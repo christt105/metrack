@@ -11,7 +11,11 @@ describe('GET /api/health', () => {
     const app = await buildApp({ appVersion: 'test', migrationRunner: runner });
     const response = await app.inject({ method: 'GET', url: '/api/health' });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: 'ok', appVersion: 'test', schemaVersion: 1 });
+    expect(response.json()).toEqual({
+      status: 'ok',
+      appVersion: 'test',
+      schemaVersion: migrations.length,
+    });
   });
 
   it('returns 404 JSON for unknown API routes', async () => {
