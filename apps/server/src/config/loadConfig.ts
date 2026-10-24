@@ -12,5 +12,8 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     dataDir: env.DATA_DIR ?? './data',
     webDir: env.WEB_DIR ?? '../web/dist',
     appVersion: env.APP_VERSION ?? 'dev',
+    tmdbApiKey: env.TMDB_API_KEY || undefined,
+    tmdbLanguage: env.TMDB_LANGUAGE ?? 'es-ES',
+    steamGridDbToken: env.STEAMGRIDDB_TOKEN || undefined,
   };
 }

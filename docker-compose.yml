@@ -6,5 +6,9 @@ services:
     restart: unless-stopped
     ports:
       - '${METRACK_PORT:-8097}:8097'
+    environment:
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      TMDB_LANGUAGE: ${TMDB_LANGUAGE:-es-ES}
+      STEAMGRIDDB_TOKEN: ${STEAMGRIDDB_TOKEN:-}
     volumes:
       - ${METRACK_DATA:-./data}:/data
