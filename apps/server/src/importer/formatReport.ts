@@ -1,11 +1,17 @@
 import { collectImageSources } from './collectImageSources.js';
+import type { LegacyImageIndex } from './LegacyImageIndex.js';
+import { summarizeRemoteImages } from './summarizeRemoteImages.js';
 import { ISSUE_DESCRIPTIONS, type IssueCode } from './IssueCode.js';
 import type { ImportPlan } from './ImportPlan.js';
 
 const PREVIEW_LIMIT = 8;
 
 /** Renders the dry-run report: counts per type, notes with problems and the unlinked inbox. */
-export function formatReport(plan: ImportPlan, verbose: boolean): string {
+export function formatReport(
+  plan: ImportPlan,
+  verbose: boolean,
+  legacyImages: LegacyImageIndex | null = null,
+): string {
   const lines: string[] = [];
   const seasonCount = plan.series.reduce((sum, series) => sum + series.seasons.length, 0);
   const implicit = plan.series.filter((series) => series.implicitSeason).length;
@@ -28,14 +34,22 @@ export function formatReport(plan: ImportPlan, verbose: boolean): string {
   }
   lines.push('');
 
-  const images = collectImageSources(plan);
-  const remote = new Set(images.flatMap((image) => (image.kind === 'remote' ? [image.url] : [])));
-  const local = images.filter((image) => image.kind === 'local').length;
+  const local = collectImageSources(plan).filter((image) => image.kind === 'local').length;
+  const remote = summarizeRemoteImages(plan, legacyImages);
   lines.push('Images:');
   lines.push(`  local files to import: ${local}`);
   lines.push(
-    `  remote URLs: ${remote.size} (only linked when a local copy already exists; nothing is downloaded)`,
+    legacyImages
+      ? `  remote URLs: ${remote.total} (${remote.resolved} found in the images directories, ${remote.unresolved.length} without a local copy; nothing is downloaded)`
+      : `  remote URLs: ${remote.total} (only linked when a local copy already exists; nothing is downloaded)`,
   );
+  if (legacyImages && remote.unresolved.length > 0) {
+    const shown = verbose ? remote.unresolved : remote.unresolved.slice(0, PREVIEW_LIMIT);
+    lines.push('  unresolved:', ...shown.map((url) => `    ${url}`));
+    if (shown.length < remote.unresolved.length) {
+      lines.push(`    ... ${remote.unresolved.length - shown.length} more (use --verbose)`);
+    }
+  }
   lines.push('');
 
   const notes = Object.entries(plan.notesRead)
