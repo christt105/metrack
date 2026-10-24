@@ -55,6 +55,14 @@ export abstract class TableRepository<T extends { id: number }> {
     return Number(this.db.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes) > 0;
   }
 
+  /** First entity whose column equals the value. The column name must be a trusted constant. */
+  protected findOneBy(column: string, value: SQLInputValue): T | undefined {
+    const row = this.db
+      .prepare(`SELECT * FROM ${this.table} WHERE ${column} = ? ORDER BY id LIMIT 1`)
+      .get(value);
+    return row ? this.fromRow(row) : undefined;
+  }
+
   protected require(id: number): T {
     const entity = this.get(id);
     if (!entity) throw new Error(`${this.table} ${id} not found`);

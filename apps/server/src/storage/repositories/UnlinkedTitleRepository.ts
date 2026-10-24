@@ -9,6 +9,10 @@ export class UnlinkedTitleRepository extends TableRepository<UnlinkedTitle> {
     super(db, 'unlinked_title');
   }
 
+  findBySourceRef(source: string, sourceRef: string): UnlinkedTitle | undefined {
+    return this.list().find((t) => t.source === source && t.sourceRef === sourceRef);
+  }
+
   protected toRow(t: Omit<UnlinkedTitle, 'id'>): RowValues {
     return {
       media_type: t.mediaType,

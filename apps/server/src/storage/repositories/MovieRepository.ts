@@ -8,6 +8,10 @@ export class MovieRepository extends TableRepository<Movie> {
     super(db, 'movie');
   }
 
+  findByTmdbId(tmdbId: number): Movie | undefined {
+    return this.findOneBy('tmdb_id', tmdbId);
+  }
+
   protected toRow(m: Omit<Movie, 'id'>): RowValues {
     return {
       tmdb_id: m.tmdbId,
