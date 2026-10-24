@@ -6,5 +6,10 @@ services:
     restart: unless-stopped
     ports:
       - '${METRACK_PORT:-8097}:8097'
+    environment:
+      NTFY_URL: ${NTFY_URL:-}
+      NTFY_TOPIC: ${NTFY_TOPIC:-}
+      NTFY_TOKEN: ${NTFY_TOKEN:-}
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-14}
     volumes:
       - ${METRACK_DATA:-./data}:/data
