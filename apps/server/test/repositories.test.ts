@@ -45,6 +45,8 @@ const newSeries = (over: Partial<Omit<Series, 'id'>> = {}): Omit<Series, 'id'> =
   note: null,
   cover: null,
   banner: null,
+  slug: null,
+  tags: [],
   ...over,
 });
 
@@ -63,6 +65,8 @@ const newSeason = (
   episodeCount: null,
   cover: null,
   banner: null,
+  slug: null,
+  tags: [],
   ...tracking,
   ...over,
 });
@@ -89,6 +93,8 @@ describe('MovieRepository', () => {
     note: null,
     cover: 'cover.jpg',
     banner: null,
+    slug: 'Aftersun (2022)',
+    tags: ['drama'],
     ...tracking,
     status: 'completed',
     startedAt: '2026-03-15',
@@ -149,6 +155,8 @@ describe('videogames and books', () => {
       note: null,
       cover: null,
       banner: null,
+      slug: null,
+      tags: ['rpg'],
       ...tracking,
     });
     expect(repo.get(created.id)).toEqual(created);
@@ -169,6 +177,8 @@ describe('videogames and books', () => {
       genres: [],
       note: null,
       cover: null,
+      slug: null,
+      tags: [],
       ...tracking,
     });
     expect(repo.get(created.id)).toEqual(created);

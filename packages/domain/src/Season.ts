@@ -15,4 +15,6 @@ export interface Season extends Tracking, Artwork {
   overview: string | null;
   firstAirDate: string | null;
   episodeCount: number | null;
+  slug: string | null;
+  tags: string[];
 }

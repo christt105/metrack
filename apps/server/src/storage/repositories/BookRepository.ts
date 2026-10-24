@@ -29,6 +29,8 @@ export class BookRepository extends TableRepository<Book> {
       genres: JSON.stringify(b.genres),
       note: b.note,
       cover: b.cover,
+      slug: b.slug,
+      tags: JSON.stringify(b.tags),
       ...trackingToRow(b),
     };
   }
@@ -47,6 +49,8 @@ export class BookRepository extends TableRepository<Book> {
       genres: parseList(row.genres),
       note: text(row.note),
       cover: text(row.cover),
+      slug: text(row.slug),
+      tags: parseList(row.tags),
       ...trackingFromRow(row),
     };
   }

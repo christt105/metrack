@@ -155,7 +155,7 @@ export function buildImportPlan(
     seasons.sort((a, b) => a.entity.number - b.entity.number);
 
     const implicitSeason = seasonNotes.length === 0;
-    if (implicitSeason) seasons.push(planImplicitSeason(note, base.entity, issues));
+    if (implicitSeason) seasons.push(planImplicitSeason(note, base.entity, vaultDir, issues));
     else if (hasSeriesTracking(note)) issues.add('series-tracking-ignored', note.path);
     series.push({ ...base, seasons, implicitSeason });
   }

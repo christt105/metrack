@@ -26,6 +26,8 @@ export function planSeason(
       episodeCount: null,
       cover: null,
       banner: null,
+      slug: note.name,
+      tags: readList(note.frontmatter.tags),
       ...readTracking(note, issues),
     },
     ...readArtwork(note, vaultDir, issues),

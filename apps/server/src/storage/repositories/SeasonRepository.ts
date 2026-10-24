@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Season } from '@metrack/domain';
 import { TableRepository, type Row, type RowValues } from './TableRepository.js';
-import { num, text, trackingFromRow, trackingToRow } from './rowMapping.js';
+import { num, parseList, text, trackingFromRow, trackingToRow } from './rowMapping.js';
 
 export class SeasonRepository extends TableRepository<Season> {
   constructor(db: DatabaseSync) {
@@ -27,6 +27,8 @@ export class SeasonRepository extends TableRepository<Season> {
       episode_count: s.episodeCount,
       cover: s.cover,
       banner: s.banner,
+      slug: s.slug,
+      tags: JSON.stringify(s.tags),
       ...trackingToRow(s),
     };
   }
@@ -44,6 +46,8 @@ export class SeasonRepository extends TableRepository<Season> {
       episodeCount: num(row.episode_count),
       cover: text(row.cover),
       banner: text(row.banner),
+      slug: text(row.slug),
+      tags: parseList(row.tags),
       ...trackingFromRow(row),
     };
   }

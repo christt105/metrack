@@ -30,6 +30,8 @@ export class VideogameRepository extends TableRepository<Videogame> {
       note: g.note,
       cover: g.cover,
       banner: g.banner,
+      slug: g.slug,
+      tags: JSON.stringify(g.tags),
       ...trackingToRow(g),
     };
   }
@@ -49,6 +51,8 @@ export class VideogameRepository extends TableRepository<Videogame> {
       note: text(row.note),
       cover: text(row.cover),
       banner: text(row.banner),
+      slug: text(row.slug),
+      tags: parseList(row.tags),
       ...trackingFromRow(row),
     };
   }

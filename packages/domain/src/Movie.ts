@@ -13,4 +13,7 @@ export interface Movie extends Tracking, Artwork {
   cast: string[];
   director: string | null;
   note: string | null;
+  /** File name the item had in the vault. It keeps exported page addresses stable. */
+  slug: string | null;
+  tags: string[];
 }

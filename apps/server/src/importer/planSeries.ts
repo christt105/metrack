@@ -3,6 +3,7 @@ import { readList, readText } from './fieldReaders.js';
 import { readArtwork } from './readArtwork.js';
 import { readDescriptiveDate } from './readDescriptiveDate.js';
 import { readExternalId } from './readExternalId.js';
+import { readInlineImages } from './readInlineImages.js';
 import { readTitle } from './readTitle.js';
 import { readTracking } from './readTracking.js';
 import type { IssueLog } from './IssueLog.js';
@@ -30,14 +31,17 @@ export function planSeriesEntity(
     note: null,
     cover: null,
     banner: null,
+    slug: note.name,
+    tags: readList(fm.tags),
   };
-  return { path: note.path, entity, ...readArtwork(note, vaultDir, issues) };
+  return { path: note.path, entity, ...readArtwork(note, vaultDir, issues), inline: [] };
 }
 
 /** The single season of a series that has no season notes: its tracking lives on the series note. */
 export function planImplicitSeason(
   note: VaultNote,
   series: Omit<Series, 'id'>,
+  vaultDir: string,
   issues: IssueLog,
 ): PlannedSeason {
   return {
@@ -52,9 +56,12 @@ export function planImplicitSeason(
       episodeCount: null,
       cover: null,
       banner: null,
+      slug: null,
+      tags: readList(note.frontmatter.tags),
       ...readTracking(note, issues),
     },
     cover: null,
     banner: null,
+    inline: readInlineImages(note, vaultDir, issues),
   };
 }

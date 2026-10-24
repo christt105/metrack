@@ -28,6 +28,8 @@ export function planMovie(
     note: null,
     cover: null,
     banner: null,
+    slug: note.name,
+    tags: readList(fm.tags),
     ...readTracking(note, issues),
   };
   return { path: note.path, entity, ...readArtwork(note, vaultDir, issues) };
