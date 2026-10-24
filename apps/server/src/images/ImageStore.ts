@@ -39,9 +39,9 @@ export class ImageStore {
     return this.add(new Uint8Array(await response.arrayBuffer()), url);
   }
 
-  /** Copies an existing local file into the store. */
-  async importFile(path: string): Promise<StoredImage> {
-    return this.add(new Uint8Array(await readFile(path)), null);
+  /** Copies an existing local file into the store, optionally recording the URL it stands for. */
+  async importFile(path: string, sourceUrl: string | null = null): Promise<StoredImage> {
+    return this.add(new Uint8Array(await readFile(path)), sourceUrl);
   }
 
   /** Stores raw image bytes. Throws when they are not a supported image or exceed the size limit. */

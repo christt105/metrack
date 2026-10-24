@@ -18,6 +18,7 @@ export function formatApplyResult(result: ApplyResult): string {
     'Images:',
     `  local files stored: ${result.images.localStored}`,
     `  remote URLs linked to an existing local copy: ${result.images.remoteLinked}`,
+    `  remote URLs imported from images directories: ${result.images.remoteImported}`,
     `  remote URLs without a local copy (left empty): ${result.images.remoteUnavailable}`,
   ];
   if (result.warnings.length > 0)

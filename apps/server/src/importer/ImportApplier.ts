@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { ImageStore } from '../images/ImageStore.js';
+import type { LegacyImageIndex } from './LegacyImageIndex.js';
 import { ImageResolver } from './ImageResolver.js';
 import { mergeIntoExisting } from './mergeIntoExisting.js';
 import type { ApplyResult } from './ApplyResult.js';
@@ -23,11 +24,17 @@ export class ImportApplier {
     private readonly targets: ImportTargets,
     private readonly imageStore: ImageStore,
     private readonly now: () => Date = () => new Date(),
+    private readonly legacyImages: LegacyImageIndex | null = null,
   ) {}
 
   async apply(plan: ImportPlan): Promise<ApplyResult> {
     const result = emptyResult();
-    const resolver = new ImageResolver(this.imageStore, result.images, result.warnings);
+    const resolver = new ImageResolver(
+      this.imageStore,
+      result.images,
+      result.warnings,
+      this.legacyImages,
+    );
     const images = new Map<PlannedEntity<unknown>, Resolved>();
     const slots: PlannedEntity<unknown>[] = [
       ...plan.movies,
@@ -206,7 +213,7 @@ function emptyResult(): ApplyResult {
     books: tally(),
     unlinked: tally(),
     unlinkedResolved: 0,
-    images: { localStored: 0, remoteLinked: 0, remoteUnavailable: 0 },
+    images: { localStored: 0, remoteLinked: 0, remoteImported: 0, remoteUnavailable: 0 },
     warnings: [],
   };
 }
