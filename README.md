@@ -48,13 +48,13 @@ The server writes a backup every `BACKUP_INTERVAL_HOURS` (default 24) to `/data/
 
 Each backup is a directory `metrack-<UTC timestamp>` containing `metrack.db`, a consistent copy made with `VACUUM INTO` that is checked with `PRAGMA integrity_check` before it is accepted, and `images/` when `/data/images` exists. A failed backup leaves nothing behind.
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `BACKUP_ENABLED` | `true` | Run the internal scheduler |
-| `BACKUP_DIR` | `$DATA_DIR/backups` | Where backups are written |
-| `BACKUP_RETENTION` | `14` | Number of backups to keep |
-| `BACKUP_INTERVAL_HOURS` | `24` | Minimum age of the newest backup before a new one is taken |
-| `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN` | unset | Send a failure alert to ntfy; `NTFY_TOKEN` is optional. Without URL and topic, failures are only logged |
+| Variable                               | Default             | Meaning                                                                                                 |
+| -------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `BACKUP_ENABLED`                       | `true`              | Run the internal scheduler                                                                              |
+| `BACKUP_DIR`                           | `$DATA_DIR/backups` | Where backups are written                                                                               |
+| `BACKUP_RETENTION`                     | `14`                | Number of backups to keep                                                                               |
+| `BACKUP_INTERVAL_HOURS`                | `24`                | Minimum age of the newest backup before a new one is taken                                              |
+| `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN` | unset               | Send a failure alert to ntfy; `NTFY_TOKEN` is optional. Without URL and topic, failures are only logged |
 
 Manual use:
 
