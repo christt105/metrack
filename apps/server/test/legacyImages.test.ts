@@ -7,7 +7,7 @@ import { buildImportPlan } from '../src/importer/buildImportPlan.js';
 import { ImageStore } from '../src/images/ImageStore.js';
 import { ImportApplier } from '../src/importer/ImportApplier.js';
 import { IssueLog } from '../src/importer/IssueLog.js';
-import { legacyImageName } from '../src/importer/legacyImageName.js';
+import { legacyImageName } from '@metrack/export';
 import { LegacyImageIndex } from '../src/importer/LegacyImageIndex.js';
 import { readVaultNotes } from '../src/importer/readVaultNotes.js';
 import { runImport } from '../src/importer/runImport.js';

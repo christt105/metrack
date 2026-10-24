@@ -1,6 +1,6 @@
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { legacyImageName } from './legacyImageName.js';
+import { legacyImageName } from '@metrack/export';
 
 /**
  * Finds the local copy of a remote image URL among directories written by the previous Hugo
