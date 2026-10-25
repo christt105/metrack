@@ -10,6 +10,7 @@ import { registerMetadataRoutes } from './registerMetadataRoutes.js';
 import { registerMediaRoutes } from './registerMediaRoutes.js';
 import { registerPublishRoutes } from './registerPublishRoutes.js';
 import { registerSeasonOverrideRoutes } from './registerSeasonOverrideRoutes.js';
+import { registerSyncRoutes } from './registerSyncRoutes.js';
 import { registerTitleRoutes } from './registerTitleRoutes.js';
 import type { EditServices } from './EditServices.js';
 import type { ImageStore } from '../images/ImageStore.js';
@@ -18,6 +19,7 @@ import type { PublishQueue } from '../publish/PublishQueue.js';
 import { registerBackupRoutes } from './registerBackupRoutes.js';
 import type { BackupJob } from '../backup/BackupJob.js';
 import type { BackupService } from '../backup/BackupService.js';
+import type { SyncService } from '../sync/SyncService.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
 
 export interface AppDeps {
@@ -29,6 +31,7 @@ export interface AppDeps {
   publishQueue?: PublishQueue;
   edit?: EditServices;
   backup?: { service: BackupService; job: BackupJob };
+  sync?: SyncService;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -52,6 +55,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerArtworkRoutes(app, artwork, editor);
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
+  registerSyncRoutes(app, deps.sync);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
 

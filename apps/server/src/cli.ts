@@ -6,6 +6,8 @@ import { join } from 'node:path';
 import { exportSite } from './export/exportSite.js';
 import { openExportSources } from './export/openExportSources.js';
 import { runBackupCommand } from './backup/runBackupCommand.js';
+import { loadSyncConfig } from './sync/loadSyncConfig.js';
+import { runSyncCommand } from './sync/runSyncCommand.js';
 import { runImport } from './importer/runImport.js';
 
 const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
@@ -13,12 +15,18 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack backups
        metrack backup
        metrack restore <backupName>
+       metrack sync [--apply] [--verbose] [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
   With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
   --images-dir (repeatable) points at folders of images cached by the old Hugo site; remote cover and banner
   URLs are matched to files there by name and imported. Nothing is downloaded.
+
+  sync compares the Jellyfin playback history (Jellyfin API plus the Jellystat database, configured with JELLYFIN_URL,
+  JELLYFIN_TOKEN, JELLYSTAT_DB_HOST, JELLYSTAT_DB_PASSWORD and optionally JELLYFIN_USER, default admin) with the
+  tracking in the data directory. Without --apply it only prints the plan and the database is opened read-only.
+  With --apply it writes the plan.
 
   redirect writes 404.html and index.html for the old GitHub Pages site. Every old address is sent to the same
   path on --origin (the old site was served under --old-base, default /MediaTracker). Nothing else is touched.
@@ -50,6 +58,25 @@ async function main(argv: string[]): Promise<number> {
       return 2;
     }
     console.log(await runBackupCommand(loadConfig(process.env), command, target));
+    return 0;
+  }
+  if (!values.help && command === 'sync') {
+    if (positionals.length > 1) {
+      console.error(USAGE);
+      return 2;
+    }
+    const { config: syncConfig, missing } = loadSyncConfig(process.env);
+    if (!syncConfig) {
+      console.error(`Jellyfin sync is not configured, missing: ${missing.join(', ')}`);
+      return 2;
+    }
+    console.log(
+      await runSyncCommand(syncConfig, {
+        dataDir: values['data-dir'] ?? loadConfig(process.env).dataDir,
+        apply: values.apply,
+        verbose: values.verbose,
+      }),
+    );
     return 0;
   }
   const known = command === 'import' || command === 'export' || command === 'redirect';

@@ -10,16 +10,17 @@ import type {
   Season,
   Series,
   SyncState,
+  Tracking,
 } from '../src/index.js';
 
-const TRACKING = {
+const TRACKING: Tracking = {
   status: 'planned',
   startedAt: null,
   finishedAt: null,
   rating: null,
   review: null,
   rewatches: [],
-} as const;
+};
 const ART = { cover: null, banner: null };
 
 function movie(over: Partial<Movie>): Movie {
@@ -61,9 +62,8 @@ function series(over: Partial<Series>): Series {
     tags: [],
     review: null,
     ...ART,
-    ...TRACKING,
     ...over,
-  } as Series;
+  };
 }
 
 function season(over: Partial<Season>): Season {

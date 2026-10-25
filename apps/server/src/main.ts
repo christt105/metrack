@@ -31,6 +31,8 @@ import { migrations } from './storage/migrations/index.js';
 import { TitleProviders } from './titles/TitleProviders.js';
 import { TmdbMovieProvider } from './titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from './titles/TmdbSeriesProvider.js';
+import { createSyncService } from './sync/createSyncService.js';
+import { loadSyncConfig } from './sync/loadSyncConfig.js';
 import { openDatabase } from './storage/openDatabase.js';
 import {
   BookRepository,
@@ -92,6 +94,12 @@ const edit = createEditServices({
   imageProviders,
 });
 
+const { config: syncConfig, missing: syncMissing } = loadSyncConfig(process.env);
+const syncSetup = syncConfig
+  ? createSyncService(syncConfig, db, { movies, series, seasons, overrides, unlinked })
+  : undefined;
+if (!syncSetup) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
+
 const logger = { info: console.log, error: console.error };
 const { config: publishConfig, missing: publishMissing } = loadPublishConfig(process.env);
 let publishQueue: PublishQueue | undefined;
@@ -148,11 +156,13 @@ const app = await buildApp({
   publishQueue,
   edit,
   backup: { service: backupService, job: backupJob },
+  sync: syncSetup?.service,
 });
 
 const shutdown = async (): Promise<void> => {
   scheduler.stop();
   await app.close();
+  await syncSetup?.pool.end();
   db.close();
   process.exit(0);
 };
