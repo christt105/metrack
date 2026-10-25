@@ -3,6 +3,10 @@ import { resolve } from 'node:path';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { createHealthReport } from '@metrack/domain';
+import { registerImageRoutes } from './registerImageRoutes.js';
+import { registerMetadataRoutes } from './registerMetadataRoutes.js';
+import type { ImageStore } from '../images/ImageStore.js';
+import type { MetadataCache } from '../metadata/MetadataCache.js';
 import { registerBackupRoutes } from './registerBackupRoutes.js';
 import type { BackupJob } from '../backup/BackupJob.js';
 import type { BackupService } from '../backup/BackupService.js';
@@ -12,6 +16,8 @@ export interface AppDeps {
   appVersion: string;
   migrationRunner: MigrationRunner;
   webDir?: string;
+  imageStore?: ImageStore;
+  metadataCache?: MetadataCache;
   backup?: { service: BackupService; job: BackupJob };
 }
 
@@ -22,6 +28,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion()),
   );
 
+  if (deps.imageStore) registerImageRoutes(app, deps.imageStore);
+  if (deps.metadataCache) registerMetadataRoutes(app, deps.metadataCache);
   if (deps.backup) {
     registerBackupRoutes(app, deps.backup);
   }

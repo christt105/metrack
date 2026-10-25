@@ -7,6 +7,9 @@ export interface Config {
   dataDir: string;
   webDir: string;
   appVersion: string;
+  tmdbApiKey: string | undefined;
+  tmdbLanguage: string;
+  steamGridDbToken: string | undefined;
   backup: BackupConfig;
   ntfy?: NtfyConfig;
 }
