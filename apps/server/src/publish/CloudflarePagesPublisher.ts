@@ -2,12 +2,7 @@ import type { CommandRunner } from './CommandRunner.js';
 import type { PublishConfig } from './PublishConfig.js';
 import type { Publisher } from './Publisher.js';
 
-/** Exact wrangler release run through npx; bump it deliberately. */
-export const WRANGLER_VERSION = '4.152.0';
-
-export const WRANGLER_PACKAGE = `wrangler@${WRANGLER_VERSION}`;
-
-/** Parent environment variables wrangler and npx need: paths, locale, npm cache, proxies and CAs. */
+/** Parent environment variables wrangler needs: paths, locale, proxies and CAs. */
 export const WRANGLER_INHERITED_ENV: readonly string[] = [
   'PATH',
   'HOME',
@@ -15,10 +10,6 @@ export const WRANGLER_INHERITED_ENV: readonly string[] = [
   'LANG',
   'XDG_CONFIG_HOME',
   'XDG_CACHE_HOME',
-  'npm_config_cache',
-  'NPM_CONFIG_CACHE',
-  'npm_config_registry',
-  'NPM_CONFIG_REGISTRY',
   'HTTP_PROXY',
   'HTTPS_PROXY',
   'NO_PROXY',
@@ -34,17 +25,19 @@ export class CloudflarePagesPublisher implements Publisher {
   constructor(
     private readonly config: Pick<
       PublishConfig,
-      'cloudflareApiToken' | 'cloudflareAccountId' | 'cloudflareProject' | 'cloudflareBranch'
+      | 'wranglerBinary'
+      | 'cloudflareApiToken'
+      | 'cloudflareAccountId'
+      | 'cloudflareProject'
+      | 'cloudflareBranch'
     >,
     private readonly runner: CommandRunner,
   ) {}
 
   async publish(siteDir: string): Promise<void> {
     await this.runner.run(
-      'npx',
+      this.config.wranglerBinary,
       [
-        '--yes',
-        WRANGLER_PACKAGE,
         'pages',
         'deploy',
         siteDir,

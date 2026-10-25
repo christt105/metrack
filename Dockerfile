@@ -11,7 +11,27 @@ COPY apps apps
 RUN npm run build
 RUN npm prune --omit=dev
 
+FROM node:22-slim AS tools
+ARG HUGO_VERSION=0.152.2
+ARG TARGETARCH
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /tmp/hugo
+RUN arch="${TARGETARCH:-amd64}" \
+    && archive="hugo_extended_${HUGO_VERSION}_linux-${arch}.tar.gz" \
+    && base="https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}" \
+    && curl -fsSLO "${base}/${archive}" \
+    && curl -fsSL "${base}/hugo_${HUGO_VERSION}_checksums.txt" | grep " ${archive}\$" | sha256sum -c - \
+    && tar -xzf "${archive}" hugo \
+    && ./hugo version
+
 FROM node:22-slim AS runtime
+COPY --from=tools /tmp/hugo/hugo /usr/local/bin/hugo
+ARG WRANGLER_VERSION=4.152.0
+RUN npm install --global --no-fund --no-audit "wrangler@${WRANGLER_VERSION}" \
+    && npm cache clean --force \
+    && wrangler --version
 ENV NODE_ENV=production \
     PORT=8097 \
     DATA_DIR=/data \

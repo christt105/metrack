@@ -22,6 +22,7 @@ export function loadPublishConfig(env: Record<string, string | undefined>): Publ
     config: {
       siteTemplateDir: env.PUBLISH_SITE_TEMPLATE_DIR!,
       hugoBinary: env.HUGO_BIN || 'hugo',
+      wranglerBinary: env.WRANGLER_BIN || 'wrangler',
       cloudflareApiToken: env.CLOUDFLARE_API_TOKEN!,
       cloudflareAccountId: env.CLOUDFLARE_ACCOUNT_ID!,
       cloudflareProject: env.CLOUDFLARE_PAGES_PROJECT!,

@@ -2,6 +2,7 @@ export interface PublishConfig {
   /** A Hugo project (config, layouts, assets, data, static pages) without the exported content sections. */
   siteTemplateDir: string;
   hugoBinary: string;
+  wranglerBinary: string;
   cloudflareApiToken: string;
   cloudflareAccountId: string;
   cloudflareProject: string;
