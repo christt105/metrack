@@ -11,7 +11,7 @@ export function formatSyncReport(plan: SyncPlan, verbose: boolean): string {
     `Seasons: ${seasons.filter((s) => s.seasonId === null).length} to create, ${seasons.filter((s) => s.seasonId !== null).length} to update, ${seasons.filter((s) => s.status === 'completed').length} completed, ${seasons.filter((s) => s.status === 'in_progress').length} in progress`,
     `Unlinked: ${plan.unlinked.length}`,
     `Warnings: ${plan.warnings.length}`,
-    `Playback records with no matching library item: ${plan.ignoredPlays}`,
+    `Playback records with no matching library item: ${plan.ignoredPlays} (${plan.unmatchedTitles.length} titles)`,
     `Finished items still without a rating: ${plan.movies.filter((m) => m.missingRating).length + seasons.filter((s) => s.missingRating).length}`,
   ];
   if (verbose) {
@@ -30,6 +30,7 @@ export function formatSyncReport(plan: SyncPlan, verbose: boolean): string {
     }
     for (const u of plan.unlinked)
       lines.push(`unlinked ${u.mediaType}: ${u.title} (${u.plays} plays)`);
+    for (const t of plan.unmatchedTitles) lines.push(`unmatched: ${t.title} (${t.plays} plays)`);
     for (const w of plan.warnings) lines.push(`warning ${w.code}: ${w.title}: ${w.message}`);
   }
   return lines.join('\n');

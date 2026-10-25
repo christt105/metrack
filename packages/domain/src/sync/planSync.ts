@@ -18,7 +18,7 @@ export function planSync(input: SyncInput): SyncPlan {
         runtimes.set(episode.jellyfinId, episode.runtimeSeconds);
     }
   }
-  const { days, playCount, ignored } = collectWatchDays(
+  const { days, playCount, ignored, unmatched } = collectWatchDays(
     input.plays,
     runtimes,
     makeDateOf(input.timeZone),
@@ -31,5 +31,8 @@ export function planSync(input: SyncInput): SyncPlan {
     unlinked: [...movies.unlinked, ...series.unlinked],
     warnings: [...movies.warnings, ...series.warnings],
     ignoredPlays: ignored,
+    unmatchedTitles: [...unmatched]
+      .map(([title, plays]) => ({ title, plays }))
+      .sort((a, b) => b.plays - a.plays || a.title.localeCompare(b.title)),
   };
 }

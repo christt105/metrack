@@ -10,13 +10,21 @@ export function collectWatchDays(
   plays: readonly PlayRecord[],
   runtimes: ReadonlyMap<string, number | null>,
   dateOf: (iso: string) => string,
-): { days: Map<string, string[]>; playCount: Map<string, number>; ignored: number } {
+): {
+  days: Map<string, string[]>;
+  playCount: Map<string, number>;
+  ignored: number;
+  unmatched: Map<string, number>;
+} {
   const seconds = new Map<string, Map<string, number>>();
   const playCount = new Map<string, number>();
+  const unmatched = new Map<string, number>();
   let ignored = 0;
   for (const play of plays) {
     if (!runtimes.has(play.itemId)) {
       ignored += 1;
+      const title = play.title ?? 'Unknown';
+      unmatched.set(title, (unmatched.get(title) ?? 0) + 1);
       continue;
     }
     const perDay = seconds.get(play.itemId) ?? new Map<string, number>();
@@ -34,5 +42,5 @@ export function collectWatchDays(
       .sort();
     if (watched.length > 0) days.set(itemId, watched);
   }
-  return { days, playCount, ignored };
+  return { days, playCount, ignored, unmatched };
 }

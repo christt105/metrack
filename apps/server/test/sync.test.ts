@@ -160,14 +160,21 @@ describe('PostgresPlaybackSource', () => {
         query: async (text, values) => {
           calls.push({ text, values });
           return {
-            rows: [{ item_id: 'e1', played_at: new Date('2026-10-24T20:00:00Z'), seconds: '1500' }],
+            rows: [
+              {
+                item_id: 'e1',
+                title: 'Show',
+                played_at: new Date('2026-10-24T20:00:00Z'),
+                seconds: '1500',
+              },
+            ],
           };
         },
       },
       'admin',
     );
     expect(await source.listPlays()).toEqual([
-      { itemId: 'e1', playedAt: '2026-10-24T20:00:00.000Z', watchedSeconds: 1500 },
+      { itemId: 'e1', title: 'Show', playedAt: '2026-10-24T20:00:00.000Z', watchedSeconds: 1500 },
     ]);
     expect(calls[0]?.values).toEqual(['admin']);
     expect(calls[0]?.text).toMatch(/^\s*SELECT/);

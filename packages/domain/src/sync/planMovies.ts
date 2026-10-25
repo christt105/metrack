@@ -11,6 +11,11 @@ export interface MoviePlan {
   warnings: SyncWarning[];
 }
 
+/** The day after `day`: a viewing that runs past midnight is the same viewing the vault dated by its start. */
+function nextDay(day: string): string {
+  return new Date(Date.parse(day) + 86_400_000).toISOString().slice(0, 10);
+}
+
 function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, i) => value === b[i]);
 }
@@ -91,7 +96,8 @@ export function planMovies(
       continue;
     }
     const finishedAt = existing.finishedAt;
-    const later = days.filter((day) => day > finishedAt);
+    const sameViewing = nextDay(finishedAt);
+    const later = days.filter((day) => day > sameViewing);
     const rewatches = union(existing.rewatches, later);
     if (!sameList(rewatches, existing.rewatches)) {
       plan.changes.push({

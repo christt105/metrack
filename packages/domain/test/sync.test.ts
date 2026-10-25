@@ -175,6 +175,12 @@ describe('movies', () => {
     expect(run(done, [play('m1', '2026-05-10', 6000)]).movies).toEqual([]);
   });
 
+  it('treats a viewing past midnight as the recorded one', () => {
+    const state = { ...EMPTY, movies: [movie({ status: 'completed', finishedAt: '2026-02-01' })] };
+    expect(run(state, [play('m1', '2026-02-02', 6000)]).movies).toEqual([]);
+    expect(run(state, [play('m1', '2026-02-03', 6000)]).movies).toHaveLength(1);
+  });
+
   it('leaves dropped movies alone and warns', () => {
     const state = { ...EMPTY, movies: [movie({ status: 'dropped' })] };
     const plan = run(state, [play('m1', '2026-02-01', 6000)]);
@@ -206,7 +212,12 @@ describe('movies', () => {
   });
 
   it('counts playback of unknown items', () => {
-    expect(run(EMPTY, [play('zzz', '2026-02-01')]).ignoredPlays).toBe(1);
+    const plan = run(EMPTY, [
+      { ...play('zzz', '2026-02-01'), title: 'Gone' },
+      { ...play('yyy', '2026-02-02'), title: 'Gone' },
+    ]);
+    expect(plan.ignoredPlays).toBe(2);
+    expect(plan.unmatchedTitles).toEqual([{ title: 'Gone', plays: 2 }]);
   });
 });
 

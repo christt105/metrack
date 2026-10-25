@@ -9,6 +9,7 @@ import type { SqlQuery } from './SqlQuery.js';
  */
 const QUERY = `
   SELECT COALESCE("EpisodeId", "NowPlayingItemId") AS item_id,
+         COALESCE("SeriesName", "NowPlayingItemName") AS title,
          "ActivityDateInserted" AS played_at,
          "PlaybackDuration" AS seconds
   FROM jf_playback_activity
@@ -26,6 +27,7 @@ export class PostgresPlaybackSource implements PlaybackSource {
     const { rows } = await this.db.query(QUERY, [this.userName]);
     return rows.map((row) => ({
       itemId: String(row.item_id),
+      title: row.title === null ? undefined : String(row.title),
       playedAt: new Date(row.played_at as string | Date).toISOString(),
       watchedSeconds: Number(row.seconds),
     }));
