@@ -12,7 +12,7 @@ describe('BackupJob', () => {
       create: vi.fn(() => info),
       prune: vi.fn(() => []),
     } as unknown as BackupService;
-    const notifier: Notifier = { notify: vi.fn(async () => {}) };
+    const notifier: Notifier = { notify: vi.fn(async () => true) };
     const result = await new BackupJob(service, 7, notifier, logger).run();
     expect(result).toBe(info);
     expect(service.prune).toHaveBeenCalledWith(7);
@@ -26,7 +26,7 @@ describe('BackupJob', () => {
       }),
       prune: vi.fn(),
     } as unknown as BackupService;
-    const notifier: Notifier = { notify: vi.fn(async () => {}) };
+    const notifier: Notifier = { notify: vi.fn(async () => true) };
     await expect(new BackupJob(service, 7, notifier, logger).run()).rejects.toThrow('disk full');
     expect(notifier.notify).toHaveBeenCalledWith('metrack backup failed', 'disk full');
     expect(service.prune).not.toHaveBeenCalled();

@@ -12,7 +12,10 @@ function setup(results: (PublishOutcome | Error)[]) {
   const alerts: string[] = [];
   const logs: string[] = [];
   const notifier: Notifier = {
-    notify: async (title, message) => void alerts.push(`${title}|${message}`),
+    notify: async (title, message) => {
+      alerts.push(`${title}|${message}`);
+      return true;
+    },
   };
   const logger: Logger = { info: (m) => void logs.push(m), error: (m) => void logs.push(m) };
   let calls = 0;
@@ -70,7 +73,7 @@ describe('PublishQueue', () => {
         if (calls === 1) await new Promise<void>((resolve) => (release = resolve));
         return 'published';
       },
-      { notify: async () => {} },
+      { notify: async () => true },
       { info: () => {}, error: () => {} },
       scheduler,
       options,

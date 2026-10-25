@@ -91,7 +91,7 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
   const scheduler = new FakeScheduler();
   const queue = new PublishQueue(
     async () => 'published',
-    { notify: async () => {} },
+    { notify: async () => true },
     { info: () => {}, error: () => {} },
     scheduler,
   );

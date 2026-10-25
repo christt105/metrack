@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Pool } from 'pg';
 import type { FetchFn } from '../http/FetchFn.js';
+import type { Logger } from '../notify/Logger.js';
 import { JellyfinClient } from './jellyfin/JellyfinClient.js';
 import { JellyfinLibrarySource } from './jellyfin/JellyfinLibrarySource.js';
 import { openJellystatPool } from './jellystat/openJellystatPool.js';
@@ -15,9 +16,10 @@ export function createSyncService(
   config: SyncConfig,
   db: DatabaseSync,
   targets: SyncTargets,
+  logger: Logger,
   fetchFn: FetchFn = fetch,
 ): { service: SyncService; pool: Pool } {
-  const pool = openJellystatPool(config.jellystat);
+  const pool = openJellystatPool(config.jellystat, logger);
   const service = new SyncService(
     new JellyfinLibrarySource(new JellyfinClient(fetchFn, config.jellyfin)),
     new PostgresPlaybackSource(pool, config.userName),

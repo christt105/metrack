@@ -121,7 +121,7 @@ const edit = createEditServices({
 
 const { config: syncConfig, missing: syncMissing } = loadSyncConfig(process.env);
 const syncSetup = syncConfig
-  ? createSyncService(syncConfig, db, { movies, series, seasons, overrides, unlinked })
+  ? createSyncService(syncConfig, db, { movies, series, seasons, overrides, unlinked }, logger)
   : undefined;
 if (!syncSetup) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
 

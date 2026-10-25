@@ -24,6 +24,8 @@ interface Subject {
  * sends each alert once. How often a title is looked at depends on how close its release is, so a
  * premiere is noticed within minutes instead of a day later. Due times are kept in memory: after a
  * restart every followed title is checked once, which is harmless because alerts are recorded in the database.
+ * An alert is recorded only after the notifier delivered it; one that could not be delivered stays
+ * pending and the title is checked again like after any other failure.
  */
 export class ReleaseWatcher {
   private readonly nextCheck = new Map<string, number>();
@@ -120,23 +122,30 @@ export class ReleaseWatcher {
       sent,
       today,
     );
+    let undelivered = 0;
     for (const key of due) {
       const subject = subjects.find((s) => sameSubject(s.candidate, key));
       if (!subject) continue;
       const message = releaseAlertText(key.kind, subject.candidate.releaseDate ?? today);
-      const recorded = this.deps.alerts.record({
+      const delivered = await this.deps.notifier.notify(subject.title, message, {
+        priority: 'default',
+        tags: [key.kind === 'available_es' ? 'tv' : 'calendar'],
+        ...(posterUrl === null ? {} : { imageUrl: posterUrl }),
+      });
+      if (!delivered) {
+        undelivered += 1;
+        continue;
+      }
+      this.deps.alerts.record({
         ...key,
         title: subject.title,
         message,
         sentAt: now.toISOString(),
       });
-      if (!recorded) continue;
       summary.alertsSent += 1;
-      await this.deps.notifier.notify(subject.title, message, {
-        priority: 'default',
-        tags: [key.kind === 'available_es' ? 'tv' : 'calendar'],
-        ...(posterUrl === null ? {} : { imageUrl: posterUrl }),
-      });
+    }
+    if (undelivered > 0) {
+      throw new Error(`${undelivered} alert(s) could not be delivered`);
     }
   }
 
