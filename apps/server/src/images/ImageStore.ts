@@ -1,11 +1,12 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import type { FetchFn } from '../http/FetchFn.js';
 import { IMAGE_COLUMNS } from './imageColumns.js';
 import { imageRef } from './imageRef.js';
+import { readBodyWithLimit } from './readBodyWithLimit.js';
 import { readImageSize } from './readImageSize.js';
 import type { StoredImage } from './StoredImage.js';
 
@@ -35,12 +36,18 @@ export class ImageStore {
     const response = await this.fetchFn(url);
     if (!response.ok) throw new Error(`Image download failed (${response.status}) for ${url}`);
     const declared = Number(response.headers.get('content-length') ?? 0);
-    if (declared > MAX_IMAGE_BYTES) throw new Error(`Image too large: ${url}`);
-    return this.add(new Uint8Array(await response.arrayBuffer()), url);
+    if (declared > MAX_IMAGE_BYTES) {
+      await response.body?.cancel();
+      throw new Error(`Image too large: ${url}`);
+    }
+    const bytes = await readBodyWithLimit(response, MAX_IMAGE_BYTES);
+    if (bytes === null) throw new Error(`Image too large: ${url}`);
+    return this.add(bytes, url);
   }
 
   /** Copies an existing local file into the store, optionally recording the URL it stands for. */
   async importFile(path: string, sourceUrl: string | null = null): Promise<StoredImage> {
+    if ((await stat(path)).size > MAX_IMAGE_BYTES) throw new Error('Image too large');
     return this.add(new Uint8Array(await readFile(path)), sourceUrl);
   }
 
@@ -64,12 +71,19 @@ export class ImageStore {
       createdAt: this.now().toISOString(),
     };
     const target = this.pathOf(image);
-    const temp = `${target}.tmp`;
-    await writeFile(temp, bytes);
-    await rename(temp, target);
+    const temp = `${target}.${randomBytes(8).toString('hex')}.tmp`;
+    try {
+      await writeFile(temp, bytes);
+      await rename(temp, target);
+    } catch (error) {
+      await rm(temp, { force: true });
+      throw error;
+    }
+    const stored = this.get(hash);
+    if (stored) return stored;
     this.db
       .prepare(
-        `INSERT OR REPLACE INTO image (hash, extension, mime_type, width, height, byte_size, source_url, created_at)
+        `INSERT INTO image (hash, extension, mime_type, width, height, byte_size, source_url, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
