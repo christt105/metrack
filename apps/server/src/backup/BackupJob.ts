@@ -5,7 +5,8 @@ import type { BackupService } from './BackupService.js';
 
 /**
  * Runs one backup followed by retention pruning. Alerts through the notifier on the first failure
- * of a streak only, and once more when a backup succeeds again.
+ * of a streak only (retrying on later failures until the alert is delivered), and once more when a
+ * backup succeeds again.
  */
 export class BackupJob {
   private failing = false;
@@ -28,8 +29,7 @@ export class BackupJob {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`backup failed: ${message}`);
       if (!this.failing) {
-        this.failing = true;
-        await this.notifier.notify('metrack backup failed', message);
+        this.failing = await this.notifier.notify('metrack backup failed', message);
       }
       throw error;
     }

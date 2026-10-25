@@ -60,4 +60,17 @@ describe('BackupJob', () => {
     await expect(job.run()).rejects.toThrow('disk full');
     expect(notifier.notify).toHaveBeenCalledTimes(3);
   });
+
+  it('keeps trying to alert while the failure alert is not delivered', async () => {
+    const service = {
+      create: vi.fn(() => {
+        throw new Error('disk full');
+      }),
+      prune: vi.fn(() => []),
+    } as unknown as BackupService;
+    const notify = vi.fn(async () => notify.mock.calls.length > 2);
+    const job = new BackupJob(service, 7, { notify }, logger);
+    for (let i = 0; i < 5; i++) await expect(job.run()).rejects.toThrow('disk full');
+    expect(notify).toHaveBeenCalledTimes(3);
+  });
 });
