@@ -1,5 +1,6 @@
 import type { FetchFn } from '../../http/FetchFn.js';
 import { getJson, type QueryParams } from '../../http/getJson.js';
+import type { TmdbReleaseResponse } from './TmdbReleaseResponse.js';
 import type { TmdbImagesResponse } from './TmdbImagesResponse.js';
 import type { TmdbSearchResponse } from './TmdbSearchResponse.js';
 import type { TmdbClientOptions } from './TmdbClientOptions.js';
@@ -21,6 +22,22 @@ export class TmdbClient {
 
   tv(id: number): Promise<TmdbTitleResponse> {
     return this.details('tv', id);
+  }
+
+  /** A series with its seasons, next episode and watch providers. */
+  tvReleases(id: number): Promise<TmdbReleaseResponse> {
+    return this.get(`/tv/${id}`, {
+      language: this.options.language,
+      append_to_response: 'watch/providers',
+    });
+  }
+
+  /** A movie with its per-country release dates and watch providers. */
+  movieReleases(id: number): Promise<TmdbReleaseResponse> {
+    return this.get(`/movie/${id}`, {
+      language: this.options.language,
+      append_to_response: 'release_dates,watch/providers',
+    });
   }
 
   /** Title search. `year` narrows by release year (first air year for TV). */

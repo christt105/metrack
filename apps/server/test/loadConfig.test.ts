@@ -33,6 +33,19 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ BACKUP_RETENTION: '0' })).toThrow('Invalid BACKUP_RETENTION');
   });
 
+  it('defaults release alerts to Madrid time from 8 and validates the hour', () => {
+    expect(loadConfig({}).alerts).toEqual({
+      enabled: true,
+      timeZone: 'Europe/Madrid',
+      notifyFromHour: 8,
+    });
+    expect(
+      loadConfig({ ALERTS_ENABLED: 'false', ALERTS_TIMEZONE: 'UTC', ALERTS_NOTIFY_FROM_HOUR: '0' })
+        .alerts,
+    ).toEqual({ enabled: false, timeZone: 'UTC', notifyFromHour: 0 });
+    expect(() => loadConfig({ ALERTS_NOTIFY_FROM_HOUR: '24' })).toThrow('ALERTS_NOTIFY_FROM_HOUR');
+  });
+
   it('enables ntfy only when url and topic are both set', () => {
     expect(loadConfig({ NTFY_URL: 'http://x' }).ntfy).toBeUndefined();
     expect(loadConfig({ NTFY_URL: 'http://x', NTFY_TOPIC: 't', NTFY_TOKEN: 'k' }).ntfy).toEqual({
