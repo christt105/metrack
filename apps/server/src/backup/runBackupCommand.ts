@@ -35,8 +35,8 @@ export async function runBackupCommand(
     }
     db.close();
     closed = true;
-    service.restore(name);
-    return `restored ${name}; start the server again`;
+    const safetyDir = service.restore(name);
+    return `restored ${name}; the replaced data was moved to ${safetyDir}; start the server again`;
   } finally {
     if (!closed) db.close();
   }
