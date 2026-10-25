@@ -110,9 +110,9 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       />
     </header>
 
+    <SeasonList v-if="series" :series-id="series.id" :seasons="series.seasons" @changed="load" />
     <EntityForm :collection="collection" :detail="detail" @saved="onSaved" @changed="load" />
 
-    <SeasonList v-if="series" :series-id="series.id" :seasons="series.seasons" @changed="load" />
     <SeasonOverrideEditor
       v-if="series"
       :series-id="series.id"

@@ -102,22 +102,17 @@ async function resolve(): Promise<void> {
 }
 
 .ids {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  align-items: end;
+  align-items: flex-end;
 }
 
 label {
   display: flex;
+  flex: 1 1 160px;
   flex-direction: column;
   gap: 2px;
   font-size: 0.8rem;
-}
-
-@media (min-width: 760px) {
-  .ids {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) auto;
-  }
 }
 </style>

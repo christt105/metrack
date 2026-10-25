@@ -1,4 +1,6 @@
-import type { MediaSummary } from '@metrack/domain';
+import type { MediaSortField, MediaSummary } from '@metrack/domain';
+
+const TRACKING_SORTS: readonly MediaSortField[] = ['rating', 'startedAt', 'finishedAt'];
 
 export type CardTypeFilter = '' | 'movie' | 'series' | 'season' | 'videogame' | 'book';
 
@@ -44,9 +46,14 @@ function singleSeasonCard(item: MediaSummary): LibraryCard {
 /**
  * Turns the combined list into library cards. Seasons of a multi-season series are hidden behind
  * their series, a single-season series becomes one card with its season's tracking, and the
- * `season` filter shows every season as its own card.
+ * `season` filter shows every season as its own card. The single-season card sits where the series
+ * row sorts, except for tracking sorts (rating and dates) where the season row carries the value.
  */
-export function buildCards(items: MediaSummary[], filter: CardTypeFilter): LibraryCard[] {
+export function buildCards(
+  items: MediaSummary[],
+  filter: CardTypeFilter,
+  sort: MediaSortField = 'title',
+): LibraryCard[] {
   if (filter === 'season') return items.filter((item) => item.type === 'season').map(toCard);
 
   const seasonCount = new Map<number, number>();
@@ -61,13 +68,23 @@ export function buildCards(items: MediaSummary[], filter: CardTypeFilter): Libra
   const isSingle = (seriesId: number | null): boolean =>
     seriesId !== null && seasonCount.get(seriesId) === 1 && withSeasonRow.has(seriesId);
 
+  const bySeries = new Map<number, MediaSummary>();
+  for (const item of items) {
+    if (item.type === 'season' && item.seriesId !== null) bySeries.set(item.seriesId, item);
+  }
+  const anchorOnSeason = TRACKING_SORTS.includes(sort);
+
   const cards: LibraryCard[] = [];
   for (const item of items) {
     if (item.type === 'season') {
-      if (isSingle(item.seriesId)) cards.push(singleSeasonCard(item));
+      if (anchorOnSeason && isSingle(item.seriesId)) cards.push(singleSeasonCard(item));
       continue;
     }
-    if (item.type === 'series' && isSingle(item.id)) continue;
+    if (item.type === 'series' && isSingle(item.id)) {
+      const season = bySeries.get(item.id);
+      if (!anchorOnSeason && season) cards.push(singleSeasonCard(season));
+      continue;
+    }
     cards.push(toCard(item));
   }
   if (filter === '' || filter === 'series') {

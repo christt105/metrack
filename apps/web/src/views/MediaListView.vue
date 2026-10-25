@@ -21,7 +21,9 @@ const loading = ref(false);
 let ticket = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 
-const cards = computed(() => (page.value ? buildCards(page.value.items, filters.value.type) : []));
+const cards = computed(() =>
+  page.value ? buildCards(page.value.items, filters.value.type, filters.value.sort) : [],
+);
 
 async function load(): Promise<void> {
   const mine = ++ticket;

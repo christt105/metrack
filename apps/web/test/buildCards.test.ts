@@ -65,6 +65,18 @@ describe('buildCards', () => {
     expect(cards.filter((c) => c.title === 'Dan Da Dan')).toHaveLength(1);
   });
 
+  it('places the single-season card by series position, or by season position for rating sorts', () => {
+    const rows = [items[1]!, items[2]!, items[0]!];
+    expect(buildCards(rows, '', 'title').map((c) => c.key)).toEqual(['series-2', 'movie-1']);
+    expect(buildCards(rows, '', 'rating').map((c) => c.key)).toEqual(['series-2', 'movie-1']);
+    const reordered = [items[0]!, items[2]!, items[1]!];
+    expect(buildCards(reordered, '', 'rating').map((c) => c.key)).toEqual(['movie-1', 'series-2']);
+    expect(buildCards([items[0]!, items[1]!, items[2]!], '', 'title').map((c) => c.key)).toEqual([
+      'movie-1',
+      'series-2',
+    ]);
+  });
+
   it('hides the seasons of a multi-season series behind the series', () => {
     const cards = buildCards(items, '');
     expect(cards.map((c) => c.key)).toEqual(['movie-1', 'series-2', 'series-3']);

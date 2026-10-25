@@ -107,8 +107,13 @@ async function clear(kind: ImageKind): Promise<void> {
   aspect-ratio: 2 / 3;
 }
 
+.slot.banner {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+
 .banner .preview {
-  width: min(100%, 360px);
+  width: 100%;
   aspect-ratio: 16 / 9;
 }
 
