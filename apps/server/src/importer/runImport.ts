@@ -16,6 +16,7 @@ import { buildImportPlan } from './buildImportPlan.js';
 import { formatApplyResult } from './formatApplyResult.js';
 import { formatReport } from './formatReport.js';
 import { ImportApplier } from './ImportApplier.js';
+import { LegacyImageIndex } from './LegacyImageIndex.js';
 import { IssueLog } from './IssueLog.js';
 import { readVaultNotes } from './readVaultNotes.js';
 
@@ -23,6 +24,8 @@ export interface ImportOptions {
   vaultDir: string;
   dataDir: string;
   apply: boolean;
+  /** Directories holding images named by the previous Hugo migration script. */
+  imagesDirs?: string[];
   verbose: boolean;
 }
 
@@ -35,9 +38,15 @@ export async function runImport(options: ImportOptions): Promise<string> {
   if (!existsSync(vaultDir) || !statSync(vaultDir).isDirectory()) {
     throw new Error(`Not a directory: ${vaultDir}`);
   }
+  const imagesDirs = (options.imagesDirs ?? []).map((dir) => resolve(dir));
+  for (const dir of imagesDirs) {
+    if (!existsSync(dir) || !statSync(dir).isDirectory())
+      throw new Error(`Not a directory: ${dir}`);
+  }
+  const legacyImages = imagesDirs.length > 0 ? new LegacyImageIndex(imagesDirs) : null;
   const issues = new IssueLog();
   const plan = buildImportPlan(readVaultNotes(vaultDir, issues), vaultDir, issues);
-  const report = formatReport(plan, options.verbose);
+  const report = formatReport(plan, options.verbose, legacyImages);
   if (!options.apply) return report;
 
   const db = openDatabase(join(options.dataDir, 'metrack.db'));
@@ -52,7 +61,7 @@ export async function runImport(options: ImportOptions): Promise<string> {
       unlinked: new UnlinkedTitleRepository(db),
     };
     const store = new ImageStore(db, join(options.dataDir, 'images'));
-    const result = await new ImportApplier(db, targets, store).apply(plan);
+    const result = await new ImportApplier(db, targets, store, undefined, legacyImages).apply(plan);
     return `${report}\n\n${formatApplyResult(result)}`;
   } finally {
     db.close();

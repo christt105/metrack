@@ -14,6 +14,8 @@ export interface ApplyResult {
     localStored: number;
     /** Remote URLs linked to an existing local copy. */
     remoteLinked: number;
+    /** Remote URLs satisfied by importing a file from an images directory. */
+    remoteImported: number;
     /** Remote URLs with no local copy; the cover or banner stays empty. */
     remoteUnavailable: number;
   };
