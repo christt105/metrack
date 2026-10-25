@@ -1,3 +1,5 @@
+import type { TmdbSeasonSummary } from './TmdbSeasonSummary.js';
+
 /** The subset of a TMDB movie or TV details response (with credits appended) that is used. */
 export interface TmdbTitleResponse {
   id: number;
@@ -11,6 +13,7 @@ export interface TmdbTitleResponse {
   poster_path?: string | null;
   backdrop_path?: string | null;
   genres?: { name: string }[];
+  seasons?: TmdbSeasonSummary[];
   credits?: {
     cast?: { name: string; character: string }[];
     crew?: { job: string; name: string }[];
