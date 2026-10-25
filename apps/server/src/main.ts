@@ -22,6 +22,10 @@ import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js'
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { TmdbMovieSource } from './providers/tmdb/TmdbMovieSource.js';
 import { TmdbSeriesSource } from './providers/tmdb/TmdbSeriesSource.js';
+import { BackupJob } from './backup/BackupJob.js';
+import { BackupScheduler } from './backup/BackupScheduler.js';
+import { createBackupService } from './backup/createBackupService.js';
+import { createNotifier } from './notify/createNotifier.js';
 import { MigrationRunner } from './storage/MigrationRunner.js';
 import { migrations } from './storage/migrations/index.js';
 import { TitleProviders } from './titles/TitleProviders.js';
@@ -121,6 +125,20 @@ if (publishConfig) {
   console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
 }
 
+const backupService = createBackupService(config, db);
+const backupJob = new BackupJob(
+  backupService,
+  config.backup.retention,
+  createNotifier(config.ntfy, logger),
+  logger,
+);
+const scheduler = new BackupScheduler(
+  backupService,
+  backupJob,
+  config.backup.intervalHours * 3_600_000,
+  logger,
+);
+
 const app = await buildApp({
   appVersion: config.appVersion,
   migrationRunner,
@@ -129,9 +147,11 @@ const app = await buildApp({
   metadataCache,
   publishQueue,
   edit,
+  backup: { service: backupService, job: backupJob },
 });
 
 const shutdown = async (): Promise<void> => {
+  scheduler.stop();
   await app.close();
   db.close();
   process.exit(0);
@@ -140,4 +160,7 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 await app.listen({ port: config.port, host: config.host });
+if (config.backup.enabled) {
+  scheduler.start();
+}
 console.log(`metrack listening on ${config.host}:${config.port} (schema v${schemaVersion})`);

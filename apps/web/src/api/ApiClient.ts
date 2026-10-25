@@ -22,6 +22,7 @@ import type {
   SeriesDetail,
   UnlinkedTitle,
 } from '@metrack/domain';
+import type { BackupInfo } from './BackupInfo';
 import { ApiRequestError } from './ApiRequestError';
 import { buildQueryString } from './buildQueryString';
 import type { EntityOf } from './EntityOf';
@@ -177,5 +178,13 @@ export class ApiClient {
 
   publish(): Promise<{ status: string; failures: number }> {
     return this.request('POST', '/publish');
+  }
+
+  listBackups(): Promise<BackupInfo[]> {
+    return this.request('GET', '/backups');
+  }
+
+  createBackup(): Promise<BackupInfo> {
+    return this.request('POST', '/backups');
   }
 }

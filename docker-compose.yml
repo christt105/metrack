@@ -10,5 +10,9 @@ services:
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       TMDB_LANGUAGE: ${TMDB_LANGUAGE:-es-ES}
       STEAMGRIDDB_TOKEN: ${STEAMGRIDDB_TOKEN:-}
+      NTFY_URL: ${NTFY_URL:-}
+      NTFY_TOPIC: ${NTFY_TOPIC:-}
+      NTFY_TOKEN: ${NTFY_TOKEN:-}
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-14}
     volumes:
       - ${METRACK_DATA:-./data}:/data
