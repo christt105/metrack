@@ -1,6 +1,7 @@
 import { readList, readText } from './fieldReaders.js';
 import { readArtwork } from './readArtwork.js';
 import { readDescriptiveDate } from './readDescriptiveDate.js';
+import { readSlug } from './readSlug.js';
 import { readTitle } from './readTitle.js';
 import { readTracking } from './readTracking.js';
 import type { IssueLog } from './IssueLog.js';
@@ -26,7 +27,7 @@ export function planSeason(
       episodeCount: null,
       cover: null,
       banner: null,
-      slug: note.name,
+      slug: readSlug(note),
       tags: readList(note.frontmatter.tags),
       ...readTracking(note, issues),
     },

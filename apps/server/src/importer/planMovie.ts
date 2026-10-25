@@ -3,6 +3,7 @@ import { readList, readText } from './fieldReaders.js';
 import { readArtwork } from './readArtwork.js';
 import { readDescriptiveDate } from './readDescriptiveDate.js';
 import { readExternalId } from './readExternalId.js';
+import { readSlug } from './readSlug.js';
 import { readTitle } from './readTitle.js';
 import { readTracking } from './readTracking.js';
 import type { IssueLog } from './IssueLog.js';
@@ -29,7 +30,7 @@ export function planMovie(
     note: null,
     cover: null,
     banner: null,
-    slug: note.name,
+    slug: readSlug(note),
     tags: readList(fm.tags),
     ...readTracking(note, issues),
   };

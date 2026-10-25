@@ -76,6 +76,15 @@ describe('import of export fields', () => {
     expect(targets.videogames.findByIgdbId(4)).toMatchObject({ slug: 'Game', tags: ['rpg'] });
   });
 
+  it('stores no slug for a note name that is not a safe folder name', async () => {
+    const { targets } = await importVault({
+      'Movies/Part #1: Origins.md': note('title: Origins\ntype: movie\ntmdb_id: 1'),
+      'Movies/Amélie (2001).md': note('title: Amélie\ntype: movie\ntmdb_id: 2'),
+    });
+    expect(targets.movies.findByTmdbId(1)?.slug).toBeNull();
+    expect(targets.movies.findByTmdbId(2)?.slug).toBe('Amélie (2001)');
+  });
+
   it('keeps the review of a series that has season notes on the series', async () => {
     const { targets } = await importVault({
       'TVs/Show (2020).md': note(

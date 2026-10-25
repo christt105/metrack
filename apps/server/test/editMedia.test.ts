@@ -51,6 +51,28 @@ describe('creating and reading', () => {
     );
   });
 
+  it('rejects slugs that are not a single safe folder name', async () => {
+    const id = await createMovie();
+    for (const slug of ['../..', '..', '.', '/', '', ' ', 'a/b', 'a\\b', '../../etc/passwd']) {
+      const created = await post('/api/movies', { title: 'x', slug });
+      expect(created.statusCode).toBe(400);
+      expect(created.json().code).toBe('validation_error');
+      const patched = await patch(`/api/movies/${id}`, { slug });
+      expect(patched.statusCode).toBe(400);
+      expect(patched.json().code).toBe('validation_error');
+    }
+  });
+
+  it('accepts slugs like the ones the vault gives', async () => {
+    const id = await createMovie();
+    for (const slug of ['Amélie (2001)', "Ocean's Eleven (2001)", 'Mr. Robot - Season 1']) {
+      const patched = await patch(`/api/movies/${id}`, { slug });
+      expect(patched.statusCode).toBe(200);
+      expect(patched.json().slug).toBe(slug);
+    }
+    expect((await patch(`/api/movies/${id}`, { slug: null })).json().slug).toBeNull();
+  });
+
   it('rejects impossible calendar dates', async () => {
     const response = await post('/api/movies', { title: 'x', releaseDate: '2026-02-30' });
     expect(response.statusCode).toBe(400);
