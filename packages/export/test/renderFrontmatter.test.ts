@@ -28,6 +28,11 @@ describe('renderFrontmatter', () => {
     );
   });
 
+  it('never folds long text', () => {
+    const long = 'word '.repeat(60).trim();
+    expect(renderFrontmatter({ overview: long })).toBe(`---\noverview: ${long}\n---\n`);
+  });
+
   it('rejects dates that are not ISO', () => {
     expect(() => new DateValue('Mar 2024')).toThrow();
   });

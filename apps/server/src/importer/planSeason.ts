@@ -40,7 +40,6 @@ export function hasSeriesTracking(note: VaultNote): boolean {
     readText(fm.date) !== null ||
     readText(fm.rating) !== null ||
     readList(fm.rewatches).length > 0 ||
-    note.body.trim() !== '' ||
     (readText(fm.status) !== null && readText(fm.status)?.toLowerCase() !== 'sin empezar')
   );
 }

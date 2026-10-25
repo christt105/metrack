@@ -19,7 +19,9 @@ function isEmpty(value: unknown): boolean {
 }
 
 function scalar(value: unknown): string {
-  return value instanceof DateValue ? value.iso : stringify(value, { version: '1.1' }).trimEnd();
+  return value instanceof DateValue
+    ? value.iso
+    : stringify(value, { version: '1.1', lineWidth: 0 }).trimEnd();
 }
 
 /**

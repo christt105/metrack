@@ -10,5 +10,6 @@ export const exportFieldsMigration: Migration = {
       db.exec(`ALTER TABLE ${table} ADD COLUMN slug TEXT`);
       db.exec(`ALTER TABLE ${table} ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'`);
     }
+    db.exec('ALTER TABLE series ADD COLUMN review TEXT');
   },
 };

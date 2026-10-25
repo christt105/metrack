@@ -72,7 +72,21 @@ describe('import of export fields', () => {
       tags: ['drama'],
       review: 'Body.',
     });
+    expect(show.review).toBeNull();
     expect(targets.videogames.findByIgdbId(4)).toMatchObject({ slug: 'Game', tags: ['rpg'] });
+  });
+
+  it('keeps the review of a series that has season notes on the series', async () => {
+    const { targets } = await importVault({
+      'TVs/Show (2020).md': note(
+        'title: Show\ntype: tv\ntmdb_id: 2\nstatus: Acabado\nrating: 7',
+        'My thoughts.',
+      ),
+      'Seasons/Show - S1.md': note(
+        'title: S1\ntype: season\nseries: "[[Show (2020)]]"\nseason_number: 1',
+      ),
+    });
+    expect(targets.series.findByTmdbId(2)?.review).toBe('My thoughts.');
   });
 
   it('stores images embedded in a review and rewrites the embed to the stored reference', async () => {

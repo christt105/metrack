@@ -5,3 +5,4 @@ export type { ExportedImageFile } from './ExportedImageFile.js';
 export type { ExportedTextFile } from './ExportedTextFile.js';
 export type { ExportImage } from './ExportImage.js';
 export type { ExportInput } from './ExportInput.js';
+export { fingerprintExport } from './fingerprintExport.js';

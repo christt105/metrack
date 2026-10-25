@@ -47,6 +47,7 @@ const newSeries = (over: Partial<Omit<Series, 'id'>> = {}): Omit<Series, 'id'> =
   banner: null,
   slug: null,
   tags: [],
+  review: null,
   ...over,
 });
 

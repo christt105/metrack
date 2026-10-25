@@ -17,7 +17,7 @@ export const ISSUE_DESCRIPTIONS = {
   'odd-rating': 'Rating that is not a number from 0 to 10; ignored',
   'missing-image': 'Local image that does not exist; ignored',
   'series-tracking-ignored':
-    'Series note with season notes also carries tracking data, which the model does not keep',
+    'Series note with season notes also carries status, date, rating or rewatches, which the model keeps on seasons only',
   'completed-without-date': 'Completed without a `date`, so finished_at stays empty',
 } as const;
 

@@ -81,7 +81,7 @@ describe('buildExport', () => {
   it('gives each season a page linked to the series and keeps the series untracked', () => {
     const files = buildExport({
       ...empty,
-      series: [series()],
+      series: [series({ review: 'About the show' })],
       seasons: [
         season({
           id: 2,
@@ -102,6 +102,7 @@ describe('buildExport', () => {
     const tv = text(files, 'content/tv/Show (2019)/index.md');
     expect(tv).toContain('seasons:\n  - Show - Season 1\n  - Show - Season 2');
     expect(tv).toContain('status: not_started');
+    expect(tv.endsWith('\nAbout the show\n')).toBe(true);
     const second = text(files, 'content/seasons/Show - Season 2/index.md');
     expect(second).toContain('series: Show (2019)');
     expect(second).toContain('season_number: 2');

@@ -40,6 +40,7 @@ export class SeriesRepository extends TableRepository<Series> {
       banner: s.banner,
       slug: s.slug,
       tags: JSON.stringify(s.tags),
+      review: s.review,
     };
   }
 
@@ -61,6 +62,7 @@ export class SeriesRepository extends TableRepository<Series> {
       banner: text(row.banner),
       slug: text(row.slug),
       tags: parseList(row.tags),
+      review: text(row.review),
     };
   }
 }

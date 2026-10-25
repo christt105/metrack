@@ -33,7 +33,7 @@ export function buildSeriesPages(series: Series, seasons: Season[], context: Pag
         seasons: seasonSlugs,
         ...(inline ? trackingFields(inline) : { status: statusKey('planned') }),
       },
-      review: inline?.review ?? null,
+      review: inline ? inline.review : series.review,
       artwork: series,
     },
     context,
