@@ -1,9 +1,11 @@
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
-import { ImageStore } from '../src/images/ImageStore.js';
+import type { FetchFn } from '../src/http/FetchFn.js';
+import { ImageStore, MAX_IMAGE_BYTES } from '../src/images/ImageStore.js';
 import { fakeFetch } from './support/fakeFetch.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { jpeg, png } from './support/sampleImages.js';
@@ -15,6 +17,27 @@ beforeEach(() => {
   db = openTestDatabase();
   dir = join(mkdtempSync(join(tmpdir(), 'metrack-images-')), 'images');
 });
+
+const CHUNK_BYTES = 1024 * 1024;
+
+/** A fetch whose body is an endless stream of 1 MiB chunks; `pulled` counts the chunks read. */
+function endlessFetch(headers: Record<string, string> = {}): {
+  fetch: FetchFn;
+  pulled: () => number;
+} {
+  let pulled = 0;
+  const chunk = new Uint8Array(CHUNK_BYTES);
+  const fetchFn = (() => {
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        controller.enqueue(chunk);
+      },
+    });
+    return Promise.resolve(new Response(body, { headers }));
+  }) as FetchFn;
+  return { fetch: fetchFn, pulled: () => pulled };
+}
 
 const insertMovie = (cover: string | null) =>
   db.prepare('INSERT INTO movie (title, cover) VALUES (?, ?)').run('Movie', cover);
@@ -55,6 +78,39 @@ describe('ImageStore', () => {
     const store = new ImageStore(db, dir, net.fetch);
     await expect(store.download('https://img.test/missing.png')).rejects.toThrow('404');
     await expect(store.download('https://img.test/page')).rejects.toThrow('Unsupported');
+    expect(store.list()).toEqual([]);
+  });
+
+  it('stops reading a body without content-length once it exceeds the limit', async () => {
+    const net = endlessFetch();
+    const store = new ImageStore(db, dir, net.fetch);
+    await expect(store.download('https://img.test/huge.png')).rejects.toThrow('too large');
+    expect(net.pulled()).toBeLessThanOrEqual(MAX_IMAGE_BYTES / CHUNK_BYTES + 3);
+    expect(store.list()).toEqual([]);
+  });
+
+  it('enforces the limit when content-length understates the body', async () => {
+    const net = endlessFetch({ 'content-length': '100' });
+    const store = new ImageStore(db, dir, net.fetch);
+    await expect(store.download('https://img.test/liar.png')).rejects.toThrow('too large');
+    expect(net.pulled()).toBeLessThanOrEqual(MAX_IMAGE_BYTES / CHUNK_BYTES + 3);
+  });
+
+  it('stores identical bytes added concurrently once and answers both callers', async () => {
+    const store = new ImageStore(db, dir);
+    const [a, b] = await Promise.all([store.add(png(5, 5), null), store.add(png(5, 5), null)]);
+    expect(a.hash).toBe(b.hash);
+    expect(store.list()).toHaveLength(1);
+    expect(readdirSync(dir)).toEqual([`${a.hash}.png`]);
+  });
+
+  it('removes its temporary file when the write cannot complete', async () => {
+    const store = new ImageStore(db, dir);
+    const bytes = png(6, 6);
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    mkdirSync(join(dir, `${hash}.png`));
+    await expect(store.add(bytes, null)).rejects.toThrow();
+    expect(readdirSync(dir)).toEqual([`${hash}.png`]);
     expect(store.list()).toEqual([]);
   });
 

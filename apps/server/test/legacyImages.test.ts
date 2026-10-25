@@ -1,10 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { formatReport } from '../src/importer/formatReport.js';
 import { buildImportPlan } from '../src/importer/buildImportPlan.js';
 import { ImageStore } from '../src/images/ImageStore.js';
+import type { ApplyResult } from '../src/importer/ApplyResult.js';
+import { ImageResolver } from '../src/importer/ImageResolver.js';
 import { ImportApplier } from '../src/importer/ImportApplier.js';
 import { IssueLog } from '../src/importer/IssueLog.js';
 import { legacyImageName } from '@metrack/export';
@@ -79,6 +81,69 @@ describe('LegacyImageIndex', () => {
       join(b, 'nested/deeper/steamgriddb_x.png'),
     );
     expect(index.find('https://image.tmdb.org/t/p/original/missing.jpg')).toBeNull();
+  });
+
+  it('terminates on a symlink cycle and still follows linked directories', () => {
+    const dir = writeFiles({ 'cache/tmdb_known.jpg': png(2, 3) });
+    const outside = writeFiles({ 'tmdb_linked.jpg': png(2, 3) });
+    symlinkSync(dir, join(dir, 'cache/loop'));
+    symlinkSync(outside, join(dir, 'linked'));
+    symlinkSync(join(dir, 'missing'), join(dir, 'broken'));
+    const index = new LegacyImageIndex([dir]);
+    expect(index.find('https://image.tmdb.org/t/p/original/known.jpg')).toBe(
+      join(dir, 'cache/tmdb_known.jpg'),
+    );
+    expect(index.find('https://image.tmdb.org/t/p/original/linked.jpg')).toBe(
+      join(dir, 'linked/tmdb_linked.jpg'),
+    );
+  });
+});
+
+describe('ImageResolver', () => {
+  const emptyStats = (): ApplyResult['images'] => ({
+    localStored: 0,
+    remoteLinked: 0,
+    remoteImported: 0,
+    remoteUnavailable: 0,
+  });
+
+  it('registers every URL whose bytes were already stored, so a second run only links', async () => {
+    const first = 'https://image.tmdb.org/t/p/original/first.jpg';
+    const second = 'https://image.tmdb.org/t/p/original/second.jpg';
+    const legacy = new LegacyImageIndex([
+      writeFiles({ 'tmdb_first.jpg': png(4, 4), 'tmdb_second.jpg': png(4, 4) }),
+    ]);
+    const dir = mkdtempSync(join(tmpdir(), 'metrack-images-'));
+    created.push(dir);
+    const store = new ImageStore(openTestDatabase(), dir);
+    const resolveBoth = async (stats: ApplyResult['images']): Promise<(string | null)[]> => {
+      const resolver = new ImageResolver(store, stats, [], legacy);
+      return [
+        await resolver.resolve({ kind: 'remote', url: first }, 'a.md'),
+        await resolver.resolve({ kind: 'remote', url: second }, 'b.md'),
+      ];
+    };
+
+    const firstRun = emptyStats();
+    const refs = await resolveBoth(firstRun);
+    expect(firstRun).toMatchObject({ remoteImported: 2, remoteLinked: 0 });
+    expect(refs[1]).toBe(refs[0]);
+    expect(store.list()).toHaveLength(1);
+    expect(store.findBySourceUrl(second)?.ref).toBe(refs[0]);
+
+    const secondRun = emptyStats();
+    expect(await resolveBoth(secondRun)).toEqual(refs);
+    expect(secondRun).toMatchObject({ remoteImported: 0, remoteLinked: 2 });
+  });
+
+  it('forgets the extra URLs when the image is deleted', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'metrack-images-'));
+    created.push(dir);
+    const store = new ImageStore(openTestDatabase(), dir);
+    const image = await store.add(png(3, 3), 'https://img.test/a.png');
+    await store.add(png(3, 3), 'https://img.test/b.png');
+    await store.delete(image.hash);
+    expect(store.findBySourceUrl('https://img.test/b.png')).toBeUndefined();
   });
 });
 

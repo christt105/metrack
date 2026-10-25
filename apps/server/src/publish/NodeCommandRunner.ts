@@ -8,7 +8,7 @@ export class NodeCommandRunner implements CommandRunner {
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, {
         cwd: options.cwd,
-        env: { ...process.env, ...options.env },
+        env: { ...parentEnv(options.inheritEnv), ...options.env },
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       let output = '';
@@ -26,4 +26,14 @@ export class NodeCommandRunner implements CommandRunner {
       });
     });
   }
+}
+
+function parentEnv(names: readonly string[] | undefined): NodeJS.ProcessEnv {
+  if (names === undefined) return process.env;
+  return Object.fromEntries(
+    names.flatMap((name) => {
+      const value = process.env[name];
+      return value === undefined ? [] : [[name, value]];
+    }),
+  );
 }
