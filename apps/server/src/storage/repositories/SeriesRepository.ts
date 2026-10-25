@@ -8,6 +8,14 @@ export class SeriesRepository extends TableRepository<Series> {
     super(db, 'series');
   }
 
+  findByTmdbId(tmdbId: number): Series | undefined {
+    return this.findOneBy('tmdb_id', tmdbId);
+  }
+
+  findByTvdbId(tvdbId: number): Series | undefined {
+    return this.findOneBy('tvdb_id', tvdbId);
+  }
+
   listFollowed(): Series[] {
     return this.db
       .prepare('SELECT * FROM series WHERE follow = 1 ORDER BY id')

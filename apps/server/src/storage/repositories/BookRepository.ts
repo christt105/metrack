@@ -8,6 +8,14 @@ export class BookRepository extends TableRepository<Book> {
     super(db, 'book');
   }
 
+  findByOpenLibraryId(openLibraryId: string): Book | undefined {
+    return this.findOneBy('openlibrary_id', openLibraryId);
+  }
+
+  findByIsbn(isbn: string): Book | undefined {
+    return this.findOneBy('isbn', isbn);
+  }
+
   protected toRow(b: Omit<Book, 'id'>): RowValues {
     return {
       openlibrary_id: b.openLibraryId,

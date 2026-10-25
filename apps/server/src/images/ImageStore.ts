@@ -137,7 +137,8 @@ export class ImageStore {
     return orphans;
   }
 
-  private findBySourceUrl(url: string): StoredImage | undefined {
+  /** The stored copy of a URL, without ever hitting the network. */
+  findBySourceUrl(url: string): StoredImage | undefined {
     const row = this.db.prepare('SELECT * FROM image WHERE source_url = ? LIMIT 1').get(url);
     return row ? toImage(row) : undefined;
   }

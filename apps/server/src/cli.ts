@@ -1,39 +1,43 @@
-import { join } from 'node:path';
-import { BackupJob } from './backup/BackupJob.js';
-import { createBackupService } from './backup/createBackupService.js';
+import { parseArgs } from 'node:util';
 import { loadConfig } from './config/loadConfig.js';
-import { createNotifier } from './notify/createNotifier.js';
-import { openDatabase } from './storage/openDatabase.js';
+import { runImport } from './importer/runImport.js';
 
-const usage = 'Usage: cli.js <list | create | restore <backup-name>>';
+const USAGE = `Usage: metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>]
 
-const config = loadConfig(process.env);
-const db = openDatabase(join(config.dataDir, 'metrack.db'));
-const service = createBackupService(config, db);
-const [command, argument] = process.argv.slice(2);
+  Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
+  With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).`;
 
-try {
-  if (command === 'list') {
-    for (const info of service.list()) {
-      console.log(`${info.name}  ${info.sizeBytes} bytes  images=${info.hasImages}`);
-    }
-  } else if (command === 'create') {
-    const job = new BackupJob(
-      service,
-      config.backup.retention,
-      createNotifier(config.ntfy, console),
-      console,
-    );
-    console.log((await job.run()).name);
-  } else if (command === 'restore' && argument) {
-    db.close();
-    service.restore(argument);
-    console.log(`restored ${argument}; start the server again`);
-  } else {
-    console.error(usage);
-    process.exitCode = 2;
+async function main(argv: string[]): Promise<number> {
+  const { positionals, values } = parseArgs({
+    args: argv,
+    allowPositionals: true,
+    options: {
+      apply: { type: 'boolean', default: false },
+      verbose: { type: 'boolean', default: false },
+      'data-dir': { type: 'string' },
+      help: { type: 'boolean', short: 'h', default: false },
+    },
+  });
+  const [command, vaultDir] = positionals;
+  if (values.help || command !== 'import' || !vaultDir || positionals.length > 2) {
+    console.error(USAGE);
+    return values.help ? 0 : 2;
   }
-} catch (error) {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
+  const config = loadConfig(process.env);
+  const output = await runImport({
+    vaultDir,
+    dataDir: values['data-dir'] ?? config.dataDir,
+    apply: values.apply,
+    verbose: values.verbose,
+  });
+  console.log(output);
+  return 0;
 }
+
+main(process.argv.slice(2)).then(
+  (code) => process.exit(code),
+  (error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  },
+);

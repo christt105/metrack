@@ -8,6 +8,14 @@ export class VideogameRepository extends TableRepository<Videogame> {
     super(db, 'videogame');
   }
 
+  findByIgdbId(igdbId: number): Videogame | undefined {
+    return this.findOneBy('igdb_id', igdbId);
+  }
+
+  findBySteamAppId(steamAppId: string): Videogame | undefined {
+    return this.findOneBy('steam_appid', steamAppId);
+  }
+
   protected toRow(g: Omit<Videogame, 'id'>): RowValues {
     return {
       igdb_id: g.igdbId,
