@@ -5,8 +5,10 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { createHealthReport } from '@metrack/domain';
 import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
+import { registerPublishRoutes } from './registerPublishRoutes.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
+import type { PublishQueue } from '../publish/PublishQueue.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
 
 export interface AppDeps {
@@ -15,6 +17,7 @@ export interface AppDeps {
   webDir?: string;
   imageStore?: ImageStore;
   metadataCache?: MetadataCache;
+  publishQueue?: PublishQueue;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -26,6 +29,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   if (deps.imageStore) registerImageRoutes(app, deps.imageStore);
   if (deps.metadataCache) registerMetadataRoutes(app, deps.metadataCache);
+  if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
 
   const webDir = deps.webDir ? resolve(deps.webDir) : undefined;
   if (webDir && existsSync(webDir)) {
