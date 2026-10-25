@@ -47,3 +47,4 @@ export type { ResolveUnlinkedRequest } from './api/ResolveUnlinkedRequest.js';
 export type { ResolveUnlinkedResponse } from './api/ResolveUnlinkedResponse.js';
 export type { RefreshResult } from './api/RefreshResult.js';
 export type { EntityRef } from './api/EntityRef.js';
+export type { ImageCandidateList } from './api/ImageCandidateList.js';
