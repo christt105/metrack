@@ -19,7 +19,7 @@ describe('MigrationRunner', () => {
   it('rolls back a failing migration', () => {
     const db = new DatabaseSync(':memory:');
     const failing: Migration = {
-      version: 2,
+      version: migrations.length + 1,
       name: 'failing',
       up: (d) => {
         d.exec('CREATE TABLE t (id INTEGER)');
@@ -28,13 +28,13 @@ describe('MigrationRunner', () => {
     };
     const runner = new MigrationRunner(db, [...migrations, failing]);
     expect(() => runner.run()).toThrow('boom');
-    expect(runner.currentVersion()).toBe(1);
+    expect(runner.currentVersion()).toBe(migrations.length);
     const row = db.prepare("SELECT name FROM sqlite_master WHERE name = 't'").get();
     expect(row).toBeUndefined();
   });
 
   it('rejects non-contiguous versions', () => {
-    const gap: Migration = { version: 3, name: 'gap', up: () => {} };
+    const gap: Migration = { version: migrations.length + 2, name: 'gap', up: () => {} };
     expect(() => new MigrationRunner(new DatabaseSync(':memory:'), [...migrations, gap])).toThrow();
   });
 });
