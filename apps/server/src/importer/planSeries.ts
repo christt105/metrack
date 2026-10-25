@@ -4,6 +4,7 @@ import { readArtwork } from './readArtwork.js';
 import { readDescriptiveDate } from './readDescriptiveDate.js';
 import { readExternalId } from './readExternalId.js';
 import type { InlineImage } from './InlineImage.js';
+import { readSlug } from './readSlug.js';
 import { readTitle } from './readTitle.js';
 import { readTracking } from './readTracking.js';
 import type { IssueLog } from './IssueLog.js';
@@ -32,7 +33,7 @@ export function planSeriesEntity(
     note: null,
     cover: null,
     banner: null,
-    slug: note.name,
+    slug: readSlug(note),
     tags: readList(fm.tags),
     review: hasSeasonNotes && note.body.trim() !== '' ? note.body.trim() : null,
   };

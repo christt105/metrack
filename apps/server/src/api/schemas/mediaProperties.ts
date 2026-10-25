@@ -3,6 +3,7 @@ import {
   DATE_PATTERN,
   nullableDate,
   nullableInteger,
+  nullableSlug,
   nullableString,
   stringList,
   title,
@@ -19,7 +20,7 @@ const tracking: Properties = {
   rewatches: { type: 'array', items: { type: 'string', pattern: DATE_PATTERN } },
 };
 
-const common: Properties = { slug: nullableString, tags: stringList };
+const common: Properties = { slug: nullableSlug, tags: stringList };
 
 /** Editable fields of each collection. Images are changed through the image routes. */
 export const MEDIA_PROPERTIES: Record<Collection, Properties> = {

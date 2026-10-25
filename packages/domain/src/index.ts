@@ -20,6 +20,8 @@ export { matchSeasonsByAirDate } from './matchSeasonsByAirDate.js';
 export { applySeasonOverrides } from './applySeasonOverrides.js';
 export { canTransition, transitionStatus } from './transitionStatus.js';
 export { addRewatch } from './addRewatch.js';
+export { SLUG_PATTERN } from './SLUG_PATTERN.js';
+export { isSafeSlug } from './isSafeSlug.js';
 export type { ApiErrorBody } from './api/ApiErrorBody.js';
 export { COLLECTIONS, MEDIA_TYPE_OF_COLLECTION } from './api/collections.js';
 export type { Collection } from './api/collections.js';
