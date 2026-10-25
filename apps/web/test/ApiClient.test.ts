@@ -39,6 +39,12 @@ describe('ApiClient', () => {
     });
   });
 
+  it('returns a degraded health report answered with 503', async () => {
+    const report = { status: 'degraded', appVersion: 'dev', schemaVersion: 0 };
+    const { client } = recorder(new Response(JSON.stringify(report), { status: 503 }));
+    expect(await client.health()).toEqual(report);
+  });
+
   it('maps a 204 to undefined and a thrown fetch to a network error', async () => {
     const { client } = recorder(new Response(null, { status: 204 }));
     expect(await client.remove('books', 1)).toBeUndefined();

@@ -37,7 +37,12 @@ type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDet
 export class ApiClient {
   constructor(private readonly fetchFn: typeof fetch = (...args) => fetch(...args)) {}
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    acceptedStatuses: readonly number[] = [],
+  ): Promise<T> {
     const init: RequestInit = { method };
     if (body !== undefined) {
       init.headers = { 'content-type': 'application/json' };
@@ -53,7 +58,9 @@ export class ApiClient {
         'network_error',
       );
     }
-    if (!response.ok) throw await this.toError(response);
+    if (!response.ok && !acceptedStatuses.includes(response.status)) {
+      throw await this.toError(response);
+    }
     if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
   }
@@ -76,8 +83,9 @@ export class ApiClient {
     }
   }
 
+  /** A degraded service answers 503 with the same report, which is returned rather than thrown. */
   health(): Promise<HealthReport> {
-    return this.request('GET', '/health');
+    return this.request('GET', '/health', undefined, [503]);
   }
 
   listMedia(query: MediaQuery): Promise<MediaPage> {

@@ -97,7 +97,7 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 ## Publishing and health
 
 - `POST /api/publish`: queues a publish and answers 202 `{ "status": "queued", "failures": n }`.
-- `GET /api/health`: `HealthReport`.
+- `GET /api/health`: `HealthReport`. Answers 200 when `status` is `ok` and 503 with the same body when it is `degraded`, so the container health check fails.
 
 ## Backups
 

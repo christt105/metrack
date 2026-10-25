@@ -45,9 +45,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
   registerErrorHandler(app);
 
-  app.get('/api/health', async () =>
-    createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion()),
-  );
+  app.get('/api/health', async (_request, reply) => {
+    const report = createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion());
+    return reply.code(report.status === 'ok' ? 200 : 503).send(report);
+  });
 
   if (deps.imageStore) registerImageRoutes(app, deps.imageStore);
   if (deps.metadataCache) registerMetadataRoutes(app, deps.metadataCache, deps.edit?.editor);
