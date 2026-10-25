@@ -2,6 +2,7 @@ import type { Book } from '@metrack/domain';
 import { readInteger, readList, readText } from './fieldReaders.js';
 import { parseImageSource } from './parseImageSource.js';
 import { readDescriptiveDate } from './readDescriptiveDate.js';
+import { readInlineImages } from './readInlineImages.js';
 import { readTitle } from './readTitle.js';
 import { readTracking } from './readTracking.js';
 import type { IssueLog } from './IssueLog.js';
@@ -29,6 +30,8 @@ export function planBook(
     genres: readList(fm.genres),
     note: null,
     cover: null,
+    slug: note.name,
+    tags: readList(fm.tags),
     ...readTracking(note, issues),
   };
   return {
@@ -36,5 +39,6 @@ export function planBook(
     entity,
     cover: parseImageSource(fm.cover, 'cover', vaultDir, note.path, issues),
     banner: null,
+    inline: readInlineImages(note, vaultDir, issues),
   };
 }

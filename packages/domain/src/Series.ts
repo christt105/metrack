@@ -1,6 +1,9 @@
 import type { Artwork } from './Artwork.js';
 
-/** Groups seasons and holds descriptive metadata. It carries no viewing data. */
+/**
+ * Groups seasons and holds descriptive metadata. Status, dates and rating live on the seasons;
+ * the series only has a free-text review.
+ */
 export interface Series extends Artwork {
   id: number;
   tmdbId: number | null;
@@ -14,4 +17,8 @@ export interface Series extends Artwork {
   cast: string[];
   follow: boolean;
   note: string | null;
+  /** File name the item had in the vault. It keeps exported page addresses stable. */
+  slug: string | null;
+  tags: string[];
+  review: string | null;
 }

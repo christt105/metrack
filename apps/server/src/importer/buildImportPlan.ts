@@ -108,10 +108,10 @@ export function buildImportPlan(
   const unlinkedSeriesNames = new Set<string>();
   const series: PlannedSeries[] = [];
   for (const note of byKind('tv')) {
-    const base = planSeriesEntity(note, vaultDir, issues);
+    const seasonNotes = seasonNotesBySeries.get(note.name) ?? [];
+    const base = planSeriesEntity(note, vaultDir, issues, seasonNotes.length > 0);
     const { tmdbId, tvdbId } = base.entity;
     const key = tmdbId !== null ? `tmdb:${tmdbId}` : tvdbId !== null ? `tvdb:${tvdbId}` : null;
-    const seasonNotes = seasonNotesBySeries.get(note.name) ?? [];
     if (key === null) {
       issues.add('missing-id', note.path, 'tmdb_id');
       unlinked.push(toUnlinked('series', base.entity.title, base.entity.firstAirDate, note));
@@ -155,7 +155,7 @@ export function buildImportPlan(
     seasons.sort((a, b) => a.entity.number - b.entity.number);
 
     const implicitSeason = seasonNotes.length === 0;
-    if (implicitSeason) seasons.push(planImplicitSeason(note, base.entity, issues));
+    if (implicitSeason) seasons.push(planImplicitSeason(note, base.entity, base.inline, issues));
     else if (hasSeriesTracking(note)) issues.add('series-tracking-ignored', note.path);
     series.push({ ...base, seasons, implicitSeason });
   }

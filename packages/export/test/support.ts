@@ -1,0 +1,110 @@
+import type { Book, Movie, Season, Series, Videogame } from '@metrack/domain';
+
+const tracking = {
+  status: 'planned' as const,
+  startedAt: null,
+  finishedAt: null,
+  rating: null,
+  review: null,
+  rewatches: [],
+};
+
+export const movie = (over: Partial<Movie> = {}): Movie => ({
+  id: 1,
+  tmdbId: 10,
+  jellyfinId: null,
+  title: 'Alpha',
+  originalTitle: null,
+  releaseDate: '2020-05-06',
+  overview: 'An overview',
+  genres: ['Drama'],
+  cast: [],
+  director: null,
+  note: null,
+  cover: null,
+  banner: null,
+  slug: 'Alpha (2020)',
+  tags: [],
+  ...tracking,
+  ...over,
+});
+
+export const series = (over: Partial<Series> = {}): Series => ({
+  id: 1,
+  tmdbId: 20,
+  tvdbId: null,
+  jellyfinId: null,
+  title: 'Show',
+  originalTitle: null,
+  firstAirDate: '2019-01-01',
+  overview: null,
+  genres: [],
+  cast: [],
+  follow: false,
+  note: null,
+  cover: null,
+  banner: null,
+  slug: 'Show (2019)',
+  tags: ['anime'],
+  review: null,
+  ...over,
+});
+
+export const season = (over: Partial<Season> = {}): Season => ({
+  id: 1,
+  seriesId: 1,
+  number: 1,
+  tmdbSeasonNumber: 1,
+  jellyfinId: null,
+  title: 'Show - Season 1',
+  overview: null,
+  firstAirDate: null,
+  episodeCount: null,
+  cover: null,
+  banner: null,
+  slug: 'Show - Season 1',
+  tags: [],
+  ...tracking,
+  ...over,
+});
+
+export const game = (over: Partial<Videogame> = {}): Videogame => ({
+  id: 1,
+  igdbId: 5,
+  steamAppId: '730',
+  steamGridDbId: null,
+  title: 'Game',
+  releaseDate: null,
+  overview: null,
+  genres: [],
+  developer: 'Dev',
+  platforms: ['PC'],
+  note: null,
+  cover: null,
+  banner: null,
+  slug: 'Game',
+  tags: [],
+  ...tracking,
+  ...over,
+});
+
+export const book = (over: Partial<Book> = {}): Book => ({
+  id: 1,
+  openLibraryId: 'OL1',
+  isbn: null,
+  title: 'Book',
+  authors: ['A'],
+  publisher: null,
+  pageCount: null,
+  releaseDate: null,
+  overview: null,
+  genres: [],
+  cover: null,
+  note: null,
+  slug: 'Book',
+  tags: [],
+  ...tracking,
+  ...over,
+});
+
+export const empty = { movies: [], series: [], seasons: [], videogames: [], books: [], images: [] };

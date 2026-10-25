@@ -5,8 +5,10 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { createHealthReport } from '@metrack/domain';
 import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
+import { registerPublishRoutes } from './registerPublishRoutes.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
+import type { PublishQueue } from '../publish/PublishQueue.js';
 import { registerBackupRoutes } from './registerBackupRoutes.js';
 import type { BackupJob } from '../backup/BackupJob.js';
 import type { BackupService } from '../backup/BackupService.js';
@@ -18,6 +20,7 @@ export interface AppDeps {
   webDir?: string;
   imageStore?: ImageStore;
   metadataCache?: MetadataCache;
+  publishQueue?: PublishQueue;
   backup?: { service: BackupService; job: BackupJob };
 }
 
@@ -30,6 +33,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   if (deps.imageStore) registerImageRoutes(app, deps.imageStore);
   if (deps.metadataCache) registerMetadataRoutes(app, deps.metadataCache);
+  if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
   if (deps.backup) {
     registerBackupRoutes(app, deps.backup);
   }

@@ -11,7 +11,7 @@ import type { Tally } from './Tally.js';
 
 export const IMPORT_SOURCE = 'obsidian-import';
 
-type Resolved = { cover: string | null; banner: string | null };
+type Resolved = { cover: string | null; banner: string | null; review: string | null };
 
 /**
  * Writes an import plan through the repositories. Repeating it is safe: rows are matched by their
@@ -47,6 +47,7 @@ export class ImportApplier {
       images.set(slot, {
         cover: await resolver.resolve(slot.cover, slot.path),
         banner: await resolver.resolve(slot.banner, slot.path),
+        review: await this.embedImages(resolver, slot),
       });
     }
 
@@ -59,6 +60,19 @@ export class ImportApplier {
       throw error;
     }
     return result;
+  }
+
+  private async embedImages(
+    resolver: ImageResolver,
+    slot: PlannedEntity<unknown>,
+  ): Promise<string | null> {
+    let review = (slot.entity as { review?: string | null }).review ?? null;
+    if (review === null) return null;
+    for (const image of slot.inline) {
+      const ref = await resolver.resolve({ kind: 'local', path: image.path }, slot.path);
+      if (ref !== null) review = review.replaceAll(image.embed, `![${image.alt}](${ref})`);
+    }
+    return review;
   }
 
   private write(
@@ -110,7 +124,11 @@ export class ImportApplier {
       upsert(
         result.books,
         existing,
-        { ...slot.entity, cover: images.get(slot)?.cover ?? null },
+        {
+          ...slot.entity,
+          cover: images.get(slot)?.cover ?? null,
+          review: images.get(slot)?.review ?? slot.entity.review,
+        },
         (e) => books.create(e),
         (id, p) => books.update(id, p),
       );
@@ -180,6 +198,7 @@ function nonNull(resolved: Resolved | undefined): Partial<Resolved> {
   return {
     ...(resolved?.cover ? { cover: resolved.cover } : {}),
     ...(resolved?.banner ? { banner: resolved.banner } : {}),
+    ...(resolved?.review ? { review: resolved.review } : {}),
   };
 }
 

@@ -11,9 +11,10 @@ Self-hosted media tracker. TypeScript monorepo (npm workspaces), single Docker c
 ## Structure
 
 - `packages/domain`: pure logic. No HTTP, no database, no I/O. Built with tsc to `dist`, consumed by the apps.
+- `packages/export`: pure exporter from stored data to the Hugo content tree (plus the redirect pages for the old site). No database, no disk; depends on domain and `yaml`.
 - `apps/server`: `config/` (env), `storage/` (SQLite via `node:sqlite`, migrations), `backup/` (scheduled backups, restore), `notify/` (ntfy alerts), `api/` (Fastify). Wiring happens only in `src/main.ts`.
 - `apps/web`: Vue 3 + Vite; talks to the server only through `src/api`.
-- Dependencies point inward: web and server depend on domain, domain depends on nothing.
+- Dependencies point inward: web and server depend on domain and export, export depends on domain, domain depends on nothing.
 
 ## Conventions
 

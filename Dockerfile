@@ -2,6 +2,7 @@ FROM node:22-slim AS build
 WORKDIR /repo
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/domain/package.json packages/domain/
+COPY packages/export/package.json packages/export/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 RUN npm ci
@@ -22,6 +23,8 @@ COPY --from=build /repo/package.json ./package.json
 COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/packages/domain/package.json ./packages/domain/package.json
 COPY --from=build /repo/packages/domain/dist ./packages/domain/dist
+COPY --from=build /repo/packages/export/package.json ./packages/export/package.json
+COPY --from=build /repo/packages/export/dist ./packages/export/dist
 COPY --from=build /repo/apps/server/package.json ./apps/server/package.json
 COPY --from=build /repo/apps/server/dist ./apps/server/dist
 COPY --from=build /repo/apps/web/dist ./web

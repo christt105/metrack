@@ -13,4 +13,7 @@ export interface Book extends Tracking {
   genres: string[];
   cover: string | null;
   note: string | null;
+  /** File name the item had in the vault. It keeps exported page addresses stable. */
+  slug: string | null;
+  tags: string[];
 }

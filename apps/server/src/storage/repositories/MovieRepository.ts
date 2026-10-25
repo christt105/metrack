@@ -26,6 +26,8 @@ export class MovieRepository extends TableRepository<Movie> {
       note: m.note,
       cover: m.cover,
       banner: m.banner,
+      slug: m.slug,
+      tags: JSON.stringify(m.tags),
       ...trackingToRow(m),
     };
   }
@@ -45,6 +47,8 @@ export class MovieRepository extends TableRepository<Movie> {
       note: text(row.note),
       cover: text(row.cover),
       banner: text(row.banner),
+      slug: text(row.slug),
+      tags: parseList(row.tags),
       ...trackingFromRow(row),
     };
   }

@@ -11,9 +11,9 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @metrack/domain && npm run build -w @metrack/server && npm run build -w @metrack/web",
-    "typecheck": "npm run build -w @metrack/domain && npm run typecheck --workspaces --if-present",
-    "test": "npm run build -w @metrack/domain && npm run test --workspaces --if-present",
+    "build": "npm run build -w @metrack/domain && npm run build -w @metrack/export && npm run build -w @metrack/server && npm run build -w @metrack/web",
+    "typecheck": "npm run build -w @metrack/domain && npm run build -w @metrack/export && npm run typecheck --workspaces --if-present",
+    "test": "npm run build -w @metrack/domain && npm run build -w @metrack/export && npm run test --workspaces --if-present",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "dev:server": "npm run dev -w @metrack/server",

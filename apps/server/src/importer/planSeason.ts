@@ -26,6 +26,8 @@ export function planSeason(
       episodeCount: null,
       cover: null,
       banner: null,
+      slug: note.name,
+      tags: readList(note.frontmatter.tags),
       ...readTracking(note, issues),
     },
     ...readArtwork(note, vaultDir, issues),
@@ -38,7 +40,6 @@ export function hasSeriesTracking(note: VaultNote): boolean {
     readText(fm.date) !== null ||
     readText(fm.rating) !== null ||
     readList(fm.rewatches).length > 0 ||
-    note.body.trim() !== '' ||
     (readText(fm.status) !== null && readText(fm.status)?.toLowerCase() !== 'sin empezar')
   );
 }

@@ -20,6 +20,19 @@ describe('readImageSize', () => {
     });
   });
 
+  it('reads BMP dimensions, including bottom-up files', () => {
+    const bmp = Buffer.alloc(54);
+    bmp.write('BM', 0, 'ascii');
+    bmp.writeInt32LE(320, 18);
+    bmp.writeInt32LE(-240, 22);
+    expect(readImageSize(bmp)).toMatchObject({
+      mimeType: 'image/bmp',
+      extension: 'bmp',
+      width: 320,
+      height: 240,
+    });
+  });
+
   it.each([
     ['lossy', webpLossy(500, 750)],
     ['lossless', webpLossless(500, 750)],

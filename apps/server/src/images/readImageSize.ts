@@ -5,13 +5,18 @@ const JPEG_SOF_MARKERS = new Set([
 ]);
 
 /**
- * Reads the format and pixel dimensions of a PNG, JPEG, WebP or GIF from its header.
+ * Reads the format and pixel dimensions of a PNG, JPEG, WebP, GIF or BMP from its header.
  * Throws when the bytes are not one of those formats or the header is truncated.
  */
 export function readImageSize(bytes: Uint8Array): ImageSize {
   const buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const size =
-    readPng(buffer) ?? readJpeg(buffer) ?? readWebp(buffer) ?? readGif(buffer) ?? undefined;
+    readPng(buffer) ??
+    readJpeg(buffer) ??
+    readWebp(buffer) ??
+    readGif(buffer) ??
+    readBmp(buffer) ??
+    undefined;
   if (!size || size.width < 1 || size.height < 1) {
     throw new Error('Unsupported or corrupt image');
   }
@@ -37,6 +42,16 @@ function readGif(b: Buffer): ImageSize | null {
     extension: 'gif',
     width: b.readUInt16LE(6),
     height: b.readUInt16LE(8),
+  };
+}
+
+function readBmp(b: Buffer): ImageSize | null {
+  if (b.length < 26 || b.toString('ascii', 0, 2) !== 'BM') return null;
+  return {
+    mimeType: 'image/bmp',
+    extension: 'bmp',
+    width: Math.abs(b.readInt32LE(18)),
+    height: Math.abs(b.readInt32LE(22)),
   };
 }
 
