@@ -36,6 +36,41 @@ describe('transitionStatus', () => {
     });
   });
 
+  it('keeps the first finish when a completed item goes back to in progress', () => {
+    const done = transitionStatus(planned, 'completed', '2026-03-15');
+    expect(transitionStatus(done, 'in_progress', '2026-05-01')).toMatchObject({
+      status: 'in_progress',
+      startedAt: '2026-03-15',
+      finishedAt: '2026-03-15',
+      rewatches: [],
+    });
+  });
+
+  it('records completing an already finished item again as a rewatch', () => {
+    const done = { ...planned, status: 'completed' as const, finishedAt: '2026-03-15' };
+    const again = transitionStatus(done, 'in_progress', '2026-05-01');
+    expect(transitionStatus(again, 'completed', '2026-05-09')).toMatchObject({
+      status: 'completed',
+      finishedAt: '2026-03-15',
+      rewatches: ['2026-05-09'],
+    });
+    const paused = transitionStatus(again, 'paused', '2026-05-02');
+    const earlier = { ...paused, rewatches: ['2026-06-01'] };
+    expect(transitionStatus(earlier, 'completed', '2026-04-20').rewatches).toEqual([
+      '2026-04-20',
+      '2026-06-01',
+    ]);
+  });
+
+  it('does not record a rewatch when completed again on the finish day', () => {
+    const done = transitionStatus(planned, 'completed', '2026-03-15');
+    const undone = transitionStatus(done, 'in_progress', '2026-03-15');
+    expect(transitionStatus(undone, 'completed', '2026-03-15')).toMatchObject({
+      finishedAt: '2026-03-15',
+      rewatches: [],
+    });
+  });
+
   it('rejects disallowed transitions and does not mutate', () => {
     expect(canTransition('completed', 'paused')).toBe(false);
     expect(() => transitionStatus(planned, 'paused', '2026-01-02')).toThrow();

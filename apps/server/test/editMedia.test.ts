@@ -161,6 +161,22 @@ describe('editing', () => {
     expect(response.json()).toMatchObject({ startedAt: '2025-12-01', finishedAt: '2025-12-24' });
   });
 
+  it('keeps the first finish and records a rewatch when a finished movie is completed again', async () => {
+    const id = await createMovie({
+      status: 'completed',
+      startedAt: '2026-01-02',
+      finishedAt: '2026-01-10',
+    });
+    const restarted = await patch(`/api/movies/${id}`, { status: 'in_progress' });
+    expect(restarted.json()).toMatchObject({ status: 'in_progress', finishedAt: '2026-01-10' });
+    const completed = await patch(`/api/movies/${id}`, { status: 'completed' });
+    expect(completed.json()).toMatchObject({
+      status: 'completed',
+      finishedAt: '2026-01-10',
+      rewatches: ['2026-03-05'],
+    });
+  });
+
   it('rejects a finish date before the start date', async () => {
     const id = await createMovie({ startedAt: '2026-02-01' });
     const response = await patch(`/api/movies/${id}`, { finishedAt: '2026-01-01' });
