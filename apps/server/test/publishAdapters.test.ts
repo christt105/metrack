@@ -38,14 +38,24 @@ describe('loadPublishConfig', () => {
     expect(loadPublishConfig(env).config).toEqual({
       siteTemplateDir: '/site',
       hugoBinary: 'hugo',
+      wranglerBinary: 'wrangler',
       cloudflareApiToken: 'token',
       cloudflareAccountId: 'account',
       cloudflareProject: 'metrack-site',
       cloudflareBranch: 'main',
     });
     expect(
-      loadPublishConfig({ ...env, HUGO_BIN: '/opt/hugo', CLOUDFLARE_PAGES_BRANCH: 'live' }).config,
-    ).toMatchObject({ hugoBinary: '/opt/hugo', cloudflareBranch: 'live' });
+      loadPublishConfig({
+        ...env,
+        HUGO_BIN: '/opt/hugo',
+        WRANGLER_BIN: '/opt/wrangler',
+        CLOUDFLARE_PAGES_BRANCH: 'live',
+      }).config,
+    ).toMatchObject({
+      hugoBinary: '/opt/hugo',
+      wranglerBinary: '/opt/wrangler',
+      cloudflareBranch: 'live',
+    });
   });
 });
 
@@ -57,6 +67,7 @@ describe('CloudflarePagesPublisher', () => {
     };
     await new CloudflarePagesPublisher(
       {
+        wranglerBinary: 'wrangler',
         cloudflareApiToken: 'token',
         cloudflareAccountId: 'account',
         cloudflareProject: 'metrack-site',
@@ -65,10 +76,8 @@ describe('CloudflarePagesPublisher', () => {
       runner,
     ).publish('/built');
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.command).toBe('npx');
+    expect(calls[0]!.command).toBe('wrangler');
     expect(calls[0]!.args).toEqual([
-      '--yes',
-      'wrangler@4.152.0',
       'pages',
       'deploy',
       '/built',
