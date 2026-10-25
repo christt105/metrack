@@ -31,6 +31,10 @@ describe('loadConfig', () => {
     });
     expect(config.backup).toMatchObject({ enabled: false, retention: 3, intervalHours: 6 });
     expect(() => loadConfig({ BACKUP_RETENTION: '0' })).toThrow('Invalid BACKUP_RETENTION');
+    expect(loadConfig({ DATA_DIR: '/data', BACKUP_DIR: '/mnt/backups' }).backup.dir).toBe(
+      '/mnt/backups',
+    );
+    expect(loadConfig({ DATA_DIR: '/data', BACKUP_DIR: '' }).backup.dir).toBe('/data/backups');
   });
 
   it('defaults release alerts to Madrid time from 8 and validates the hour', () => {

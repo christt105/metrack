@@ -173,7 +173,7 @@ describe('backup and restore of the whole data directory', () => {
     db.exec('DELETE FROM series; DELETE FROM movie; DELETE FROM image; DELETE FROM unlinked_title');
     rmSync(join(dir, 'images'), { recursive: true, force: true });
     db.close();
-    service.restore(backup.name);
+    const safetyDir = service.restore(backup.name);
 
     const restored = openDatabase(join(dir, 'metrack.db'));
     try {
@@ -181,6 +181,14 @@ describe('backup and restore of the whole data directory', () => {
       expect(readdirSync(join(dir, 'images')).sort()).toEqual(imageFiles);
       expect(readFileSync(join(dir, 'images', imageFiles[0]!))).toEqual(imageBytes);
       expect(existsSync(join(dir, 'backups', backup.name, 'images'))).toBe(true);
+      const saved = openDatabase(join(safetyDir, 'metrack.db'));
+      try {
+        expect(saved.prepare('SELECT COUNT(*) AS n FROM series').get()).toEqual({ n: 0 });
+        expect(saved.prepare('SELECT COUNT(*) AS n FROM videogame').get()).toEqual({ n: 1 });
+      } finally {
+        saved.close();
+      }
+      expect(existsSync(join(safetyDir, 'images'))).toBe(false);
     } finally {
       restored.close();
     }

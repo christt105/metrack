@@ -43,19 +43,15 @@ describe('backup routes', () => {
     db.close();
   });
 
-  it('returns 500 when the backup fails', async () => {
+  it('returns a generic 500 when the backup fails and logs the details', async () => {
     const service = {
       create: () => {
-        throw new Error('nope');
+        throw new Error("ENOSPC: no space left on device, open '/data/backups/x/metrack.db'");
       },
       list: () => [],
     } as unknown as BackupService;
-    const job = new BackupJob(
-      service,
-      5,
-      { notify: vi.fn(async () => true) },
-      { info: vi.fn(), error: vi.fn() },
-    );
+    const logger = { info: vi.fn(), error: vi.fn() };
+    const job = new BackupJob(service, 5, { notify: vi.fn(async () => true) }, logger);
     const runner = new MigrationRunner(openDatabase(':memory:'), migrations);
     const app = await buildApp({
       appVersion: 'test',
@@ -64,6 +60,9 @@ describe('backup routes', () => {
     });
     const response = await app.inject({ method: 'POST', url: '/api/backups' });
     expect(response.statusCode).toBe(500);
-    expect(response.json()).toEqual({ error: 'nope' });
+    expect(response.json()).toEqual({ error: 'Backup failed', code: 'backup_failed' });
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('/data/backups/x/metrack.db'),
+    );
   });
 });

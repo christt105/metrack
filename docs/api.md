@@ -97,7 +97,12 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 ## Publishing and health
 
 - `POST /api/publish`: queues a publish and answers 202 `{ "status": "queued", "failures": n }`.
-- `GET /api/health`: `HealthReport`.
+- `GET /api/health`: `HealthReport`. Answers 200 when `status` is `ok` and 503 with the same body when it is `degraded`, so the container health check fails.
+
+## Backups
+
+- `GET /api/backups`: the stored backups, newest first, as `{ name, createdAt, sizeBytes, hasImages }[]`.
+- `POST /api/backups`: takes a backup now, prunes to the retention count and answers 201 with the new backup. A failure answers 500 `backup_failed` with a generic message; the details are only in the server log.
 
 ## Jellyfin sync
 

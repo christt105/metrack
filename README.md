@@ -107,7 +107,7 @@ Migrations are TypeScript modules in `apps/server/src/storage/migrations`, numbe
 
 ## Backups
 
-The server writes a backup every `BACKUP_INTERVAL_HOURS` (default 24) to `/data/backups`, keeping the newest `BACKUP_RETENTION` (default 14). A check runs at startup and every 10 minutes, and a backup is taken when the newest one is older than the interval, so a restart after downtime catches up. Set `BACKUP_ENABLED=false` to turn the scheduler off.
+The server writes a backup every `BACKUP_INTERVAL_HOURS` (default 24) to `/data/backups`, keeping the newest `BACKUP_RETENTION` (default 14). A check runs at startup and every 10 minutes, and a backup is taken when the newest one is older than the interval, so a restart after downtime catches up. After a failure the next attempt waits 10 minutes, doubling on each consecutive failure up to the interval. A run of failures sends one alert, and one more message when a backup succeeds again. Set `BACKUP_ENABLED=false` to turn the scheduler off.
 
 Each backup is a directory `metrack-<UTC timestamp>` containing `metrack.db`, a consistent copy made with `VACUUM INTO` that is checked with `PRAGMA integrity_check` before it is accepted, and `images/` when `/data/images` exists. A failed backup leaves nothing behind.
 
@@ -124,13 +124,13 @@ Manual use:
 ```sh
 curl -X POST http://localhost:8097/api/backups
 curl http://localhost:8097/api/backups
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js list
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js create
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backups
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backup
 ```
 
 ### Restore
 
-Stop the service first, since the database file is replaced. Then run the restore in a one-off container (the name comes from `list`) and start the service again. The backup is re-verified before anything is overwritten, and the image store is replaced by the one in the backup.
+Stop the service first, since the database file is replaced. Then run the restore in a one-off container (the name comes from `backups`) and start the service again. The backup is re-verified and copied next to the live data before anything is overwritten. The database and image store being replaced are then moved to `/data/pre-restore-<UTC timestamp>` (the command prints the path), and the backup takes their place. To undo a restore, stop the service and move `metrack.db` and `images/` back from that directory. Safety directories are never deleted automatically; remove them once the restored data looks right.
 
 ```sh
 docker compose stop metrack
@@ -138,7 +138,7 @@ docker compose run --rm metrack node --disable-warning=ExperimentalWarning apps/
 docker compose start metrack
 ```
 
-A test restores a backup over a modified database and image store and checks the result matches the original.
+A test restores a backup over a modified database and image store and checks the result matches the original and the replaced data is kept in the safety directory.
 
 ### Off-server copy
 
