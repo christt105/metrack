@@ -124,13 +124,13 @@ Manual use:
 ```sh
 curl -X POST http://localhost:8097/api/backups
 curl http://localhost:8097/api/backups
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js list
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js create
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backups
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backup
 ```
 
 ### Restore
 
-Stop the service first, since the database file is replaced. Then run the restore in a one-off container (the name comes from `list`) and start the service again. The backup is re-verified and copied next to the live data before anything is overwritten. The database and image store being replaced are then moved to `/data/pre-restore-<UTC timestamp>` (the command prints the path), and the backup takes their place. To undo a restore, stop the service and move `metrack.db` and `images/` back from that directory. Safety directories are never deleted automatically; remove them once the restored data looks right.
+Stop the service first, since the database file is replaced. Then run the restore in a one-off container (the name comes from `backups`) and start the service again. The backup is re-verified and copied next to the live data before anything is overwritten. The database and image store being replaced are then moved to `/data/pre-restore-<UTC timestamp>` (the command prints the path), and the backup takes their place. To undo a restore, stop the service and move `metrack.db` and `images/` back from that directory. Safety directories are never deleted automatically; remove them once the restored data looks right.
 
 ```sh
 docker compose stop metrack
