@@ -16,6 +16,8 @@ import type {
   ResolveUnlinkedRequest,
   ResolveUnlinkedResponse,
   SearchResult,
+  SyncApplyResult,
+  SyncPlan,
   SearchableType,
   SeasonOverride,
   SeasonOverrideInput,
@@ -186,5 +188,13 @@ export class ApiClient {
 
   createBackup(): Promise<BackupInfo> {
     return this.request('POST', '/backups');
+  }
+
+  syncReport(): Promise<SyncPlan> {
+    return this.request('GET', '/sync/report');
+  }
+
+  applySync(): Promise<{ plan: SyncPlan; result: SyncApplyResult }> {
+    return this.request('POST', '/sync/apply', { confirm: true });
   }
 }
