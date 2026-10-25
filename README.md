@@ -27,12 +27,26 @@ Run the API with `npm run dev:server` (port 8097, data in `./data`) and the web 
 
 ## Docker
 
+Images are published to GitHub Container Registry as `ghcr.io/christt105/metrack`. The repository is private, so the host needs `docker login ghcr.io` with a token that has `read:packages` before it can pull.
+
 ```sh
-docker compose up -d --build
+docker compose pull && docker compose up -d
 curl http://localhost:8097/api/health
 ```
 
-The port is set with `METRACK_PORT` (default 8097) and the data directory with `METRACK_DATA` (default `./data`, mounted at `/data`). The database lives at `/data/metrack.db`.
+The image tag is set with `METRACK_TAG` (default `latest`), the port with `METRACK_PORT` (default 8097) and the data directory with `METRACK_DATA` (default `./data`, mounted at `/data`). The database lives at `/data/metrack.db`. To run a local build instead, tag it and point `METRACK_TAG` at it:
+
+```sh
+docker build -t ghcr.io/christt105/metrack:dev . && METRACK_TAG=dev docker compose up -d
+```
+
+### Images and releases
+
+CI runs lint, typecheck, tests and build on every pull request and push to `main`, then builds the image. Every pull request from this repository publishes a preview image, `ghcr.io/christt105/metrack:pr-<number>`, so it can be tried on the server before merging. Pushing a `vX.Y.Z` tag that points at a commit on `main` publishes `vX.Y.Z`, `vX.Y` and `latest`; tags outside `main` fail the release. The image tag is passed as `APP_VERSION` and reported by `/api/health`.
+
+```sh
+git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0
+```
 
 Images are stored under `/data/images`, named by content hash, and are served at `/api/images/<hash>`. Provider access is configured with `TMDB_API_KEY` (a v3 key or v4 token, required for metadata refresh), `TMDB_LANGUAGE` (default `es-ES`) and `STEAMGRIDDB_TOKEN`. No keys are bundled.
 

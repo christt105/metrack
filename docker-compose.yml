@@ -1,7 +1,6 @@
 services:
   metrack:
-    build: .
-    image: metrack:local
+    image: ghcr.io/christt105/metrack:${METRACK_TAG:-latest}
     container_name: metrack
     restart: unless-stopped
     ports:
