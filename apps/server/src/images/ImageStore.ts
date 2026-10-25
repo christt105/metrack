@@ -1,11 +1,12 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import type { FetchFn } from '../http/FetchFn.js';
 import { IMAGE_COLUMNS } from './imageColumns.js';
 import { imageRef } from './imageRef.js';
+import { readBodyWithLimit } from './readBodyWithLimit.js';
 import { readImageSize } from './readImageSize.js';
 import type { StoredImage } from './StoredImage.js';
 
@@ -15,7 +16,9 @@ type Row = Record<string, unknown>;
 
 /**
  * Local image store. Files are named by the SHA-256 of their content, so identical
- * images are stored once. Entities point at the copy through `imageRef`.
+ * images are stored once. Entities point at the copy through `imageRef`. An image keeps the
+ * first URL it came from as `sourceUrl`; any other URL that yields the same bytes is recorded
+ * as an extra source so `findBySourceUrl` resolves it too.
  */
 export class ImageStore {
   constructor(
@@ -35,12 +38,18 @@ export class ImageStore {
     const response = await this.fetchFn(url);
     if (!response.ok) throw new Error(`Image download failed (${response.status}) for ${url}`);
     const declared = Number(response.headers.get('content-length') ?? 0);
-    if (declared > MAX_IMAGE_BYTES) throw new Error(`Image too large: ${url}`);
-    return this.add(new Uint8Array(await response.arrayBuffer()), url);
+    if (declared > MAX_IMAGE_BYTES) {
+      await response.body?.cancel();
+      throw new Error(`Image too large: ${url}`);
+    }
+    const bytes = await readBodyWithLimit(response, MAX_IMAGE_BYTES);
+    if (bytes === null) throw new Error(`Image too large: ${url}`);
+    return this.add(bytes, url);
   }
 
   /** Copies an existing local file into the store, optionally recording the URL it stands for. */
   async importFile(path: string, sourceUrl: string | null = null): Promise<StoredImage> {
+    if ((await stat(path)).size > MAX_IMAGE_BYTES) throw new Error('Image too large');
     return this.add(new Uint8Array(await readFile(path)), sourceUrl);
   }
 
@@ -50,7 +59,7 @@ export class ImageStore {
     const size = readImageSize(bytes);
     const hash = createHash('sha256').update(bytes).digest('hex');
     const existing = this.get(hash);
-    if (existing && existsSync(this.pathOf(existing))) return existing;
+    if (existing && existsSync(this.pathOf(existing))) return this.withSource(existing, sourceUrl);
 
     const image: StoredImage = {
       hash,
@@ -64,12 +73,19 @@ export class ImageStore {
       createdAt: this.now().toISOString(),
     };
     const target = this.pathOf(image);
-    const temp = `${target}.tmp`;
-    await writeFile(temp, bytes);
-    await rename(temp, target);
+    const temp = `${target}.${randomBytes(8).toString('hex')}.tmp`;
+    try {
+      await writeFile(temp, bytes);
+      await rename(temp, target);
+    } catch (error) {
+      await rm(temp, { force: true });
+      throw error;
+    }
+    const stored = this.get(hash);
+    if (stored) return this.withSource(stored, sourceUrl);
     this.db
       .prepare(
-        `INSERT OR REPLACE INTO image (hash, extension, mime_type, width, height, byte_size, source_url, created_at)
+        `INSERT INTO image (hash, extension, mime_type, width, height, byte_size, source_url, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
@@ -112,6 +128,7 @@ export class ImageStore {
     for (const { table, column } of IMAGE_COLUMNS) {
       this.db.prepare(`UPDATE ${table} SET ${column} = NULL WHERE ${column} = ?`).run(image.ref);
     }
+    this.db.prepare('DELETE FROM image_source WHERE hash = ?').run(hash);
     this.db.prepare('DELETE FROM image WHERE hash = ?').run(hash);
     await rm(this.pathOf(image), { force: true });
     return true;
@@ -139,8 +156,27 @@ export class ImageStore {
 
   /** The stored copy of a URL, without ever hitting the network. */
   findBySourceUrl(url: string): StoredImage | undefined {
-    const row = this.db.prepare('SELECT * FROM image WHERE source_url = ? LIMIT 1').get(url);
+    const row = this.db
+      .prepare(
+        `SELECT * FROM image
+         WHERE source_url = ? OR hash IN (SELECT hash FROM image_source WHERE url = ?)
+         ORDER BY source_url = ? DESC
+         LIMIT 1`,
+      )
+      .get(url, url, url);
     return row ? toImage(row) : undefined;
+  }
+
+  private withSource(image: StoredImage, sourceUrl: string | null): StoredImage {
+    if (sourceUrl !== null && sourceUrl !== image.sourceUrl) {
+      this.db
+        .prepare(
+          `INSERT INTO image_source (url, hash) VALUES (?, ?)
+           ON CONFLICT (url) DO UPDATE SET hash = excluded.hash`,
+        )
+        .run(sourceUrl, image.hash);
+    }
+    return image;
   }
 }
 

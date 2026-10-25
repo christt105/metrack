@@ -14,8 +14,11 @@ export function canTransition(from: MediaStatus, to: MediaStatus): boolean {
 }
 
 /**
- * Moves tracking to a new status. Entering `in_progress` sets `startedAt` if missing and clears `finishedAt`;
- * entering `completed` sets `finishedAt` to `today` (and `startedAt` if missing). Throws on a disallowed transition.
+ * Moves tracking to a new status. Entering `in_progress` sets `startedAt` if missing. Entering
+ * `completed` sets `startedAt` if missing and `finishedAt` to `today`, unless the item was already
+ * finished: `finishedAt` keeps the first finish and a later one is recorded as a rewatch, so going
+ * back to `in_progress` and completing again never loses a viewing. Throws on a disallowed
+ * transition.
  */
 export function transitionStatus<T extends Tracking>(
   tracking: T,
@@ -28,11 +31,14 @@ export function transitionStatus<T extends Tracking>(
   const next: T = { ...tracking, status: to };
   if (to === 'in_progress') {
     next.startedAt = tracking.startedAt ?? today;
-    next.finishedAt = null;
   }
   if (to === 'completed') {
     next.startedAt = tracking.startedAt ?? today;
-    next.finishedAt = today;
+    if (tracking.finishedAt === null) {
+      next.finishedAt = today;
+    } else if (today > tracking.finishedAt) {
+      next.rewatches = [...new Set([...tracking.rewatches, today])].sort();
+    }
   }
   return next;
 }

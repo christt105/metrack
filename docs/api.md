@@ -47,7 +47,7 @@ The tracking fields are `status`, `startedAt`, `finishedAt`, `rating`, `review` 
 
 ### Editing rules
 
-- `status` follows the domain transition rules (`canTransition`). A forbidden move answers 409 `invalid_transition` and changes nothing. Entering `in_progress` sets `startedAt` when empty and clears `finishedAt`; entering `completed` sets `finishedAt` to today (and `startedAt` when empty). Dates sent in the same request win over those automatic dates. Sending the current status changes nothing.
+- `status` follows the domain transition rules (`canTransition`). A forbidden move answers 409 `invalid_transition` and changes nothing. Entering `in_progress` sets `startedAt` when empty and keeps `finishedAt`; entering `completed` sets `startedAt` when empty and `finishedAt` to today, unless the item was already finished, in which case `finishedAt` keeps the first finish and today is added to `rewatches` (when it is a later day). Dates sent in the same request win over those automatic dates. Sending the current status changes nothing.
 - `finishedAt` before `startedAt` answers 400 `invalid_dates`.
 - `rewatches` sent in a patch replaces the whole list (sorted, without duplicates). Prefer the two routes below to add or remove one.
 - Metadata fields are marked as hand-edited when a patch actually changes them: `title`, `originalTitle`, `releaseDate`, `firstAirDate`, `overview`, `genres`, `cast`, `director` (movies and series), `developer`, `platforms` (games), `authors`, `publisher`, `pageCount` (books), `episodeCount` (seasons). Sending a form with unchanged values does not mark anything. Ids, tracking, `note`, `tags`, `slug` and `follow` are never marked. Choosing or removing an image marks `cover` or `banner`.
@@ -97,7 +97,12 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 ## Publishing and health
 
 - `POST /api/publish`: queues a publish and answers 202 `{ "status": "queued", "failures": n }`.
-- `GET /api/health`: `HealthReport`.
+- `GET /api/health`: `HealthReport`. Answers 200 when `status` is `ok` and 503 with the same body when it is `degraded`, so the container health check fails.
+
+## Backups
+
+- `GET /api/backups`: the stored backups, newest first, as `{ name, createdAt, sizeBytes, hasImages }[]`.
+- `POST /api/backups`: takes a backup now, prunes to the retention count and answers 201 with the new backup. A failure answers 500 `backup_failed` with a generic message; the details are only in the server log.
 
 ## Jellyfin sync
 

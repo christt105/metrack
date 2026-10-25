@@ -19,9 +19,7 @@ import type { EditServices } from './EditServices.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import type { PublishQueue } from '../publish/PublishQueue.js';
-import { registerBackupRoutes } from './registerBackupRoutes.js';
-import type { BackupJob } from '../backup/BackupJob.js';
-import type { BackupService } from '../backup/BackupService.js';
+import { registerBackupRoutes, type BackupRouteDeps } from './registerBackupRoutes.js';
 import type { SyncService } from '../sync/SyncService.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
 
@@ -33,7 +31,7 @@ export interface AppDeps {
   metadataCache?: MetadataCache;
   publishQueue?: PublishQueue;
   edit?: EditServices;
-  backup?: { service: BackupService; job: BackupJob };
+  backup?: BackupRouteDeps;
   sync?: SyncService;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
 }
@@ -45,9 +43,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
   registerErrorHandler(app);
 
-  app.get('/api/health', async () =>
-    createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion()),
-  );
+  app.get('/api/health', async (_request, reply) => {
+    const report = createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion());
+    return reply.code(report.status === 'ok' ? 200 : 503).send(report);
+  });
 
   if (deps.imageStore) registerImageRoutes(app, deps.imageStore);
   if (deps.metadataCache) registerMetadataRoutes(app, deps.metadataCache, deps.edit?.editor);

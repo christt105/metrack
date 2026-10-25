@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { checkIntegrity } from '../storage/checkIntegrity.js';
 import type { BackupInfo } from './BackupInfo.js';
@@ -76,23 +76,50 @@ export class BackupService {
 
   /**
    * Replaces the live database and image store with a backup. The server must be stopped, since
-   * the live database file is swapped out underneath any open connection.
+   * the live database file is swapped out underneath any open connection. The data being replaced
+   * is first moved to a `pre-restore-<UTC timestamp>` directory next to the database, whose path is
+   * returned so a wrong restore can be undone.
    */
-  restore(name: string): void {
+  restore(name: string): string {
     const source = this.requireBackup(name);
     checkIntegrity(join(source, DB_FILE));
 
-    cpSync(join(source, DB_FILE), `${this.paths.dbPath}.restoring`);
-    for (const suffix of ['-wal', '-shm']) {
-      rmSync(`${this.paths.dbPath}${suffix}`, { force: true });
-    }
-    renameSync(`${this.paths.dbPath}.restoring`, this.paths.dbPath);
-
-    rmSync(this.paths.imagesDir, { recursive: true, force: true });
+    const { dbPath, imagesDir } = this.paths;
+    const stagedDb = `${dbPath}.restoring`;
+    const stagedImages = `${imagesDir}.restoring`;
     const imagesSource = join(source, IMAGES_DIR);
-    if (existsSync(imagesSource)) {
-      cpSync(imagesSource, this.paths.imagesDir, { recursive: true });
+    const safetyDir = join(dirname(dbPath), `pre-restore-${formatStamp(this.now())}`);
+    const dbName = basename(dbPath);
+
+    rmSync(stagedImages, { recursive: true, force: true });
+    try {
+      cpSync(join(source, DB_FILE), stagedDb);
+      if (existsSync(imagesSource)) {
+        cpSync(imagesSource, stagedImages, { recursive: true });
+      }
+      mkdirSync(safetyDir);
+      if (existsSync(dbPath)) {
+        cpSync(dbPath, join(safetyDir, dbName));
+      }
+      if (existsSync(imagesDir)) {
+        renameSync(imagesDir, join(safetyDir, IMAGES_DIR));
+      }
+    } catch (error) {
+      rmSync(stagedDb, { force: true });
+      rmSync(stagedImages, { recursive: true, force: true });
+      throw error;
     }
+
+    if (existsSync(stagedImages)) {
+      renameSync(stagedImages, imagesDir);
+    }
+    for (const suffix of ['-wal', '-shm']) {
+      if (existsSync(`${dbPath}${suffix}`)) {
+        renameSync(`${dbPath}${suffix}`, join(safetyDir, `${dbName}${suffix}`));
+      }
+    }
+    renameSync(stagedDb, dbPath);
+    return safetyDir;
   }
 
   private requireBackup(name: string): string {
@@ -105,8 +132,11 @@ export class BackupService {
 }
 
 function formatName(date: Date): string {
-  const iso = date.toISOString().replace(/[-:]/g, '').replace('.', '');
-  return `metrack-${iso}`;
+  return `metrack-${formatStamp(date)}`;
+}
+
+function formatStamp(date: Date): string {
+  return date.toISOString().replace(/[-:]/g, '').replace('.', '');
 }
 
 function describe(backupDir: string, name: string): BackupInfo {

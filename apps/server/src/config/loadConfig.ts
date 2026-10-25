@@ -19,7 +19,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     steamGridDbToken: env.STEAMGRIDDB_TOKEN || undefined,
     backup: {
       enabled: env.BACKUP_ENABLED !== 'false',
-      dir: env.BACKUP_DIR ?? join(dataDir, 'backups'),
+      dir: env.BACKUP_DIR || join(dataDir, 'backups'),
       retention: positiveInteger(env, 'BACKUP_RETENTION', 14),
       intervalHours: positiveInteger(env, 'BACKUP_INTERVAL_HOURS', 24),
     },

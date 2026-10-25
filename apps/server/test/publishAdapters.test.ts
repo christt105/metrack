@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CloudflarePagesPublisher } from '../src/publish/CloudflarePagesPublisher.js';
+import {
+  CloudflarePagesPublisher,
+  WRANGLER_INHERITED_ENV,
+} from '../src/publish/CloudflarePagesPublisher.js';
 import type { CommandOptions, CommandRunner } from '../src/publish/CommandRunner.js';
 import { FilePublishState } from '../src/publish/FilePublishState.js';
 import { loadPublishConfig } from '../src/publish/loadPublishConfig.js';
@@ -65,7 +68,7 @@ describe('CloudflarePagesPublisher', () => {
     expect(calls[0]!.command).toBe('npx');
     expect(calls[0]!.args).toEqual([
       '--yes',
-      'wrangler@4',
+      'wrangler@4.152.0',
       'pages',
       'deploy',
       '/built',
@@ -79,6 +82,8 @@ describe('CloudflarePagesPublisher', () => {
       CLOUDFLARE_API_TOKEN: 'token',
       CLOUDFLARE_ACCOUNT_ID: 'account',
     });
+    expect(calls[0]!.options?.inheritEnv).toEqual(WRANGLER_INHERITED_ENV);
+    expect(calls[0]!.options?.inheritEnv).not.toContain('CLOUDFLARE_API_TOKEN');
     expect(calls[0]!.args.join(' ')).not.toContain('token');
   });
 });
@@ -112,6 +117,24 @@ describe('NodeCommandRunner', () => {
       ['-e', 'process.exit(process.env.METRACK_TEST === "1" ? 0 : 3)'],
       { env: { METRACK_TEST: '1' } },
     );
+  });
+
+  it('passes only the listed parent variables when inheritEnv is set', async () => {
+    process.env.METRACK_KEEP = 'keep';
+    process.env.METRACK_SECRET = 'secret';
+    try {
+      await runner.run(
+        process.execPath,
+        [
+          '-e',
+          'const e = process.env; process.exit(e.METRACK_KEEP === "keep" && e.METRACK_SECRET === undefined && e.METRACK_TEST === "1" ? 0 : 3)',
+        ],
+        { env: { METRACK_TEST: '1' }, inheritEnv: ['METRACK_KEEP'] },
+      );
+    } finally {
+      delete process.env.METRACK_KEEP;
+      delete process.env.METRACK_SECRET;
+    }
   });
 
   it('rejects with the output tail when the command fails', async () => {

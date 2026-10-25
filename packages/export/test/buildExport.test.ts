@@ -125,6 +125,36 @@ describe('buildExport', () => {
     ]);
   });
 
+  it('derives a name instead of using a stored one that is not a safe folder name', () => {
+    const files = buildExport({
+      ...empty,
+      movies: [
+        movie({ id: 1, slug: '../../evil', title: 'Evil' }),
+        movie({ id: 2, slug: '..', title: 'Dots' }),
+        movie({ id: 3, slug: '', title: 'Blank' }),
+        movie({ id: 4, slug: 'a\\b', title: 'Slash' }),
+      ],
+    });
+    expect(files.map((f) => f.path)).toEqual([
+      'content/movies/Blank (2020)/index.md',
+      'content/movies/Dots (2020)/index.md',
+      'content/movies/Evil (2020)/index.md',
+      'content/movies/Slash (2020)/index.md',
+    ]);
+  });
+
+  it('never derives a dot name from a title', () => {
+    const files = buildExport({
+      ...empty,
+      videogames: [game({ id: 1, slug: null, title: '..', releaseDate: null })],
+      books: [book({ id: 2, slug: null, title: '/', releaseDate: null })],
+    });
+    expect(files.map((f) => f.path)).toEqual([
+      'content/books/untitled (2)/index.md',
+      'content/games/untitled/index.md',
+    ]);
+  });
+
   it('writes games and books to their sections', () => {
     const files = buildExport({ ...empty, videogames: [game()], books: [book()] });
     expect(text(files, 'content/games/Game/index.md')).toContain('steam_appid: "730"');

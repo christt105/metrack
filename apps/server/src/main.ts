@@ -51,6 +51,7 @@ import {
 
 const config = loadConfig(process.env);
 const logger = { info: console.log, error: console.error };
+const notifier = createNotifier(config.ntfy, logger);
 const db = openDatabase(join(config.dataDir, 'metrack.db'));
 const migrationRunner = new MigrationRunner(db, migrations);
 const schemaVersion = migrationRunner.run();
@@ -94,7 +95,7 @@ if (config.tmdbApiKey) {
         overrides,
         alerts: releaseAlerts,
         source: new TmdbReleaseSource(tmdb),
-        notifier: createNotifier(config.ntfy, logger),
+        notifier,
         logger,
         timeZone: config.alerts.timeZone,
         notifyFromHour: config.alerts.notifyFromHour,
@@ -121,7 +122,7 @@ const edit = createEditServices({
 
 const { config: syncConfig, missing: syncMissing } = loadSyncConfig(process.env);
 const syncSetup = syncConfig
-  ? createSyncService(syncConfig, db, { movies, series, seasons, overrides, unlinked })
+  ? createSyncService(syncConfig, db, { movies, series, seasons, overrides, unlinked }, logger)
   : undefined;
 if (!syncSetup) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
 
@@ -158,12 +159,7 @@ if (publishConfig) {
 }
 
 const backupService = createBackupService(config, db);
-const backupJob = new BackupJob(
-  backupService,
-  config.backup.retention,
-  createNotifier(config.ntfy, logger),
-  logger,
-);
+const backupJob = new BackupJob(backupService, config.backup.retention, notifier, logger);
 const scheduler = new BackupScheduler(
   backupService,
   backupJob,

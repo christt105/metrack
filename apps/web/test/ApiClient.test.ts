@@ -26,6 +26,13 @@ describe('ApiClient', () => {
     expect(calls[0]?.init?.body).toBe('{"rating":7}');
   });
 
+  it('encodes free-text path segments', async () => {
+    const { calls, client } = recorder(new Response('{}'));
+    await client.removeRewatch('movies', 3, '2026/../x?y#z');
+    expect(calls[0]?.url).toBe('/api/movies/3/rewatches/2026%2F..%2Fx%3Fy%23z');
+    expect(calls[0]?.init?.method).toBe('DELETE');
+  });
+
   it('turns an error body into an ApiRequestError', async () => {
     const body = { error: 'No such transition', code: 'invalid_transition', details: { x: 1 } };
     const { client } = recorder(new Response(JSON.stringify(body), { status: 409 }));
@@ -37,6 +44,12 @@ describe('ApiClient', () => {
       message: 'No such transition',
       details: { x: 1 },
     });
+  });
+
+  it('returns a degraded health report answered with 503', async () => {
+    const report = { status: 'degraded', appVersion: 'dev', schemaVersion: 0 };
+    const { client } = recorder(new Response(JSON.stringify(report), { status: 503 }));
+    expect(await client.health()).toEqual(report);
   });
 
   it('maps a 204 to undefined and a thrown fetch to a network error', async () => {

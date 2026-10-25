@@ -18,6 +18,14 @@ describe('GET /api/health', () => {
     });
   });
 
+  it('answers 503 with the same report when degraded', async () => {
+    const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
+    const app = await buildApp({ appVersion: 'test', migrationRunner: runner });
+    const response = await app.inject({ method: 'GET', url: '/api/health' });
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ status: 'degraded', appVersion: 'test', schemaVersion: 0 });
+  });
+
   it('returns 404 JSON for unknown API routes', async () => {
     const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
     const app = await buildApp({ appVersion: 'test', migrationRunner: runner });

@@ -100,6 +100,46 @@ describe('BackupService', () => {
     restored.close();
     expect(readFileSync(join(dir, 'images', 'a.jpg'), 'utf8')).toBe('original');
     expect(existsSync(join(dir, 'images', 'stray.jpg'))).toBe(false);
+    expect(existsSync(join(dir, 'metrack.db.restoring'))).toBe(false);
+    expect(existsSync(join(dir, 'images.restoring'))).toBe(false);
+  });
+
+  it('moves the replaced database and images to a safety directory before restoring', () => {
+    mkdirSync(join(dir, 'images'));
+    writeFileSync(join(dir, 'images', 'a.jpg'), 'original');
+    const { name } = service.create();
+
+    db.exec("INSERT INTO note (body) VALUES ('after backup')");
+    writeFileSync(join(dir, 'images', 'a.jpg'), 'changed');
+    writeFileSync(join(dir, 'images', 'stray.jpg'), 'stray');
+    const beforeRestore = dump(db);
+    db.close();
+
+    clock = new Date('2026-10-25T08:00:00.000Z');
+    const safetyDir = service.restore(name);
+
+    expect(safetyDir).toBe(join(dir, 'pre-restore-20261025T080000000Z'));
+    const saved = openDatabase(join(safetyDir, 'metrack.db'));
+    expect(dump(saved)).toBe(beforeRestore);
+    saved.close();
+    expect(readFileSync(join(safetyDir, 'images', 'a.jpg'), 'utf8')).toBe('changed');
+    expect(readFileSync(join(safetyDir, 'images', 'stray.jpg'), 'utf8')).toBe('stray');
+    expect(service.list().map((b) => b.name)).toEqual([name]);
+  });
+
+  it('leaves the live data untouched when the safety directory cannot be created', () => {
+    mkdirSync(join(dir, 'images'));
+    writeFileSync(join(dir, 'images', 'a.jpg'), 'original');
+    const { name } = service.create();
+    writeFileSync(join(dir, 'images', 'a.jpg'), 'changed');
+    db.close();
+    mkdirSync(join(dir, 'pre-restore-20261024T100000000Z'));
+
+    expect(() => service.restore(name)).toThrow();
+
+    expect(readFileSync(join(dir, 'images', 'a.jpg'), 'utf8')).toBe('changed');
+    expect(existsSync(join(dir, 'metrack.db.restoring'))).toBe(false);
+    expect(existsSync(join(dir, 'images.restoring'))).toBe(false);
   });
 
   it('rejects a corrupted backup on verify and restore', () => {

@@ -40,7 +40,7 @@ export async function runSyncCommand(
     overrides: new SeasonOverrideRepository(db),
     unlinked: new UnlinkedTitleRepository(db),
   };
-  const { service, pool } = createSyncService(config, db, targets);
+  const { service, pool } = createSyncService(config, db, targets, console);
   try {
     if (!options.apply) return formatSyncReport(await service.report(), options.verbose);
     const { plan, result } = await service.apply();

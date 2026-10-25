@@ -1,3 +1,4 @@
+import { isSafeSlug } from '@metrack/domain';
 import type { ExportInput } from './ExportInput.js';
 import { inlineSeasonOf } from './inlineSeasonOf.js';
 import { SlugRegistry } from './SlugRegistry.js';
@@ -16,7 +17,9 @@ function withYear(title: string, date: string | null): string {
 
 function keepGiven<T extends Named>(items: T[], map: Map<number, string>, registry: SlugRegistry) {
   for (const item of items) {
-    if (item.slug !== null) map.set(item.id, registry.claimVerbatim(item.slug));
+    if (item.slug !== null && isSafeSlug(item.slug)) {
+      map.set(item.id, registry.claimVerbatim(item.slug));
+    }
   }
 }
 
@@ -32,8 +35,9 @@ function deriveMissing<T extends Named>(
 }
 
 /**
- * Names every page. Names the vault gave are kept so addresses do not change; anything else is
- * derived from its title, in id order so the result does not depend on call order.
+ * Names every page. Names the vault gave are kept so addresses do not change, unless they are not a
+ * safe folder name; anything else is derived from its title, in id order so the result does not
+ * depend on call order.
  */
 export function assignSlugs(input: ExportInput): Slugs {
   const registry = new SlugRegistry();

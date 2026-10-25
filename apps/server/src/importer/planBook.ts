@@ -3,6 +3,7 @@ import { readInteger, readList, readText } from './fieldReaders.js';
 import { parseImageSource } from './parseImageSource.js';
 import { readDescriptiveDate } from './readDescriptiveDate.js';
 import { readInlineImages } from './readInlineImages.js';
+import { readSlug } from './readSlug.js';
 import { readTitle } from './readTitle.js';
 import { readTracking } from './readTracking.js';
 import type { IssueLog } from './IssueLog.js';
@@ -30,7 +31,7 @@ export function planBook(
     genres: readList(fm.genres),
     note: null,
     cover: null,
-    slug: note.name,
+    slug: readSlug(note),
     tags: readList(fm.tags),
     ...readTracking(note, issues),
   };

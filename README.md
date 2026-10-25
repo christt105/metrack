@@ -78,7 +78,7 @@ A series with season notes exports a `tv` page that only groups its seasons (sta
 
 ## Publishing
 
-The service builds the site and uploads it to Cloudflare Pages by direct upload (`wrangler pages deploy`, fetched with `npx` on first use), so images never go through git. Publishing is event driven: any successful write under `/api` marks the site as changed, `POST /api/publish` does the same on request, and a short debounce turns a burst of edits into one attempt. An attempt exports the data and compares its fingerprint with the last published one, so nothing is built or uploaded when the site would be identical. Otherwise it copies the site template, adds the export, runs `hugo` and uploads the result. A failed attempt is retried with exponential backoff (1 minute, doubling, up to 1 hour) and every failure goes through the `Notifier`; today that only logs, and it will use the ntfy notifier of the backups module once that is merged.
+The service builds the site and uploads it to Cloudflare Pages by direct upload (`wrangler pages deploy`), so images never go through git. Wrangler is not a dependency of the image: it runs through `npx` at the exact version in `WRANGLER_VERSION` (`apps/server/src/publish/CloudflarePagesPublisher.ts`), downloaded on first use, and upgrading it means changing that constant. It receives the Cloudflare credentials plus only an allowlist of the server's environment (`WRANGLER_INHERITED_ENV`: `PATH`, `HOME`, npm cache, proxy and CA variables). Publishing is event driven: any successful write under `/api` marks the site as changed, `POST /api/publish` does the same on request, and a short debounce turns a burst of edits into one attempt. An attempt exports the data and compares its fingerprint with the last published one, so nothing is built or uploaded when the site would be identical. Otherwise it copies the site template, adds the export, runs `hugo` and uploads the result. A failed attempt is retried with exponential backoff (1 minute, doubling, up to 1 hour) and every failure goes through the `Notifier`; today that only logs, and it will use the ntfy notifier of the backups module once that is merged.
 
 Publishing stays off, with a log line naming what is missing, unless all of these are set. Credentials are only ever read from the environment.
 
@@ -121,7 +121,7 @@ Migrations are TypeScript modules in `apps/server/src/storage/migrations`, numbe
 
 ## Backups
 
-The server writes a backup every `BACKUP_INTERVAL_HOURS` (default 24) to `/data/backups`, keeping the newest `BACKUP_RETENTION` (default 14). A check runs at startup and every 10 minutes, and a backup is taken when the newest one is older than the interval, so a restart after downtime catches up. Set `BACKUP_ENABLED=false` to turn the scheduler off.
+The server writes a backup every `BACKUP_INTERVAL_HOURS` (default 24) to `/data/backups`, keeping the newest `BACKUP_RETENTION` (default 14). A check runs at startup and every 10 minutes, and a backup is taken when the newest one is older than the interval, so a restart after downtime catches up. After a failure the next attempt waits 10 minutes, doubling on each consecutive failure up to the interval. A run of failures sends one alert, and one more message when a backup succeeds again. Set `BACKUP_ENABLED=false` to turn the scheduler off.
 
 Each backup is a directory `metrack-<UTC timestamp>` containing `metrack.db`, a consistent copy made with `VACUUM INTO` that is checked with `PRAGMA integrity_check` before it is accepted, and `images/` when `/data/images` exists. A failed backup leaves nothing behind.
 
@@ -138,13 +138,13 @@ Manual use:
 ```sh
 curl -X POST http://localhost:8097/api/backups
 curl http://localhost:8097/api/backups
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js list
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js create
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backups
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backup
 ```
 
 ### Restore
 
-Stop the service first, since the database file is replaced. Then run the restore in a one-off container (the name comes from `list`) and start the service again. The backup is re-verified before anything is overwritten, and the image store is replaced by the one in the backup.
+Stop the service first, since the database file is replaced. Then run the restore in a one-off container (the name comes from `backups`) and start the service again. The backup is re-verified and copied next to the live data before anything is overwritten. The database and image store being replaced are then moved to `/data/pre-restore-<UTC timestamp>` (the command prints the path), and the backup takes their place. To undo a restore, stop the service and move `metrack.db` and `images/` back from that directory. Safety directories are never deleted automatically; remove them once the restored data looks right.
 
 ```sh
 docker compose stop metrack
@@ -152,7 +152,7 @@ docker compose run --rm metrack node --disable-warning=ExperimentalWarning apps/
 docker compose start metrack
 ```
 
-A test restores a backup over a modified database and image store and checks the result matches the original.
+A test restores a backup over a modified database and image store and checks the result matches the original and the replaced data is kept in the safety directory.
 
 ### Off-server copy
 
@@ -197,7 +197,7 @@ Following a series (`follow`) or a movie puts it on the watchlist (the "Followin
 
 The release date of a season is its `air_date`, or the date of `next_episode_to_air` when that is the first episode and the season has no date yet. For a movie it is the earliest Spanish premiere or limited release in `release_dates`, falling back to `release_date`. When TMDB announces a season of a followed series that is not stored, the season is created as `planned`. It is paired with an existing season by its stored TMDB number, then by the date of its first episode, and a season override can give it another number. Seasons that are missing locally but were released long ago are left alone. When the season shows up in Jellyfin under another number, the Jellyfin sync pairs it by date, so nothing is duplicated.
 
-How often a title is asked about depends on how close its release is: every 30 minutes from the day before to the day after, every 3 hours while providers may still be catching up, and twice a day otherwise. The scheduler ticks every 10 minutes and keeps the due times in memory. Nothing is checked or sent before `ALERTS_NOTIFY_FROM_HOUR`, so alerts do not arrive at night. Sent alerts are recorded in `release_alert` and listed on the Following page. Alerts need `TMDB_API_KEY`; without `NTFY_URL` and `NTFY_TOPIC` they are only logged.
+How often a title is asked about depends on how close its release is: every 30 minutes from the day before to the day after, every 3 hours while providers may still be catching up, and twice a day otherwise. The scheduler ticks every 10 minutes and keeps the due times in memory. Nothing is checked or sent before `ALERTS_NOTIFY_FROM_HOUR`, so alerts do not arrive at night. An alert is recorded in `release_alert` only once ntfy has accepted it, and recorded alerts are listed on the Following page; an alert ntfy does not accept stays pending and is retried 30 minutes later. Alerts need `TMDB_API_KEY`; without `NTFY_URL` and `NTFY_TOPIC` they are only logged.
 
 | Variable                  | Default         | Meaning                                                      |
 | ------------------------- | --------------- | ------------------------------------------------------------ |

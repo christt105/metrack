@@ -286,6 +286,41 @@ describe('ReleaseWatcher', () => {
     at('2026-10-22T09:35:00Z');
     expect((await watcher.tick()).failures).toBe(1);
   });
+
+  it('keeps an alert that could not be delivered pending and retries it', async () => {
+    notifier.fails = () => true;
+    expect(await watcher.tick()).toMatchObject({ checked: 1, alertsSent: 0, failures: 1 });
+    expect(alerts.list()).toEqual([]);
+    at('2026-10-22T09:20:00Z');
+    expect((await watcher.tick()).checked).toBe(0);
+
+    notifier.fails = () => false;
+    at('2026-10-22T09:31:00Z');
+    expect(await watcher.tick()).toMatchObject({ checked: 1, alertsSent: 1, failures: 0 });
+    expect(notifier.failed.map((n) => n.title)).toEqual(['Lupin, season 3']);
+    expect(notifier.sent.map((n) => n.message)).toEqual(['Releases tomorrow (2026-10-23)']);
+    expect(alerts.list().map((a) => a.kind)).toEqual(['releases_tomorrow']);
+  });
+
+  it('does not resend delivered alerts while another one keeps failing', async () => {
+    movies.create({ ...emptyMovie(), tmdbId: 5, title: 'Heat 2', follow: true });
+    source.moviesById.set(5, { posterUrl: null, releaseDate: '2026-10-23', flatrateEs: false });
+    notifier.fails = (n) => n.title === 'Heat 2';
+    expect(await watcher.tick()).toMatchObject({ alertsSent: 1, failures: 1 });
+    at('2026-10-22T09:31:00Z');
+    await watcher.tick();
+    at('2026-10-22T10:02:00Z');
+    await watcher.tick();
+    expect(notifier.sent.map((n) => n.title)).toEqual(['Lupin, season 3']);
+    expect(notifier.failed.map((n) => n.title)).toEqual(['Heat 2', 'Heat 2', 'Heat 2']);
+    expect(alerts.list().map((a) => a.title)).toEqual(['Lupin, season 3']);
+
+    notifier.fails = () => false;
+    at('2026-10-22T10:33:00Z');
+    await watcher.tick();
+    expect(notifier.sent.map((n) => n.title)).toEqual(['Lupin, season 3', 'Heat 2']);
+    expect(alerts.list().map((a) => a.title)).toEqual(['Heat 2', 'Lupin, season 3']);
+  });
 });
 
 describe('ReleaseWatchScheduler', () => {

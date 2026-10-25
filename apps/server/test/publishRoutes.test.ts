@@ -17,7 +17,7 @@ async function setup() {
   const scheduler = new FakeScheduler();
   const queue = new PublishQueue(
     async () => 'published',
-    { notify: async () => {} },
+    { notify: async () => true },
     { info: () => {}, error: () => {} },
     scheduler,
   );
