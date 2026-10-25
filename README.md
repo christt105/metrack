@@ -1,6 +1,32 @@
 # metrack
 
-Self-hosted media tracker: movies, series (tracked per season), games and books, stored in SQLite and served by a single container. This is the service skeleton: a health route, versioned migrations and a Vue shell.
+[![CI](https://github.com/christt105/metrack/actions/workflows/ci.yml/badge.svg)](https://github.com/christt105/metrack/actions/workflows/ci.yml)
+
+Self-hosted media tracker for movies, series (tracked per season), games and books. One container holds the data in SQLite, serves a web app to edit it and publishes a static Hugo site with the collection.
+
+## Features
+
+- Web app to add and edit titles. Movies and series are searched and refreshed from TMDB; games and books are entered by hand. Artwork comes from TMDB and SteamGridDB and is stored locally by content hash.
+- Per-season tracking for series: status, dates, rating, review and rewatches.
+- Importer for the Obsidian `Media Tracker` vault and exporter to the Hugo content tree of [hugo-mediatracker-theme](https://github.com/christt105/hugo-mediatracker-theme).
+- Event-driven publishing to Cloudflare Pages: an edit rebuilds and uploads the site only when the exported content changed.
+- Jellyfin viewing sync through Jellystat, with a report-only pass before anything is written.
+- Release alerts over ntfy for followed series and movies (premieres and Spanish streaming availability).
+- Scheduled, verified backups with retention and a restore command.
+
+## Security model
+
+metrack is meant to run on a trusted local network. The API has no authentication, and anyone who can reach the port can edit, publish, back up and restore. Do not expose it to the internet. If it ever has to be reachable from outside, put it behind a VPN or an authenticating reverse proxy. Only the published static site is meant to be public.
+
+## Quick start
+
+```sh
+curl -O https://raw.githubusercontent.com/christt105/metrack/main/docker-compose.yml
+docker compose up -d
+curl http://localhost:8097/api/health
+```
+
+Then open `http://<host>:8097`. Every integration is optional and stays off, with a log line naming the missing variables, until it is configured; see the sections below.
 
 ## Layout
 
@@ -11,7 +37,7 @@ Self-hosted media tracker: movies, series (tracked per season), games and books,
 
 ## Development
 
-Requires Node 22 and npm 10.
+Requires Node 22.13 or later and npm 10.
 
 ```sh
 npm ci
@@ -27,7 +53,7 @@ Run the API with `npm run dev:server` (port 8097, data in `./data`) and the web 
 
 ## Docker
 
-Images are published to GitHub Container Registry as `ghcr.io/christt105/metrack`. The repository is private, so the host needs `docker login ghcr.io` with a token that has `read:packages` before it can pull.
+Images are published to GitHub Container Registry as `ghcr.io/christt105/metrack` and can be pulled without logging in.
 
 ```sh
 docker compose pull && docker compose up -d
