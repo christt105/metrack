@@ -27,13 +27,25 @@ afterEach(() => {
 });
 
 class RecordingRunner implements CommandRunner {
-  readonly calls: { command: string; args: string[]; cwd?: string; hadContent: boolean }[] = [];
+  readonly calls: {
+    command: string;
+    args: string[];
+    cwd?: string;
+    hadContent: boolean;
+    inheritEnv?: readonly string[];
+  }[] = [];
   failWith: Error | null = null;
 
   async run(command: string, args: string[], options: CommandOptions = {}): Promise<void> {
     if (this.failWith) throw this.failWith;
     const hadContent = existsSync(join(options.cwd ?? '', 'content/movies/Alpha/index.md'));
-    this.calls.push({ command, args, cwd: options.cwd, hadContent });
+    this.calls.push({
+      command,
+      args,
+      cwd: options.cwd,
+      hadContent,
+      inheritEnv: options.inheritEnv,
+    });
     const out = args[args.indexOf('--destination') + 1]!;
     mkdirSync(out, { recursive: true });
     writeFileSync(join(out, 'index.html'), 'built');
@@ -109,6 +121,8 @@ describe('PublishPipeline', () => {
     expect(await pipeline.run()).toBe('published');
     expect(runner.calls).toHaveLength(1);
     expect(runner.calls[0]).toMatchObject({ command: 'hugo', hadContent: true });
+    expect(runner.calls[0]!.inheritEnv).toContain('HUGO_*');
+    expect(runner.calls[0]!.inheritEnv).not.toContain('CLOUDFLARE_API_TOKEN');
     expect(publisher.published).toEqual(['built']);
     expect(existsSync(join(template, 'content'))).toBe(false);
   });

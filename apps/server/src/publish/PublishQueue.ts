@@ -13,13 +13,15 @@ export const DEFAULT_QUEUE_OPTIONS: PublishQueueOptions = {
 /**
  * Publishes when something changed, never on a clock. Changes are coalesced, a change that arrives
  * during a publish triggers another one afterwards, and failures are retried with exponential
- * backoff while telling a human through the notifier.
+ * backoff. A run of failures is reported once through the notifier (retrying the alert on later
+ * failures until it is delivered), and once more when a publish succeeds again.
  */
 export class PublishQueue {
   private dirty = false;
   private running = false;
   private waiting = false;
   private failures = 0;
+  private alerted = false;
 
   constructor(
     private readonly attempt: () => Promise<PublishOutcome>,
@@ -55,6 +57,13 @@ export class PublishQueue {
       const outcome = await this.attempt();
       this.failures = 0;
       this.logger.info(`Publish ${outcome}`);
+      if (this.alerted) {
+        this.alerted = false;
+        await this.notifier.notify('metrack publish recovered', `Publish ${outcome}`, {
+          priority: 'default',
+          tags: ['white_check_mark'],
+        });
+      }
     } catch (error) {
       this.failures += 1;
       this.dirty = true;
@@ -64,10 +73,12 @@ export class PublishQueue {
         this.options.maxDelayMs,
       );
       this.logger.error(`Publish failed (attempt ${this.failures}): ${reason}`);
-      await this.notifier.notify(
-        'metrack publish failed',
-        `Attempt ${this.failures} failed: ${reason}. Retrying in ${Math.round(delay / 1000)}s.`,
-      );
+      if (!this.alerted) {
+        this.alerted = await this.notifier.notify(
+          'metrack publish failed',
+          `Attempt ${this.failures} failed: ${reason}. Retrying in ${Math.round(delay / 1000)}s.`,
+        );
+      }
       this.running = false;
       this.wait(delay);
       return;

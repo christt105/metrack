@@ -7,14 +7,14 @@ import { FakeScheduler } from './support/FakeScheduler.js';
 
 const options = { debounceMs: 10, baseDelayMs: 100, maxDelayMs: 350 };
 
-function setup(results: (PublishOutcome | Error)[]) {
+function setup(results: (PublishOutcome | Error)[], delivered: boolean[] = []) {
   const scheduler = new FakeScheduler();
   const alerts: string[] = [];
   const logs: string[] = [];
   const notifier: Notifier = {
     notify: async (title, message) => {
       alerts.push(`${title}|${message}`);
-      return true;
+      return delivered[alerts.length - 1] ?? true;
     },
   };
   const logger: Logger = { info: (m) => void logs.push(m), error: (m) => void logs.push(m) };
@@ -46,7 +46,7 @@ describe('PublishQueue', () => {
     expect(scheduler.pending()).toBe(0);
   });
 
-  it('retries with exponential backoff capped at the maximum and alerts on every failure', async () => {
+  it('retries with exponential backoff capped at the maximum and alerts once per run of failures', async () => {
     const { queue, scheduler, alerts, calls } = setup([
       new Error('one'),
       new Error('two'),
@@ -58,9 +58,32 @@ describe('PublishQueue', () => {
     for (let i = 0; i < 5; i += 1) await scheduler.fire();
     expect(calls()).toBe(5);
     expect(scheduler.delays).toEqual([10, 100, 200, 350, 350]);
-    expect(alerts).toHaveLength(4);
-    expect(alerts[0]).toBe('metrack publish failed|Attempt 1 failed: one. Retrying in 0s.');
+    expect(alerts).toEqual([
+      'metrack publish failed|Attempt 1 failed: one. Retrying in 0s.',
+      'metrack publish recovered|Publish published',
+    ]);
     expect(queue.failureCount()).toBe(0);
+  });
+
+  it('keeps trying to deliver the failure alert until the notifier accepts it', async () => {
+    const { queue, scheduler, alerts } = setup(
+      [new Error('one'), new Error('two'), new Error('three'), 'published'],
+      [false, true],
+    );
+    queue.markDirty();
+    for (let i = 0; i < 4; i += 1) await scheduler.fire();
+    expect(alerts).toEqual([
+      'metrack publish failed|Attempt 1 failed: one. Retrying in 0s.',
+      'metrack publish failed|Attempt 2 failed: two. Retrying in 0s.',
+      'metrack publish recovered|Publish published',
+    ]);
+  });
+
+  it('sends no recovery message when no failure was reported', async () => {
+    const { queue, scheduler, alerts } = setup(['published']);
+    queue.markDirty();
+    await scheduler.fire();
+    expect(alerts).toEqual([]);
   });
 
   it('publishes again after a change that arrives while publishing', async () => {

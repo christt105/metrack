@@ -12,9 +12,9 @@ import { runImport } from './importer/runImport.js';
 
 const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack redirect <outDir> --origin <newSiteAddress> [--old-base <path>]
-       metrack backups
-       metrack backup
-       metrack restore <backupName>
+       metrack backups [--data-dir <dir>]
+       metrack backup [--data-dir <dir>]
+       metrack restore <backupName> [--data-dir <dir>]
        metrack sync [--apply] [--verbose] [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
 
@@ -57,7 +57,8 @@ async function main(argv: string[]): Promise<number> {
       console.error(USAGE);
       return 2;
     }
-    console.log(await runBackupCommand(loadConfig(process.env), command, target));
+    const env = { ...process.env, DATA_DIR: values['data-dir'] ?? process.env.DATA_DIR };
+    console.log(await runBackupCommand(loadConfig(env), command, target));
     return 0;
   }
   if (!values.help && command === 'sync') {

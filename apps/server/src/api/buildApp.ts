@@ -22,10 +22,13 @@ import type { PublishQueue } from '../publish/PublishQueue.js';
 import { registerBackupRoutes, type BackupRouteDeps } from './registerBackupRoutes.js';
 import type { SyncService } from '../sync/SyncService.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
+import type { Logger } from '../notify/Logger.js';
 
 export interface AppDeps {
   appVersion: string;
   migrationRunner: MigrationRunner;
+  /** Receives the failures answered with a 5xx status. */
+  logger?: Logger;
   webDir?: string;
   imageStore?: ImageStore;
   metadataCache?: MetadataCache;
@@ -41,7 +44,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     logger: false,
     ajv: { customOptions: { removeAdditional: false, coerceTypes: 'array' } },
   });
-  registerErrorHandler(app);
+  registerErrorHandler(app, deps.logger);
 
   app.get('/api/health', async (_request, reply) => {
     const report = createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion());

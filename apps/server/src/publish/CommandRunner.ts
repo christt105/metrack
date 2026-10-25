@@ -3,7 +3,8 @@ export interface CommandOptions {
   env?: Record<string, string>;
   /**
    * Names of the parent environment variables the command may see. When set, only these
-   * (plus `env`) are passed; otherwise the whole parent environment is inherited.
+   * (plus `env`) are passed; otherwise the whole parent environment is inherited. A name ending in
+   * `*` matches every variable with that prefix.
    */
   inheritEnv?: readonly string[];
 }

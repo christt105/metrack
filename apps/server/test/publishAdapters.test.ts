@@ -137,6 +137,26 @@ describe('NodeCommandRunner', () => {
     }
   });
 
+  it('passes every parent variable with a listed prefix', async () => {
+    process.env.METRACK_KEEP_A = 'a';
+    process.env.METRACK_KEEP_B = 'b';
+    process.env.METRACK_SECRET = 'secret';
+    try {
+      await runner.run(
+        process.execPath,
+        [
+          '-e',
+          'const e = process.env; process.exit(e.METRACK_KEEP_A === "a" && e.METRACK_KEEP_B === "b" && e.METRACK_SECRET === undefined ? 0 : 3)',
+        ],
+        { inheritEnv: ['PATH', 'METRACK_KEEP_*'] },
+      );
+    } finally {
+      delete process.env.METRACK_KEEP_A;
+      delete process.env.METRACK_KEEP_B;
+      delete process.env.METRACK_SECRET;
+    }
+  });
+
   it('rejects with the output tail when the command fails', async () => {
     await expect(
       runner.run(process.execPath, ['-e', 'console.error("boom"); process.exit(2)']),
