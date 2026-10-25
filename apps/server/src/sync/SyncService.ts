@@ -1,8 +1,7 @@
-import { planSync, type SyncPlan } from '@metrack/domain';
+import { planSync, type SyncApplyResult, type SyncPlan } from '@metrack/domain';
 import type { LibrarySource } from './LibrarySource.js';
 import type { PlaybackSource } from './PlaybackSource.js';
 import type { SyncApplier } from './SyncApplier.js';
-import type { SyncApplyResult } from './SyncApplyResult.js';
 import type { SyncTargets } from './SyncTargets.js';
 import { loadSyncState } from './loadSyncState.js';
 

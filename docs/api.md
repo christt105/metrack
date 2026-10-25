@@ -7,7 +7,7 @@ The private editing API served by `apps/server` under `/api`. There is no authen
 - Dates are ISO `YYYY-MM-DD` and must be real calendar dates. Ratings are numbers from 0 to 10.
 - Bodies are validated against a schema. Unknown fields are rejected, not ignored.
 - Errors always have the shape `ApiErrorBody`: `{ "error": "message for people", "code": "stable_code", "details": optional }`. Status codes: 400 validation or bad input, 404 unknown record, 409 conflict with the current state, 501 a provider or source that is not configured, 502 a provider failed.
-- Common codes: `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
+- Common codes: `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `sync_not_configured`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
 - Any successful write under `/api` marks the public site as changed, so the publisher rebuilds it after a short debounce. Reads never do.
 - Images are never linked to a provider. `cover` and `banner` always hold `/api/images/<hash>`, a copy in the server image store.
 
@@ -98,6 +98,12 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 
 - `POST /api/publish`: queues a publish and answers 202 `{ "status": "queued", "failures": n }`.
 - `GET /api/health`: `HealthReport`.
+
+## Jellyfin sync
+
+- `GET /api/sync/report`: the `SyncPlan` a sync would apply: `movies` (`MovieChange`), `series` (`SeriesChange` with its `seasons`), `unlinked`, `warnings`, `ignoredPlays` and `unmatchedTitles`. Reads Jellyfin and Jellystat and the database; writes nothing.
+- `POST /api/sync/apply` with `{ "confirm": true }`: recomputes the plan on the server (a client-supplied plan is never trusted), writes it in one transaction and answers `{ plan, result: SyncApplyResult }`. A body without `confirm: true` is a 400.
+- Both answer 501 `sync_not_configured` unless the Jellyfin and Jellystat variables are set (see the README).
 
 ## Not in the API
 

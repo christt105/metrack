@@ -1,7 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { SeasonChange, SyncPlan } from '@metrack/domain';
+import type { SeasonChange, SyncApplyResult, SyncPlan } from '@metrack/domain';
 import { emptyMovie, emptySeason, emptySeries } from '../media/emptyEntities.js';
-import type { SyncApplyResult } from './SyncApplyResult.js';
 import type { SyncTargets } from './SyncTargets.js';
 
 export const SYNC_SOURCE = 'jellyfin';

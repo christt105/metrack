@@ -96,6 +96,7 @@ npx tsx tools/parity/compareContent.ts /path/to/MediaTracker/content /tmp/parity
 
 - `node:sqlite` (built into Node 22): avoids a native module and a build toolchain in the image; it is still marked experimental, so it is confined to `apps/server/src/storage` and the image silences its warning.
 - `fastify` and `@fastify/static`: routing, in-process request injection for tests and static file serving with little code.
+- `pg`: the only way to read Jellystat, which exposes its history through its own login-protected API and its Postgres database; used for one read-only query.
 - `vue`, `vite`, `@vitejs/plugin-vue`, `vue-tsc`: the frontend.
 - `yaml`: parses note frontmatter (quoted strings, block lists, multi-line values) and quotes values when writing front matter for Hugo, both of which a hand-written implementation would get subtly wrong; zero dependencies of its own.
 - `vitest`, `eslint`, `prettier`, `typescript`, `tsx`: tests, lint, formatting, type checking and dev reload.
@@ -149,3 +150,26 @@ rclone sync /path/to/metrack-data/backups remote:metrack-backups
 ```
 
 Backups are immutable directories, so syncing the whole folder is safe. Restore from an off-server copy by placing the backup directory back under `backups/` and running the restore above.
+
+## Jellyfin viewing sync
+
+The service can compare what was played in Jellyfin with the tracking. The structure (seasons, episodes, provider ids) comes from the Jellyfin API and the dates from Jellystat's `jf_playback_activity` table, read directly from its Postgres database in a read-only session. Jellyfin 12 only accepts the `Authorization: MediaBrowser Token="..."` header, which is what the client sends. Jellystat only records real playback, so items marked as watched by hand never show up. Syncing is off unless the four required variables are set.
+
+| Variable                                     | Default                   | Meaning                                             |
+| -------------------------------------------- | ------------------------- | --------------------------------------------------- |
+| `JELLYFIN_URL`, `JELLYFIN_TOKEN`             | required                  | Jellyfin address and an API key                     |
+| `JELLYSTAT_DB_HOST`, `JELLYSTAT_DB_PASSWORD` | required                  | Jellystat Postgres host and password                |
+| `JELLYSTAT_DB_PORT`, `_USER`, `_NAME`        | 5432, postgres, jellystat | Rest of the connection                              |
+| `JELLYFIN_USER`                              | `admin`                   | Jellyfin account whose viewings are tracked         |
+| `SYNC_TIME_ZONE`                             | `Europe/Madrid`           | Time zone that decides on which day a viewing falls |
+
+Rules: an item counts as watched when 90% of its runtime was played in one day. A watched movie without a finish date completes with that day, and later viewings become rewatches (a viewing the day after the recorded date is taken as the same one). The first watched episode puts the season in progress with `started_at`; once every episode is watched and none is still to air the season completes with `finished_at` set to the day the last one was first watched. Ratings, reviews and notes are never touched. Library seasons are paired with stored seasons by Jellyfin id, a season override, the date of the first episode (never the number, so TMDB season 3 pairs with Jellyfin season 4 for Lupin) and finally the number for stored seasons that have no air date. Titles without any id go to the unlinked inbox. Playback of items that left the library or came back under new ids cannot be matched and is only counted.
+
+The first pass is report only:
+
+```sh
+node --disable-warning=ExperimentalWarning apps/server/dist/cli.js sync --verbose
+curl http://localhost:8097/api/sync/report
+```
+
+`sync` without `--apply` opens the database read-only. `sync --apply` and `POST /api/sync/apply` with `{ "confirm": true }` recompute the plan and write it in one transaction. The settings page has the same two steps.

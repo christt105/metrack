@@ -62,5 +62,6 @@ export type { SeriesChange } from './sync/SeriesChange.js';
 export type { UnlinkedChange } from './sync/UnlinkedChange.js';
 export type { SyncWarning, SyncWarningCode } from './sync/SyncWarning.js';
 export type { UnmatchedTitle } from './sync/UnmatchedTitle.js';
+export type { SyncApplyResult } from './sync/SyncApplyResult.js';
 export type { SyncPlan } from './sync/SyncPlan.js';
 export { planSync } from './sync/planSync.js';

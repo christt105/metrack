@@ -151,6 +151,20 @@ export const messages = {
     backupDone: (name: string) => `Created ${name}.`,
     backupSize: (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`,
     backupWithImages: 'with images',
+    sync: 'Jellyfin viewings',
+    syncHint:
+      'Compares what was played in Jellyfin with your tracking. Checking never writes anything.',
+    syncCheck: 'Check viewings',
+    syncApply: 'Apply changes',
+    syncConfirm: 'Write these changes to your tracking?',
+    syncNothing: 'Nothing to change.',
+    syncApplied: (changes: number) => `Applied ${changes} change(s).`,
+    syncMovies: (n: number) => `${n} movie(s) to create or update`,
+    syncSeasons: (n: number) => `${n} season(s) to create or update`,
+    syncUnlinked: (n: number) => `${n} title(s) without ids for the inbox`,
+    syncWarnings: (n: number) => `${n} warning(s)`,
+    syncUnmatched: (plays: number, titles: number) =>
+      `${plays} play(s) of ${titles} title(s) are no longer in the library and are ignored`,
   },
   typeLabels: {
     movie: 'Movie',

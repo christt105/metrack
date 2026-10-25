@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import type { SyncPlan } from '@metrack/domain';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
 import { messages } from '../i18n/messages';
+import { countSyncChanges } from '../logic/countSyncChanges';
 
 const api = useApi();
 const { data: health, error: healthError } = useLoader(() => api.health());
@@ -28,6 +30,22 @@ async function run(action: () => Promise<string>): Promise<void> {
     busy.value = false;
   }
 }
+
+const plan = ref<SyncPlan | null>(null);
+const syncChanges = computed(() => (plan.value === null ? 0 : countSyncChanges(plan.value)));
+const checkSync = () =>
+  run(async () => {
+    plan.value = await api.syncReport();
+    return countSyncChanges(plan.value) === 0 ? messages.settings.syncNothing : '';
+  });
+const applySync = () => {
+  if (!window.confirm(messages.settings.syncConfirm)) return Promise.resolve();
+  return run(async () => {
+    const { plan: applied } = await api.applySync();
+    plan.value = null;
+    return messages.settings.syncApplied(countSyncChanges(applied));
+  });
+};
 
 const publish = () =>
   run(async () => messages.settings.publishQueued((await api.publish()).failures));
@@ -88,6 +106,27 @@ const backup = () =>
         {{ messages.settings.backupNow }}
       </button>
     </div>
+    <div class="panel">
+      <h2>{{ messages.settings.sync }}</h2>
+      <p class="muted">{{ messages.settings.syncHint }}</p>
+      <ul v-if="plan" class="sync">
+        <li>{{ messages.settings.syncMovies(plan.movies.length) }}</li>
+        <li>
+          {{ messages.settings.syncSeasons(plan.series.flatMap((s) => s.seasons).length) }}
+        </li>
+        <li>{{ messages.settings.syncUnlinked(plan.unlinked.length) }}</li>
+        <li>{{ messages.settings.syncWarnings(plan.warnings.length) }}</li>
+        <li class="muted">
+          {{ messages.settings.syncUnmatched(plan.ignoredPlays, plan.unmatchedTitles.length) }}
+        </li>
+      </ul>
+      <button type="button" :disabled="busy" @click="checkSync">
+        {{ messages.settings.syncCheck }}
+      </button>
+      <button v-if="syncChanges > 0" type="button" :disabled="busy" @click="applySync">
+        {{ messages.settings.syncApply }}
+      </button>
+    </div>
     <p v-if="actionResult" class="notice success" role="status">{{ actionResult }}</p>
     <ErrorNotice :error="actionError" />
   </section>
@@ -98,6 +137,11 @@ const backup = () =>
   list-style: none;
   padding: 0;
   margin: 0 0 12px;
+}
+
+.sync {
+  margin: 0 0 12px;
+  padding-left: 20px;
 }
 
 .backups li {
