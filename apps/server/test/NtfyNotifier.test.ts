@@ -74,7 +74,20 @@ describe('NtfyNotifier', () => {
       logger,
       fetchFn as unknown as typeof fetch,
     );
-    await expect(notifier.notify('a', 'b')).resolves.toBeUndefined();
+    await expect(notifier.notify('a', 'b')).resolves.toBe(false);
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('unreachable'));
+  });
+
+  it('reports whether ntfy accepted the message', async () => {
+    const statuses = [200, 503];
+    const fetchFn = vi.fn(async () => new Response('', { status: statuses.shift() }));
+    const notifier = new NtfyNotifier(
+      { url: 'http://x', topic: 't' },
+      logger,
+      fetchFn as unknown as typeof fetch,
+    );
+    await expect(notifier.notify('a', 'b')).resolves.toBe(true);
+    await expect(notifier.notify('a', 'b')).resolves.toBe(false);
+    expect(logger.error).toHaveBeenCalledWith('ntfy responded with status 503');
   });
 });

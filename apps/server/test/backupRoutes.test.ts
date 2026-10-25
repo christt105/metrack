@@ -29,7 +29,7 @@ describe('backup routes', () => {
       join(dir, 'backups'),
     );
     const logger = { info: vi.fn(), error: vi.fn() };
-    const job = new BackupJob(service, 5, { notify: vi.fn(async () => {}) }, logger);
+    const job = new BackupJob(service, 5, { notify: vi.fn(async () => true) }, logger);
     const app = await buildApp({
       appVersion: 'test',
       migrationRunner: runner,
@@ -53,7 +53,7 @@ describe('backup routes', () => {
     const job = new BackupJob(
       service,
       5,
-      { notify: vi.fn(async () => {}) },
+      { notify: vi.fn(async () => true) },
       { info: vi.fn(), error: vi.fn() },
     );
     const runner = new MigrationRunner(openDatabase(':memory:'), migrations);

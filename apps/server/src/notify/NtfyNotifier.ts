@@ -3,7 +3,7 @@ import type { NtfyConfig } from './NtfyConfig.js';
 import type { Notifier } from './Notifier.js';
 import type { NotifyOptions } from './NotifyOptions.js';
 
-/** Publishes alerts to an ntfy topic. Delivery failures are logged, never thrown. */
+/** Publishes alerts to an ntfy topic. Delivery failures are logged and reported, never thrown. */
 export class NtfyNotifier implements Notifier {
   constructor(
     private readonly config: NtfyConfig,
@@ -11,7 +11,7 @@ export class NtfyNotifier implements Notifier {
     private readonly fetchFn: typeof fetch = fetch,
   ) {}
 
-  async notify(title: string, message: string, options: NotifyOptions = {}): Promise<void> {
+  async notify(title: string, message: string, options: NotifyOptions = {}): Promise<boolean> {
     const headers: Record<string, string> = {
       Title: encodeHeader(title),
       Priority: options.priority ?? 'high',
@@ -34,8 +34,10 @@ export class NtfyNotifier implements Notifier {
       if (!response.ok) {
         this.logger.error(`ntfy responded with status ${response.status}`);
       }
+      return response.ok;
     } catch (error) {
       this.logger.error(`ntfy delivery failed: ${errorMessage(error)}`);
+      return false;
     }
   }
 }
