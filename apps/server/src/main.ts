@@ -6,7 +6,6 @@ import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js'
 import { TmdbImageProvider } from './artwork/TmdbImageProvider.js';
 import { loadConfig } from './config/loadConfig.js';
 import { ImageStore } from './images/ImageStore.js';
-import { LogNotifier } from './notify/LogNotifier.js';
 import { MetadataCache } from './metadata/MetadataCache.js';
 import { MetadataStateRepository } from './metadata/MetadataStateRepository.js';
 import { movieLifecycle } from './metadata/movieLifecycle.js';
@@ -148,12 +147,7 @@ if (publishConfig) {
     new CloudflarePagesPublisher(publishConfig, runner),
     new FilePublishState(join(config.dataDir, 'publish-state.json')),
   );
-  publishQueue = new PublishQueue(
-    () => pipeline.run(),
-    new LogNotifier(logger),
-    logger,
-    new TimerScheduler(),
-  );
+  publishQueue = new PublishQueue(() => pipeline.run(), notifier, logger, new TimerScheduler());
 } else {
   console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
 }
@@ -170,6 +164,7 @@ const scheduler = new BackupScheduler(
 const app = await buildApp({
   appVersion: config.appVersion,
   migrationRunner,
+  logger,
   webDir: config.webDir,
   imageStore,
   metadataCache,

@@ -5,6 +5,7 @@ import { loadExportInput, type ExportSources } from '../export/loadExportInput.j
 import { storeImagePath } from '../export/storeImagePath.js';
 import { writeExport } from '../export/writeExport.js';
 import type { CommandRunner } from './CommandRunner.js';
+import { HUGO_INHERITED_ENV } from './HUGO_INHERITED_ENV.js';
 import type { PublishOutcome } from './PublishOutcome.js';
 import type { PublishPipelineOptions } from './PublishPipelineOptions.js';
 import type { Publisher } from './Publisher.js';
@@ -36,7 +37,10 @@ export class PublishPipeline {
     cpSync(this.options.siteTemplateDir, siteDir, { recursive: true });
     writeExport(files, siteDir, storeImagePath(this.sources.images));
 
-    await this.runner.run(this.options.hugoBinary, ['--destination', builtDir], { cwd: siteDir });
+    await this.runner.run(this.options.hugoBinary, ['--destination', builtDir], {
+      cwd: siteDir,
+      inheritEnv: HUGO_INHERITED_ENV,
+    });
     await this.publisher.publish(builtDir);
     this.state.record(fingerprint);
     return 'published';

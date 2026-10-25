@@ -30,10 +30,13 @@ export class NodeCommandRunner implements CommandRunner {
 
 function parentEnv(names: readonly string[] | undefined): NodeJS.ProcessEnv {
   if (names === undefined) return process.env;
+  const exact = new Set(names.filter((name) => !name.endsWith('*')));
+  const prefixes = names.filter((name) => name.endsWith('*')).map((name) => name.slice(0, -1));
   return Object.fromEntries(
-    names.flatMap((name) => {
-      const value = process.env[name];
-      return value === undefined ? [] : [[name, value]];
-    }),
+    Object.entries(process.env).filter(
+      ([name, value]) =>
+        value !== undefined &&
+        (exact.has(name) || prefixes.some((prefix) => name.startsWith(prefix))),
+    ),
   );
 }

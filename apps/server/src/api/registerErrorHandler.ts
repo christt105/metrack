@@ -1,5 +1,6 @@
 import type { FastifyError, FastifyInstance } from 'fastify';
 import type { ApiErrorBody } from '@metrack/domain';
+import type { Logger } from '../notify/Logger.js';
 import { HttpError } from '../http/HttpError.js';
 import { ApiError } from './ApiError.js';
 
@@ -54,11 +55,17 @@ function describe(error: unknown): Failure {
   return { status: 500, body: { error: 'Internal server error', code: 'internal_error' } };
 }
 
-/** Answers every failure under `/api` with the same `{ error, code, details? }` body. */
-export function registerErrorHandler(app: FastifyInstance): void {
+/**
+ * Answers every failure under `/api` with the same `{ error, code, details? }` body, and logs the
+ * failures that are the server's fault.
+ */
+export function registerErrorHandler(app: FastifyInstance, logger?: Logger): void {
   app.setErrorHandler((error, request, reply) => {
     const { status, body } = describe(error);
-    if (status >= 500) request.log.error(error);
+    if (status >= 500 && logger) {
+      const detail = error instanceof Error ? (error.stack ?? error.message) : String(error);
+      logger.error(`${request.method} ${request.url} failed with ${status}: ${detail}`);
+    }
     return reply.code(status).send(body);
   });
 }
