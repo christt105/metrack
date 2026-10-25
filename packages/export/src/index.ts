@@ -6,3 +6,5 @@ export type { ExportedTextFile } from './ExportedTextFile.js';
 export type { ExportImage } from './ExportImage.js';
 export type { ExportInput } from './ExportInput.js';
 export { fingerprintExport } from './fingerprintExport.js';
+export { buildRedirectPages } from './buildRedirectPages.js';
+export type { RedirectOptions } from './RedirectOptions.js';
