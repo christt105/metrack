@@ -1,13 +1,18 @@
 const OVERWRITE = new Set(['status', 'finishedAt', 'rating', 'review', 'rewatches']);
 
 function isEmpty(value: unknown): boolean {
-  return value === null || value === undefined || (Array.isArray(value) && value.length === 0);
+  return (
+    value === null ||
+    value === undefined ||
+    value === false ||
+    (Array.isArray(value) && value.length === 0)
+  );
 }
 
 /**
  * The fields of `incoming` that should change `existing`. Tracking fields always follow the
  * note, so clearing a rating in the vault clears it here. Every other field is only filled in
- * or changed, never emptied, so data fetched or edited since the last import survives.
+ * or changed, never emptied (a `false` flag counts as empty), so data fetched or edited since the last import survives.
  */
 export function mergeIntoExisting<T extends object>(existing: T, incoming: Partial<T>): Partial<T> {
   const patch: Record<string, unknown> = {};

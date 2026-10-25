@@ -12,6 +12,7 @@ export interface Movie extends Tracking, Artwork {
   genres: string[];
   cast: string[];
   director: string | null;
+  follow: boolean;
   note: string | null;
   /** File name the item had in the vault. It keeps exported page addresses stable. */
   slug: string | null;

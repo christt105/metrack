@@ -431,6 +431,7 @@ function emptyMovieRow() {
     genres: [],
     cast: [],
     director: null,
+    follow: false,
     note: null,
     slug: null,
     tags: [],

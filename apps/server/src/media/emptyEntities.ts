@@ -22,6 +22,7 @@ export function emptyMovie(): Omit<Movie, 'id'> {
     genres: [],
     cast: [],
     director: null,
+    follow: false,
     note: null,
     slug: null,
     tags: [],

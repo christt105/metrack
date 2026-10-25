@@ -86,6 +86,7 @@ function setup() {
       genres: [],
       cast: [],
       director: null,
+      follow: false,
       note: null,
       cover: null,
       banner: null,

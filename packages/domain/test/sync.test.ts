@@ -35,6 +35,7 @@ function movie(over: Partial<Movie>): Movie {
     genres: [],
     cast: [],
     director: null,
+    follow: false,
     note: null,
     slug: null,
     tags: [],

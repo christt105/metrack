@@ -20,6 +20,7 @@ export const movie = (over: Partial<Movie> = {}): Movie => ({
   genres: ['Drama'],
   cast: [],
   director: null,
+  follow: false,
   note: null,
   cover: null,
   banner: null,

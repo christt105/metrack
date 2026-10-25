@@ -23,6 +23,7 @@ export const fieldSchemas: Record<Collection, FieldSchema[]> = {
     { key: 'originalTitle', kind: 'text', section: 'metadata' },
     { key: 'releaseDate', kind: 'date', section: 'metadata' },
     { key: 'director', kind: 'text', section: 'metadata' },
+    { key: 'follow', kind: 'boolean', section: 'notes' },
     { key: 'genres', kind: 'list', section: 'metadata' },
     { key: 'cast', kind: 'list', section: 'metadata' },
     { key: 'overview', kind: 'textarea', section: 'metadata' },
