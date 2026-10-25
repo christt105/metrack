@@ -237,3 +237,7 @@ Limitations:
 - There is no free source for "episode X airs in Spain" for weekly broadcast series. Only season premieres are announced, never single episodes, and a season that streams all at once is detected by its provider listing.
 - A season that TMDB lists without any date is not created or announced until it gets one. If a release date moves after an alert was sent, the alert is not repeated.
 - Created seasons have no cover of their own and show the series cover until a metadata refresh or an image choice sets one.
+
+## License
+
+[MIT](LICENSE)
