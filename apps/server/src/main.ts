@@ -4,9 +4,6 @@ import { createEditServices } from './api/createEditServices.js';
 import type { ImageProvider } from './artwork/ImageProvider.js';
 import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js';
 import { TmdbImageProvider } from './artwork/TmdbImageProvider.js';
-import { BackupJob } from './backup/BackupJob.js';
-import { BackupScheduler } from './backup/BackupScheduler.js';
-import { createBackupService } from './backup/createBackupService.js';
 import { loadConfig } from './config/loadConfig.js';
 import { ImageStore } from './images/ImageStore.js';
 import { LogNotifier } from './notify/LogNotifier.js';
@@ -25,6 +22,9 @@ import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js'
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { TmdbMovieSource } from './providers/tmdb/TmdbMovieSource.js';
 import { TmdbSeriesSource } from './providers/tmdb/TmdbSeriesSource.js';
+import { BackupJob } from './backup/BackupJob.js';
+import { BackupScheduler } from './backup/BackupScheduler.js';
+import { createBackupService } from './backup/createBackupService.js';
 import { createNotifier } from './notify/createNotifier.js';
 import { MigrationRunner } from './storage/MigrationRunner.js';
 import { migrations } from './storage/migrations/index.js';
@@ -91,19 +91,6 @@ const edit = createEditServices({
   titleProviders,
   imageProviders,
 });
-const backupService = createBackupService(config, db);
-const backupJob = new BackupJob(
-  backupService,
-  config.backup.retention,
-  createNotifier(config.ntfy, console),
-  console,
-);
-const scheduler = new BackupScheduler(
-  backupService,
-  backupJob,
-  config.backup.intervalHours * 3_600_000,
-  console,
-);
 
 const logger = { info: console.log, error: console.error };
 const { config: publishConfig, missing: publishMissing } = loadPublishConfig(process.env);
@@ -137,6 +124,20 @@ if (publishConfig) {
 } else {
   console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
 }
+
+const backupService = createBackupService(config, db);
+const backupJob = new BackupJob(
+  backupService,
+  config.backup.retention,
+  createNotifier(config.ntfy, logger),
+  logger,
+);
+const scheduler = new BackupScheduler(
+  backupService,
+  backupJob,
+  config.backup.intervalHours * 3_600_000,
+  logger,
+);
 
 const app = await buildApp({
   appVersion: config.appVersion,

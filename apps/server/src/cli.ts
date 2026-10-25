@@ -5,10 +5,14 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { exportSite } from './export/exportSite.js';
 import { openExportSources } from './export/openExportSources.js';
+import { runBackupCommand } from './backup/runBackupCommand.js';
 import { runImport } from './importer/runImport.js';
 
 const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack redirect <outDir> --origin <newSiteAddress> [--old-base <path>]
+       metrack backups
+       metrack backup
+       metrack restore <backupName>
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
@@ -18,6 +22,9 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
 
   redirect writes 404.html and index.html for the old GitHub Pages site. Every old address is sent to the same
   path on --origin (the old site was served under --old-base, default /MediaTracker). Nothing else is touched.
+
+  backups lists stored backups, backup creates one now (and prunes to BACKUP_RETENTION), restore replaces the
+  database and image store with a backup (stop the server first).
 
   export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
   <outDir>, replacing those sections. It reads the database and image store in the data directory.`;
@@ -37,6 +44,14 @@ async function main(argv: string[]): Promise<number> {
     },
   });
   const [command, target] = positionals;
+  if (!values.help && (command === 'backups' || command === 'backup' || command === 'restore')) {
+    if (positionals.length > (command === 'restore' ? 2 : 1)) {
+      console.error(USAGE);
+      return 2;
+    }
+    console.log(await runBackupCommand(loadConfig(process.env), command, target));
+    return 0;
+  }
   const known = command === 'import' || command === 'export' || command === 'redirect';
   if (values.help || !known || !target || positionals.length > 2) {
     console.error(USAGE);

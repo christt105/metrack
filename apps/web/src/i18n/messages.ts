@@ -145,6 +145,12 @@ export const messages = {
     storage: 'Image store',
     cleanup: 'Remove unused images',
     cleanupDone: (n: number) => `Removed ${n} image(s).`,
+    backups: 'Backups',
+    backupNow: 'Back up now',
+    backupsEmpty: 'No backups yet.',
+    backupDone: (name: string) => `Created ${name}.`,
+    backupSize: (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`,
+    backupWithImages: 'with images',
   },
   typeLabels: {
     movie: 'Movie',

@@ -52,10 +52,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerArtworkRoutes(app, artwork, editor);
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
+  if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
-  if (deps.backup) {
-    registerBackupRoutes(app, deps.backup);
-  }
 
   const webDir = deps.webDir ? resolve(deps.webDir) : undefined;
   const serveWeb = webDir !== undefined && existsSync(webDir);

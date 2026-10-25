@@ -7,6 +7,11 @@ import { messages } from '../i18n/messages';
 
 const api = useApi();
 const { data: health, error: healthError } = useLoader(() => api.health());
+const {
+  data: backups,
+  error: backupsError,
+  reload: reloadBackups,
+} = useLoader(() => api.listBackups());
 const actionError = ref<unknown>(null);
 const actionResult = ref<string | null>(null);
 const busy = ref(false);
@@ -28,6 +33,12 @@ const publish = () =>
   run(async () => messages.settings.publishQueued((await api.publish()).failures));
 const cleanup = () =>
   run(async () => messages.settings.cleanupDone((await api.cleanupImages()).removed.length));
+const backup = () =>
+  run(async () => {
+    const created = await api.createBackup();
+    await reloadBackups();
+    return messages.settings.backupDone(created.name);
+  });
 </script>
 
 <template>
@@ -58,12 +69,43 @@ const cleanup = () =>
         {{ messages.settings.cleanup }}
       </button>
     </div>
+    <div class="panel">
+      <h2>{{ messages.settings.backups }}</h2>
+      <ErrorNotice :error="backupsError" />
+      <p v-if="backups && backups.length === 0" class="muted">
+        {{ messages.settings.backupsEmpty }}
+      </p>
+      <ul v-if="backups" class="backups">
+        <li v-for="item in backups" :key="item.name">
+          <span>{{ item.name }}</span>
+          <span class="muted">
+            {{ messages.settings.backupSize(item.sizeBytes)
+            }}<template v-if="item.hasImages">, {{ messages.settings.backupWithImages }}</template>
+          </span>
+        </li>
+      </ul>
+      <button type="button" :disabled="busy" @click="backup">
+        {{ messages.settings.backupNow }}
+      </button>
+    </div>
     <p v-if="actionResult" class="notice success" role="status">{{ actionResult }}</p>
     <ErrorNotice :error="actionError" />
   </section>
 </template>
 
 <style scoped>
+.backups {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+
+.backups li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 dl {
   display: grid;
   grid-template-columns: max-content 1fr;
