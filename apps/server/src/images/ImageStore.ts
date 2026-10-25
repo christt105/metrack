@@ -16,7 +16,9 @@ type Row = Record<string, unknown>;
 
 /**
  * Local image store. Files are named by the SHA-256 of their content, so identical
- * images are stored once. Entities point at the copy through `imageRef`.
+ * images are stored once. Entities point at the copy through `imageRef`. An image keeps the
+ * first URL it came from as `sourceUrl`; any other URL that yields the same bytes is recorded
+ * as an extra source so `findBySourceUrl` resolves it too.
  */
 export class ImageStore {
   constructor(
@@ -57,7 +59,7 @@ export class ImageStore {
     const size = readImageSize(bytes);
     const hash = createHash('sha256').update(bytes).digest('hex');
     const existing = this.get(hash);
-    if (existing && existsSync(this.pathOf(existing))) return existing;
+    if (existing && existsSync(this.pathOf(existing))) return this.withSource(existing, sourceUrl);
 
     const image: StoredImage = {
       hash,
@@ -80,7 +82,7 @@ export class ImageStore {
       throw error;
     }
     const stored = this.get(hash);
-    if (stored) return stored;
+    if (stored) return this.withSource(stored, sourceUrl);
     this.db
       .prepare(
         `INSERT INTO image (hash, extension, mime_type, width, height, byte_size, source_url, created_at)
@@ -126,6 +128,7 @@ export class ImageStore {
     for (const { table, column } of IMAGE_COLUMNS) {
       this.db.prepare(`UPDATE ${table} SET ${column} = NULL WHERE ${column} = ?`).run(image.ref);
     }
+    this.db.prepare('DELETE FROM image_source WHERE hash = ?').run(hash);
     this.db.prepare('DELETE FROM image WHERE hash = ?').run(hash);
     await rm(this.pathOf(image), { force: true });
     return true;
@@ -153,8 +156,27 @@ export class ImageStore {
 
   /** The stored copy of a URL, without ever hitting the network. */
   findBySourceUrl(url: string): StoredImage | undefined {
-    const row = this.db.prepare('SELECT * FROM image WHERE source_url = ? LIMIT 1').get(url);
+    const row = this.db
+      .prepare(
+        `SELECT * FROM image
+         WHERE source_url = ? OR hash IN (SELECT hash FROM image_source WHERE url = ?)
+         ORDER BY source_url = ? DESC
+         LIMIT 1`,
+      )
+      .get(url, url, url);
     return row ? toImage(row) : undefined;
+  }
+
+  private withSource(image: StoredImage, sourceUrl: string | null): StoredImage {
+    if (sourceUrl !== null && sourceUrl !== image.sourceUrl) {
+      this.db
+        .prepare(
+          `INSERT INTO image_source (url, hash) VALUES (?, ?)
+           ON CONFLICT (url) DO UPDATE SET hash = excluded.hash`,
+        )
+        .run(sourceUrl, image.hash);
+    }
+    return image;
   }
 }
 
