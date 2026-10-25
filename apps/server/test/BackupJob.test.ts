@@ -31,4 +31,33 @@ describe('BackupJob', () => {
     expect(notifier.notify).toHaveBeenCalledWith('metrack backup failed', 'disk full');
     expect(service.prune).not.toHaveBeenCalled();
   });
+
+  it('alerts once per failure streak and once on recovery', async () => {
+    let fail = true;
+    const service = {
+      create: vi.fn(() => {
+        if (fail) throw new Error('disk full');
+        return info;
+      }),
+      prune: vi.fn(() => []),
+    } as unknown as BackupService;
+    const notifier: Notifier = { notify: vi.fn(async () => {}) };
+    const job = new BackupJob(service, 7, notifier, logger);
+    for (let i = 0; i < 3; i++) await expect(job.run()).rejects.toThrow('disk full');
+    expect(notifier.notify).toHaveBeenCalledTimes(1);
+
+    fail = false;
+    await job.run();
+    await job.run();
+    expect(notifier.notify).toHaveBeenCalledTimes(2);
+    expect(notifier.notify).toHaveBeenLastCalledWith(
+      'metrack backup recovered',
+      'backup n created',
+      { priority: 'default', tags: ['white_check_mark'] },
+    );
+
+    fail = true;
+    await expect(job.run()).rejects.toThrow('disk full');
+    expect(notifier.notify).toHaveBeenCalledTimes(3);
+  });
 });
