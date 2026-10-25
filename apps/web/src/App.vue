@@ -1,28 +1,62 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import type { HealthReport } from '@metrack/domain';
-import { fetchHealth } from './api/fetchHealth';
-
-const health = ref<HealthReport | null>(null);
-const error = ref<string | null>(null);
-
-onMounted(async () => {
-  try {
-    health.value = await fetchHealth();
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e);
-  }
-});
+import { messages } from './i18n/messages';
 </script>
 
 <template>
-  <main>
-    <h1>metrack</h1>
-    <p v-if="error">Service unavailable: {{ error }}</p>
-    <p v-else-if="health">
-      Status: {{ health.status }} (version {{ health.appVersion }}, schema
-      {{ health.schemaVersion }})
-    </p>
-    <p v-else>Loading...</p>
+  <header class="topbar">
+    <RouterLink to="/" class="brand">{{ messages.appName }}</RouterLink>
+    <nav>
+      <RouterLink to="/">{{ messages.nav.library }}</RouterLink>
+      <RouterLink to="/search">{{ messages.nav.search }}</RouterLink>
+      <RouterLink to="/unlinked">{{ messages.nav.unlinked }}</RouterLink>
+      <RouterLink to="/settings">{{ messages.nav.settings }}</RouterLink>
+    </nav>
+  </header>
+  <main class="page">
+    <RouterView />
   </main>
 </template>
+
+<style scoped>
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  padding: 10px 16px;
+  background: var(--surface-low);
+  border-bottom: 1px solid var(--outline);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--on-surface);
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+nav a {
+  padding: 6px 2px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+
+nav a.router-link-exact-active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 16px 64px;
+}
+</style>
