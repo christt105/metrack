@@ -116,7 +116,7 @@ export class ApiClient {
   }
 
   removeRewatch<C extends Collection>(collection: C, id: number, date: string): Promise<Detail<C>> {
-    return this.request('DELETE', `/${collection}/${id}/rewatches/${date}`);
+    return this.request('DELETE', `/${collection}/${id}/rewatches/${encodeURIComponent(date)}`);
   }
 
   putOverride(
