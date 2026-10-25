@@ -99,6 +99,11 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 - `POST /api/publish`: queues a publish and answers 202 `{ "status": "queued", "failures": n }`.
 - `GET /api/health`: `HealthReport`.
 
+## Backups
+
+- `GET /api/backups`: the stored backups, newest first, as `{ name, createdAt, sizeBytes, hasImages }[]`.
+- `POST /api/backups`: takes a backup now, prunes to the retention count and answers 201 with the new backup. A failure answers 500 `backup_failed` with a generic message; the details are only in the server log.
+
 ## Jellyfin sync
 
 - `GET /api/sync/report`: the `SyncPlan` a sync would apply: `movies` (`MovieChange`), `series` (`SeriesChange` with its `seasons`), `unlinked`, `warnings`, `ignoredPlays` and `unmatchedTitles`. Reads Jellyfin and Jellystat and the database; writes nothing.
