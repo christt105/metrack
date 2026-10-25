@@ -1,6 +1,6 @@
 # HTTP API
 
-The private editing API served by `apps/server` under `/api`. There is no authentication: the service is only reachable over the VPN. Requests and responses are JSON unless noted. Every type named here is exported from `@metrack/domain` (`packages/domain/src/api` and the entity types next to it), so the web app imports the contract instead of redefining it.
+The private editing API served by `apps/server` under `/api`. There is no authentication: the service is meant for a trusted local network (see the security model in the README). Requests and responses are JSON unless noted. Every type named here is exported from `@metrack/domain` (`packages/domain/src/api` and the entity types next to it), so the web app imports the contract instead of redefining it.
 
 ## Conventions
 
