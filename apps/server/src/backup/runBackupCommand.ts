@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Config } from '../config/Config.js';
 import { createNotifier } from '../notify/createNotifier.js';
@@ -11,7 +12,11 @@ export async function runBackupCommand(
   command: 'backups' | 'backup' | 'restore',
   name: string | undefined,
 ): Promise<string> {
-  const db = openDatabase(join(config.dataDir, 'metrack.db'));
+  const dbPath = join(config.dataDir, 'metrack.db');
+  if (command === 'backup' && !existsSync(dbPath)) {
+    throw new Error(`No database at ${dbPath}; check DATA_DIR`);
+  }
+  const db = openDatabase(dbPath);
   const service = createBackupService(config, db);
   let closed = false;
   try {
