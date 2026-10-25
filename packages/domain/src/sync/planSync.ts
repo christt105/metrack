@@ -18,10 +18,18 @@ export function planSync(input: SyncInput): SyncPlan {
         runtimes.set(episode.jellyfinId, episode.runtimeSeconds);
     }
   }
+  const played = new Set<string>();
+  for (const movie of input.movies) if (movie.played) played.add(movie.jellyfinId);
+  for (const series of input.series) {
+    for (const season of series.seasons) {
+      for (const episode of season.episodes) if (episode.played) played.add(episode.jellyfinId);
+    }
+  }
   const { days, playCount, ignored, unmatched } = collectWatchDays(
     input.plays,
     runtimes,
     makeDateOf(input.timeZone),
+    played,
   );
   const movies = planMovies(input.movies, days, playCount, input.state);
   const series = planSeries(input.series, days, playCount, input.state, input.today);

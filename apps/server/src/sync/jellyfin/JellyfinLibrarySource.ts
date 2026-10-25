@@ -17,6 +17,7 @@ function toEpisode(item: JellyfinItem): LibraryEpisode {
     airDate: dateOf(item.PremiereDate),
     runtimeSeconds: ticksToSeconds(item.RunTimeTicks),
     available: item.LocationType !== 'Virtual',
+    played: item.UserData?.Played === true,
   };
 }
 
@@ -31,6 +32,7 @@ export class JellyfinLibrarySource implements LibrarySource {
       year: item.ProductionYear ?? null,
       tmdbId: providerId(item, 'Tmdb'),
       runtimeSeconds: ticksToSeconds(item.RunTimeTicks),
+      played: item.UserData?.Played === true,
     }));
     const series: LibrarySeries[] = [];
     for (const item of await this.client.listSeries()) {

@@ -61,6 +61,36 @@ describe('JellyfinClient', () => {
     expect(url?.search).not.toContain('api_key');
   });
 
+  function withUsers(users: { Id: string; Name: string }[], recorded: Recorded[] = []): FetchFn {
+    const items = jellyfinFetch(() => [{ Id: 'a', UserData: { Played: true } }], recorded);
+    return ((input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      return url.pathname === '/Users' ? Promise.resolve(Response.json(users)) : items(input, init);
+    }) as FetchFn;
+  }
+
+  it('reads the played state of the configured user', async () => {
+    const recorded: Recorded[] = [];
+    const client = new JellyfinClient(withUsers([{ Id: 'u1', Name: 'Admin' }], recorded), {
+      url: 'http://jf',
+      token: 't',
+      userName: 'admin',
+    });
+    const movies = await client.listMovies();
+    expect(movies[0]?.UserData?.Played).toBe(true);
+    const itemsCall = recorded.find((call) => call.url.pathname === '/Items');
+    expect(itemsCall?.url.searchParams.get('UserId')).toBe('u1');
+  });
+
+  it('fails clearly when the configured user does not exist', async () => {
+    const client = new JellyfinClient(withUsers([{ Id: 'u1', Name: 'Admin' }]), {
+      url: 'http://jf',
+      token: 't',
+      userName: 'ghost',
+    });
+    await expect(client.listMovies()).rejects.toThrow('Jellyfin user not found: ghost');
+  });
+
   it('pages through every item', async () => {
     const all = Array.from({ length: 1100 }, (_, i) => ({ Id: `m${i}` }));
     const client = new JellyfinClient(
@@ -83,7 +113,7 @@ describe('JellyfinLibrarySource', () => {
           RunTimeTicks: 6000 * TICKS,
           ProviderIds: { Tmdb: '10' },
         },
-        { Id: 'm2', Name: 'No id', ProviderIds: {} },
+        { Id: 'm2', Name: 'No id', ProviderIds: {}, UserData: { Played: true } },
       ];
     }
     if (type === 'Series') {
@@ -114,8 +144,22 @@ describe('JellyfinLibrarySource', () => {
     );
     const library = await source.load();
     expect(library.movies).toEqual([
-      { jellyfinId: 'm1', title: 'Movie', year: 2020, tmdbId: 10, runtimeSeconds: 6000 },
-      { jellyfinId: 'm2', title: 'No id', year: null, tmdbId: null, runtimeSeconds: null },
+      {
+        jellyfinId: 'm1',
+        title: 'Movie',
+        year: 2020,
+        tmdbId: 10,
+        runtimeSeconds: 6000,
+        played: false,
+      },
+      {
+        jellyfinId: 'm2',
+        title: 'No id',
+        year: null,
+        tmdbId: null,
+        runtimeSeconds: null,
+        played: true,
+      },
     ]);
     expect(library.series).toEqual([
       {
@@ -136,6 +180,7 @@ describe('JellyfinLibrarySource', () => {
                 airDate: '2026-10-23',
                 runtimeSeconds: 1500,
                 available: true,
+                played: false,
               },
               {
                 jellyfinId: 'e2',
@@ -143,6 +188,7 @@ describe('JellyfinLibrarySource', () => {
                 airDate: null,
                 runtimeSeconds: null,
                 available: false,
+                played: false,
               },
             ],
           },
