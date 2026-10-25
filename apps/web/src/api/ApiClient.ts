@@ -22,7 +22,9 @@ import type {
   SeasonOverride,
   SeasonOverrideInput,
   SeriesDetail,
+  ReleaseAlert,
   UnlinkedTitle,
+  WatchlistEntry,
 } from '@metrack/domain';
 import type { BackupInfo } from './BackupInfo';
 import { ApiRequestError } from './ApiRequestError';
@@ -196,5 +198,21 @@ export class ApiClient {
 
   applySync(): Promise<{ plan: SyncPlan; result: SyncApplyResult }> {
     return this.request('POST', '/sync/apply', { confirm: true });
+  }
+
+  listWatchlist(): Promise<WatchlistEntry[]> {
+    return this.request('GET', '/watchlist');
+  }
+
+  follow(collection: 'movies' | 'series', id: number): Promise<void> {
+    return this.request('PUT', `/watchlist/${collection}/${id}`);
+  }
+
+  unfollow(collection: 'movies' | 'series', id: number): Promise<void> {
+    return this.request('DELETE', `/watchlist/${collection}/${id}`);
+  }
+
+  listAlerts(): Promise<ReleaseAlert[]> {
+    return this.request('GET', '/alerts');
   }
 }

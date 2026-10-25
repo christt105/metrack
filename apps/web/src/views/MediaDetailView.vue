@@ -7,6 +7,7 @@ import type { AnyDetail } from '../api/AnyDetail';
 import ArtworkPanel from '../components/ArtworkPanel.vue';
 import EntityForm from '../components/EntityForm.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
+import FollowToggle from '../components/FollowToggle.vue';
 import MetadataRefresh from '../components/MetadataRefresh.vue';
 import RewatchList from '../components/RewatchList.vue';
 import SeasonList from '../components/SeasonList.vue';
@@ -25,6 +26,9 @@ const error = ref<unknown>(null);
 let ticket = 0;
 
 const type = computed(() => MEDIA_TYPE_OF_COLLECTION[props.collection]);
+const followCollection = computed(() =>
+  props.collection === 'movies' || props.collection === 'series' ? props.collection : null,
+);
 const refreshable = computed(() => props.collection === 'movies' || props.collection === 'series');
 const series = computed(() =>
   props.collection === 'series' ? (detail.value as SeriesDetail | null) : null,
@@ -64,6 +68,10 @@ async function load(): Promise<void> {
   }
 }
 
+function setFollowing(value: boolean): void {
+  if (detail.value && 'follow' in detail.value) detail.value.follow = value;
+}
+
 function onSaved(updated: AnyDetail): void {
   detail.value =
     props.collection === 'series' && series.value
@@ -101,6 +109,13 @@ watch(() => [props.collection, props.id], load, { immediate: true });
         <span class="muted">{{ messages.collectionLabels[collection] }}</span>
         <StatusBadge v-if="trackedStatus" :status="trackedStatus" />
       </div>
+      <FollowToggle
+        v-if="followCollection && 'follow' in detail"
+        :id="detail.id"
+        :collection="followCollection"
+        :following="detail.follow"
+        @changed="setFollowing"
+      />
       <MetadataRefresh
         v-if="refreshable"
         :id="detail.id"

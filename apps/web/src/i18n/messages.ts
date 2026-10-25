@@ -9,7 +9,13 @@ import type {
 /** Every user-facing text of the app. Translating the interface means replacing this module. */
 export const messages = {
   appName: 'metrack',
-  nav: { library: 'Library', search: 'Add title', unlinked: 'Unlinked', settings: 'Settings' },
+  nav: {
+    library: 'Library',
+    search: 'Add title',
+    watchlist: 'Following',
+    unlinked: 'Unlinked',
+    settings: 'Settings',
+  },
   common: {
     save: 'Save',
     saving: 'Saving...',
@@ -119,6 +125,23 @@ export const messages = {
     manualTitle: 'Title',
     create: 'Create',
     added: 'Added.',
+  },
+  watchlist: {
+    title: 'Following',
+    followedTitle: 'Followed titles',
+    followedEmpty: 'Nothing is followed yet. Use the follow button on a movie or series.',
+    alertsTitle: 'Sent alerts',
+    alertsEmpty: 'No alert has been sent yet.',
+    follow: 'Follow for releases',
+    unfollow: 'Stop following',
+    following: 'Following',
+    releases: (date: string) => `Latest release ${date}`,
+    noDate: 'No release date',
+    kinds: {
+      releases_tomorrow: 'Releases tomorrow',
+      releases_today: 'Releases today',
+      available_es: 'Available in Spain',
+    },
   },
   unlinked: {
     title: 'Titles without a link',
@@ -231,7 +254,6 @@ export const messages = {
     note: 'Note link',
     slug: 'Slug',
     tags: 'Tags',
-    follow: 'Follow for releases',
     status: 'Status',
     startedAt: 'Started',
     finishedAt: 'Finished',
