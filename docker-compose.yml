@@ -1,0 +1,10 @@
+services:
+  metrack:
+    build: .
+    image: metrack:local
+    container_name: metrack
+    restart: unless-stopped
+    ports:
+      - '${METRACK_PORT:-8097}:8097'
+    volumes:
+      - ${METRACK_DATA:-./data}:/data
