@@ -7,6 +7,9 @@ import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
+import { registerBackupRoutes } from './registerBackupRoutes.js';
+import type { BackupJob } from '../backup/BackupJob.js';
+import type { BackupService } from '../backup/BackupService.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
 
 export interface AppDeps {
@@ -15,6 +18,7 @@ export interface AppDeps {
   webDir?: string;
   imageStore?: ImageStore;
   metadataCache?: MetadataCache;
+  backup?: { service: BackupService; job: BackupJob };
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -26,6 +30,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   if (deps.imageStore) registerImageRoutes(app, deps.imageStore);
   if (deps.metadataCache) registerMetadataRoutes(app, deps.metadataCache);
+  if (deps.backup) {
+    registerBackupRoutes(app, deps.backup);
+  }
 
   const webDir = deps.webDir ? resolve(deps.webDir) : undefined;
   if (webDir && existsSync(webDir)) {
