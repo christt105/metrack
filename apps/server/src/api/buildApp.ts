@@ -15,6 +15,9 @@ import type { EditServices } from './EditServices.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import type { PublishQueue } from '../publish/PublishQueue.js';
+import { registerBackupRoutes } from './registerBackupRoutes.js';
+import type { BackupJob } from '../backup/BackupJob.js';
+import type { BackupService } from '../backup/BackupService.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
 
 export interface AppDeps {
@@ -25,6 +28,7 @@ export interface AppDeps {
   metadataCache?: MetadataCache;
   publishQueue?: PublishQueue;
   edit?: EditServices;
+  backup?: { service: BackupService; job: BackupJob };
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -49,6 +53,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
   if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
+  if (deps.backup) {
+    registerBackupRoutes(app, deps.backup);
+  }
 
   const webDir = deps.webDir ? resolve(deps.webDir) : undefined;
   const serveWeb = webDir !== undefined && existsSync(webDir);
