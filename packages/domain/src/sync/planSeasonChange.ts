@@ -60,7 +60,7 @@ export function planSeasonChange(
     matchedBy,
     jellyfinSeasonId: library.jellyfinId,
     number: library.number,
-    tmdbSeasonNumber: stored ? stored.tmdbSeasonNumber : null,
+    tmdbSeasonNumber: tmdbNumberOf(stored, library),
     title: stored?.title ?? library.title,
     firstAirDate: seasonAirDate(library) ?? stored?.firstAirDate ?? null,
     episodeCount: library.episodes.length,
@@ -84,4 +84,10 @@ function isUnchanged(stored: Season, change: SeasonChange): boolean {
     stored.episodeCount === change.episodeCount &&
     stored.firstAirDate === change.firstAirDate
   );
+}
+
+function tmdbNumberOf(stored: Season | null, library: LibrarySeason): number | null {
+  if (!stored) return null;
+  if (stored.tmdbSeasonNumber !== null) return stored.tmdbSeasonNumber;
+  return stored.number === library.number ? null : stored.number;
 }

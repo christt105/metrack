@@ -288,6 +288,17 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
     });
   });
 
+  it('remembers the stored number as the TMDB number when it was not recorded', () => {
+    const unnumbered: SyncState = {
+      ...stored,
+      seasons: stored.seasons.map((s) => (s.id === 72 ? { ...s, tmdbSeasonNumber: null } : s)),
+    };
+    expect(run([play('l1', '2026-10-24')], unnumbered).series[0]?.seasons[0]).toMatchObject({
+      number: 4,
+      tmdbSeasonNumber: 3,
+    });
+  });
+
   it('does not touch seasons 1 and 2 of the vault', () => {
     const plan = run([play('l1', '2026-10-24')]);
     expect(plan.series[0]?.seasons.map((s) => s.seasonId)).toEqual([72]);
