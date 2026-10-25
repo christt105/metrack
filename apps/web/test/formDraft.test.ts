@@ -13,6 +13,7 @@ const movie = {
   genres: ['Crime', 'Drama'],
   cast: [],
   director: null,
+  follow: false,
   startedAt: null,
   finishedAt: null,
   rating: 8,

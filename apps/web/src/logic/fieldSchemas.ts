@@ -39,7 +39,6 @@ export const fieldSchemas: Record<Collection, FieldSchema[]> = {
     { key: 'genres', kind: 'list', section: 'metadata' },
     { key: 'cast', kind: 'list', section: 'metadata' },
     { key: 'overview', kind: 'textarea', section: 'metadata' },
-    { key: 'follow', kind: 'boolean', section: 'notes' },
     { key: 'review', kind: 'textarea', section: 'notes' },
     ...housekeeping,
   ],

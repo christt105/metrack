@@ -11,7 +11,10 @@ import { registerMediaRoutes } from './registerMediaRoutes.js';
 import { registerPublishRoutes } from './registerPublishRoutes.js';
 import { registerSeasonOverrideRoutes } from './registerSeasonOverrideRoutes.js';
 import { registerSyncRoutes } from './registerSyncRoutes.js';
+import { registerWatchlistRoutes } from './registerWatchlistRoutes.js';
 import { registerTitleRoutes } from './registerTitleRoutes.js';
+import type { ReleaseAlertRepository } from '../storage/repositories/ReleaseAlertRepository.js';
+import type { WatchlistService } from '../alerts/WatchlistService.js';
 import type { EditServices } from './EditServices.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
@@ -32,6 +35,7 @@ export interface AppDeps {
   edit?: EditServices;
   backup?: { service: BackupService; job: BackupJob };
   sync?: SyncService;
+  watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -55,6 +59,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerArtworkRoutes(app, artwork, editor);
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
+  if (deps.watch) registerWatchlistRoutes(app, deps.watch.watchlist, deps.watch.alerts);
   registerSyncRoutes(app, deps.sync);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);

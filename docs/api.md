@@ -37,7 +37,7 @@ A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, 
 
 Editable fields per collection:
 
-- `movies`: `tmdbId`, `jellyfinId`, `title`, `originalTitle`, `releaseDate`, `overview`, `genres`, `cast`, `director`, `note`, `slug`, `tags` and the tracking fields.
+- `movies`: `tmdbId`, `jellyfinId`, `title`, `originalTitle`, `releaseDate`, `overview`, `genres`, `cast`, `director`, `follow`, `note`, `slug`, `tags` and the tracking fields.
 - `series`: `tmdbId`, `tvdbId`, `jellyfinId`, `title`, `originalTitle`, `firstAirDate`, `overview`, `genres`, `cast`, `follow`, `note`, `review`, `slug`, `tags`.
 - `seasons`: `number`, `tmdbSeasonNumber`, `jellyfinId`, `title`, `overview`, `firstAirDate`, `episodeCount`, `slug`, `tags` and the tracking fields.
 - `games`: `igdbId`, `steamAppId`, `steamGridDbId`, `title`, `releaseDate`, `overview`, `genres`, `developer`, `platforms`, `note`, `slug`, `tags` and the tracking fields.
@@ -104,6 +104,12 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 - `GET /api/sync/report`: the `SyncPlan` a sync would apply: `movies` (`MovieChange`), `series` (`SeriesChange` with its `seasons`), `unlinked`, `warnings`, `ignoredPlays` and `unmatchedTitles`. Reads Jellyfin and Jellystat and the database; writes nothing.
 - `POST /api/sync/apply` with `{ "confirm": true }`: recomputes the plan on the server (a client-supplied plan is never trusted), writes it in one transaction and answers `{ plan, result: SyncApplyResult }`. A body without `confirm: true` is a 400.
 - Both answer 501 `sync_not_configured` unless the Jellyfin and Jellystat variables are set (see the README).
+
+## Release alerts
+
+- `GET /api/watchlist`: the followed movies and series as `WatchlistEntry[]`, ordered by title. A series shows the first air date of its newest season.
+- `PUT /api/watchlist/{movies|series}/{id}` and `DELETE /api/watchlist/{movies|series}/{id}`: follow and unfollow (the `follow` field, so a `PATCH` does the same). 204, or 404 for an unknown id.
+- `GET /api/alerts?limit=100`: the alerts already sent as `ReleaseAlert[]`, newest first (`limit` from 1 to 500).
 
 ## Not in the API
 

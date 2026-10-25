@@ -29,6 +29,42 @@ describe('NtfyNotifier', () => {
     expect(init.headers).not.toHaveProperty('Authorization');
   });
 
+  it('sends priority, tags and the image attachment when given', async () => {
+    const fetchFn = vi.fn(async () => new Response('', { status: 200 }));
+    await new NtfyNotifier(
+      { url: 'http://x', topic: 't' },
+      logger,
+      fetchFn as unknown as typeof fetch,
+    ).notify('Lupin', 'Releases today', {
+      priority: 'default',
+      tags: ['calendar', 'tv'],
+      imageUrl: 'https://image.tmdb.org/t/p/w500/p.jpg',
+    });
+    const init = (fetchFn.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect(init.headers).toMatchObject({
+      Priority: 'default',
+      Tags: 'calendar,tv',
+      Attach: 'https://image.tmdb.org/t/p/w500/p.jpg',
+    });
+  });
+
+  it('encodes titles that do not fit in an HTTP header', async () => {
+    const fetchFn = vi.fn(async () => new Response('', { status: 200 }));
+    const notifier = new NtfyNotifier(
+      { url: 'http://x', topic: 't' },
+      logger,
+      fetchFn as unknown as typeof fetch,
+    );
+    await notifier.notify('Ōkami, temporada 2', 'b');
+    await notifier.notify('Café', 'b');
+    const titles = fetchFn.mock.calls.map(
+      (call) =>
+        ((call as unknown as [string, RequestInit])[1].headers as Record<string, string>).Title,
+    );
+    expect(titles[0]).toBe(`=?UTF-8?B?${Buffer.from('Ōkami, temporada 2').toString('base64')}?=`);
+    expect(titles[1]).toBe('Café');
+  });
+
   it('logs instead of throwing when delivery fails', async () => {
     const fetchFn = vi.fn(async () => {
       throw new Error('unreachable');

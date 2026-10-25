@@ -24,6 +24,7 @@ import { openDatabase } from '../../src/storage/openDatabase.js';
 import {
   BookRepository,
   MovieRepository,
+  ReleaseAlertRepository,
   SeasonOverrideRepository,
   SeasonRepository,
   SeriesRepository,
@@ -33,6 +34,7 @@ import {
 import { TitleProviders } from '../../src/titles/TitleProviders.js';
 import { TmdbMovieProvider } from '../../src/titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from '../../src/titles/TmdbSeriesProvider.js';
+import { WatchlistService } from '../../src/alerts/WatchlistService.js';
 import { FakeScheduler } from './FakeScheduler.js';
 
 export const NOW = new Date('2026-03-05T12:00:00Z');
@@ -48,6 +50,7 @@ export interface TestApi {
   books: BookRepository;
   unlinked: UnlinkedTitleRepository;
   cache: MetadataCache;
+  alerts: ReleaseAlertRepository;
 }
 
 /** The full API over a temporary database file and a fake network. TMDB and SteamGridDB are always configured. */
@@ -92,29 +95,44 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
     { info: () => {}, error: () => {} },
     scheduler,
   );
+  const alerts = new ReleaseAlertRepository(db);
+  const edit = createEditServices({
+    sources: {
+      movies,
+      series,
+      seasons,
+      videogames,
+      books,
+      overrides: new SeasonOverrideRepository(db),
+    },
+    unlinked,
+    states,
+    images: store,
+    cache,
+    titleProviders,
+    imageProviders,
+    now: () => NOW,
+  });
   const app = await buildApp({
     appVersion: 'test',
     migrationRunner: runner,
     imageStore: store,
     metadataCache: cache,
     publishQueue: queue,
-    edit: createEditServices({
-      sources: {
-        movies,
-        series,
-        seasons,
-        videogames,
-        books,
-        overrides: new SeasonOverrideRepository(db),
-      },
-      unlinked,
-      states,
-      images: store,
-      cache,
-      titleProviders,
-      imageProviders,
-      now: () => NOW,
-    }),
+    edit,
+    watch: { watchlist: new WatchlistService(edit.editor, movies, series, seasons), alerts },
   });
-  return { app, store, scheduler, movies, series, seasons, videogames, books, unlinked, cache };
+  return {
+    app,
+    store,
+    scheduler,
+    movies,
+    series,
+    seasons,
+    videogames,
+    books,
+    unlinked,
+    cache,
+    alerts,
+  };
 }

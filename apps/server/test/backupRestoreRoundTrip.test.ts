@@ -110,6 +110,7 @@ describe('backup and restore of the whole data directory', () => {
       genres: [],
       cast: [],
       director: null,
+      follow: false,
       note: null,
       cover: null,
       banner: null,

@@ -5,3 +5,4 @@ export { SeasonRepository } from './SeasonRepository.js';
 export { SeriesRepository } from './SeriesRepository.js';
 export { UnlinkedTitleRepository } from './UnlinkedTitleRepository.js';
 export { VideogameRepository } from './VideogameRepository.js';
+export { ReleaseAlertRepository } from './ReleaseAlertRepository.js';

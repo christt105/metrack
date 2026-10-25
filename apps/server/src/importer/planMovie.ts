@@ -25,6 +25,7 @@ export function planMovie(
     genres: readList(fm.genres),
     cast: readList(fm.main_actors),
     director: readText(fm.director),
+    follow: false,
     note: null,
     cover: null,
     banner: null,

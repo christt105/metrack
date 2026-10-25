@@ -35,6 +35,7 @@ export const MEDIA_PROPERTIES: Record<Collection, Properties> = {
     genres: stringList,
     cast: stringList,
     director: nullableString,
+    follow: { type: 'boolean' },
     note: nullableString,
   },
   series: {

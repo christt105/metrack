@@ -12,6 +12,13 @@ export class MovieRepository extends TableRepository<Movie> {
     return this.findOneBy('tmdb_id', tmdbId);
   }
 
+  listFollowed(): Movie[] {
+    return this.db
+      .prepare('SELECT * FROM movie WHERE follow = 1 ORDER BY id')
+      .all()
+      .map((row) => this.fromRow(row));
+  }
+
   protected toRow(m: Omit<Movie, 'id'>): RowValues {
     return {
       tmdb_id: m.tmdbId,
@@ -23,6 +30,7 @@ export class MovieRepository extends TableRepository<Movie> {
       genres: JSON.stringify(m.genres),
       cast_members: JSON.stringify(m.cast),
       director: m.director,
+      follow: m.follow ? 1 : 0,
       note: m.note,
       cover: m.cover,
       banner: m.banner,
@@ -44,6 +52,7 @@ export class MovieRepository extends TableRepository<Movie> {
       genres: parseList(row.genres),
       cast: parseList(row.cast_members),
       director: text(row.director),
+      follow: Number(row.follow) === 1,
       note: text(row.note),
       cover: text(row.cover),
       banner: text(row.banner),

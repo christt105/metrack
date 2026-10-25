@@ -22,6 +22,10 @@ import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js'
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { TmdbMovieSource } from './providers/tmdb/TmdbMovieSource.js';
 import { TmdbSeriesSource } from './providers/tmdb/TmdbSeriesSource.js';
+import { ReleaseWatcher } from './alerts/ReleaseWatcher.js';
+import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
+import { WatchlistService } from './alerts/WatchlistService.js';
+import { TmdbReleaseSource } from './providers/tmdb/TmdbReleaseSource.js';
 import { BackupJob } from './backup/BackupJob.js';
 import { BackupScheduler } from './backup/BackupScheduler.js';
 import { createBackupService } from './backup/createBackupService.js';
@@ -37,6 +41,7 @@ import { openDatabase } from './storage/openDatabase.js';
 import {
   BookRepository,
   MovieRepository,
+  ReleaseAlertRepository,
   SeasonOverrideRepository,
   SeasonRepository,
   SeriesRepository,
@@ -45,6 +50,7 @@ import {
 } from './storage/repositories/index.js';
 
 const config = loadConfig(process.env);
+const logger = { info: console.log, error: console.error };
 const db = openDatabase(join(config.dataDir, 'metrack.db'));
 const migrationRunner = new MigrationRunner(db, migrations);
 const schemaVersion = migrationRunner.run();
@@ -56,12 +62,14 @@ const videogames = new VideogameRepository(db);
 const books = new BookRepository(db);
 const overrides = new SeasonOverrideRepository(db);
 const unlinked = new UnlinkedTitleRepository(db);
+const releaseAlerts = new ReleaseAlertRepository(db);
 
 const imageStore = new ImageStore(db, join(config.dataDir, 'images'));
 const metadataStates = new MetadataStateRepository(db);
 const metadataCache = new MetadataCache(metadataStates, imageStore);
 const titleProviders = new TitleProviders();
 const imageProviders: ImageProvider[] = [];
+let releaseScheduler: ReleaseWatchScheduler | undefined;
 if (config.tmdbApiKey) {
   const tmdb = new TmdbClient(fetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage });
   metadataCache.register('movie', {
@@ -77,6 +85,23 @@ if (config.tmdbApiKey) {
   titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
   titleProviders.register(new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore));
   imageProviders.push(new TmdbImageProvider(tmdb));
+  if (config.alerts.enabled) {
+    releaseScheduler = new ReleaseWatchScheduler(
+      new ReleaseWatcher({
+        movies,
+        series,
+        seasons,
+        overrides,
+        alerts: releaseAlerts,
+        source: new TmdbReleaseSource(tmdb),
+        notifier: createNotifier(config.ntfy, logger),
+        logger,
+        timeZone: config.alerts.timeZone,
+        notifyFromHour: config.alerts.notifyFromHour,
+      }),
+      logger,
+    );
+  }
 }
 if (config.steamGridDbToken) {
   imageProviders.push(
@@ -100,7 +125,6 @@ const syncSetup = syncConfig
   : undefined;
 if (!syncSetup) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
 
-const logger = { info: console.log, error: console.error };
 const { config: publishConfig, missing: publishMissing } = loadPublishConfig(process.env);
 let publishQueue: PublishQueue | undefined;
 if (publishConfig) {
@@ -157,10 +181,15 @@ const app = await buildApp({
   edit,
   backup: { service: backupService, job: backupJob },
   sync: syncSetup?.service,
+  watch: {
+    watchlist: new WatchlistService(edit.editor, movies, series, seasons),
+    alerts: releaseAlerts,
+  },
 });
 
 const shutdown = async (): Promise<void> => {
   scheduler.stop();
+  releaseScheduler?.stop();
   await app.close();
   await syncSetup?.pool.end();
   db.close();
@@ -173,4 +202,9 @@ await app.listen({ port: config.port, host: config.host });
 if (config.backup.enabled) {
   scheduler.start();
 }
+releaseScheduler?.start();
+if (!releaseScheduler)
+  console.log(
+    'Release alerts are disabled, they need TMDB_API_KEY and ALERTS_ENABLED not set to false',
+  );
 console.log(`metrack listening on ${config.host}:${config.port} (schema v${schemaVersion})`);

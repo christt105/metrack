@@ -91,6 +91,7 @@ describe('MovieRepository', () => {
     genres: ['Drama'],
     cast: ['Paul Mescal'],
     director: 'Charlotte Wells',
+    follow: false,
     note: null,
     cover: 'cover.jpg',
     banner: null,

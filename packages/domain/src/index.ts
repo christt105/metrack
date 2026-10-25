@@ -65,3 +65,19 @@ export type { UnmatchedTitle } from './sync/UnmatchedTitle.js';
 export type { SyncApplyResult } from './sync/SyncApplyResult.js';
 export type { SyncPlan } from './sync/SyncPlan.js';
 export { planSync } from './sync/planSync.js';
+export { ALERT_KINDS } from './alerts/AlertKind.js';
+export type { AlertKind } from './alerts/AlertKind.js';
+export { ALERT_SUBJECT_TYPES } from './alerts/AlertSubjectType.js';
+export type { AlertSubjectType } from './alerts/AlertSubjectType.js';
+export type { AlertKey } from './alerts/AlertKey.js';
+export type { AlertCandidate } from './alerts/AlertCandidate.js';
+export type { ReleaseAlert } from './alerts/ReleaseAlert.js';
+export type { WatchlistEntry } from './alerts/WatchlistEntry.js';
+export { availabilityWindowDays } from './alerts/availabilityWindowDays.js';
+export { planReleaseAlerts } from './alerts/planReleaseAlerts.js';
+export {
+  checkIntervalMinutes,
+  FREQUENT_CHECK_MINUTES,
+  WAITING_CHECK_MINUTES,
+  IDLE_CHECK_MINUTES,
+} from './alerts/checkIntervalMinutes.js';

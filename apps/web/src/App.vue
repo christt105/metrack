@@ -8,6 +8,7 @@ import { messages } from './i18n/messages';
     <nav>
       <RouterLink to="/">{{ messages.nav.library }}</RouterLink>
       <RouterLink to="/search">{{ messages.nav.search }}</RouterLink>
+      <RouterLink to="/watchlist">{{ messages.nav.watchlist }}</RouterLink>
       <RouterLink to="/unlinked">{{ messages.nav.unlinked }}</RouterLink>
       <RouterLink to="/settings">{{ messages.nav.settings }}</RouterLink>
     </nav>

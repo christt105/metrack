@@ -1,4 +1,5 @@
 import type { BackupConfig } from '../backup/BackupConfig.js';
+import type { AlertsConfig } from './AlertsConfig.js';
 import type { NtfyConfig } from '../notify/NtfyConfig.js';
 
 export interface Config {
@@ -11,5 +12,6 @@ export interface Config {
   tmdbLanguage: string;
   steamGridDbToken: string | undefined;
   backup: BackupConfig;
+  alerts: AlertsConfig;
   ntfy?: NtfyConfig;
 }

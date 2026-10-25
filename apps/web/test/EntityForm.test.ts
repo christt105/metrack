@@ -15,6 +15,7 @@ const movie = {
   genres: [],
   cast: [],
   director: null,
+  follow: false,
   status: 'completed',
   startedAt: '2026-01-01',
   finishedAt: '2026-01-02',
