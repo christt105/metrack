@@ -16,6 +16,7 @@ import { NodeCommandRunner } from './publish/NodeCommandRunner.js';
 import { PublishPipeline } from './publish/PublishPipeline.js';
 import { PublishQueue } from './publish/PublishQueue.js';
 import { TimerScheduler } from './publish/TimerScheduler.js';
+import { IgdbClient } from './providers/igdb/IgdbClient.js';
 import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js';
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { ReleaseWatcher } from './alerts/ReleaseWatcher.js';
@@ -28,6 +29,7 @@ import { createBackupService } from './backup/createBackupService.js';
 import { createNotifier } from './notify/createNotifier.js';
 import { MigrationRunner } from './storage/MigrationRunner.js';
 import { migrations } from './storage/migrations/index.js';
+import { IgdbGameProvider } from './titles/IgdbGameProvider.js';
 import { TitleProviders } from './titles/TitleProviders.js';
 import { TmdbMovieProvider } from './titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from './titles/TmdbSeriesProvider.js';
@@ -93,9 +95,13 @@ if (tmdb) {
     );
   }
 }
-if (config.steamGridDbToken) {
-  imageProviders.push(
-    new SteamGridDbImageProvider(new SteamGridDbClient(fetch, config.steamGridDbToken)),
+const steamGridDb = config.steamGridDbToken
+  ? new SteamGridDbClient(fetch, config.steamGridDbToken)
+  : null;
+if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
+if (config.igdb) {
+  titleProviders.register(
+    new IgdbGameProvider(new IgdbClient(fetch, config.igdb), videogames, imageStore, steamGridDb),
   );
 }
 

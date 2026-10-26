@@ -74,7 +74,7 @@ CI runs lint, typecheck, tests and build on every pull request and push to `main
 git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0
 ```
 
-Images are stored under `/data/images`, named by content hash, and are served at `/api/images/<hash>`. Provider access is configured with `TMDB_API_KEY` (a v3 key or v4 token, required for metadata refresh), `TMDB_LANGUAGE` (default `es-ES`) and `STEAMGRIDDB_TOKEN`. No keys are bundled.
+Images are stored under `/data/images`, named by content hash, and are served at `/api/images/<hash>`. Provider access is configured with `TMDB_API_KEY` (a v3 key or v4 token, required for metadata refresh), `TMDB_LANGUAGE` (default `es-ES`), `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (a Twitch application, for game search) and `STEAMGRIDDB_TOKEN`. No keys are bundled.
 
 ## Importing the Obsidian vault
 

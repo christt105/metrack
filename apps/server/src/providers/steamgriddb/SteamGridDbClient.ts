@@ -23,4 +23,15 @@ export class SteamGridDbClient {
     );
     return response.data ?? [];
   }
+
+  /** The SteamGridDB game id of a Steam app, or null when SteamGridDB does not know it. */
+  async gameIdForSteamApp(appId: string): Promise<number | null> {
+    const response = await getJson<{ data?: { id?: number } }>(
+      this.fetchFn,
+      `${BASE}/games/steam/${encodeURIComponent(appId)}`,
+      {},
+      { Authorization: `Bearer ${this.token}` },
+    );
+    return response.data?.id ?? null;
+  }
 }
