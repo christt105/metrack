@@ -2,11 +2,16 @@
 import { MEDIA_SORT_FIELDS, MEDIA_STATUSES, MEDIA_TYPES } from '@metrack/domain';
 import { messages } from '../i18n/messages';
 import type { LibraryFilterState } from '../logic/LibraryFilterState';
+import { naturalOrder } from '../logic/naturalOrder';
 
 const filters = defineModel<LibraryFilterState>({ required: true });
 
 function update<K extends keyof LibraryFilterState>(key: K, value: LibraryFilterState[K]): void {
   filters.value = { ...filters.value, [key]: value };
+}
+
+function updateSort(sort: LibraryFilterState['sort']): void {
+  filters.value = { ...filters.value, sort, order: naturalOrder(sort) };
 }
 </script>
 
@@ -56,7 +61,7 @@ function update<K extends keyof LibraryFilterState>(key: K, value: LibraryFilter
       <select
         :value="filters.sort"
         @change="
-          update('sort', ($event.target as HTMLSelectElement).value as LibraryFilterState['sort'])
+          updateSort(($event.target as HTMLSelectElement).value as LibraryFilterState['sort'])
         "
       >
         <option v-for="field in MEDIA_SORT_FIELDS" :key="field" :value="field">

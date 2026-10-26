@@ -5,6 +5,7 @@ import {
   filtersToMediaQuery,
   filtersToQuery,
 } from '../src/logic/filterQuery';
+import { naturalOrder } from '../src/logic/naturalOrder';
 
 describe('filter query', () => {
   it('round trips through the route query and leaves defaults out', () => {
@@ -29,5 +30,13 @@ describe('filter query', () => {
     expect(filtersToMediaQuery({ ...defaultFilters, type: 'series' }).type).toBeUndefined();
     expect(filtersToMediaQuery({ ...defaultFilters, type: 'book' }).type).toBe('book');
     expect(filtersToMediaQuery({ ...defaultFilters, q: ' x ' }).q).toBe('x');
+  });
+});
+
+describe('naturalOrder', () => {
+  it('starts titles from A and everything else from the newest or highest', () => {
+    expect(naturalOrder('title')).toBe('asc');
+    expect(naturalOrder('recent')).toBe('desc');
+    expect(naturalOrder('rating')).toBe('desc');
   });
 });
