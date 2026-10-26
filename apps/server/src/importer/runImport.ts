@@ -46,8 +46,7 @@ export async function runImport(options: ImportOptions): Promise<string> {
   const legacyImages = imagesDirs.length > 0 ? new LegacyImageIndex(imagesDirs) : null;
   const issues = new IssueLog();
   const plan = buildImportPlan(readVaultNotes(vaultDir, issues), vaultDir, issues);
-  const report = formatReport(plan, options.verbose, legacyImages);
-  if (!options.apply) return report;
+  if (!options.apply) return formatReport(plan, options.verbose, legacyImages);
 
   const db = openDatabase(join(options.dataDir, 'metrack.db'));
   try {
@@ -62,6 +61,7 @@ export async function runImport(options: ImportOptions): Promise<string> {
     };
     const store = new ImageStore(db, join(options.dataDir, 'images'));
     const result = await new ImportApplier(db, targets, store, undefined, legacyImages).apply(plan);
+    const report = formatReport(plan, options.verbose, legacyImages, true);
     return `${report}\n\n${formatApplyResult(result)}`;
   } finally {
     db.close();

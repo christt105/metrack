@@ -322,7 +322,10 @@ describe('runImport', () => {
     created.push(vault);
     const dataDir = join(tempDir(), 'data');
     const options = { vaultDir: vault, dataDir, apply: true, verbose: false };
-    expect(await runImport(options)).toContain('movies:     created 2, updated 0, unchanged 0');
+    const first = await runImport(options);
+    expect(first).toContain('Import report (applied)');
+    expect(first).not.toContain('nothing was written');
+    expect(first).toContain('movies:     created 2, updated 0, unchanged 0');
     expect(await runImport(options)).toContain('movies:     created 0, updated 0, unchanged 2');
     expect(existsSync(join(dataDir, 'metrack.db'))).toBe(true);
   });
