@@ -1,6 +1,6 @@
 import type { MediaSortField, MediaSummary } from '@metrack/domain';
 
-const TRACKING_SORTS: readonly MediaSortField[] = ['rating', 'startedAt', 'finishedAt'];
+const TRACKING_SORTS: readonly MediaSortField[] = ['recent', 'rating', 'startedAt', 'finishedAt'];
 
 export type CardTypeFilter = '' | 'movie' | 'series' | 'season' | 'videogame' | 'book';
 
@@ -47,12 +47,12 @@ function singleSeasonCard(item: MediaSummary): LibraryCard {
  * Turns the combined list into library cards. Seasons of a multi-season series are hidden behind
  * their series, a single-season series becomes one card with its season's tracking, and the
  * `season` filter shows every season as its own card. The single-season card sits where the series
- * row sorts, except for tracking sorts (rating and dates) where the season row carries the value.
+ * row sorts, except for tracking sorts (recent, rating and dates) where the season row carries the value.
  */
 export function buildCards(
   items: MediaSummary[],
   filter: CardTypeFilter,
-  sort: MediaSortField = 'title',
+  sort: MediaSortField = 'recent',
 ): LibraryCard[] {
   if (filter === 'season') return items.filter((item) => item.type === 'season').map(toCard);
 

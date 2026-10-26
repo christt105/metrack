@@ -22,7 +22,7 @@ One list across every collection, as `MediaPage` (`{ items: MediaSummary[], tota
 - `type`: `movie`, `series`, `season`, `videogame` or `book`.
 - `status`: one of `MEDIA_STATUSES`. A series matches when any of its seasons has that status.
 - `q`: text search over the title and original title (and the series title for seasons), ignoring case and accents.
-- `sort`: `title` (default), `rating`, `startedAt`, `finishedAt`, `releaseDate` or `id`. `order`: `asc` (default) or `desc`. Rows missing the sort value always come last.
+- `sort`: `title` (default), `recent`, `rating`, `startedAt`, `finishedAt`, `releaseDate` or `id`. `order`: `asc` (default) or `desc`. Rows missing the sort value always come last. `recent` puts titles in progress first and then orders by the latest day each was started, finished or rewatched, newest first unless `order=asc`; a series takes both from its seasons. The web library uses `recent` by default.
 - `limit` (1 to 1000, default 50) and `offset`.
 
 A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, `status`, `rating`, `startedAt`, `finishedAt`, plus `seriesId` and `seriesTitle` for seasons and `seasonCount` for series. A season without its own cover shows the cover of its series.

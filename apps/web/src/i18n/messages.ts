@@ -211,6 +211,7 @@ export const messages = {
     completed: 'Completed',
   } satisfies Record<MediaStatus, string>,
   sortLabels: {
+    recent: 'Recent',
     title: 'Title',
     rating: 'Rating',
     startedAt: 'Started',
