@@ -109,6 +109,27 @@ describe('buildExport', () => {
     expect(second).toContain('rating: "6"');
   });
 
+  it('prefixes season names that do not mention their series', () => {
+    const files = buildExport({
+      ...empty,
+      series: [series(), series({ id: 2, tmdbId: 21, title: 'Other', slug: 'Other (2020)' })],
+      seasons: [
+        season({ id: 1, slug: null, title: 'Temporada 2', number: 2 }),
+        season({ id: 2, seriesId: 2, slug: null, title: 'Temporada 2', number: 2 }),
+        season({ id: 5, seriesId: 2, slug: 'Other - Season 1', number: 1 }),
+        season({ id: 3, slug: null, title: 'Show 3', number: 3 }),
+        season({ id: 4, slug: null, title: null, number: 4 }),
+      ],
+    });
+    expect(files.map((f) => f.path).filter((p) => p.startsWith('content/seasons/'))).toEqual([
+      'content/seasons/Other (2020) - Temporada 2/index.md',
+      'content/seasons/Other - Season 1/index.md',
+      'content/seasons/Show (2019) - Season 4/index.md',
+      'content/seasons/Show (2019) - Temporada 2/index.md',
+      'content/seasons/Show 3/index.md',
+    ]);
+  });
+
   it('derives unique names for items that came without one', () => {
     const files = buildExport({
       ...empty,

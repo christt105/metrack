@@ -37,7 +37,8 @@ function deriveMissing<T extends Named>(
 /**
  * Names every page. Names the vault gave are kept so addresses do not change, unless they are not a
  * safe folder name; anything else is derived from its title, in id order so the result does not
- * depend on call order.
+ * depend on call order. A season title that does not name its series (TMDB's "Temporada 2") is prefixed
+ * with the series name.
  */
 export function assignSlugs(input: ExportInput): Slugs {
   const registry = new SlugRegistry();
@@ -66,9 +67,13 @@ export function assignSlugs(input: ExportInput): Slugs {
     withYear(g.title, g.releaseDate),
   );
   deriveMissing(input.books, slugs.books, registry, (b) => withYear(b.title, b.releaseDate));
+  const seriesTitles = new Map(input.series.map((series) => [series.id, series.title]));
   deriveMissing(seasonPages, slugs.seasons, registry, (season) => {
     const parent = slugs.series.get(season.seriesId) ?? 'series';
-    return season.title ?? `${parent} - Season ${season.number}`;
+    const own = season.title ?? `Season ${season.number}`;
+    const seriesTitle = seriesTitles.get(season.seriesId);
+    const named = seriesTitle !== undefined && own.toLowerCase().includes(seriesTitle.toLowerCase());
+    return named ? own : `${parent} - ${own}`;
   });
   return slugs;
 }
