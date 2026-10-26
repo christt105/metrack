@@ -24,6 +24,9 @@ import { SyncService } from '../src/sync/SyncService.js';
 import type { LibrarySource } from '../src/sync/LibrarySource.js';
 import type { PlaybackSource } from '../src/sync/PlaybackSource.js';
 import { formatSyncReport } from '../src/sync/formatSyncReport.js';
+import { TvdbResolvingLibrarySource } from '../src/sync/TvdbResolvingLibrarySource.js';
+import type { EntityRef } from '@metrack/domain';
+import { TmdbClient } from '../src/providers/tmdb/TmdbClient.js';
 
 interface Recorded {
   url: URL;
@@ -314,49 +317,49 @@ const lupinPlays: PlaybackSource = {
   ],
 };
 
-describe('SyncService', () => {
-  function seedLupin(t: ReturnType<typeof setup>) {
-    const series = t.targets.series.create({
-      tmdbId: 96677,
-      tvdbId: 375921,
-      jellyfinId: null,
-      title: 'Lupin',
-      originalTitle: null,
-      firstAirDate: null,
-      overview: null,
-      genres: [],
-      cast: [],
-      follow: false,
-      note: 'my note',
-      slug: null,
-      tags: [],
-      review: 'series review',
-      cover: null,
-      banner: null,
-    });
-    const season = t.targets.seasons.create({
-      seriesId: series.id,
-      number: 3,
-      tmdbSeasonNumber: 3,
-      jellyfinId: null,
-      title: null,
-      overview: null,
-      firstAirDate: '2026-10-23',
-      episodeCount: 8,
-      slug: null,
-      tags: [],
-      cover: null,
-      banner: null,
-      status: 'planned',
-      startedAt: null,
-      finishedAt: null,
-      rating: 9,
-      review: 'season review',
-      rewatches: [],
-    });
-    return { series, season };
-  }
+function seedLupin(t: ReturnType<typeof setup>) {
+  const series = t.targets.series.create({
+    tmdbId: 96677,
+    tvdbId: 375921,
+    jellyfinId: null,
+    title: 'Lupin',
+    originalTitle: null,
+    firstAirDate: null,
+    overview: null,
+    genres: [],
+    cast: [],
+    follow: false,
+    note: 'my note',
+    slug: null,
+    tags: [],
+    review: 'series review',
+    cover: null,
+    banner: null,
+  });
+  const season = t.targets.seasons.create({
+    seriesId: series.id,
+    number: 3,
+    tmdbSeasonNumber: 3,
+    jellyfinId: null,
+    title: null,
+    overview: null,
+    firstAirDate: '2026-10-23',
+    episodeCount: 8,
+    slug: null,
+    tags: [],
+    cover: null,
+    banner: null,
+    status: 'planned',
+    startedAt: null,
+    finishedAt: null,
+    rating: 9,
+    review: 'season review',
+    rewatches: [],
+  });
+  return { series, season };
+}
 
+describe('SyncService', () => {
   it('reports without writing anything', async () => {
     const t = setup(lupinLibrary, lupinPlays);
     const { season } = seedLupin(t);
@@ -463,6 +466,83 @@ describe('SyncService', () => {
     expect(response.statusCode).toBe(501);
     expect(response.json().code).toBe('sync_not_configured');
     t.db.close();
+  });
+});
+
+describe('sync with TMDB', () => {
+  const tvdbOnly: LibrarySource = {
+    load: async () => {
+      const library = await lupinLibrary.load();
+      return { ...library, series: library.series.map((s) => ({ ...s, tmdbId: null, tvdbId: 1 })) };
+    },
+  };
+
+  it('pairs series Jellyfin only knows by TheTVDB id through TMDB', async () => {
+    const t = setup(
+      new TvdbResolvingLibrarySource(tvdbOnly, async (id) => (id === 1 ? 96677 : null)),
+      lupinPlays,
+    );
+    const { series } = seedLupin(t);
+    t.targets.series.update(series.id, { tvdbId: null });
+    const { result } = await t.service.apply();
+    expect(result).toMatchObject({ seriesCreated: 0, seriesUpdated: 1 });
+    expect(t.targets.series.list()).toHaveLength(1);
+    expect(t.targets.series.get(series.id)).toMatchObject({
+      tmdbId: 96677,
+      tvdbId: 1,
+      jellyfinId: 's1',
+    });
+    t.db.close();
+  });
+
+  it('keeps the TheTVDB id alone when the lookup fails', async () => {
+    const source = new TvdbResolvingLibrarySource(tvdbOnly, () =>
+      Promise.reject(new Error('down')),
+    );
+    const library = await source.load();
+    expect(library.series[0]).toMatchObject({ tmdbId: null, tvdbId: 1 });
+  });
+
+  it('refreshes the titles it creates and ignores refresh failures', async () => {
+    const t = setup(lupinLibrary, lupinPlays);
+    const refreshed: EntityRef[] = [];
+    const service = new SyncService(
+      lupinLibrary,
+      lupinPlays,
+      t.targets,
+      new SyncApplier(t.db, t.targets),
+      {
+        timeZone: 'Europe/Madrid',
+        now: () => new Date('2026-10-25T12:00:00Z'),
+        refreshCreated: async (ref) => {
+          refreshed.push(ref);
+          if (ref.type === 'series') throw new Error('TMDB down');
+        },
+      },
+    );
+    const { result } = await service.apply();
+    expect(result).toMatchObject({ moviesCreated: 1, seriesCreated: 1 });
+    const movieId = t.targets.movies.list()[0]?.id;
+    const seriesId = t.targets.series.list()[0]?.id;
+    expect(refreshed).toEqual([
+      { type: 'movie', id: movieId },
+      { type: 'series', id: seriesId },
+    ]);
+    t.db.close();
+  });
+
+  it('asks TMDB for the series behind a TheTVDB id', async () => {
+    const urls: string[] = [];
+    const fetchFn = ((u: URL) => {
+      urls.push(u.toString());
+      return Promise.resolve(
+        Response.json({ tv_results: u.pathname.endsWith('/7') ? [{ id: 42 }] : [] }),
+      );
+    }) as typeof fetch;
+    const client = new TmdbClient(fetchFn, { apiKey: 'key', language: 'es-ES' });
+    expect(await client.seriesIdForTvdb(7)).toBe(42);
+    expect(await client.seriesIdForTvdb(8)).toBeNull();
+    expect(urls[0]).toBe('https://api.themoviedb.org/3/find/7?external_source=tvdb_id&api_key=key');
   });
 });
 

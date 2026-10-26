@@ -71,11 +71,15 @@ async function main(argv: string[]): Promise<number> {
       console.error(`Jellyfin sync is not configured, missing: ${missing.join(', ')}`);
       return 2;
     }
+    const appConfig = loadConfig(process.env);
     console.log(
       await runSyncCommand(syncConfig, {
-        dataDir: values['data-dir'] ?? loadConfig(process.env).dataDir,
+        dataDir: values['data-dir'] ?? appConfig.dataDir,
         apply: values.apply,
         verbose: values.verbose,
+        tmdb: appConfig.tmdbApiKey
+          ? { apiKey: appConfig.tmdbApiKey, language: appConfig.tmdbLanguage }
+          : undefined,
       }),
     );
     return 0;

@@ -1,6 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { ImageStore } from '../images/ImageStore.js';
+import { MetadataCache } from '../metadata/MetadataCache.js';
+import { MetadataStateRepository } from '../metadata/MetadataStateRepository.js';
+import { registerTmdbMetadata } from '../metadata/registerTmdbMetadata.js';
+import { TmdbClient } from '../providers/tmdb/TmdbClient.js';
+import type { TmdbClientOptions } from '../providers/tmdb/TmdbClientOptions.js';
 import { MigrationRunner } from '../storage/MigrationRunner.js';
 import { migrations } from '../storage/migrations/index.js';
 import { openDatabase } from '../storage/openDatabase.js';
@@ -19,6 +25,8 @@ export interface SyncCommandOptions {
   dataDir: string;
   apply: boolean;
   verbose: boolean;
+  /** When set, TheTVDB-only series are paired through TMDB and created titles get their metadata. */
+  tmdb?: TmdbClientOptions;
 }
 
 /**
@@ -40,7 +48,17 @@ export async function runSyncCommand(
     overrides: new SeasonOverrideRepository(db),
     unlinked: new UnlinkedTitleRepository(db),
   };
-  const { service, pool } = createSyncService(config, db, targets, console);
+  let tmdb;
+  if (options.tmdb) {
+    const client = new TmdbClient(fetch, options.tmdb);
+    const metadata = new MetadataCache(
+      new MetadataStateRepository(db),
+      new ImageStore(db, join(options.dataDir, 'images')),
+    );
+    registerTmdbMetadata(metadata, client, targets);
+    tmdb = { client, metadata };
+  }
+  const { service, pool } = createSyncService(config, db, targets, console, tmdb);
   try {
     if (!options.apply) return formatSyncReport(await service.report(), options.verbose);
     const { plan, result } = await service.apply();
