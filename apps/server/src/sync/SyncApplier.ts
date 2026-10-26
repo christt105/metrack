@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { SeasonChange, SyncApplyResult, SyncPlan } from '@metrack/domain';
+import type { EntityRef, SeasonChange, SyncApplyResult, SyncPlan } from '@metrack/domain';
 import { emptyMovie, emptySeason, emptySeries } from '../media/emptyEntities.js';
+import type { SyncApplyOutcome } from './SyncApplyOutcome.js';
 import type { SyncTargets } from './SyncTargets.js';
 
 export const SYNC_SOURCE = 'jellyfin';
@@ -16,7 +17,7 @@ export class SyncApplier {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  apply(plan: SyncPlan): SyncApplyResult {
+  apply(plan: SyncPlan): SyncApplyOutcome {
     const result: SyncApplyResult = {
       moviesCreated: 0,
       moviesUpdated: 0,
@@ -26,18 +27,19 @@ export class SyncApplier {
       seasonsUpdated: 0,
       unlinkedAdded: 0,
     };
+    const created: EntityRef[] = [];
     this.db.exec('BEGIN');
     try {
-      this.write(plan, result);
+      this.write(plan, result, created);
       this.db.exec('COMMIT');
     } catch (error) {
       this.db.exec('ROLLBACK');
       throw error;
     }
-    return result;
+    return { result, created };
   }
 
-  private write(plan: SyncPlan, result: SyncApplyResult): void {
+  private write(plan: SyncPlan, result: SyncApplyResult, created: EntityRef[]): void {
     const { movies, series, seasons, unlinked } = this.targets;
     for (const change of plan.movies) {
       const tracking = {
@@ -47,13 +49,14 @@ export class SyncApplier {
         rewatches: change.rewatches,
       };
       if (change.movieId === null) {
-        movies.create({
+        const movie = movies.create({
           ...emptyMovie(),
           ...tracking,
           tmdbId: change.tmdbId,
           jellyfinId: change.jellyfinId,
           title: change.title,
         });
+        created.push({ type: 'movie', id: movie.id });
         result.moviesCreated += 1;
       } else {
         movies.update(change.movieId, { ...tracking, jellyfinId: change.jellyfinId });
@@ -65,6 +68,7 @@ export class SyncApplier {
       let seriesId = change.seriesId;
       if (seriesId === null) {
         seriesId = series.create({ ...emptySeries(), ...ids, title: change.title }).id;
+        created.push({ type: 'series', id: seriesId });
         result.seriesCreated += 1;
       } else {
         series.update(seriesId, ids);

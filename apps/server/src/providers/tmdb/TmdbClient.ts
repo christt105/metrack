@@ -4,6 +4,7 @@ import type { TmdbReleaseResponse } from './TmdbReleaseResponse.js';
 import type { TmdbImagesResponse } from './TmdbImagesResponse.js';
 import type { TmdbSearchResponse } from './TmdbSearchResponse.js';
 import type { TmdbClientOptions } from './TmdbClientOptions.js';
+import type { TmdbFindResponse } from './TmdbFindResponse.js';
 import type { TmdbTitleResponse } from './TmdbTitleResponse.js';
 
 const BASE = 'https://api.themoviedb.org/3';
@@ -38,6 +39,14 @@ export class TmdbClient {
       language: this.options.language,
       append_to_response: 'release_dates,watch/providers',
     });
+  }
+
+  /** The TMDB id of the series TheTVDB knows by `tvdbId`, or null when TMDB has no match. */
+  async seriesIdForTvdb(tvdbId: number): Promise<number | null> {
+    const found = await this.get<TmdbFindResponse>(`/find/${tvdbId}`, {
+      external_source: 'tvdb_id',
+    });
+    return found.tv_results[0]?.id ?? null;
   }
 
   /** Title search. `year` narrows by release year (first air year for TV). */

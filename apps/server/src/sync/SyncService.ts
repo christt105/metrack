@@ -1,4 +1,4 @@
-import { planSync, type SyncApplyResult, type SyncPlan } from '@metrack/domain';
+import { planSync, type EntityRef, type SyncApplyResult, type SyncPlan } from '@metrack/domain';
 import type { LibrarySource } from './LibrarySource.js';
 import type { PlaybackSource } from './PlaybackSource.js';
 import type { SyncApplier } from './SyncApplier.js';
@@ -8,6 +8,8 @@ import { loadSyncState } from './loadSyncState.js';
 export interface SyncServiceOptions {
   timeZone: string;
   now?: () => Date;
+  /** Fetches provider metadata and artwork for a title the sync created. A failure does not undo the sync. */
+  refreshCreated?: (ref: EntityRef) => Promise<unknown>;
 }
 
 /** Compares Jellyfin playback with the stored tracking. `report` never writes; `apply` always recomputes the plan first. */
@@ -38,6 +40,11 @@ export class SyncService {
 
   async apply(): Promise<{ plan: SyncPlan; result: SyncApplyResult }> {
     const plan = await this.report();
-    return { plan, result: this.applier.apply(plan) };
+    const { result, created } = this.applier.apply(plan);
+    const refresh = this.options.refreshCreated;
+    if (refresh) {
+      for (const ref of created) await refresh(ref).catch(() => undefined);
+    }
+    return { plan, result };
   }
 }

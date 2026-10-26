@@ -8,8 +8,7 @@ import { loadConfig } from './config/loadConfig.js';
 import { ImageStore } from './images/ImageStore.js';
 import { MetadataCache } from './metadata/MetadataCache.js';
 import { MetadataStateRepository } from './metadata/MetadataStateRepository.js';
-import { movieLifecycle } from './metadata/movieLifecycle.js';
-import { seriesLifecycle } from './metadata/seriesLifecycle.js';
+import { registerTmdbMetadata } from './metadata/registerTmdbMetadata.js';
 import { CloudflarePagesPublisher } from './publish/CloudflarePagesPublisher.js';
 import { FilePublishState } from './publish/FilePublishState.js';
 import { loadPublishConfig } from './publish/loadPublishConfig.js';
@@ -19,8 +18,6 @@ import { PublishQueue } from './publish/PublishQueue.js';
 import { TimerScheduler } from './publish/TimerScheduler.js';
 import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js';
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
-import { TmdbMovieSource } from './providers/tmdb/TmdbMovieSource.js';
-import { TmdbSeriesSource } from './providers/tmdb/TmdbSeriesSource.js';
 import { ReleaseWatcher } from './alerts/ReleaseWatcher.js';
 import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
 import { WatchlistService } from './alerts/WatchlistService.js';
@@ -70,18 +67,11 @@ const metadataCache = new MetadataCache(metadataStates, imageStore);
 const titleProviders = new TitleProviders();
 const imageProviders: ImageProvider[] = [];
 let releaseScheduler: ReleaseWatchScheduler | undefined;
-if (config.tmdbApiKey) {
-  const tmdb = new TmdbClient(fetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage });
-  metadataCache.register('movie', {
-    repository: movies,
-    source: new TmdbMovieSource(tmdb),
-    lifecycle: movieLifecycle,
-  });
-  metadataCache.register('series', {
-    repository: series,
-    source: new TmdbSeriesSource(tmdb),
-    lifecycle: seriesLifecycle,
-  });
+const tmdb = config.tmdbApiKey
+  ? new TmdbClient(fetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
+  : undefined;
+if (tmdb) {
+  registerTmdbMetadata(metadataCache, tmdb, { movies, series });
   titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
   titleProviders.register(new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore));
   imageProviders.push(new TmdbImageProvider(tmdb));
@@ -121,7 +111,13 @@ const edit = createEditServices({
 
 const { config: syncConfig, missing: syncMissing } = loadSyncConfig(process.env);
 const syncSetup = syncConfig
-  ? createSyncService(syncConfig, db, { movies, series, seasons, overrides, unlinked }, logger)
+  ? createSyncService(
+      syncConfig,
+      db,
+      { movies, series, seasons, overrides, unlinked },
+      logger,
+      tmdb && { client: tmdb, metadata: metadataCache },
+    )
   : undefined;
 if (!syncSetup) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
 
