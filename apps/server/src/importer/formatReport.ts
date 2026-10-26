@@ -6,11 +6,15 @@ import type { ImportPlan } from './ImportPlan.js';
 
 const PREVIEW_LIMIT = 8;
 
-/** Renders the dry-run report: counts per type, notes with problems and the unlinked inbox. */
+/**
+ * Renders the import plan: counts per type, notes with problems and the unlinked inbox. `applied` only
+ * changes the header, as the result of the write is printed after the report.
+ */
 export function formatReport(
   plan: ImportPlan,
   verbose: boolean,
   legacyImages: LegacyImageIndex | null = null,
+  applied = false,
 ): string {
   const lines: string[] = [];
   const seasonCount = plan.series.reduce((sum, series) => sum + series.seasons.length, 0);
@@ -18,8 +22,8 @@ export function formatReport(
   const unlinkedBy = (type: string): number =>
     plan.unlinked.filter((title) => title.mediaType === type).length;
 
-  lines.push('Import report (nothing was written)', '');
-  lines.push('Would import:');
+  lines.push(applied ? 'Import report (applied)' : 'Import report (nothing was written)', '');
+  lines.push(applied ? 'Planned:' : 'Would import:');
   lines.push(`  movies:     ${plan.movies.length}`);
   lines.push(`  series:     ${plan.series.length}`);
   lines.push(

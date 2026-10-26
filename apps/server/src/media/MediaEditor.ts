@@ -86,6 +86,9 @@ export class MediaEditor {
     for (const [field, value] of Object.entries(rest)) {
       working[field] = field === 'rewatches' ? [...new Set(value as string[])].sort() : value;
     }
+    if ('finishedAt' in rest && !('startedAt' in rest) && current.startedAt === null) {
+      working.startedAt = null;
+    }
     this.validate(working);
     if ('startedAt' in rest || 'finishedAt' in rest || status !== undefined) {
       this.validateOrder(working);
