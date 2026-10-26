@@ -24,7 +24,11 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
   return {
     missing: [],
     config: {
-      jellyfin: { url: env.JELLYFIN_URL!, token: env.JELLYFIN_TOKEN! },
+      jellyfin: {
+        url: env.JELLYFIN_URL!,
+        token: env.JELLYFIN_TOKEN!,
+        userName: env.JELLYFIN_USER || 'admin',
+      },
       jellystat: {
         host: env.JELLYSTAT_DB_HOST!,
         port,

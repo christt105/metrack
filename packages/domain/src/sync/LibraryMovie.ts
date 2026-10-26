@@ -5,4 +5,6 @@ export interface LibraryMovie {
   year: number | null;
   tmdbId: number | null;
   runtimeSeconds: number | null;
+  /** Whether the tracked account has the movie marked as played. */
+  played?: boolean;
 }

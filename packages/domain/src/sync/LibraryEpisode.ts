@@ -5,4 +5,6 @@ export interface LibraryEpisode {
   airDate: string | null;
   runtimeSeconds: number | null;
   available: boolean;
+  /** Whether the tracked account has the episode marked as played. */
+  played?: boolean;
 }

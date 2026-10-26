@@ -4,12 +4,14 @@ import { WATCHED_FRACTION } from './WATCHED_FRACTION.js';
 /**
  * Groups playback by item and returns, for each item, the sorted dates on which it was watched.
  * An item counts as watched on a day when the time played that day reaches 90% of its runtime;
- * with an unknown runtime any playback counts. Playback of unlisted items is ignored and counted in `ignored`.
+ * with an unknown runtime any playback counts. An item the media server marks as played but that never reaches 90%
+ * on a single day (skipped intros and credits) counts on the day with the most playback. Playback of unlisted items is ignored and counted in `ignored`.
  */
 export function collectWatchDays(
   plays: readonly PlayRecord[],
   runtimes: ReadonlyMap<string, number | null>,
   dateOf: (iso: string) => string,
+  played: ReadonlySet<string> = new Set(),
 ): {
   days: Map<string, string[]>;
   playCount: Map<string, number>;
@@ -40,6 +42,10 @@ export function collectWatchDays(
       .filter(([, total]) => runtime === null || total >= runtime * WATCHED_FRACTION)
       .map(([day]) => day)
       .sort();
+    if (watched.length === 0 && played.has(itemId)) {
+      const [longest] = [...perDay].sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]));
+      if (longest) watched.push(longest[0]);
+    }
     if (watched.length > 0) days.set(itemId, watched);
   }
   return { days, playCount, ignored, unmatched };

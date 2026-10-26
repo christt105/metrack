@@ -137,6 +137,22 @@ describe('movies', () => {
     expect(run(EMPTY, [play('m1', '2026-02-01', 5000)]).movies).toEqual([]);
   });
 
+  it('counts below-threshold playback of a movie the server marks as played', () => {
+    const played = { ...libraryMovie, played: true };
+    const plan = run(
+      EMPTY,
+      [play('m1', '2026-02-01', 3000), play('m1', '2026-02-03', 5000)],
+      [played],
+    );
+    expect(plan.movies).toEqual([
+      expect.objectContaining({ action: 'create', finishedAt: '2026-02-03' }),
+    ]);
+  });
+
+  it('still ignores played items that have no playback history', () => {
+    expect(run(EMPTY, [], [{ ...libraryMovie, played: true }]).movies).toEqual([]);
+  });
+
   it('sums sessions of the same day', () => {
     expect(
       run(EMPTY, [play('m1', '2026-02-01', 3000), play('m1', '2026-02-01', 3000)]).movies,
