@@ -72,7 +72,8 @@ export function assignSlugs(input: ExportInput): Slugs {
     const parent = slugs.series.get(season.seriesId) ?? 'series';
     const own = season.title ?? `Season ${season.number}`;
     const seriesTitle = seriesTitles.get(season.seriesId);
-    const named = seriesTitle !== undefined && own.toLowerCase().includes(seriesTitle.toLowerCase());
+    const named =
+      seriesTitle !== undefined && own.toLowerCase().includes(seriesTitle.toLowerCase());
     return named ? own : `${parent} - ${own}`;
   });
   return slugs;
