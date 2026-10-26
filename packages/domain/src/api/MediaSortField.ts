@@ -1,4 +1,5 @@
 export const MEDIA_SORT_FIELDS = [
+  'recent',
   'title',
   'rating',
   'startedAt',

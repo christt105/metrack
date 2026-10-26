@@ -45,7 +45,7 @@ describe('MediaListView', () => {
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
     expect(listMedia).toHaveBeenLastCalledWith(
-      expect.objectContaining({ q: 'dan', sort: 'title', order: 'asc' }),
+      expect.objectContaining({ q: 'dan', sort: 'recent', order: 'desc' }),
     );
     vi.useRealTimers();
   });

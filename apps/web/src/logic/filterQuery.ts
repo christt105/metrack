@@ -8,8 +8,8 @@ export const defaultFilters: LibraryFilterState = {
   q: '',
   type: '',
   status: '',
-  sort: 'title',
-  order: 'asc',
+  sort: 'recent',
+  order: 'desc',
 };
 
 function pick<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
@@ -25,7 +25,7 @@ export function filtersFromQuery(query: Record<string, unknown>): LibraryFilterS
     type: pick(query.type, MEDIA_TYPES) ?? '',
     status: pick(query.status, MEDIA_STATUSES) ?? '',
     sort: pick(query.sort, MEDIA_SORT_FIELDS) ?? defaultFilters.sort,
-    order: query.order === 'desc' ? 'desc' : 'asc',
+    order: pick(query.order, ['asc', 'desc'] as const) ?? defaultFilters.order,
   };
 }
 

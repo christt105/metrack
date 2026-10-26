@@ -407,6 +407,29 @@ describe('listing', () => {
     expect(page.total).toBe(8);
   });
 
+  it('sorts by recent activity: in progress first, then the latest tracked day', async () => {
+    const season = (await list('?q=season 1')).items[0];
+    await patch(`/api/seasons/${season.id}`, { finishedAt: '2026-02-01' });
+    expect(titles(await list('?sort=recent&limit=100'))).toEqual([
+      'Hades',
+      'Lupin',
+      'Season 1',
+      'Amélie',
+      'Blade Runner',
+      'Dune',
+      'Second',
+      'Zodiac',
+    ]);
+    const amelie = (await list('?q=amelie')).items[0];
+    await post(`/api/movies/${amelie.id}/rewatches`, { date: '2026-03-10' });
+    expect(titles(await list('?sort=recent&limit=3'))).toEqual(['Hades', 'Amélie', 'Lupin']);
+    expect(titles(await list('?sort=recent&order=asc&limit=3'))).toEqual([
+      'Hades',
+      'Lupin',
+      'Season 1',
+    ]);
+  });
+
   it('summarizes seasons with their series and series with a season count', async () => {
     const page = await list('?q=lupin&sort=id');
     expect(page.items.find((i: { type: string }) => i.type === 'series')).toMatchObject({
