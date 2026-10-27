@@ -1,4 +1,5 @@
-export type FieldKind = 'text' | 'textarea' | 'date' | 'integer' | 'rating' | 'list' | 'boolean';
+export type FieldKind =
+  'text' | 'link' | 'textarea' | 'date' | 'integer' | 'rating' | 'list' | 'boolean';
 
 export type FieldSection = 'ids' | 'metadata' | 'tracking' | 'notes';
 
