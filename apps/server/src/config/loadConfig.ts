@@ -29,6 +29,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       notifyFromHour: hour(env, 'ALERTS_NOTIFY_FROM_HOUR', 8),
     },
   };
+  if (env.IGDB_CLIENT_ID && env.IGDB_CLIENT_SECRET) {
+    config.igdb = { clientId: env.IGDB_CLIENT_ID, clientSecret: env.IGDB_CLIENT_SECRET };
+  }
   if (env.NTFY_URL && env.NTFY_TOPIC) {
     config.ntfy = { url: env.NTFY_URL, topic: env.NTFY_TOPIC, token: env.NTFY_TOKEN || undefined };
   }
