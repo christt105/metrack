@@ -4,4 +4,6 @@ export interface PublishQueueOptions {
   /** First retry delay after a failure. It doubles with each further failure. */
   baseDelayMs: number;
   maxDelayMs: number;
+  /** What the queue does, for logs and alerts. */
+  label?: string;
 }

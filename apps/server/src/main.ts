@@ -14,7 +14,10 @@ import { FilePublishState } from './publish/FilePublishState.js';
 import { loadPublishConfig } from './publish/loadPublishConfig.js';
 import { NodeCommandRunner } from './publish/NodeCommandRunner.js';
 import { PublishPipeline } from './publish/PublishPipeline.js';
-import { PublishQueue } from './publish/PublishQueue.js';
+import { DEFAULT_QUEUE_OPTIONS, PublishQueue } from './publish/PublishQueue.js';
+import { describeMirrorResult } from './mirror/describeMirrorResult.js';
+import { loadMirrorConfig } from './mirror/loadMirrorConfig.js';
+import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 import { TimerScheduler } from './publish/TimerScheduler.js';
 import { IgdbClient } from './providers/igdb/IgdbClient.js';
 import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js';
@@ -127,19 +130,14 @@ const syncSetup = syncConfig
   : undefined;
 if (!syncSetup) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
 
+const exportSources = { movies, series, seasons, videogames, books, images: imageStore };
+
 const { config: publishConfig, missing: publishMissing } = loadPublishConfig(process.env);
 let publishQueue: PublishQueue | undefined;
 if (publishConfig) {
   const runner = new NodeCommandRunner();
   const pipeline = new PublishPipeline(
-    {
-      movies,
-      series,
-      seasons,
-      videogames,
-      books,
-      images: imageStore,
-    },
+    exportSources,
     {
       siteTemplateDir: publishConfig.siteTemplateDir,
       workDir: join(config.dataDir, 'publish'),
@@ -152,6 +150,28 @@ if (publishConfig) {
   publishQueue = new PublishQueue(() => pipeline.run(), notifier, logger, new TimerScheduler());
 } else {
   console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
+}
+
+const mirrorConfig = loadMirrorConfig(process.env);
+let mirrorQueue: PublishQueue | undefined;
+if (mirrorConfig) {
+  mirrorQueue = new PublishQueue(
+    async () =>
+      describeMirrorResult(
+        syncVaultMirror(exportSources, {
+          ...mirrorConfig,
+          statePath: join(config.dataDir, 'vault-mirror-state.json'),
+          apply: true,
+        }),
+      ),
+    notifier,
+    logger,
+    new TimerScheduler(),
+    { ...DEFAULT_QUEUE_OPTIONS, label: 'vault mirror' },
+  );
+  mirrorQueue.markDirty();
+} else {
+  console.log('The vault mirror is disabled, VAULT_MIRROR_DIR is not set');
 }
 
 const backupService = createBackupService(config, db);
@@ -171,6 +191,7 @@ const app = await buildApp({
   imageStore,
   metadataCache,
   publishQueue,
+  mirrorQueue,
   edit,
   backup: { service: backupService, job: backupJob },
   sync: syncSetup?.service,

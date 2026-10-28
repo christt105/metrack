@@ -1,6 +1,5 @@
 import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
-import type { PublishOutcome } from './PublishOutcome.js';
 import type { PublishQueueOptions } from './PublishQueueOptions.js';
 import type { Scheduler } from './Scheduler.js';
 
@@ -24,12 +23,20 @@ export class PublishQueue {
   private alerted = false;
 
   constructor(
-    private readonly attempt: () => Promise<PublishOutcome>,
+    private readonly attempt: () => Promise<string>,
     private readonly notifier: Notifier,
     private readonly logger: Logger,
     private readonly scheduler: Scheduler,
     private readonly options: PublishQueueOptions = DEFAULT_QUEUE_OPTIONS,
   ) {}
+
+  private get label(): string {
+    return this.options.label ?? 'publish';
+  }
+
+  private get title(): string {
+    return this.label.charAt(0).toUpperCase() + this.label.slice(1);
+  }
 
   /** Records that the published site may be out of date. */
   markDirty(): void {
@@ -56,10 +63,10 @@ export class PublishQueue {
     try {
       const outcome = await this.attempt();
       this.failures = 0;
-      this.logger.info(`Publish ${outcome}`);
+      this.logger.info(`${this.title} ${outcome}`);
       if (this.alerted) {
         this.alerted = false;
-        await this.notifier.notify('metrack publish recovered', `Publish ${outcome}`, {
+        await this.notifier.notify(`metrack ${this.label} recovered`, `${this.title} ${outcome}`, {
           priority: 'default',
           tags: ['white_check_mark'],
         });
@@ -72,10 +79,10 @@ export class PublishQueue {
         this.options.baseDelayMs * 2 ** (this.failures - 1),
         this.options.maxDelayMs,
       );
-      this.logger.error(`Publish failed (attempt ${this.failures}): ${reason}`);
+      this.logger.error(`${this.title} failed (attempt ${this.failures}): ${reason}`);
       if (!this.alerted) {
         this.alerted = await this.notifier.notify(
-          'metrack publish failed',
+          `metrack ${this.label} failed`,
           `Attempt ${this.failures} failed: ${reason}. Retrying in ${Math.round(delay / 1000)}s.`,
         );
       }
