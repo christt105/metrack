@@ -9,7 +9,7 @@ const tracking: FieldSchema[] = [
 ];
 
 const housekeeping: FieldSchema[] = [
-  { key: 'note', kind: 'text', section: 'notes' },
+  { key: 'note', kind: 'link', section: 'notes' },
   { key: 'slug', kind: 'text', section: 'notes' },
   { key: 'tags', kind: 'list', section: 'notes' },
 ];

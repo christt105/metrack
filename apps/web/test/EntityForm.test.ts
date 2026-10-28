@@ -96,4 +96,16 @@ describe('EntityForm', () => {
     expect(patch).not.toHaveBeenCalled();
     expect(wrapper.find('.problem').exists()).toBe(true);
   });
+
+  it('links a note that Obsidian or a browser can open', async () => {
+    const note = 'obsidian://open?vault=Atlas&file=Heat';
+    const { wrapper } = await mountWithApi(
+      EntityForm,
+      {},
+      { collection: 'movies', detail: { ...movie, note } as AnyDetail },
+    );
+    expect(wrapper.find('a.open-link').attributes('href')).toBe(note);
+    await wrapper.find('#field-note').setValue('javascript:alert(1)');
+    expect(wrapper.find('a.open-link').exists()).toBe(false);
+  });
 });

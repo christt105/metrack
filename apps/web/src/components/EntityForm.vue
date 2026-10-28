@@ -8,6 +8,7 @@ import type { FieldSchema, FieldSection } from '../logic/FieldSchema';
 import { fieldSchemas, isTracked } from '../logic/fieldSchemas';
 import { buildPatch, DraftError, toDraft } from '../logic/formDraft';
 import type { Draft } from '../logic/formDraft';
+import { openableLink } from '../logic/openableLink';
 import { statusOptions } from '../logic/statusOptions';
 import ErrorNotice from './ErrorNotice.vue';
 import FieldInput from './FieldInput.vue';
@@ -141,6 +142,15 @@ async function save(): Promise<void> {
             :model-value="draft[schema.key] ?? ''"
             @update:model-value="draft[schema.key] = $event"
           />
+          <a
+            v-if="schema.kind === 'link' && openableLink(draft[schema.key])"
+            class="open-link"
+            :href="openableLink(draft[schema.key]) ?? undefined"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ messages.detail.openLink }}
+          </a>
         </FieldRow>
       </div>
     </fieldset>
@@ -180,6 +190,10 @@ legend {
   gap: 12px;
   padding: 10px 0;
   background: var(--surface);
+}
+
+.open-link {
+  align-self: flex-start;
 }
 
 .success-text {

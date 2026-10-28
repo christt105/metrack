@@ -83,6 +83,7 @@ export const messages = {
     addSeason: 'Add season',
     seasonNumber: 'Season number',
     deleteItem: 'Delete',
+    openLink: 'Open',
   },
   artwork: {
     cover: 'Cover',
