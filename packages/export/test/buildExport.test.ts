@@ -109,6 +109,31 @@ describe('buildExport', () => {
     expect(second).toContain('rating: "6"');
   });
 
+  it('gives a season without artwork the series cover and banner', () => {
+    const image = (hash: string) => ({
+      ref: `/api/images/${hash}`,
+      hash,
+      extension: 'jpg',
+      sourceUrl: null,
+    });
+    const files = buildExport({
+      ...empty,
+      images: [image('poster'), image('backdrop'), image('own')],
+      series: [series({ cover: '/api/images/poster', banner: '/api/images/backdrop' })],
+      seasons: [
+        season({ id: 1, number: 1, cover: '/api/images/own' }),
+        season({ id: 2, number: 2, slug: 'Show - Season 2' }),
+      ],
+    });
+    const first = text(files, 'content/seasons/Show - Season 1/index.md');
+    expect(first).toContain('image: own.jpg');
+    expect(first).toContain('banner_image: backdrop.jpg');
+    const second = text(files, 'content/seasons/Show - Season 2/index.md');
+    expect(second).toContain('image: poster.jpg');
+    expect(second).toContain('banner_image: backdrop.jpg');
+    expect(files.map((f) => f.path)).toContain('content/seasons/Show - Season 2/poster.jpg');
+  });
+
   it('prefixes season names that do not mention their series', () => {
     const files = buildExport({
       ...empty,
