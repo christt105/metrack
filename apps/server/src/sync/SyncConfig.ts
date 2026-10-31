@@ -8,4 +8,6 @@ export interface SyncConfig {
   userName: string;
   /** IANA time zone that decides on which day a viewing falls. */
   timeZone: string;
+  /** Quiet time after a Jellyfin webhook before the sync runs, so Jellystat has recorded the playback. */
+  webhookDelayMs: number;
 }

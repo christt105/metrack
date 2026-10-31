@@ -15,6 +15,7 @@ import { loadPublishConfig } from './publish/loadPublishConfig.js';
 import { NodeCommandRunner } from './publish/NodeCommandRunner.js';
 import { PublishPipeline } from './publish/PublishPipeline.js';
 import { DEFAULT_QUEUE_OPTIONS, PublishQueue } from './publish/PublishQueue.js';
+import { createSyncQueue } from './sync/createSyncQueue.js';
 import { describeMirrorResult } from './mirror/describeMirrorResult.js';
 import { loadMirrorConfig } from './mirror/loadMirrorConfig.js';
 import { syncVaultMirror } from './mirror/syncVaultMirror.js';
@@ -175,6 +176,18 @@ if (mirrorConfig) {
   console.log('The vault mirror is disabled, VAULT_MIRROR_DIR is not set');
 }
 
+const syncQueue =
+  syncSetup && syncConfig
+    ? createSyncQueue({
+        sync: syncSetup.service,
+        notifier,
+        logger,
+        scheduler: new TimerScheduler(),
+        delayMs: syncConfig.webhookDelayMs,
+        downstream: [publishQueue, mirrorQueue],
+      })
+    : undefined;
+
 const backupService = createBackupService(config, db);
 const backupJob = new BackupJob(backupService, config.backup.retention, notifier, logger);
 const scheduler = new BackupScheduler(
@@ -196,6 +209,7 @@ const app = await buildApp({
   edit,
   backup: { service: backupService, job: backupJob },
   sync: syncSetup?.service,
+  syncQueue,
   watch: {
     watchlist: new WatchlistService(edit.editor, movies, series, seasons),
     alerts: releaseAlerts,
