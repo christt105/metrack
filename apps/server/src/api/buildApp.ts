@@ -8,6 +8,7 @@ import { registerErrorHandler } from './registerErrorHandler.js';
 import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
 import { registerMediaRoutes } from './registerMediaRoutes.js';
+import { registerMirrorHook } from './registerMirrorHook.js';
 import { registerPublishRoutes } from './registerPublishRoutes.js';
 import { registerSeasonOverrideRoutes } from './registerSeasonOverrideRoutes.js';
 import { registerSyncRoutes } from './registerSyncRoutes.js';
@@ -33,6 +34,8 @@ export interface AppDeps {
   imageStore?: ImageStore;
   metadataCache?: MetadataCache;
   publishQueue?: PublishQueue;
+  /** Refreshes the read-only notes in the vault after each change. */
+  mirrorQueue?: PublishQueue;
   edit?: EditServices;
   backup?: BackupRouteDeps;
   sync?: SyncService;
@@ -65,6 +68,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   registerSyncRoutes(app, deps.sync);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
+  if (deps.mirrorQueue) registerMirrorHook(app, deps.mirrorQueue);
 
   const webDir = deps.webDir ? resolve(deps.webDir) : undefined;
   const serveWeb = webDir !== undefined && existsSync(webDir);

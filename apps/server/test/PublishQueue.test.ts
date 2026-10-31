@@ -7,7 +7,7 @@ import { FakeScheduler } from './support/FakeScheduler.js';
 
 const options = { debounceMs: 10, baseDelayMs: 100, maxDelayMs: 350 };
 
-function setup(results: (PublishOutcome | Error)[], delivered: boolean[] = []) {
+function setup(results: (PublishOutcome | Error)[], delivered: boolean[] = [], label?: string) {
   const scheduler = new FakeScheduler();
   const alerts: string[] = [];
   const logs: string[] = [];
@@ -24,7 +24,7 @@ function setup(results: (PublishOutcome | Error)[], delivered: boolean[] = []) {
     if (result instanceof Error) throw result;
     return result;
   };
-  const queue = new PublishQueue(attempt, notifier, logger, scheduler, options);
+  const queue = new PublishQueue(attempt, notifier, logger, scheduler, { ...options, label });
   return { queue, scheduler, alerts, logs, calls: () => calls };
 }
 
@@ -120,5 +120,21 @@ describe('PublishQueue', () => {
     expect(scheduler.pending()).toBe(1);
     await scheduler.fire();
     expect(calls()).toBe(2);
+  });
+
+  it('names what it runs in logs and alerts', async () => {
+    const { queue, scheduler, alerts, logs } = setup(
+      [new Error('disk full'), 'published'],
+      [],
+      'vault mirror',
+    );
+    queue.markDirty();
+    await scheduler.fire();
+    await scheduler.fire();
+    expect(alerts).toEqual([
+      'metrack vault mirror failed|Attempt 1 failed: disk full. Retrying in 0s.',
+      'metrack vault mirror recovered|Vault mirror published',
+    ]);
+    expect(logs).toEqual(['Vault mirror failed (attempt 1): disk full', 'Vault mirror published']);
   });
 });

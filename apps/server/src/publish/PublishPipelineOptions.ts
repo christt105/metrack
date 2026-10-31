@@ -4,4 +4,6 @@ export interface PublishPipelineOptions {
   /** Scratch directory for the assembled site and the built output. */
   workDir: string;
   hugoBinary: string;
+  /** Passed to Hugo as `--baseURL`; the template's own `baseURL` applies when unset. */
+  baseUrl?: string | undefined;
 }

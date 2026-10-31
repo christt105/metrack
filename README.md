@@ -90,6 +90,33 @@ The notes are never modified. The import can be repeated: rows are matched by `t
 
 Local covers and banners (such as `Portadas/`) go through the image store. A remote cover or banner URL is linked only if a copy of that exact URL is already stored; nothing is downloaded. `--images-dir` (repeatable) points at folders written by the previous Hugo site, whose migration script cached each remote image as `tmdb_<id>.<ext>`, `tvdb_<id>.<ext>`, `steamgriddb_<id>.<ext>`, `steam_<appid>_<name>.<ext>` or, for any other URL, `img_<md5 of the URL>.<ext>`. The importer derives that name from every remote cover and banner URL, searches the folders recursively, stores the matching file through the image store and records the URL, so later runs link it directly. The report lists the URLs that have no matching file. A series note without season notes becomes a series with one season holding its tracking. Notes without an external id, with an id already used by another note, or whose series cannot be found go to the unlinked inbox.
 
+## Mirroring to the Obsidian vault
+
+```sh
+npm run metrack -w @metrack/server -- mirror "/path/to/vault/Media Tracker" --web-url http://192.168.1.15:8100
+npm run metrack -w @metrack/server -- mirror "/path/to/vault/Media Tracker" --web-url http://192.168.1.15:8100 --apply
+```
+
+Once the web app is the only place where tracking is edited, `mirror` keeps a read-only copy of the library in the vault so other notes can link to it (`[[Predestination (2014)]]` from a journal entry). It writes one note per page of the site, in the format and folders the Obsidian plugin used (`Movies`, `TVs`, `Seasons`, `Juegos`, `Books`) and with the same file names, so existing links keep working and the old Hugo migration script can still read the folder. Any edit made in Obsidian to these notes is overwritten on the next run.
+
+Without `--apply` it only reports which notes would be created, changed or removed. With `--apply` it writes through a temporary file and a rename, and only notes whose text changes. Properties the database does not hold (`related`, `aliases`, `cssclasses`, `category`...) stay as written, and so do values that already mean the same thing: a cover URL or `[[file]]` for the same image, season links written with folders or aliases, a review whose only difference is how its images are embedded. A series with season notes gets its status from its seasons (in progress while one is, completed once one is finished and the rest are not started) and the latest finish date; it has no rating of its own.
+
+Covers keep their original URL when the image came from one; otherwise the note links a file in `Portadas` or `Files` with the same bytes, or the image is copied there as `metrack-<hash>.<ext>`. `--web-url` (or `VAULT_MIRROR_WEB_URL`) adds a `metrack` property linking to the item in the web app. `--link-prefix` is the folder's path inside the vault, `Media Tracker` by default.
+
+The notes written are recorded in `vault-mirror-state.json` in the data directory. A note the mirror wrote before and that no longer matches an item (deleted, or renamed) is removed; notes it never wrote are listed and left alone.
+
+### Automatic mirror
+
+With `VAULT_MIRROR_DIR` set, the server runs the mirror once at start and again a few seconds after every successful write under `/api` (the same trigger as publishing), so the vault follows every edit. `VAULT_MIRROR_WEB_URL` and `VAULT_MIRROR_LINK_PREFIX` work like the CLI options. Failures are logged, retried with backoff and reported once through ntfy. When the server runs as root (the Docker image), written files and folders take the owner of the folder they are written into, so the vault keeps belonging to its user. In Docker, mount the vault folder and point the variable at it:
+
+```yaml
+environment:
+  VAULT_MIRROR_DIR: /vault/Media Tracker
+  VAULT_MIRROR_WEB_URL: http://192.168.1.15:8100
+volumes:
+  - /path/to/vault/Media Tracker:/vault/Media Tracker
+```
+
 ## Exporting to Hugo
 
 ```sh
@@ -111,6 +138,7 @@ Publishing stays off, with a log line naming what is missing, unless all of thes
 - `PUBLISH_SITE_TEMPLATE_DIR`: Hugo project without the exported content sections.
 - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PAGES_PROJECT`: the Pages project to deploy to.
 - `HUGO_BIN` (default `hugo`), `WRANGLER_BIN` (default `wrangler`) and `CLOUDFLARE_PAGES_BRANCH` (default `main`).
+- `PUBLISH_BASE_URL` (optional): public address of the site, passed to Hugo as `--baseURL`. Set it to the address the site is served from (for example `https://my-site.pages.dev/`): without it the template's `baseURL` applies, and a relative one makes the RSS feeds emit relative links and cover URLs that feed readers cannot resolve.
 
 The image does not include Go, so the theme's Hugo modules must be vendored in the site template (`hugo mod vendor`, which writes `_vendor/`); with them vendored the build needs no network. The old MediaTracker site builds this way inside the image. The upload to Cloudflare is not covered by automated tests: the publisher is tested with a fake command runner and the pipeline with a fake publisher. Changes to the site template alone do not trigger a publish, because the fingerprint covers only the exported content.
 
