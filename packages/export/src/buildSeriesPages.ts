@@ -9,7 +9,8 @@ import { trackingFields } from './trackingFields.js';
 
 /**
  * The pages of a series. A series without season pages carries its single season's tracking on
- * its own page. Otherwise the series page only groups its seasons and each season has a page.
+ * its own page. Otherwise the series page only groups its seasons and each season has a page, which
+ * falls back to the series cover and banner when it has none of its own.
  */
 export function buildSeriesPages(series: Series, seasons: Season[], context: PageContext): Page[] {
   const ordered = [...seasons].sort((a, b) => a.number - b.number || a.id - b.id);
@@ -57,7 +58,10 @@ export function buildSeriesPages(series: Series, seasons: Season[], context: Pag
               ...trackingFields(season),
             },
             review: season.review,
-            artwork: season,
+            artwork: {
+              cover: season.cover ?? series.cover,
+              banner: season.banner ?? series.banner,
+            },
           },
           context,
         ),
