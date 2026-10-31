@@ -18,7 +18,10 @@ import { JellyfinClient } from '../src/sync/jellyfin/JellyfinClient.js';
 import type { JellyfinItem } from '../src/sync/jellyfin/JellyfinItem.js';
 import { JellyfinLibrarySource } from '../src/sync/jellyfin/JellyfinLibrarySource.js';
 import { PostgresPlaybackSource } from '../src/sync/jellystat/PostgresPlaybackSource.js';
+import { createSyncQueue } from '../src/sync/createSyncQueue.js';
 import { loadSyncConfig } from '../src/sync/loadSyncConfig.js';
+import { PublishQueue } from '../src/publish/PublishQueue.js';
+import { FakeScheduler } from './support/FakeScheduler.js';
 import { SyncApplier } from '../src/sync/SyncApplier.js';
 import { SyncService } from '../src/sync/SyncService.js';
 import type { LibrarySource } from '../src/sync/LibrarySource.js';
@@ -251,7 +254,26 @@ describe('loadSyncConfig', () => {
       userName: 'admin',
       timeZone: 'Europe/Madrid',
       jellystat: { port: 5432, user: 'postgres', database: 'jellystat' },
+      webhookDelayMs: 120_000,
     });
+  });
+
+  it('reads the webhook delay and rejects nonsense', () => {
+    const env = {
+      JELLYFIN_URL: 'http://jf',
+      JELLYFIN_TOKEN: 't',
+      JELLYSTAT_DB_HOST: 'db',
+      JELLYSTAT_DB_PASSWORD: 'p',
+    };
+    expect(
+      loadSyncConfig({ ...env, SYNC_WEBHOOK_DELAY_SECONDS: '30' }).config?.webhookDelayMs,
+    ).toBe(30_000);
+    expect(() => loadSyncConfig({ ...env, SYNC_WEBHOOK_DELAY_SECONDS: 'soon' })).toThrow(
+      'SYNC_WEBHOOK_DELAY_SECONDS',
+    );
+    expect(() => loadSyncConfig({ ...env, SYNC_WEBHOOK_DELAY_SECONDS: '-1' })).toThrow(
+      'SYNC_WEBHOOK_DELAY_SECONDS',
+    );
   });
 });
 
@@ -489,6 +511,58 @@ describe('SyncService', () => {
     });
     expect(applied.statusCode).toBe(200);
     expect(applied.json().result.moviesCreated).toBe(1);
+    t.db.close();
+  });
+
+  it('queues a delayed sync on a webhook, coalescing bursts, and refreshes the published site', async () => {
+    const t = setup(lupinLibrary, lupinPlays);
+    seedLupin(t);
+    const scheduler = new FakeScheduler();
+    const logs: string[] = [];
+    const logger = {
+      info: (m: string) => void logs.push(m),
+      error: (m: string) => void logs.push(m),
+    };
+    const notifier = { notify: async () => true };
+    const published = new PublishQueue(async () => 'published', notifier, logger, scheduler);
+    const queue = createSyncQueue({
+      sync: t.service,
+      notifier,
+      logger,
+      scheduler,
+      delayMs: 120_000,
+      downstream: [published, undefined],
+    });
+    const app = await buildApp({
+      appVersion: 'test',
+      migrationRunner: t.runner,
+      sync: t.service,
+      syncQueue: queue,
+    });
+    for (let i = 0; i < 3; i += 1) {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/sync/webhook',
+        payload: { NotificationType: 'PlaybackStop' },
+      });
+      expect(response.statusCode).toBe(202);
+    }
+    expect(scheduler.delays).toEqual([120_000]);
+    expect(t.targets.movies.list()).toEqual([]);
+
+    await scheduler.fire();
+    expect(t.targets.movies.list()).toHaveLength(1);
+    expect(t.targets.movies.list()[0]).toMatchObject({ pendingReview: true });
+    expect(logs.some((m) => m.includes('1 movies created'))).toBe(true);
+    expect(scheduler.delays).toEqual([120_000, 5_000]);
+    t.db.close();
+  });
+
+  it('answers 501 to a webhook when sync is not configured', async () => {
+    const t = setup(lupinLibrary, lupinPlays);
+    const app = await buildApp({ appVersion: 'test', migrationRunner: t.runner });
+    const response = await app.inject({ method: 'POST', url: '/api/sync/webhook', payload: {} });
+    expect(response.statusCode).toBe(501);
     t.db.close();
   });
 

@@ -21,6 +21,10 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error(`Invalid JELLYSTAT_DB_PORT: ${env.JELLYSTAT_DB_PORT}`);
   }
+  const delaySeconds = Number(env.SYNC_WEBHOOK_DELAY_SECONDS ?? 120);
+  if (!Number.isInteger(delaySeconds) || delaySeconds < 0 || delaySeconds > 3600) {
+    throw new Error(`Invalid SYNC_WEBHOOK_DELAY_SECONDS: ${env.SYNC_WEBHOOK_DELAY_SECONDS}`);
+  }
   return {
     missing: [],
     config: {
@@ -38,6 +42,7 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
       },
       userName: env.JELLYFIN_USER || 'admin',
       timeZone: env.SYNC_TIME_ZONE || 'Europe/Madrid',
+      webhookDelayMs: delaySeconds * 1000,
     },
   };
 }

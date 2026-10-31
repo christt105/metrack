@@ -39,6 +39,7 @@ export interface AppDeps {
   edit?: EditServices;
   backup?: BackupRouteDeps;
   sync?: SyncService;
+  syncQueue?: PublishQueue;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
 }
 
@@ -65,7 +66,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
   if (deps.watch) registerWatchlistRoutes(app, deps.watch.watchlist, deps.watch.alerts);
-  registerSyncRoutes(app, deps.sync);
+  registerSyncRoutes(app, deps.sync, deps.syncQueue);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
   if (deps.mirrorQueue) registerMirrorHook(app, deps.mirrorQueue);
