@@ -9,6 +9,8 @@ import { runBackupCommand } from './backup/runBackupCommand.js';
 import { loadSyncConfig } from './sync/loadSyncConfig.js';
 import { runSyncCommand } from './sync/runSyncCommand.js';
 import { runImport } from './importer/runImport.js';
+import { formatMirrorResult } from './mirror/formatMirrorResult.js';
+import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 
 const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack redirect <outDir> --origin <newSiteAddress> [--old-base <path>]
@@ -17,6 +19,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack restore <backupName> [--data-dir <dir>]
        metrack sync [--apply] [--verbose] [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
+       metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
   With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
@@ -34,6 +37,12 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   backups lists stored backups, backup creates one now (and prunes to BACKUP_RETENTION), restore replaces the
   database and image store with a backup (stop the server first).
 
+  mirror writes one read-only note per item into the Media Tracker folder of the vault, with the names and
+  folders the Obsidian plugin used, so the vault can link to them. Without --apply it only reports what would
+  change. Properties the database does not hold (related, aliases...) and reviews that did not change are kept
+  as written. --web-url (or VAULT_MIRROR_WEB_URL) adds a link back to the web app; --link-prefix is the
+  folder's path inside the vault (default "Media Tracker").
+
   export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
   <outDir>, replacing those sections. It reads the database and image store in the data directory.`;
 
@@ -48,6 +57,8 @@ async function main(argv: string[]): Promise<number> {
       'images-dir': { type: 'string', multiple: true },
       origin: { type: 'string' },
       'old-base': { type: 'string' },
+      'web-url': { type: 'string' },
+      'link-prefix': { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
@@ -84,7 +95,8 @@ async function main(argv: string[]): Promise<number> {
     );
     return 0;
   }
-  const known = command === 'import' || command === 'export' || command === 'redirect';
+  const known =
+    command === 'import' || command === 'export' || command === 'redirect' || command === 'mirror';
   if (values.help || !known || !target || positionals.length > 2) {
     console.error(USAGE);
     return values.help ? 0 : 2;
@@ -108,6 +120,23 @@ async function main(argv: string[]): Promise<number> {
       console.log(
         `Exported ${result.files} files to ${target} (fingerprint ${result.fingerprint})`,
       );
+    } finally {
+      db.close();
+    }
+    return 0;
+  }
+  if (command === 'mirror') {
+    const dataDir = values['data-dir'] ?? config.dataDir;
+    const { db, sources } = openExportSources(dataDir);
+    try {
+      const result = syncVaultMirror(sources, {
+        mirrorDir: target,
+        linkPrefix: values['link-prefix'] ?? 'Media Tracker',
+        webUrl: values['web-url'] ?? process.env.VAULT_MIRROR_WEB_URL ?? null,
+        statePath: join(dataDir, 'vault-mirror-state.json'),
+        apply: values.apply,
+      });
+      console.log(formatMirrorResult(result, values.apply, values.verbose));
     } finally {
       db.close();
     }
