@@ -117,6 +117,20 @@ describe('creating and reading', () => {
 });
 
 describe('editing', () => {
+  it('confirms a viewing pending review', async () => {
+    const id = await createMovie({ pendingReview: true });
+    expect(
+      (await api.app.inject({ method: 'GET', url: `/api/movies/${id}` })).json(),
+    ).toMatchObject({
+      pendingReview: true,
+    });
+    const response = await patch(`/api/movies/${id}`, { pendingReview: false });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ pendingReview: false });
+    const list = (await api.app.inject({ method: 'GET', url: '/api/media' })).json();
+    expect(list.items[0]).toMatchObject({ id, pendingReview: false });
+  });
+
   it('edits tracking fields and ids', async () => {
     const id = await createMovie();
     const response = await patch(`/api/movies/${id}`, {

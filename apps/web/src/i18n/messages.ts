@@ -53,6 +53,13 @@ export const messages = {
     count: (n: number) => (n === 1 ? '1 title' : `${n} titles`),
     truncated: (shown: number, total: number) => `Showing ${shown} of ${total}.`,
   },
+  pending: {
+    badge: 'Pending review',
+    hint: 'Recorded from Jellyfin. It stays out of the feeds until you confirm it.',
+    notice:
+      'This viewing was recorded from Jellyfin and stays out of the feeds until you confirm it.',
+    confirm: 'Save and confirm',
+  },
   detail: {
     sectionIds: 'Identifiers',
     sectionMetadata: 'Metadata',

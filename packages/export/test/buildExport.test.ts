@@ -78,6 +78,17 @@ describe('buildExport', () => {
     expect(page.endsWith('\nNotes\n')).toBe(true);
   });
 
+  it('flags viewings pending review on the page that carries them', () => {
+    const files = buildExport({
+      ...empty,
+      movies: [movie({ status: 'completed', finishedAt: '2024-03-05', pendingReview: true })],
+      series: [series()],
+      seasons: [season({ slug: null, status: 'completed', pendingReview: true })],
+    });
+    expect(text(files, 'content/movies/Alpha (2020)/index.md')).toContain('pending_review: true');
+    expect(text(files, 'content/tv/Show (2019)/index.md')).toContain('pending_review: true');
+  });
+
   it('gives each season a page linked to the series and keeps the series untracked', () => {
     const files = buildExport({
       ...empty,

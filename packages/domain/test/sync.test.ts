@@ -20,6 +20,7 @@ const TRACKING: Tracking = {
   rating: null,
   review: null,
   rewatches: [],
+  pendingReview: false,
 };
 const ART = { cover: null, banner: null };
 
@@ -297,6 +298,7 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
         finishedAt: null,
         episodeCount: 3,
         watchedEpisodes: 1,
+        completes: false,
       }),
     ]);
   });
@@ -313,6 +315,7 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
       startedAt: '2026-10-24',
       finishedAt: '2026-10-25',
       missingRating: true,
+      completes: true,
     });
   });
 

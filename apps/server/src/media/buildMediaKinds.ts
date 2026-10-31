@@ -32,14 +32,21 @@ function summary(partial: Pick<MediaSummary, 'type' | 'id' | 'title'>): MediaSum
     seriesId: null,
     seriesTitle: null,
     seasonCount: null,
+    pendingReview: false,
     ...partial,
   };
 }
 
 function trackingOf(
   t: Tracking,
-): Pick<MediaSummary, 'status' | 'rating' | 'startedAt' | 'finishedAt'> {
-  return { status: t.status, rating: t.rating, startedAt: t.startedAt, finishedAt: t.finishedAt };
+): Pick<MediaSummary, 'status' | 'rating' | 'startedAt' | 'finishedAt' | 'pendingReview'> {
+  return {
+    status: t.status,
+    rating: t.rating,
+    startedAt: t.startedAt,
+    finishedAt: t.finishedAt,
+    pendingReview: t.pendingReview,
+  };
 }
 
 /** The five entity collections, wired to their repositories. */
@@ -85,12 +92,14 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       defaults: () => ({ ...emptySeries() }),
       summarize: (entity) => {
         const s = entity as Series;
+        const seasons = sources.seasons.listBySeries(s.id);
         return {
           ...summary({ type: 'series', id: s.id, title: s.title }),
           subtitle: s.originalTitle !== s.title ? s.originalTitle : null,
           releaseDate: s.firstAirDate,
           cover: s.cover,
-          seasonCount: sources.seasons.listBySeries(s.id).length,
+          seasonCount: seasons.length,
+          pendingReview: seasons.some((season) => season.pendingReview),
         };
       },
       extend: (entity) => ({

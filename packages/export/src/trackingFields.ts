@@ -9,5 +9,6 @@ export function trackingFields(tracking: Tracking): Record<string, unknown> {
     date: tracking.finishedAt === null ? null : new DateValue(tracking.finishedAt),
     rating: tracking.rating === null ? null : String(tracking.rating),
     rewatches: tracking.rewatches.map((date) => new DateValue(date)),
+    pending_review: tracking.pendingReview || null,
   };
 }

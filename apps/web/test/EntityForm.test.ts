@@ -22,6 +22,7 @@ const movie = {
   rating: 8,
   review: null,
   rewatches: [],
+  pendingReview: false,
   note: null,
   slug: null,
   tags: [],
@@ -63,6 +64,41 @@ describe('EntityForm', () => {
     await flushPromises();
     expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 });
     expect(wrapper.emitted('saved')).toHaveLength(1);
+  });
+
+  it('confirms a pending viewing together with the edits', async () => {
+    const pending = { ...movie, pendingReview: true } as AnyDetail;
+    const patch = vi.fn().mockResolvedValue({ ...movie, rating: 9 });
+    const { wrapper } = await mountWithApi(
+      EntityForm,
+      { patch },
+      { collection: 'movies', detail: pending },
+    );
+    expect(wrapper.find('.pending-notice').exists()).toBe(true);
+    await wrapper.find('#field-rating').setValue('9');
+    await wrapper.find('.actions button[type="button"]').trigger('click');
+    await flushPromises();
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9, pendingReview: false });
+  });
+
+  it('keeps a pending viewing pending on a plain save', async () => {
+    const pending = { ...movie, pendingReview: true } as AnyDetail;
+    const patch = vi.fn().mockResolvedValue(pending);
+    const { wrapper } = await mountWithApi(
+      EntityForm,
+      { patch },
+      { collection: 'movies', detail: pending },
+    );
+    await wrapper.find('#field-rating').setValue('9');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 });
+  });
+
+  it('offers no confirmation for a confirmed viewing', async () => {
+    const { wrapper } = await mountWithApi(EntityForm, {}, { collection: 'movies', detail: movie });
+    expect(wrapper.find('.pending-notice').exists()).toBe(false);
+    expect(wrapper.find('.actions button[type="button"]').exists()).toBe(false);
   });
 
   it('shows the API error and keeps the draft', async () => {

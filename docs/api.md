@@ -25,7 +25,7 @@ One list across every collection, as `MediaPage` (`{ items: MediaSummary[], tota
 - `sort`: `title` (default), `recent`, `rating`, `startedAt`, `finishedAt`, `releaseDate` or `id`. `order`: `asc` (default) or `desc`. Rows missing the sort value always come last. `recent` puts titles in progress first and then orders by the latest day each was started, finished or rewatched, newest first unless `order=asc`; a series takes both from its seasons. The web library uses `recent` by default.
 - `limit` (1 to 1000, default 50) and `offset`.
 
-A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, `status`, `rating`, `startedAt`, `finishedAt`, plus `seriesId` and `seriesTitle` for seasons and `seasonCount` for series. A season without its own cover shows the cover of its series.
+A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, `status`, `rating`, `startedAt`, `finishedAt`, plus `seriesId` and `seriesTitle` for seasons and `seasonCount` for series, and `pendingReview` (a series is pending when any of its seasons is). A season without its own cover shows the cover of its series.
 
 ### Per collection
 
@@ -43,7 +43,7 @@ Editable fields per collection:
 - `games`: `igdbId`, `steamAppId`, `steamGridDbId`, `title`, `releaseDate`, `overview`, `genres`, `developer`, `platforms`, `note`, `slug`, `tags` and the tracking fields.
 - `books`: `openLibraryId`, `isbn`, `title`, `authors`, `publisher`, `pageCount`, `releaseDate`, `overview`, `genres`, `note`, `slug`, `tags` and the tracking fields.
 
-The tracking fields are `status`, `startedAt`, `finishedAt`, `rating`, `review` and `rewatches`.
+The tracking fields are `status`, `startedAt`, `finishedAt`, `rating`, `review`, `rewatches` and `pendingReview`. `pendingReview` is set by the Jellyfin sync on every viewing it records and cleared by patching it to `false`; while it is set, the exported page carries `pending_review: true` and the site feeds leave it out.
 
 ### Editing rules
 

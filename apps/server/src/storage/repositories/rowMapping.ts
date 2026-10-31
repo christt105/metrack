@@ -21,6 +21,7 @@ export function trackingFromRow(row: Row): Tracking {
     rating: num(row.rating),
     review: text(row.review),
     rewatches: parseList(row.rewatches),
+    pendingReview: Number(row.pending_review) === 1,
   };
 }
 
@@ -32,5 +33,6 @@ export function trackingToRow(tracking: Tracking): RowValues {
     rating: tracking.rating,
     review: tracking.review,
     rewatches: JSON.stringify(tracking.rewatches),
+    pending_review: tracking.pendingReview ? 1 : 0,
   };
 }

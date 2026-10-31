@@ -8,6 +8,7 @@ function emptyTracking(): Tracking {
     rating: null,
     review: null,
     rewatches: [],
+    pendingReview: false,
   };
 }
 

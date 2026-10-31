@@ -355,6 +355,7 @@ function seedLupin(t: ReturnType<typeof setup>) {
     rating: 9,
     review: 'season review',
     rewatches: [],
+    pendingReview: false,
   });
   return { series, season };
 }
@@ -412,6 +413,38 @@ describe('SyncService', () => {
     expect(again.movies).toEqual([]);
     expect(again.series).toEqual([]);
     expect(again.unlinked).toEqual([]);
+    t.db.close();
+  });
+
+  it('marks the viewings it records as pending review', async () => {
+    const t = setup(lupinLibrary, lupinPlays);
+    const { season } = seedLupin(t);
+    await t.service.apply();
+    const movie = t.targets.movies.list()[0]!;
+    expect(movie.pendingReview).toBe(true);
+    expect(t.targets.seasons.get(season.id)!.pendingReview).toBe(true);
+
+    t.targets.movies.update(movie.id, { pendingReview: false });
+    t.targets.seasons.update(season.id, { pendingReview: false });
+    await t.service.apply();
+    expect(t.targets.movies.get(movie.id)!.pendingReview).toBe(false);
+    expect(t.targets.seasons.get(season.id)!.pendingReview).toBe(false);
+    t.db.close();
+  });
+
+  it('leaves a season it only starts out of review', async () => {
+    const firstEpisode: PlaybackSource = {
+      listPlays: async () => [
+        { itemId: 'e1', playedAt: '2026-10-24T20:00:00Z', watchedSeconds: 1500 },
+      ],
+    };
+    const t = setup(lupinLibrary, firstEpisode);
+    const { season } = seedLupin(t);
+    await t.service.apply();
+    expect(t.targets.seasons.get(season.id)).toMatchObject({
+      status: 'in_progress',
+      pendingReview: false,
+    });
     t.db.close();
   });
 
@@ -569,5 +602,6 @@ function emptyMovieRow() {
     rating: null,
     review: null,
     rewatches: [],
+    pendingReview: false,
   };
 }

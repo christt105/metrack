@@ -8,7 +8,8 @@ export const SYNC_SOURCE = 'jellyfin';
 
 /**
  * Writes a sync plan through the repositories in one transaction. Only the fields the plan carries are
- * written, so ratings, reviews, notes and artwork are never touched.
+ * written, so ratings, reviews, notes and artwork are never touched. Every movie viewing and every season it
+ * completes is marked as pending review.
  */
 export class SyncApplier {
   constructor(
@@ -47,6 +48,7 @@ export class SyncApplier {
         startedAt: change.startedAt,
         finishedAt: change.finishedAt,
         rewatches: change.rewatches,
+        pendingReview: true,
       };
       if (change.movieId === null) {
         const movie = movies.create({
@@ -76,10 +78,18 @@ export class SyncApplier {
       }
       for (const season of change.seasons) {
         if (season.seasonId === null) {
-          seasons.create({ ...emptySeason(), ...seasonFields(season), seriesId });
+          seasons.create({
+            ...emptySeason(),
+            ...seasonFields(season),
+            seriesId,
+            pendingReview: season.completes,
+          });
           result.seasonsCreated += 1;
         } else {
-          seasons.update(season.seasonId, seasonFields(season));
+          seasons.update(season.seasonId, {
+            ...seasonFields(season),
+            ...(season.completes ? { pendingReview: true } : {}),
+          });
           result.seasonsUpdated += 1;
         }
       }

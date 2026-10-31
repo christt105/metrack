@@ -38,5 +38,6 @@ export function readTracking(note: VaultNote, issues: IssueLog): Tracking {
     rating: rating.value,
     review: review === '' ? null : review,
     rewatches,
+    pendingReview: false,
   };
 }
