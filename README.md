@@ -105,6 +105,18 @@ Covers keep their original URL when the image came from one; otherwise the note 
 
 The notes written are recorded in `vault-mirror-state.json` in the data directory. A note the mirror wrote before and that no longer matches an item (deleted, or renamed) is removed; notes it never wrote are listed and left alone.
 
+### Automatic mirror
+
+With `VAULT_MIRROR_DIR` set, the server runs the mirror once at start and again a few seconds after every successful write under `/api` (the same trigger as publishing), so the vault follows every edit. `VAULT_MIRROR_WEB_URL` and `VAULT_MIRROR_LINK_PREFIX` work like the CLI options. Failures are logged, retried with backoff and reported once through ntfy. When the server runs as root (the Docker image), written files and folders take the owner of the folder they are written into, so the vault keeps belonging to its user. In Docker, mount the vault folder and point the variable at it:
+
+```yaml
+environment:
+  VAULT_MIRROR_DIR: /vault/Media Tracker
+  VAULT_MIRROR_WEB_URL: http://192.168.1.15:8100
+volumes:
+  - /path/to/vault/Media Tracker:/vault/Media Tracker
+```
+
 ## Exporting to Hugo
 
 ```sh
