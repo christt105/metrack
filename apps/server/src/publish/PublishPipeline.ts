@@ -38,7 +38,7 @@ export class PublishPipeline {
     writeExport(files, siteDir, storeImagePath(this.sources.images));
 
     const baseUrlArgs = this.options.baseUrl ? ['--baseURL', this.options.baseUrl] : [];
-    await this.runner.run(this.options.hugoBinary, ['--destination', builtDir, ...baseUrlArgs], {
+    await this.runner.run(this.options.hugoBinary, ['--minify', '--destination', builtDir, ...baseUrlArgs], {
       cwd: siteDir,
       inheritEnv: HUGO_INHERITED_ENV,
     });
