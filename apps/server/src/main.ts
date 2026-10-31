@@ -144,6 +144,7 @@ if (publishConfig) {
       siteTemplateDir: publishConfig.siteTemplateDir,
       workDir: join(config.dataDir, 'publish'),
       hugoBinary: publishConfig.hugoBinary,
+      baseUrl: publishConfig.baseUrl,
     },
     runner,
     new CloudflarePagesPublisher(publishConfig, runner),

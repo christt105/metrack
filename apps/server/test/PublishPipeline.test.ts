@@ -62,7 +62,7 @@ class FakePublisher implements Publisher {
   }
 }
 
-function setup() {
+function setup(baseUrl?: string) {
   const db = openTestDatabase();
   const root = tempDir();
   const template = join(root, 'template');
@@ -82,7 +82,7 @@ function setup() {
   const state = new FilePublishState(join(root, 'state.json'));
   const pipeline = new PublishPipeline(
     sources,
-    { siteTemplateDir: template, workDir: join(root, 'work'), hugoBinary: 'hugo' },
+    { siteTemplateDir: template, workDir: join(root, 'work'), hugoBinary: 'hugo', baseUrl },
     runner,
     publisher,
     state,
@@ -115,6 +115,22 @@ function setup() {
 }
 
 describe('PublishPipeline', () => {
+  it('passes the configured base URL to hugo', async () => {
+    const { pipeline, runner, addMovie } = setup('https://site.example/');
+    addMovie('Alpha');
+    await pipeline.run();
+    expect(runner.calls[0]!.args).toEqual(
+      expect.arrayContaining(['--baseURL', 'https://site.example/']),
+    );
+  });
+
+  it('leaves the base URL to the template when none is configured', async () => {
+    const { pipeline, runner, addMovie } = setup();
+    addMovie('Alpha');
+    await pipeline.run();
+    expect(runner.calls[0]!.args).not.toContain('--baseURL');
+  });
+
   it('builds the template plus exported content and publishes the result', async () => {
     const { pipeline, runner, publisher, addMovie, template } = setup();
     addMovie('Alpha');

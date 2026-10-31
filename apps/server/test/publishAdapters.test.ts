@@ -43,6 +43,7 @@ describe('loadPublishConfig', () => {
       cloudflareAccountId: 'account',
       cloudflareProject: 'metrack-site',
       cloudflareBranch: 'main',
+      baseUrl: undefined,
     });
     expect(
       loadPublishConfig({
@@ -50,11 +51,13 @@ describe('loadPublishConfig', () => {
         HUGO_BIN: '/opt/hugo',
         WRANGLER_BIN: '/opt/wrangler',
         CLOUDFLARE_PAGES_BRANCH: 'live',
+        PUBLISH_BASE_URL: 'https://site.example/',
       }).config,
     ).toMatchObject({
       hugoBinary: '/opt/hugo',
       wranglerBinary: '/opt/wrangler',
       cloudflareBranch: 'live',
+      baseUrl: 'https://site.example/',
     });
   });
 });

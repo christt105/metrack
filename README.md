@@ -111,6 +111,7 @@ Publishing stays off, with a log line naming what is missing, unless all of thes
 - `PUBLISH_SITE_TEMPLATE_DIR`: Hugo project without the exported content sections.
 - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PAGES_PROJECT`: the Pages project to deploy to.
 - `HUGO_BIN` (default `hugo`), `WRANGLER_BIN` (default `wrangler`) and `CLOUDFLARE_PAGES_BRANCH` (default `main`).
+- `PUBLISH_BASE_URL` (optional): public address of the site, passed to Hugo as `--baseURL`. Set it to the address the site is served from (for example `https://my-site.pages.dev/`): without it the template's `baseURL` applies, and a relative one makes the RSS feeds emit relative links and cover URLs that feed readers cannot resolve.
 
 The image does not include Go, so the theme's Hugo modules must be vendored in the site template (`hugo mod vendor`, which writes `_vendor/`); with them vendored the build needs no network. The old MediaTracker site builds this way inside the image. The upload to Cloudflare is not covered by automated tests: the publisher is tested with a fake command runner and the pipeline with a fake publisher. Changes to the site template alone do not trigger a publish, because the fingerprint covers only the exported content.
 

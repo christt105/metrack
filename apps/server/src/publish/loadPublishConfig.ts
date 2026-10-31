@@ -27,6 +27,7 @@ export function loadPublishConfig(env: Record<string, string | undefined>): Publ
       cloudflareAccountId: env.CLOUDFLARE_ACCOUNT_ID!,
       cloudflareProject: env.CLOUDFLARE_PAGES_PROJECT!,
       cloudflareBranch: env.CLOUDFLARE_PAGES_BRANCH || 'main',
+      baseUrl: env.PUBLISH_BASE_URL || undefined,
     },
   };
 }

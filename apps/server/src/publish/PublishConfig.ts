@@ -8,4 +8,6 @@ export interface PublishConfig {
   cloudflareProject: string;
   /** Production branch of the Cloudflare Pages project. */
   cloudflareBranch: string;
+  /** Public address of the site. Feeds and canonical links need absolute URLs, so set it to where the site is served. */
+  baseUrl: string | undefined;
 }
