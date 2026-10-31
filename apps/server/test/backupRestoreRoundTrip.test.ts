@@ -27,6 +27,7 @@ const tracking = {
   rating: null,
   review: null,
   rewatches: [],
+  pendingReview: false,
 };
 
 let dir: string;

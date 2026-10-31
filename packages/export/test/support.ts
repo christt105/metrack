@@ -7,6 +7,7 @@ const tracking = {
   rating: null,
   review: null,
   rewatches: [],
+  pendingReview: false,
 };
 
 export const movie = (over: Partial<Movie> = {}): Movie => ({

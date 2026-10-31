@@ -80,6 +80,7 @@ describe('SettingsView Jellyfin sync', () => {
             startedAt: '2026-10-24',
             finishedAt: null,
             watchedEpisodes: 1,
+            completes: false,
             missingRating: false,
           },
         ],

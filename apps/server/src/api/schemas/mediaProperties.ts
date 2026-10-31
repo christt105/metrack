@@ -18,6 +18,7 @@ const tracking: Properties = {
   rating: { type: ['number', 'null'], minimum: 0, maximum: 10 },
   review: nullableString,
   rewatches: { type: 'array', items: { type: 'string', pattern: DATE_PATTERN } },
+  pendingReview: { type: 'boolean' },
 };
 
 const common: Properties = { slug: nullableSlug, tags: stringList };

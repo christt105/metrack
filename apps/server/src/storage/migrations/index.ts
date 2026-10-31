@@ -6,6 +6,7 @@ import { exportFieldsMigration } from './0004-export-fields.js';
 import { movieFollowMigration } from './0005-movie-follow.js';
 import { releaseAlertMigration } from './0006-release-alert.js';
 import { imageSourceMigration } from './0007-image-source.js';
+import { pendingReviewMigration } from './0008-pending-review.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -15,4 +16,5 @@ export const migrations: readonly Migration[] = [
   movieFollowMigration,
   releaseAlertMigration,
   imageSourceMigration,
+  pendingReviewMigration,
 ];

@@ -4,6 +4,7 @@ import type { Season } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import ErrorNotice from './ErrorNotice.vue';
+import PendingBadge from './PendingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 
 const props = defineProps<{ seriesId: number; seasons: Season[] }>();
@@ -52,6 +53,7 @@ async function add(): Promise<void> {
         <span class="row">
           <span v-if="season.rating !== null" class="muted">{{ season.rating }}</span>
           <StatusBadge :status="season.status" />
+          <PendingBadge v-if="season.pendingReview" />
         </span>
       </li>
     </ul>

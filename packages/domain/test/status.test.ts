@@ -9,6 +9,7 @@ const planned: Tracking = {
   rating: null,
   review: null,
   rewatches: [],
+  pendingReview: false,
 };
 
 describe('transitionStatus', () => {

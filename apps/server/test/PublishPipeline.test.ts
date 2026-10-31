@@ -110,6 +110,7 @@ function setup() {
       rating: null,
       review: null,
       rewatches: [],
+      pendingReview: false,
     });
   return { pipeline, runner, publisher, state, addMovie, template };
 }

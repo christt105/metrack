@@ -16,6 +16,7 @@ function summary(
     seriesId: null,
     seriesTitle: null,
     seasonCount: null,
+    pendingReview: false,
     ...partial,
   };
 }
@@ -63,6 +64,14 @@ describe('buildCards', () => {
       seasonCount: 1,
     });
     expect(cards.filter((c) => c.title === 'Dan Da Dan')).toHaveLength(1);
+  });
+
+  it('carries a pending season review onto its single-season series card', () => {
+    const pending = items.map((item) =>
+      item.type === 'season' && item.id === 20 ? { ...item, pendingReview: true } : item,
+    );
+    const card = buildCards(pending, '').find((c) => c.title === 'Dan Da Dan');
+    expect(card?.pendingReview).toBe(true);
   });
 
   it('places the single-season card by series position, or by season position for rating sorts', () => {

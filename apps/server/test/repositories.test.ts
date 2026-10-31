@@ -29,6 +29,7 @@ const tracking: Tracking = {
   rating: null,
   review: null,
   rewatches: [],
+  pendingReview: false,
 };
 
 const newSeries = (over: Partial<Omit<Series, 'id'>> = {}): Omit<Series, 'id'> => ({

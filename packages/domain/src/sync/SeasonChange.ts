@@ -15,5 +15,7 @@ export interface SeasonChange {
   startedAt: string | null;
   finishedAt: string | null;
   watchedEpisodes: number;
+  /** Whether this change completes a season that was not completed before. */
+  completes: boolean;
   missingRating: boolean;
 }

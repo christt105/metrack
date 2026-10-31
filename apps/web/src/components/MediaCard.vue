@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { messages } from '../i18n/messages';
 import type { LibraryCard } from '../logic/buildCards';
 import { detailPath } from '../logic/mediaRoutes';
+import PendingBadge from './PendingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 
 const props = defineProps<{ card: LibraryCard }>();
@@ -28,6 +29,7 @@ const meta = computed(() => {
       <strong class="title">{{ card.title }}</strong>
       <span class="muted meta">{{ meta }}</span>
       <StatusBadge v-if="card.status" :status="card.status" />
+      <PendingBadge v-if="card.pendingReview" />
     </div>
   </RouterLink>
 </template>

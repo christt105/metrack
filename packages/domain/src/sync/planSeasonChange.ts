@@ -68,6 +68,7 @@ export function planSeasonChange(
     startedAt,
     finishedAt,
     watchedEpisodes: watchedIds.size,
+    completes: status === 'completed' && stored?.status !== 'completed',
     missingRating: status === 'completed' && (stored?.rating ?? null) === null,
   };
   if (stored && isUnchanged(stored, change)) return null;

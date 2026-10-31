@@ -27,6 +27,7 @@ const saved = ref(false);
 const error = ref<unknown>(null);
 const invalid = ref<{ key: string; reason: string } | null>(null);
 
+const pending = computed(() => 'pendingReview' in props.detail && props.detail.pendingReview);
 const currentStatus = computed(() => ('status' in props.detail ? props.detail.status : 'planned'));
 const options = computed(() => statusOptions(currentStatus.value));
 
@@ -73,7 +74,7 @@ async function release(key: string): Promise<void> {
   }
 }
 
-async function save(): Promise<void> {
+async function save(confirm = false): Promise<void> {
   error.value = null;
   invalid.value = null;
   saved.value = false;
@@ -86,6 +87,7 @@ async function save(): Promise<void> {
     return;
   }
   if (tracked.value && status.value !== currentStatus.value) patch.status = status.value;
+  if (confirm) patch.pendingReview = false;
   if (Object.keys(patch).length === 0) {
     saved.value = true;
     return;
@@ -104,7 +106,8 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <form class="entity-form" @submit.prevent="save">
+  <form class="entity-form" @submit.prevent="save()">
+    <p v-if="pending" class="pending-notice" role="note">{{ messages.pending.notice }}</p>
     <fieldset
       v-for="section in sections"
       v-show="fieldsOf(section).length > 0 || (section === 'tracking' && tracked)"
@@ -159,6 +162,9 @@ async function save(): Promise<void> {
       <button type="submit" class="primary" :disabled="saving">
         {{ saving ? messages.common.saving : messages.common.save }}
       </button>
+      <button v-if="pending" type="button" :disabled="saving" @click="save(true)">
+        {{ messages.pending.confirm }}
+      </button>
       <span v-if="saved && !saving" class="success-text" role="status">{{
         messages.common.saved
       }}</span>
@@ -190,6 +196,14 @@ legend {
   gap: 12px;
   padding: 10px 0;
   background: var(--surface);
+}
+
+.pending-notice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  color: var(--warning);
 }
 
 .open-link {
