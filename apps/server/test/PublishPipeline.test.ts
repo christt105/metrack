@@ -138,6 +138,7 @@ describe('PublishPipeline', () => {
     expect(await pipeline.run()).toBe('published');
     expect(runner.calls).toHaveLength(1);
     expect(runner.calls[0]).toMatchObject({ command: 'hugo', hadContent: true });
+    expect(runner.calls[0]!.args).toContain('--minify');
     expect(runner.calls[0]!.inheritEnv).toContain('HUGO_*');
     expect(runner.calls[0]!.inheritEnv).not.toContain('CLOUDFLARE_API_TOKEN');
     expect(publisher.published).toEqual(['built']);
