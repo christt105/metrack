@@ -11,6 +11,7 @@ export interface Config {
   appVersion: string;
   tmdbApiKey: string | undefined;
   tmdbLanguage: string;
+  openLibraryLanguage: string;
   steamGridDbToken: string | undefined;
   igdb?: IgdbClientOptions;
   backup: BackupConfig;

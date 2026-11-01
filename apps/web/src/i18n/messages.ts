@@ -36,7 +36,7 @@ export const messages = {
     network: 'The service cannot be reached.',
     notFound: 'This item does not exist.',
     providerNotConfigured:
-      'This provider is not set up on the server yet (IGDB, Steam and Open Library are not available). You can still add the title by hand.',
+      'This provider is not set up on the server yet (TMDB for movies and series, IGDB for games). You can still add the title by hand.',
     noMetadataSource: 'There is no metadata source for this kind of title.',
     generic: 'Something went wrong.',
   },
