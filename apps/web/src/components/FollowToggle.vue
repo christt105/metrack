@@ -50,6 +50,5 @@ async function toggle(): Promise<void> {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
 }
 </style>
