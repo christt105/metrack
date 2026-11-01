@@ -14,6 +14,14 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ PORT: 'abc' })).toThrow('Invalid PORT');
   });
 
+  it('takes the book search language from TMDB_LANGUAGE unless OPENLIBRARY_LANGUAGE is set', () => {
+    expect(loadConfig({}).openLibraryLanguage).toBe('es');
+    expect(loadConfig({ TMDB_LANGUAGE: 'en-US' }).openLibraryLanguage).toBe('en');
+    expect(
+      loadConfig({ TMDB_LANGUAGE: 'en-US', OPENLIBRARY_LANGUAGE: 'fr' }).openLibraryLanguage,
+    ).toBe('fr');
+  });
+
   it('defaults backups to daily with 14 kept under the data directory', () => {
     expect(loadConfig({ DATA_DIR: '/data' }).backup).toEqual({
       enabled: true,
