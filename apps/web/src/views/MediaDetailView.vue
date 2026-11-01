@@ -109,20 +109,22 @@ watch(() => [props.collection, props.id], load, { immediate: true });
         <span class="muted">{{ messages.collectionLabels[collection] }}</span>
         <StatusBadge v-if="trackedStatus" :status="trackedStatus" />
       </div>
-      <FollowToggle
-        v-if="followCollection && 'follow' in detail"
-        :id="detail.id"
-        :collection="followCollection"
-        :following="detail.follow"
-        @changed="setFollowing"
-      />
-      <MetadataRefresh
-        v-if="refreshable"
-        :id="detail.id"
-        :type="type"
-        :fetched-at="detail.fetchedAt"
-        @refreshed="load"
-      />
+      <div class="actions">
+        <FollowToggle
+          v-if="followCollection && 'follow' in detail"
+          :id="detail.id"
+          :collection="followCollection"
+          :following="detail.follow"
+          @changed="setFollowing"
+        />
+        <MetadataRefresh
+          v-if="refreshable"
+          :id="detail.id"
+          :type="type"
+          :fetched-at="detail.fetchedAt"
+          @refreshed="load"
+        />
+      </div>
     </header>
 
     <SeasonList v-if="series" :series-id="series.id" :seasons="series.seasons" @changed="load" />
@@ -166,5 +168,17 @@ watch(() => [props.collection, props.id], load, { immediate: true });
 
 .head h1 {
   margin-bottom: 6px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+.actions:empty {
+  display: none;
 }
 </style>
