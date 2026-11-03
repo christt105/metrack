@@ -8,6 +8,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     throw new Error(`Invalid PORT: ${env.PORT}`);
   }
   const dataDir = env.DATA_DIR ?? './data';
+  const tmdbLanguage = env.TMDB_LANGUAGE ?? 'es-ES';
   const config: Config = {
     port,
     host: env.HOST ?? '0.0.0.0',
@@ -15,7 +16,8 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     webDir: env.WEB_DIR ?? '../web/dist',
     appVersion: env.APP_VERSION ?? 'dev',
     tmdbApiKey: env.TMDB_API_KEY || undefined,
-    tmdbLanguage: env.TMDB_LANGUAGE ?? 'es-ES',
+    tmdbLanguage,
+    openLibraryLanguage: env.OPENLIBRARY_LANGUAGE || tmdbLanguage.slice(0, 2),
     steamGridDbToken: env.STEAMGRIDDB_TOKEN || undefined,
     backup: {
       enabled: env.BACKUP_ENABLED !== 'false',

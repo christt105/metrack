@@ -6,7 +6,7 @@ Self-hosted media tracker for movies, series (tracked per season), games and boo
 
 ## Features
 
-- Web app to add and edit titles. Movies and series are searched and refreshed from TMDB; games and books are entered by hand. Artwork comes from TMDB and SteamGridDB and is stored locally by content hash.
+- Web app to add and edit titles. Movies and series are searched and refreshed from TMDB, games are searched on IGDB and books on Open Library; anything can also be entered by hand. Artwork comes from TMDB, Steam, IGDB, SteamGridDB and Open Library and is stored locally by content hash.
 - Per-season tracking for series: status, dates, rating, review and rewatches.
 - Importer for the Obsidian `Media Tracker` vault and exporter to the Hugo content tree of [hugo-mediatracker-theme](https://github.com/christt105/hugo-mediatracker-theme).
 - Event-driven publishing to Cloudflare Pages: an edit rebuilds and uploads the site only when the exported content changed.
@@ -74,7 +74,7 @@ CI runs lint, typecheck, tests and build on every pull request and push to `main
 git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0
 ```
 
-Images are stored under `/data/images`, named by content hash, and are served at `/api/images/<hash>`. Provider access is configured with `TMDB_API_KEY` (a v3 key or v4 token, required for metadata refresh), `TMDB_LANGUAGE` (default `es-ES`), `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (a Twitch application, for game search) and `STEAMGRIDDB_TOKEN`. No keys are bundled.
+Images are stored under `/data/images`, named by content hash, and are served at `/api/images/<hash>`. Provider access is configured with `TMDB_API_KEY` (a v3 key or v4 token, required for metadata refresh), `TMDB_LANGUAGE` (default `es-ES`), `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (a Twitch application, for game search) and `STEAMGRIDDB_TOKEN`. No keys are bundled. Book search uses Open Library, which needs no key; `OPENLIBRARY_LANGUAGE` (an ISO 639-1 code, by default the language part of `TMDB_LANGUAGE`) picks the edition whose title, cover, publisher and ISBN are used.
 
 ## Importing the Obsidian vault
 

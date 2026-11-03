@@ -21,6 +21,7 @@ import { loadMirrorConfig } from './mirror/loadMirrorConfig.js';
 import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 import { TimerScheduler } from './publish/TimerScheduler.js';
 import { IgdbClient } from './providers/igdb/IgdbClient.js';
+import { OpenLibraryClient } from './providers/openlibrary/OpenLibraryClient.js';
 import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js';
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { ReleaseWatcher } from './alerts/ReleaseWatcher.js';
@@ -34,6 +35,7 @@ import { createNotifier } from './notify/createNotifier.js';
 import { MigrationRunner } from './storage/MigrationRunner.js';
 import { migrations } from './storage/migrations/index.js';
 import { IgdbGameProvider } from './titles/IgdbGameProvider.js';
+import { OpenLibraryBookProvider } from './titles/OpenLibraryBookProvider.js';
 import { TitleProviders } from './titles/TitleProviders.js';
 import { TmdbMovieProvider } from './titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from './titles/TmdbSeriesProvider.js';
@@ -108,6 +110,13 @@ if (config.igdb) {
     new IgdbGameProvider(new IgdbClient(fetch, config.igdb), videogames, imageStore, steamGridDb),
   );
 }
+titleProviders.register(
+  new OpenLibraryBookProvider(
+    new OpenLibraryClient(fetch, config.openLibraryLanguage),
+    books,
+    imageStore,
+  ),
+);
 
 const edit = createEditServices({
   sources: { movies, series, seasons, videogames, books, overrides },
