@@ -42,6 +42,7 @@ import { TmdbMovieProvider } from '../../src/titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from '../../src/titles/TmdbSeriesProvider.js';
 import { WatchlistService } from '../../src/alerts/WatchlistService.js';
 import { FakeScheduler } from './FakeScheduler.js';
+import { signedInAs } from './signedInAs.js';
 
 export const NOW = new Date('2026-03-05T12:00:00Z');
 
@@ -121,6 +122,7 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
   });
   const app = await buildApp({
     appVersion: 'test',
+    authenticator: signedInAs(),
     migrationRunner: runner,
     imageStore: store,
     metadataCache: cache,

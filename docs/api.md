@@ -1,15 +1,23 @@
 # HTTP API
 
-The private editing API served by `apps/server` under `/api`. There is no authentication: the service is meant for a trusted local network (see the security model in the README). Requests and responses are JSON unless noted. Every type named here is exported from `@metrack/domain` (`packages/domain/src/api` and the entity types next to it), so the web app imports the contract instead of redefining it.
+The private editing API served by `apps/server` under `/api`. Every route needs a signed-in session except the ones marked public below (see the security model in the README). Requests and responses are JSON unless noted. Every type named here is exported from `@metrack/domain` (`packages/domain/src/api` and the entity types next to it), so the web app imports the contract instead of redefining it.
 
 ## Conventions
 
 - Dates are ISO `YYYY-MM-DD` and must be real calendar dates. Ratings are numbers from 0 to 10.
 - Bodies are validated against a schema. Unknown fields are rejected, not ignored.
-- Errors always have the shape `ApiErrorBody`: `{ "error": "message for people", "code": "stable_code", "details": optional }`. Status codes: 400 validation or bad input, 404 unknown record, 409 conflict with the current state, 501 a provider or source that is not configured, 502 a provider failed.
-- Common codes: `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `sync_not_configured`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
+- Errors always have the shape `ApiErrorBody`: `{ "error": "message for people", "code": "stable_code", "details": optional }`. Status codes: 400 validation or bad input, 401 no session (`unauthenticated`), 404 unknown record, 409 conflict with the current state, 501 a provider or source that is not configured, 502 a provider failed.
+- Common codes: `unauthenticated`, `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `sync_not_configured`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
 - Any successful write under `/api` marks the public site as changed, so the publisher rebuilds it after a short debounce. Reads never do.
 - Images are never linked to a provider. `cover` and `banner` always hold `/api/images/<hash>`, a copy in the server image store.
+
+## Sessions
+
+A session is an `HttpOnly`, `SameSite=Lax` cookie named `metrack_session` that lasts 30 days (`Secure` when served over HTTPS). The server stores only the SHA-256 of its token. Public routes: `GET /api/health`, `POST /api/sync/webhook`, `POST /api/auth/logout` and the dev login routes.
+
+- `GET /api/auth/me`: the signed-in `User` (`{ id, name, email }`).
+- `POST /api/auth/logout`: ends the session and clears the cookie, 204 (also without a session).
+- `GET /api/auth/dev-users` and `POST /api/auth/dev-login` (`DevLoginRequest`, `{ "userId": 2 }`, answers the `User` and sets the cookie): only with `DEV_LOGIN=true`, otherwise they answer 404. They let anyone who reaches the server sign in as any user with no password, for development and a trusted local network.
 
 ## Collections
 

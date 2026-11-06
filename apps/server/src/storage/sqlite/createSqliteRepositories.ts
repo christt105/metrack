@@ -7,9 +7,11 @@ import type { SqliteRepositories } from './SqliteRepositories.js';
 import { SqliteReleaseAlertRepository } from './SqliteReleaseAlertRepository.js';
 import { SqliteSeasonOverrideRepository } from './SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from './SqliteSeasonRepository.js';
+import { SqliteSessionRepository } from './SqliteSessionRepository.js';
 import { SqliteSeriesRepository } from './SqliteSeriesRepository.js';
 import { SqliteTransactionRunner } from './SqliteTransactionRunner.js';
 import { SqliteUnlinkedTitleRepository } from './SqliteUnlinkedTitleRepository.js';
+import { SqliteUserRepository } from './SqliteUserRepository.js';
 import { SqliteVideogameRepository } from './SqliteVideogameRepository.js';
 
 /** Every repository over one SQLite connection. */
@@ -25,6 +27,8 @@ export function createSqliteRepositories(db: DatabaseSync): SqliteRepositories {
     releaseAlerts: new SqliteReleaseAlertRepository(db),
     metadataStates: new SqliteMetadataStateRepository(db),
     images: new SqliteImageRepository(db),
+    users: new SqliteUserRepository(db),
+    sessions: new SqliteSessionRepository(db),
     transactions: new SqliteTransactionRunner(db),
   };
 }

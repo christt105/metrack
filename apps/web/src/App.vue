@@ -1,17 +1,31 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
+import { useSession } from './composables/useSession';
 import { messages } from './i18n/messages';
+
+const session = useSession();
+const router = useRouter();
+
+async function signOut(): Promise<void> {
+  await session.signOut();
+  await router.push({ name: 'login' });
+}
 </script>
 
 <template>
   <header class="topbar">
     <RouterLink to="/" class="brand">{{ messages.appName }}</RouterLink>
-    <nav>
+    <nav v-if="session.user.value">
       <RouterLink to="/">{{ messages.nav.library }}</RouterLink>
       <RouterLink to="/search">{{ messages.nav.search }}</RouterLink>
       <RouterLink to="/watchlist">{{ messages.nav.watchlist }}</RouterLink>
       <RouterLink to="/unlinked">{{ messages.nav.unlinked }}</RouterLink>
       <RouterLink to="/settings">{{ messages.nav.settings }}</RouterLink>
     </nav>
+    <div v-if="session.user.value" class="account">
+      <span class="muted">{{ session.user.value.name }}</span>
+      <button type="button" class="small" @click="signOut">{{ messages.login.signOut }}</button>
+    </div>
   </header>
   <main class="page">
     <RouterView />
@@ -53,6 +67,13 @@ nav a {
 nav a.router-link-exact-active {
   color: var(--primary);
   border-bottom-color: var(--primary);
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .page {

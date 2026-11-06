@@ -29,6 +29,7 @@ import { TvdbResolvingLibrarySource } from '../src/sync/TvdbResolvingLibrarySour
 import type { EntityRef } from '@metrack/domain';
 import { TmdbClient } from '../src/providers/tmdb/TmdbClient.js';
 import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
+import { signedInAs } from './support/signedInAs.js';
 
 interface Recorded {
   url: URL;
@@ -499,7 +500,12 @@ describe('SyncService', () => {
   it('serves the report over HTTP and refuses apply without confirmation', async () => {
     const t = setup(lupinLibrary, lupinPlays);
     await seedLupin(t);
-    const app = await buildApp({ appVersion: 'test', migrationRunner: t.runner, sync: t.service });
+    const app = await buildApp({
+      appVersion: 'test',
+      authenticator: signedInAs(),
+      migrationRunner: t.runner,
+      sync: t.service,
+    });
     const report = await app.inject({ method: 'GET', url: '/api/sync/report' });
     expect(report.statusCode).toBe(200);
     expect(report.json().movies).toHaveLength(1);
@@ -543,6 +549,7 @@ describe('SyncService', () => {
     });
     const app = await buildApp({
       appVersion: 'test',
+      authenticator: signedInAs(),
       migrationRunner: t.runner,
       sync: t.service,
       syncQueue: queue,
@@ -568,7 +575,11 @@ describe('SyncService', () => {
 
   it('answers 501 to a webhook when sync is not configured', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    const app = await buildApp({ appVersion: 'test', migrationRunner: t.runner });
+    const app = await buildApp({
+      appVersion: 'test',
+      authenticator: signedInAs(),
+      migrationRunner: t.runner,
+    });
     const response = await app.inject({ method: 'POST', url: '/api/sync/webhook', payload: {} });
     expect(response.statusCode).toBe(501);
     t.db.close();
@@ -576,7 +587,11 @@ describe('SyncService', () => {
 
   it('answers 501 when sync is not configured', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    const app = await buildApp({ appVersion: 'test', migrationRunner: t.runner });
+    const app = await buildApp({
+      appVersion: 'test',
+      authenticator: signedInAs(),
+      migrationRunner: t.runner,
+    });
     const response = await app.inject({ method: 'GET', url: '/api/sync/report' });
     expect(response.statusCode).toBe(501);
     expect(response.json().code).toBe('sync_not_configured');

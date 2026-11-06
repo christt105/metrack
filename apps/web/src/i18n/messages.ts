@@ -16,6 +16,13 @@ export const messages = {
     unlinked: 'Unlinked',
     settings: 'Settings',
   },
+  login: {
+    title: 'Sign in',
+    devHint:
+      'Development sign-in: pick who you are. Anyone who can open this page can do the same.',
+    noMethod: 'This server has no way to sign in set up yet.',
+    signOut: 'Sign out',
+  },
   common: {
     save: 'Save',
     saving: 'Saving...',

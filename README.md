@@ -16,17 +16,19 @@ Self-hosted media tracker for movies, series (tracked per season), games and boo
 
 ## Security model
 
-metrack is meant to run on a trusted local network. The API has no authentication, and anyone who can reach the port can edit, publish, back up and restore. Do not expose it to the internet. If it ever has to be reachable from outside, put it behind a VPN or an authenticating reverse proxy. Only the published static site is meant to be public.
+Every API route needs a signed-in session except health, logout and the Jellyfin webhook (which only schedules a sync). Users are listed with `metrack users` and created with `metrack users add <name> [--email <address>]` (in Docker: `docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js users add <name>`); user 1 owns everything stored before users existed. Sign-in with Google is planned; for now the only way to sign in is dev login (`DEV_LOGIN=true`), where the sign-in page lists every user and anyone who can open it picks one with no password. With dev login off, nobody can sign in.
+
+Dev login is only safe on a trusted local network, so until there is a real sign-in method do not expose metrack to the internet. Only the published static site is meant to be public. Each user has their own session, but the library is still shared by everyone who signs in: separating it per user is the next step.
 
 ## Quick start
 
 ```sh
 curl -O https://raw.githubusercontent.com/christt105/metrack/main/docker-compose.yml
-docker compose up -d
+DEV_LOGIN=true docker compose up -d
 curl http://localhost:8097/api/health
 ```
 
-Then open `http://<host>:8097`. Every integration is optional and stays off, with a log line naming the missing variables, until it is configured; see the sections below.
+Then open `http://<host>:8097` and sign in as the owner (see the security model above). Every integration is optional and stays off, with a log line naming the missing variables, until it is configured; see the sections below.
 
 ## Layout
 

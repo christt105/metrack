@@ -15,6 +15,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     dataDir,
     webDir: env.WEB_DIR ?? '../web/dist',
     appVersion: env.APP_VERSION ?? 'dev',
+    devLogin: env.DEV_LOGIN === 'true',
     tmdbApiKey: env.TMDB_API_KEY || undefined,
     tmdbLanguage,
     openLibraryLanguage: env.OPENLIBRARY_LANGUAGE || tmdbLanguage.slice(0, 2),

@@ -5,9 +5,11 @@ import type { MovieRepository } from '../repositories/MovieRepository.js';
 import type { ReleaseAlertRepository } from '../repositories/ReleaseAlertRepository.js';
 import type { SeasonOverrideRepository } from '../repositories/SeasonOverrideRepository.js';
 import type { SeasonRepository } from '../repositories/SeasonRepository.js';
+import type { SessionRepository } from '../repositories/SessionRepository.js';
 import type { SeriesRepository } from '../repositories/SeriesRepository.js';
 import type { TransactionRunner } from '../repositories/TransactionRunner.js';
 import type { UnlinkedTitleRepository } from '../repositories/UnlinkedTitleRepository.js';
+import type { UserRepository } from '../repositories/UserRepository.js';
 import type { VideogameRepository } from '../repositories/VideogameRepository.js';
 
 export interface SqliteRepositories {
@@ -21,5 +23,7 @@ export interface SqliteRepositories {
   releaseAlerts: ReleaseAlertRepository;
   metadataStates: MetadataStateRepository;
   images: ImageRepository;
+  users: UserRepository;
+  sessions: SessionRepository;
   transactions: TransactionRunner;
 }
