@@ -134,9 +134,11 @@ describe('MovieRepository', () => {
     const repo = new SqliteMovieRepository(db);
     const { id } = await repo.create(movie);
     const row = db
-      .prepare('SELECT fetched_at, metadata_hash, edited_fields FROM movie WHERE id = ?')
+      .prepare(
+        'SELECT c.fetched_at, c.metadata_hash, e.overrides FROM movie c JOIN movie_entry e ON e.movie_id = c.id WHERE c.id = ?',
+      )
       .get(id);
-    expect(row).toEqual({ fetched_at: null, metadata_hash: null, edited_fields: '[]' });
+    expect(row).toEqual({ fetched_at: null, metadata_hash: null, overrides: '{}' });
   });
 });
 

@@ -7,6 +7,7 @@ import { movieFollowMigration } from './0005-movie-follow.js';
 import { releaseAlertMigration } from './0006-release-alert.js';
 import { imageSourceMigration } from './0007-image-source.js';
 import { pendingReviewMigration } from './0008-pending-review.js';
+import { catalogEntriesMigration } from './0009-catalog-entries.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -17,4 +18,5 @@ export const migrations: readonly Migration[] = [
   releaseAlertMigration,
   imageSourceMigration,
   pendingReviewMigration,
+  catalogEntriesMigration,
 ];

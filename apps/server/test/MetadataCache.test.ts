@@ -10,6 +10,7 @@ import { SqliteMetadataStateRepository } from '../src/storage/sqlite/SqliteMetad
 import { movieLifecycle } from '../src/metadata/movieLifecycle.js';
 import type { MetadataSource } from '../src/metadata/MetadataSource.js';
 import type { ProviderMetadata } from '../src/metadata/ProviderMetadata.js';
+import { emptyMovie } from '../src/media/emptyEntities.js';
 import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
 import type { MovieRepository } from '../src/storage/repositories/MovieRepository.js';
 import { fakeFetch } from './support/fakeFetch.js';
@@ -35,7 +36,7 @@ let source: ScriptedSource;
 let cache: MetadataCache;
 let movieId: number;
 
-beforeEach(() => {
+beforeEach(async () => {
   const db = openTestDatabase();
   clock = new Date('2026-10-24T12:00:00Z');
   movies = new SqliteMovieRepository(db);
@@ -52,10 +53,7 @@ beforeEach(() => {
   });
   cache = new MetadataCache(states, images, undefined, () => clock);
   cache.register('movie', { repository: movies, source, lifecycle: movieLifecycle });
-  movieId = db
-    .prepare('INSERT INTO movie (title, release_date) VALUES (?, ?)')
-    .run('Old', '2015-01-01').lastInsertRowid as number;
-  movieId = Number(movieId);
+  movieId = (await movies.create({ ...emptyMovie(), title: 'Old', releaseDate: '2015-01-01' })).id;
 });
 
 const advanceDays = (days: number) => {
@@ -107,14 +105,15 @@ describe('MetadataCache', () => {
   });
 
   it('never overwrites fields marked as edited', async () => {
-    await movies.update(movieId, { overview: 'My own summary' });
-    await states.markEdited('movie', movieId, 'overview');
+    await movies.override(movieId, { overview: 'My own summary' });
     await cache.refresh('movie', movieId);
     const movie = (await movies.get(movieId)) as Movie;
     expect(movie.overview).toBe('My own summary');
     expect(movie.genres).toEqual(['Drama']);
-    await states.unmarkEdited('movie', movieId, 'overview');
+    expect((await states.get('movie', movieId)).editedFields).toEqual(['overview']);
+    await movies.clearOverride(movieId, 'overview');
     expect((await states.get('movie', movieId)).editedFields).toEqual([]);
+    expect((await movies.get(movieId))?.overview).toBeNull();
   });
 
   it('keeps stored data when the provider fails', async () => {

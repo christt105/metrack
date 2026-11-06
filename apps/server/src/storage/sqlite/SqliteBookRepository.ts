@@ -6,9 +6,22 @@ import type { RowValues } from './RowValues.js';
 import { SqliteTableRepository } from './SqliteTableRepository.js';
 import { num, parseList, text, trackingFromRow, trackingToRow } from './rowMapping.js';
 
+const ENTRY_COLUMNS = [
+  'note',
+  'slug',
+  'tags',
+  'status',
+  'started_at',
+  'finished_at',
+  'rating',
+  'review',
+  'rewatches',
+  'pending_review',
+];
+
 export class SqliteBookRepository extends SqliteTableRepository<Book> implements BookRepository {
   constructor(db: DatabaseSync) {
-    super(db, 'book');
+    super(db, 'book', ENTRY_COLUMNS);
   }
 
   async findByOpenLibraryId(openLibraryId: string): Promise<Book | undefined> {

@@ -7,4 +7,7 @@ export interface MediaRepository {
   create(input: Record<string, unknown>): Promise<MediaEntity>;
   update(id: number, patch: Record<string, unknown>): Promise<MediaEntity>;
   delete(id: number): Promise<boolean>;
+  override(id: number, fields: Record<string, unknown>): Promise<MediaEntity>;
+  clearOverride(id: number, field: string): Promise<MediaEntity>;
+  overriddenFields(id: number): Promise<string[]>;
 }

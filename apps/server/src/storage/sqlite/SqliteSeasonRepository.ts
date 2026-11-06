@@ -6,16 +6,29 @@ import type { RowValues } from './RowValues.js';
 import { SqliteTableRepository } from './SqliteTableRepository.js';
 import { num, parseList, text, trackingFromRow, trackingToRow } from './rowMapping.js';
 
+const ENTRY_COLUMNS = [
+  'jellyfin_id',
+  'slug',
+  'tags',
+  'status',
+  'started_at',
+  'finished_at',
+  'rating',
+  'review',
+  'rewatches',
+  'pending_review',
+];
+
 export class SqliteSeasonRepository
   extends SqliteTableRepository<Season>
   implements SeasonRepository
 {
   constructor(db: DatabaseSync) {
-    super(db, 'season');
+    super(db, 'season', ENTRY_COLUMNS);
   }
 
   async listBySeries(seriesId: number): Promise<Season[]> {
-    return this.all('SELECT * FROM season WHERE series_id = ? ORDER BY number', seriesId);
+    return this.where('c.series_id = ? ORDER BY c.number', seriesId);
   }
 
   protected toRow(s: Omit<Season, 'id'>): RowValues {

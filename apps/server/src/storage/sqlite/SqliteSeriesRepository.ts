@@ -6,12 +6,14 @@ import type { RowValues } from './RowValues.js';
 import { SqliteTableRepository } from './SqliteTableRepository.js';
 import { num, parseList, text } from './rowMapping.js';
 
+const ENTRY_COLUMNS = ['jellyfin_id', 'follow', 'note', 'slug', 'tags', 'review'];
+
 export class SqliteSeriesRepository
   extends SqliteTableRepository<Series>
   implements SeriesRepository
 {
   constructor(db: DatabaseSync) {
-    super(db, 'series');
+    super(db, 'series', ENTRY_COLUMNS);
   }
 
   async findByTmdbId(tmdbId: number): Promise<Series | undefined> {
@@ -23,7 +25,7 @@ export class SqliteSeriesRepository
   }
 
   async listFollowed(): Promise<Series[]> {
-    return this.all('SELECT * FROM series WHERE follow = 1 ORDER BY id');
+    return this.where('e.follow = 1 ORDER BY c.id');
   }
 
   protected toRow(s: Omit<Series, 'id'>): RowValues {
