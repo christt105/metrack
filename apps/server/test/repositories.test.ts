@@ -12,15 +12,13 @@ import {
 } from '@metrack/domain';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
-import {
-  BookRepository,
-  MovieRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from '../src/storage/repositories/index.js';
+import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
+import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 
 const tracking: Tracking = {
   status: 'planned',
@@ -107,34 +105,34 @@ describe('MovieRepository', () => {
     rewatches: ['2026-08-01'],
   };
 
-  it('round-trips every field', () => {
-    const repo = new MovieRepository(db);
-    const created = repo.create(movie);
+  it('round-trips every field', async () => {
+    const repo = new SqliteMovieRepository(db);
+    const created = await repo.create(movie);
     expect(created).toEqual({ id: created.id, ...movie });
-    expect(repo.get(created.id)).toEqual(created);
+    expect(await repo.get(created.id)).toEqual(created);
   });
 
-  it('updates with a patch, lists and deletes', () => {
-    const repo = new MovieRepository(db);
-    const created = repo.create(movie);
-    const updated = repo.update(created.id, { rating: 8, genres: ['Drama', 'Indie'] });
+  it('updates with a patch, lists and deletes', async () => {
+    const repo = new SqliteMovieRepository(db);
+    const created = await repo.create(movie);
+    const updated = await repo.update(created.id, { rating: 8, genres: ['Drama', 'Indie'] });
     expect(updated).toMatchObject({ rating: 8, genres: ['Drama', 'Indie'], title: 'Aftersun' });
-    expect(repo.list()).toHaveLength(1);
-    expect(repo.delete(created.id)).toBe(true);
-    expect(repo.get(created.id)).toBeUndefined();
-    expect(repo.delete(created.id)).toBe(false);
+    expect(await repo.list()).toHaveLength(1);
+    expect(await repo.delete(created.id)).toBe(true);
+    expect(await repo.get(created.id)).toBeUndefined();
+    expect(await repo.delete(created.id)).toBe(false);
   });
 
-  it('rejects a duplicate tmdb_id and an out of range rating', () => {
-    const repo = new MovieRepository(db);
-    repo.create(movie);
-    expect(() => repo.create(movie)).toThrow();
-    expect(() => repo.create({ ...movie, tmdbId: 1, rating: 11 })).toThrow();
+  it('rejects a duplicate tmdb_id and an out of range rating', async () => {
+    const repo = new SqliteMovieRepository(db);
+    await repo.create(movie);
+    await expect(repo.create(movie)).rejects.toThrow();
+    await expect(repo.create({ ...movie, tmdbId: 1, rating: 11 })).rejects.toThrow();
   });
 
-  it('reserves cache columns with defaults', () => {
-    const repo = new MovieRepository(db);
-    const { id } = repo.create(movie);
+  it('reserves cache columns with defaults', async () => {
+    const repo = new SqliteMovieRepository(db);
+    const { id } = await repo.create(movie);
     const row = db
       .prepare('SELECT fetched_at, metadata_hash, edited_fields FROM movie WHERE id = ?')
       .get(id);
@@ -143,9 +141,9 @@ describe('MovieRepository', () => {
 });
 
 describe('videogames and books', () => {
-  it('round-trips a videogame with its own ids', () => {
-    const repo = new VideogameRepository(db);
-    const created = repo.create({
+  it('round-trips a videogame with its own ids', async () => {
+    const repo = new SqliteVideogameRepository(db);
+    const created = await repo.create({
       igdbId: 27719,
       steamAppId: '447150',
       steamGridDbId: 10875,
@@ -162,13 +160,13 @@ describe('videogames and books', () => {
       tags: ['rpg'],
       ...tracking,
     });
-    expect(repo.get(created.id)).toEqual(created);
+    expect(await repo.get(created.id)).toEqual(created);
     expect(created.steamAppId).toBe('447150');
   });
 
-  it('round-trips a book', () => {
-    const repo = new BookRepository(db);
-    const created = repo.create({
+  it('round-trips a book', async () => {
+    const repo = new SqliteBookRepository(db);
+    const created = await repo.create({
       openLibraryId: 'OL1M',
       isbn: '9780000000002',
       title: 'Book',
@@ -184,83 +182,83 @@ describe('videogames and books', () => {
       tags: [],
       ...tracking,
     });
-    expect(repo.get(created.id)).toEqual(created);
+    expect(await repo.get(created.id)).toEqual(created);
   });
 });
 
 describe('series and seasons', () => {
-  it('stores the follow flag and filters followed series', () => {
-    const repo = new SeriesRepository(db);
-    const a = repo.create(newSeries({ title: 'A', tmdbId: 1 }));
-    repo.create(newSeries({ title: 'B', tmdbId: 2 }));
-    expect(repo.listFollowed()).toEqual([]);
-    repo.update(a.id, { follow: true });
-    expect(repo.listFollowed().map((s) => s.title)).toEqual(['A']);
+  it('stores the follow flag and filters followed series', async () => {
+    const repo = new SqliteSeriesRepository(db);
+    const a = await repo.create(newSeries({ title: 'A', tmdbId: 1 }));
+    await repo.create(newSeries({ title: 'B', tmdbId: 2 }));
+    expect(await repo.listFollowed()).toEqual([]);
+    await repo.update(a.id, { follow: true });
+    expect((await repo.listFollowed()).map((s) => s.title)).toEqual(['A']);
   });
 
-  it('cascades season deletion with the series and keeps numbers unique per series', () => {
-    const series = new SeriesRepository(db);
-    const seasons = new SeasonRepository(db);
-    const s = series.create(newSeries());
-    seasons.create(newSeason(s.id, 1));
-    expect(() => seasons.create(newSeason(s.id, 1))).toThrow();
-    series.delete(s.id);
-    expect(seasons.list()).toEqual([]);
+  it('cascades season deletion with the series and keeps numbers unique per series', async () => {
+    const series = new SqliteSeriesRepository(db);
+    const seasons = new SqliteSeasonRepository(db);
+    const s = await series.create(newSeries());
+    await seasons.create(newSeason(s.id, 1));
+    await expect(seasons.create(newSeason(s.id, 1))).rejects.toThrow();
+    await series.delete(s.id);
+    expect(await seasons.list()).toEqual([]);
   });
 
-  it('tracks started_at and finished_at per season', () => {
-    const series = new SeriesRepository(db);
-    const seasons = new SeasonRepository(db);
-    const s = series.create(newSeries());
-    const one = seasons.create(newSeason(s.id, 1));
-    const two = seasons.create(newSeason(s.id, 2));
+  it('tracks started_at and finished_at per season', async () => {
+    const series = new SqliteSeriesRepository(db);
+    const seasons = new SqliteSeasonRepository(db);
+    const s = await series.create(newSeries());
+    const one = await seasons.create(newSeason(s.id, 1));
+    const two = await seasons.create(newSeason(s.id, 2));
     const done = transitionStatus(
       transitionStatus(one, 'in_progress', '2026-01-01'),
       'completed',
       '2026-01-20',
     );
-    seasons.update(one.id, done);
-    expect(seasons.get(one.id)).toMatchObject({
+    await seasons.update(one.id, done);
+    expect(await seasons.get(one.id)).toMatchObject({
       startedAt: '2026-01-01',
       finishedAt: '2026-01-20',
     });
-    expect(seasons.get(two.id)).toMatchObject({ startedAt: null, finishedAt: null });
+    expect(await seasons.get(two.id)).toMatchObject({ startedAt: null, finishedAt: null });
   });
 
-  it('a one season series is a series with one season', () => {
-    const series = new SeriesRepository(db);
-    const seasons = new SeasonRepository(db);
-    const s = series.create(newSeries({ title: 'Abandonados', tmdbId: 324050 }));
-    seasons.create(newSeason(s.id, 1, { episodeCount: 4 }));
-    expect(seasons.listBySeries(s.id)).toHaveLength(1);
+  it('a one season series is a series with one season', async () => {
+    const series = new SqliteSeriesRepository(db);
+    const seasons = new SqliteSeasonRepository(db);
+    const s = await series.create(newSeries({ title: 'Abandonados', tmdbId: 324050 }));
+    await seasons.create(newSeason(s.id, 1, { episodeCount: 4 }));
+    expect(await seasons.listBySeries(s.id)).toHaveLength(1);
   });
 });
 
 describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
-  it('links the stored season through season_override and date matching', () => {
-    const series = new SeriesRepository(db);
-    const seasons = new SeasonRepository(db);
-    const overrides = new SeasonOverrideRepository(db);
-    const lupin = series.create(newSeries({ title: 'Lupin', tmdbId: 1, tvdbId: 375921 }));
-    seasons.create(
+  it('links the stored season through season_override and date matching', async () => {
+    const series = new SqliteSeriesRepository(db);
+    const seasons = new SqliteSeasonRepository(db);
+    const overrides = new SqliteSeasonOverrideRepository(db);
+    const lupin = await series.create(newSeries({ title: 'Lupin', tmdbId: 1, tvdbId: 375921 }));
+    await seasons.create(
       newSeason(lupin.id, 3, { tmdbSeasonNumber: 3, firstAirDate: '2026-10-23', episodeCount: 8 }),
     );
 
-    overrides.set({
+    await overrides.set({
       seriesId: lupin.id,
       tmdbSeasonNumber: 3,
       number: 4,
       title: null,
       jellyfinSeasonId: 'jf-s4',
     });
-    overrides.set({
+    await overrides.set({
       seriesId: lupin.id,
       tmdbSeasonNumber: 3,
       number: 4,
       title: 'Part 3',
       jellyfinSeasonId: 'jf-s4',
     });
-    expect(overrides.listBySeries(lupin.id)).toEqual([
+    expect(await overrides.listBySeries(lupin.id)).toEqual([
       {
         seriesId: lupin.id,
         tmdbSeasonNumber: 3,
@@ -270,33 +268,33 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
       },
     ]);
 
-    const tmdb: SeasonSource[] = seasons.listBySeries(lupin.id).map((s) => ({
+    const tmdb: SeasonSource[] = (await seasons.listBySeries(lupin.id)).map((s) => ({
       number: s.tmdbSeasonNumber ?? s.number,
       firstAirDate: s.firstAirDate ?? '',
       episodeCount: s.episodeCount ?? 0,
     }));
     const jellyfin: SeasonSource[] = [{ number: 4, firstAirDate: '2026-10-23', episodeCount: 3 }];
     expect(matchSeasonsByAirDate(jellyfin, tmdb).matched).toHaveLength(1);
-    expect(applySeasonOverrides(tmdb, overrides.listBySeries(lupin.id))[0]).toMatchObject({
+    expect(applySeasonOverrides(tmdb, await overrides.listBySeries(lupin.id))[0]).toMatchObject({
       number: 4,
       title: 'Part 3',
     });
 
-    expect(overrides.delete(lupin.id, 3)).toBe(true);
-    expect(overrides.listBySeries(lupin.id)).toEqual([]);
+    expect(await overrides.delete(lupin.id, 3)).toBe(true);
+    expect(await overrides.listBySeries(lupin.id)).toEqual([]);
   });
 });
 
 describe('Dan Da Dan: TMDB one season of 24, Jellyfin two of 12', () => {
-  it('stores the Jellyfin structure with the TMDB season number on the first one', () => {
-    const series = new SeriesRepository(db);
-    const seasons = new SeasonRepository(db);
-    const s = series.create(newSeries({ title: 'Dan Da Dan', tmdbId: 240411, tvdbId: 1 }));
-    seasons.create(
+  it('stores the Jellyfin structure with the TMDB season number on the first one', async () => {
+    const series = new SqliteSeriesRepository(db);
+    const seasons = new SqliteSeasonRepository(db);
+    const s = await series.create(newSeries({ title: 'Dan Da Dan', tmdbId: 240411, tvdbId: 1 }));
+    await seasons.create(
       newSeason(s.id, 1, { tmdbSeasonNumber: 1, firstAirDate: '2024-10-04', episodeCount: 12 }),
     );
-    seasons.create(newSeason(s.id, 2, { firstAirDate: '2025-07-03', episodeCount: 12 }));
-    expect(seasons.listBySeries(s.id).map((x) => [x.number, x.tmdbSeasonNumber])).toEqual([
+    await seasons.create(newSeason(s.id, 2, { firstAirDate: '2025-07-03', episodeCount: 12 }));
+    expect((await seasons.listBySeries(s.id)).map((x) => [x.number, x.tmdbSeasonNumber])).toEqual([
       [1, 1],
       [2, null],
     ]);
@@ -304,9 +302,9 @@ describe('Dan Da Dan: TMDB one season of 24, Jellyfin two of 12', () => {
 });
 
 describe('UnlinkedTitleRepository', () => {
-  it('collects titles without ids and removes them once resolved', () => {
-    const repo = new UnlinkedTitleRepository(db);
-    const t = repo.create({
+  it('collects titles without ids and removes them once resolved', async () => {
+    const repo = new SqliteUnlinkedTitleRepository(db);
+    const t = await repo.create({
       mediaType: 'series',
       title: 'Mystery Show',
       year: 2020,
@@ -314,14 +312,14 @@ describe('UnlinkedTitleRepository', () => {
       sourceRef: '/media/Series/Mystery Show',
       createdAt: '2026-10-24T10:00:00.000Z',
     });
-    expect(repo.list()).toEqual([t]);
-    expect(repo.delete(t.id)).toBe(true);
-    expect(repo.list()).toEqual([]);
+    expect(await repo.list()).toEqual([t]);
+    expect(await repo.delete(t.id)).toBe(true);
+    expect(await repo.list()).toEqual([]);
   });
 
-  it('rejects an unknown media type', () => {
-    const repo = new UnlinkedTitleRepository(db);
-    expect(() =>
+  it('rejects an unknown media type', async () => {
+    const repo = new SqliteUnlinkedTitleRepository(db);
+    await expect(
       repo.create({
         mediaType: 'podcast' as never,
         title: 'x',
@@ -330,6 +328,6 @@ describe('UnlinkedTitleRepository', () => {
         sourceRef: null,
         createdAt: 'now',
       }),
-    ).toThrow();
+    ).rejects.toThrow();
   });
 });

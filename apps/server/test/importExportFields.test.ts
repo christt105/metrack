@@ -2,22 +2,21 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import { buildImportPlan } from '../src/importer/buildImportPlan.js';
 import { ImportApplier } from '../src/importer/ImportApplier.js';
 import { IssueLog } from '../src/importer/IssueLog.js';
 import { readVaultNotes } from '../src/importer/readVaultNotes.js';
-import {
-  BookRepository,
-  MovieRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from '../src/storage/repositories/index.js';
+import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
+import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
 import { writeVault } from './support/writeVault.js';
+import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
 
 const note = (frontmatter: string, body = ''): string => `---\n${frontmatter}\n---\n${body}`;
 const dirs: string[] = [];
@@ -31,17 +30,17 @@ async function importVault(files: Record<string, string | Buffer>) {
   dirs.push(vaultDir, storeDir);
   const db = openTestDatabase();
   const targets = {
-    movies: new MovieRepository(db),
-    series: new SeriesRepository(db),
-    seasons: new SeasonRepository(db),
-    videogames: new VideogameRepository(db),
-    books: new BookRepository(db),
-    unlinked: new UnlinkedTitleRepository(db),
+    movies: new SqliteMovieRepository(db),
+    series: new SqliteSeriesRepository(db),
+    seasons: new SqliteSeasonRepository(db),
+    videogames: new SqliteVideogameRepository(db),
+    books: new SqliteBookRepository(db),
+    unlinked: new SqliteUnlinkedTitleRepository(db),
   };
   const issues = new IssueLog();
   const plan = buildImportPlan(readVaultNotes(vaultDir, issues), vaultDir, issues);
-  const store = new ImageStore(db, storeDir);
-  await new ImportApplier(db, targets, store).apply(plan);
+  const store = createImageStore(db, storeDir);
+  await new ImportApplier(new SqliteTransactionRunner(db), targets, store).apply(plan);
   return { targets, store, issues };
 }
 
@@ -59,21 +58,27 @@ describe('import of export fields', () => {
       'TVs/Solo (2021).md': note('title: Solo\ntype: tv\ntmdb_id: 3\ntags:\n  - drama', 'Body.'),
       'Juegos/Game.md': note('title: Game\ntype: videogame\nigdb_id: 4\ntags:\n  - rpg'),
     });
-    expect(targets.movies.findByTmdbId(1)).toMatchObject({ slug: 'Alpha (2020)', tags: ['cine'] });
-    expect(targets.series.findByTmdbId(2)).toMatchObject({ slug: 'Show (2020)', tags: ['anime'] });
-    const show = targets.series.findByTmdbId(2)!;
-    expect(targets.seasons.listBySeries(show.id)[0]).toMatchObject({
+    expect(await targets.movies.findByTmdbId(1)).toMatchObject({
+      slug: 'Alpha (2020)',
+      tags: ['cine'],
+    });
+    expect(await targets.series.findByTmdbId(2)).toMatchObject({
+      slug: 'Show (2020)',
+      tags: ['anime'],
+    });
+    const show = (await targets.series.findByTmdbId(2))!;
+    expect((await targets.seasons.listBySeries(show.id))[0]).toMatchObject({
       slug: 'Show - S1',
       tags: ['anime'],
     });
-    const solo = targets.series.findByTmdbId(3)!;
-    expect(targets.seasons.listBySeries(solo.id)[0]).toMatchObject({
+    const solo = (await targets.series.findByTmdbId(3))!;
+    expect((await targets.seasons.listBySeries(solo.id))[0]).toMatchObject({
       slug: null,
       tags: ['drama'],
       review: 'Body.',
     });
     expect(show.review).toBeNull();
-    expect(targets.videogames.findByIgdbId(4)).toMatchObject({ slug: 'Game', tags: ['rpg'] });
+    expect(await targets.videogames.findByIgdbId(4)).toMatchObject({ slug: 'Game', tags: ['rpg'] });
   });
 
   it('stores no slug for a note name that is not a safe folder name', async () => {
@@ -81,8 +86,8 @@ describe('import of export fields', () => {
       'Movies/Part #1: Origins.md': note('title: Origins\ntype: movie\ntmdb_id: 1'),
       'Movies/Amélie (2001).md': note('title: Amélie\ntype: movie\ntmdb_id: 2'),
     });
-    expect(targets.movies.findByTmdbId(1)?.slug).toBeNull();
-    expect(targets.movies.findByTmdbId(2)?.slug).toBe('Amélie (2001)');
+    expect((await targets.movies.findByTmdbId(1))?.slug).toBeNull();
+    expect((await targets.movies.findByTmdbId(2))?.slug).toBe('Amélie (2001)');
   });
 
   it('keeps the review of a series that has season notes on the series', async () => {
@@ -95,7 +100,7 @@ describe('import of export fields', () => {
         'title: S1\ntype: season\nseries: "[[Show (2020)]]"\nseason_number: 1',
       ),
     });
-    expect(targets.series.findByTmdbId(2)?.review).toBe('My thoughts.');
+    expect((await targets.series.findByTmdbId(2))?.review).toBe('My thoughts.');
   });
 
   it('stores images embedded in a review and rewrites the embed to the stored reference', async () => {
@@ -106,8 +111,8 @@ describe('import of export fields', () => {
         'Before ![[Media Tracker/Files/Shot.png]] after ![[Missing.png]]',
       ),
     });
-    const movie = targets.movies.findByTmdbId(1)!;
-    const [image] = store.list();
+    const movie = (await targets.movies.findByTmdbId(1))!;
+    const [image] = await store.list();
     expect(movie.review).toBe(`Before ![Shot.png](${image!.ref}) after ![[Missing.png]]`);
     expect(issues.all().map((issue) => issue.code)).toContain('missing-image');
   });

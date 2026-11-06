@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { ExportedFile } from '@metrack/export';
 
@@ -21,14 +21,14 @@ function targetInside(outDir: string, path: string): string {
 
 /**
  * Writes an export under `outDir`, replacing the sections it owns so removed items do not linger.
- * `imagePath` maps an image hash to the file in the image store. Throws before touching the disk
+ * `readImage` returns the bytes of an image hash from the image store. Throws before touching the disk
  * when any file would land outside `outDir`.
  */
-export function writeExport(
+export async function writeExport(
   files: ExportedFile[],
   outDir: string,
-  imagePath: (hash: string) => string,
-): void {
+  readImage: (hash: string) => Promise<Uint8Array>,
+): Promise<void> {
   const writes = files.map((file) => ({ file, target: targetInside(outDir, file.path) }));
   for (const section of EXPORT_SECTIONS) {
     rmSync(join(outDir, 'content', section), { recursive: true, force: true });
@@ -36,6 +36,6 @@ export function writeExport(
   for (const { file, target } of writes) {
     mkdirSync(dirname(target), { recursive: true });
     if (file.kind === 'text') writeFileSync(target, file.content);
-    else copyFileSync(imagePath(file.hash), target);
+    else writeFileSync(target, await readImage(file.hash));
   }
 }

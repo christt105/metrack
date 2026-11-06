@@ -28,7 +28,7 @@ export class UnlinkedResolver {
   ) {}
 
   async resolve(id: number, ids: ExternalIds): Promise<ResolveUnlinkedResponse> {
-    const title = this.unlinked.get(id);
+    const title = await this.unlinked.get(id);
     if (!title) throw ApiError.notFound();
     const allowed = ID_FIELDS[title.mediaType];
     if (!allowed) {
@@ -60,15 +60,17 @@ export class UnlinkedResolver {
       created = await provider.add(String(ids.tmdbId));
       const others: ExternalIds = { ...ids };
       delete others.tmdbId;
-      if (Object.keys(others).length > 0) this.editor.patch(collection, created.id, { ...others });
+      if (Object.keys(others).length > 0) {
+        await this.editor.patch(collection, created.id, { ...others });
+      }
     } else {
-      const detail = this.editor.create(collection, { title: title.title, ...ids });
+      const detail = await this.editor.create(collection, { title: title.title, ...ids });
       created = { type: title.mediaType, id: detail.id };
       if (this.cache.supports(title.mediaType)) {
         refresh = await this.cache.refresh(title.mediaType, detail.id, true);
       }
     }
-    this.unlinked.delete(id);
+    await this.unlinked.delete(id);
     return { ...created, refresh };
   }
 }

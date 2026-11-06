@@ -18,14 +18,14 @@ function siteDir(): string {
   return site;
 }
 
-const noImages = (hash: string): string => {
+const noImages = async (hash: string): Promise<Uint8Array> => {
   throw new Error(`unexpected image ${hash}`);
 };
 
 describe('writeExport', () => {
-  it('replaces the owned sections with the exported files', () => {
+  it('replaces the owned sections with the exported files', async () => {
     const site = siteDir();
-    writeExport(
+    await writeExport(
       [{ kind: 'text', path: 'content/movies/New/index.md', content: 'new' }],
       site,
       noImages,
@@ -36,9 +36,9 @@ describe('writeExport', () => {
 
   it.each(['content/movies/../../../escape/index.md', '../escape.md', '/tmp/escape.md', '.'])(
     'refuses %j without touching the disk',
-    (path) => {
+    async (path) => {
       const site = siteDir();
-      expect(() =>
+      await expect(
         writeExport(
           [
             { kind: 'text', path: 'content/movies/New/index.md', content: 'new' },
@@ -47,7 +47,7 @@ describe('writeExport', () => {
           site,
           noImages,
         ),
-      ).toThrow(/outside the export directory/);
+      ).rejects.toThrow(/outside the export directory/);
       expect(existsSync(join(site, 'content', 'movies', 'Old', 'index.md'))).toBe(true);
       expect(existsSync(join(site, 'content', 'movies', 'New'))).toBe(false);
       expect(existsSync(join(site, '..', 'escape'))).toBe(false);
@@ -55,10 +55,10 @@ describe('writeExport', () => {
     },
   );
 
-  it('refuses an image that would escape', () => {
+  it('refuses an image that would escape', async () => {
     const site = siteDir();
-    expect(() =>
+    await expect(
       writeExport([{ kind: 'image', path: 'content/../../img.png', hash: 'h' }], site, noImages),
-    ).toThrow(/outside the export directory/);
+    ).rejects.toThrow(/outside the export directory/);
   });
 });

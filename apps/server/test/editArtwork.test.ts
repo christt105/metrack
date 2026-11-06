@@ -146,7 +146,7 @@ describe('choosing and removing images', () => {
     const detail = response.json();
     expect(detail.cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
     expect(detail.editedFields).toContain('cover');
-    expect(api.store.list()).toHaveLength(1);
+    expect(await api.store.list()).toHaveLength(1);
     const served = await call('GET', detail.cover);
     expect(served.rawPayload.equals(png(1000, 1500, 1))).toBe(true);
   });
@@ -162,7 +162,7 @@ describe('choosing and removing images', () => {
       expect(response.statusCode).toBe(400);
       expect(response.json().code).toBe('url_not_allowed');
     }
-    expect(api.store.list()).toEqual([]);
+    expect(await api.store.list()).toEqual([]);
   });
 
   it('refuses a SteamGridDB image for a movie', async () => {
@@ -178,7 +178,7 @@ describe('choosing and removing images', () => {
       url: `${IMG}/missing.jpg`,
     });
     expect(response.statusCode).toBe(502);
-    expect(api.movies.get(id)?.cover).toBeNull();
+    expect((await api.movies.get(id))?.cover).toBeNull();
   });
 
   it('removes an image from the entity and its file from the store', async () => {
@@ -186,7 +186,7 @@ describe('choosing and removing images', () => {
     await call('PUT', `/api/movies/${id}/images/cover`, { url: `${IMG}/a.jpg` });
     const response = await call('DELETE', `/api/movies/${id}/images/cover`);
     expect(response.json()).toMatchObject({ cover: null });
-    expect(api.store.list()).toEqual([]);
+    expect(await api.store.list()).toEqual([]);
   });
 
   it('keeps the file when another entity still uses it', async () => {
@@ -197,8 +197,8 @@ describe('choosing and removing images', () => {
     await call('PUT', `/api/movies/${first}/images/cover`, { url: `${IMG}/a.jpg` });
     await call('PUT', `/api/movies/${second}/images/cover`, { url: `${IMG}/a.jpg` });
     await call('DELETE', `/api/movies/${first}/images/cover`);
-    expect(api.store.list()).toHaveLength(1);
-    expect(api.movies.get(second)?.cover).not.toBeNull();
+    expect(await api.store.list()).toHaveLength(1);
+    expect((await api.movies.get(second))?.cover).not.toBeNull();
   });
 
   it('marks the site dirty after choosing an image', async () => {

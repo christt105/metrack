@@ -19,14 +19,14 @@ export interface ExportSources {
 }
 
 /** Reads everything the exporter needs from the repositories and the image store. */
-export function loadExportInput(sources: ExportSources): ExportInput {
+export async function loadExportInput(sources: ExportSources): Promise<ExportInput> {
   return {
-    movies: sources.movies.list(),
-    series: sources.series.list(),
-    seasons: sources.seasons.list(),
-    videogames: sources.videogames.list(),
-    books: sources.books.list(),
-    images: sources.images.list().map((image) => ({
+    movies: await sources.movies.list(),
+    series: await sources.series.list(),
+    seasons: await sources.seasons.list(),
+    videogames: await sources.videogames.list(),
+    books: await sources.books.list(),
+    images: (await sources.images.list()).map((image) => ({
       ref: imageRef(image.hash),
       hash: image.hash,
       extension: image.extension,

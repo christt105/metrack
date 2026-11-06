@@ -51,8 +51,8 @@ function trackingOf(
 
 /** The five entity collections, wired to their repositories. */
 export function buildMediaKinds(sources: MediaKindSources): Record<Collection, MediaKind> {
-  const seriesTitleOf = (seriesId: number): string | null =>
-    sources.series.get(seriesId)?.title ?? null;
+  const seriesTitleOf = async (seriesId: number): Promise<string | null> =>
+    (await sources.series.get(seriesId))?.title ?? null;
 
   return {
     movies: {
@@ -71,7 +71,7 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       ],
       imageKinds: ['cover', 'banner'],
       defaults: () => ({ ...emptyMovie() }),
-      summarize: (entity) => {
+      summarize: async (entity) => {
         const m = entity as Movie;
         return {
           ...summary({ type: 'movie', id: m.id, title: m.title }),
@@ -90,9 +90,9 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       metadataFields: ['title', 'originalTitle', 'firstAirDate', 'overview', 'genres', 'cast'],
       imageKinds: ['cover', 'banner'],
       defaults: () => ({ ...emptySeries() }),
-      summarize: (entity) => {
+      summarize: async (entity) => {
         const s = entity as Series;
-        const seasons = sources.seasons.listBySeries(s.id);
+        const seasons = await sources.seasons.listBySeries(s.id);
         return {
           ...summary({ type: 'series', id: s.id, title: s.title }),
           subtitle: s.originalTitle !== s.title ? s.originalTitle : null,
@@ -102,9 +102,9 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
           pendingReview: seasons.some((season) => season.pendingReview),
         };
       },
-      extend: (entity) => ({
-        seasons: sources.seasons.listBySeries(entity.id),
-        overrides: sources.overrides.listBySeries(entity.id),
+      extend: async (entity) => ({
+        seasons: await sources.seasons.listBySeries(entity.id),
+        overrides: await sources.overrides.listBySeries(entity.id),
       }),
     },
     seasons: {
@@ -115,24 +115,24 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       metadataFields: ['title', 'overview', 'firstAirDate', 'episodeCount'],
       imageKinds: ['cover', 'banner'],
       defaults: () => ({ ...emptySeason() }),
-      checkReferences: (values) => {
-        if (!sources.series.get(Number(values.seriesId))) {
+      checkReferences: async (values) => {
+        if (!(await sources.series.get(Number(values.seriesId)))) {
           throw ApiError.badRequest(
             'invalid_reference',
             `Series ${String(values.seriesId)} does not exist`,
           );
         }
       },
-      summarize: (entity) => {
+      summarize: async (entity) => {
         const s = entity as Season;
-        const parent = sources.series.get(s.seriesId);
+        const parent = await sources.series.get(s.seriesId);
         return {
           ...summary({ type: 'season', id: s.id, title: s.title ?? `Season ${s.number}` }),
           subtitle: parent?.title ?? null,
           releaseDate: s.firstAirDate,
           cover: s.cover ?? parent?.cover ?? null,
           seriesId: s.seriesId,
-          seriesTitle: seriesTitleOf(s.seriesId),
+          seriesTitle: await seriesTitleOf(s.seriesId),
           ...trackingOf(s),
         };
       },
@@ -145,7 +145,7 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       metadataFields: ['title', 'releaseDate', 'overview', 'genres', 'developer', 'platforms'],
       imageKinds: ['cover', 'banner'],
       defaults: () => ({ ...emptyVideogame() }),
-      summarize: (entity) => {
+      summarize: async (entity) => {
         const g = entity as Videogame;
         return {
           ...summary({ type: 'videogame', id: g.id, title: g.title }),
@@ -172,7 +172,7 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       ],
       imageKinds: ['cover'],
       defaults: () => ({ ...emptyBook() }),
-      summarize: (entity) => {
+      summarize: async (entity) => {
         const b = entity as Book;
         return {
           ...summary({ type: 'book', id: b.id, title: b.title }),

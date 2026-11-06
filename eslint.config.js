@@ -23,6 +23,17 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    files: ['apps/server/**/*.ts'],
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+    },
+  },
+  {
     files: ['apps/web/**/*.{ts,vue}'],
     languageOptions: { globals: globals.browser },
   },

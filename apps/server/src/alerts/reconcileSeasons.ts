@@ -24,12 +24,12 @@ function addDays(date: string, days: number): string {
  * released recently or still to come are created, so seasons missing locally from long ago are left alone.
  * Seasons without a date are not announced yet and are ignored.
  */
-export function reconcileSeasons(
+export async function reconcileSeasons(
   seriesId: number,
   release: SeriesRelease,
   today: string,
   repositories: { seasons: SeasonRepository; overrides: SeasonOverrideRepository },
-): ReconciledSeason[] {
+): Promise<ReconciledSeason[]> {
   const { seasons, overrides } = repositories;
   const next = release.nextEpisode;
   const announced = release.seasons
@@ -51,19 +51,19 @@ export function reconcileSeasons(
     episodeCount: s.episodeCount ?? 0,
     ...(s.name === null ? {} : { title: s.name }),
   }));
-  const corrected = applySeasonOverrides(providerSeasons, overrides.listBySeries(seriesId));
+  const corrected = applySeasonOverrides(providerSeasons, await overrides.listBySeries(seriesId));
 
-  const local = seasons.listBySeries(seriesId);
+  const local = await seasons.listBySeries(seriesId);
   const result: ReconciledSeason[] = [];
   const unlinkedLocal: Season[] = [];
   const pending: number[] = [];
   const linked = new Set<number>();
 
-  announced.forEach((s, index) => {
+  for (const [index, s] of announced.entries()) {
     const match = local.find((l) => l.tmdbSeasonNumber === s.number);
     if (match) {
       result.push({
-        season: fillDate(seasons, match, s.airDate),
+        season: await fillDate(seasons, match, s.airDate),
         airDate: s.airDate,
         created: false,
       });
@@ -71,7 +71,7 @@ export function reconcileSeasons(
     } else {
       pending.push(index);
     }
-  });
+  }
   for (const l of local) {
     if (!linked.has(l.id) && l.tmdbSeasonNumber === null && l.firstAirDate !== null) {
       unlinkedLocal.push(l);
@@ -96,7 +96,7 @@ export function reconcileSeasons(
     if (!season || !provider) continue;
     matchedPending.add(fallback.number);
     result.push({
-      season: seasons.update(season.id, { tmdbSeasonNumber: provider.number }),
+      season: await seasons.update(season.id, { tmdbSeasonNumber: provider.number }),
       airDate: provider.airDate,
       created: false,
     });
@@ -110,7 +110,7 @@ export function reconcileSeasons(
     if (!provider || !source || matchedPending.has(index) || provider.airDate < cutoff) continue;
     const number = taken.has(source.number) ? Math.max(0, ...taken) + 1 : source.number;
     taken.add(number);
-    const created = seasons.create({
+    const created = await seasons.create({
       ...emptySeason(),
       seriesId,
       number,
@@ -125,8 +125,12 @@ export function reconcileSeasons(
   return result;
 }
 
-function fillDate(seasons: SeasonRepository, season: Season, airDate: string): Season {
+async function fillDate(
+  seasons: SeasonRepository,
+  season: Season,
+  airDate: string,
+): Promise<Season> {
   return season.firstAirDate === null
-    ? seasons.update(season.id, { firstAirDate: airDate })
+    ? await seasons.update(season.id, { firstAirDate: airDate })
     : season;
 }

@@ -5,9 +5,8 @@ import type { ImageProvider } from './artwork/ImageProvider.js';
 import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js';
 import { TmdbImageProvider } from './artwork/TmdbImageProvider.js';
 import { loadConfig } from './config/loadConfig.js';
-import { ImageStore } from './images/ImageStore.js';
+import { createImageStore } from './images/createImageStore.js';
 import { MetadataCache } from './metadata/MetadataCache.js';
-import { MetadataStateRepository } from './metadata/MetadataStateRepository.js';
 import { registerTmdbMetadata } from './metadata/registerTmdbMetadata.js';
 import { CloudflarePagesPublisher } from './publish/CloudflarePagesPublisher.js';
 import { FilePublishState } from './publish/FilePublishState.js';
@@ -41,17 +40,8 @@ import { TmdbMovieProvider } from './titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from './titles/TmdbSeriesProvider.js';
 import { createSyncService } from './sync/createSyncService.js';
 import { loadSyncConfig } from './sync/loadSyncConfig.js';
-import { openDatabase } from './storage/openDatabase.js';
-import {
-  BookRepository,
-  MovieRepository,
-  ReleaseAlertRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from './storage/repositories/index.js';
+import { openDatabase } from './storage/sqlite/openDatabase.js';
+import { createSqliteRepositories } from './storage/sqlite/createSqliteRepositories.js';
 
 const config = loadConfig(process.env);
 const logger = { info: console.log, error: console.error };
@@ -60,17 +50,20 @@ const db = openDatabase(join(config.dataDir, 'metrack.db'));
 const migrationRunner = new MigrationRunner(db, migrations);
 const schemaVersion = migrationRunner.run();
 
-const movies = new MovieRepository(db);
-const series = new SeriesRepository(db);
-const seasons = new SeasonRepository(db);
-const videogames = new VideogameRepository(db);
-const books = new BookRepository(db);
-const overrides = new SeasonOverrideRepository(db);
-const unlinked = new UnlinkedTitleRepository(db);
-const releaseAlerts = new ReleaseAlertRepository(db);
+const repositories = createSqliteRepositories(db);
+const {
+  movies,
+  series,
+  seasons,
+  videogames,
+  books,
+  overrides,
+  unlinked,
+  releaseAlerts,
+  metadataStates,
+} = repositories;
 
-const imageStore = new ImageStore(db, join(config.dataDir, 'images'));
-const metadataStates = new MetadataStateRepository(db);
+const imageStore = createImageStore(db, join(config.dataDir, 'images'));
 const metadataCache = new MetadataCache(metadataStates, imageStore);
 const titleProviders = new TitleProviders();
 const imageProviders: ImageProvider[] = [];
@@ -132,7 +125,7 @@ const { config: syncConfig, missing: syncMissing } = loadSyncConfig(process.env)
 const syncSetup = syncConfig
   ? createSyncService(
       syncConfig,
-      db,
+      repositories.transactions,
       { movies, series, seasons, overrides, unlinked },
       logger,
       tmdb && { client: tmdb, metadata: metadataCache },
@@ -169,7 +162,7 @@ if (mirrorConfig) {
   mirrorQueue = new PublishQueue(
     async () =>
       describeMirrorResult(
-        syncVaultMirror(exportSources, {
+        await syncVaultMirror(exportSources, {
           ...mirrorConfig,
           statePath: join(config.dataDir, 'vault-mirror-state.json'),
           apply: true,
@@ -233,8 +226,8 @@ const shutdown = async (): Promise<void> => {
   db.close();
   process.exit(0);
 };
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => void shutdown());
+process.on('SIGINT', () => void shutdown());
 
 await app.listen({ port: config.port, host: config.host });
 if (config.backup.enabled) {

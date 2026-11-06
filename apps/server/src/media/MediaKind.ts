@@ -14,9 +14,9 @@ export interface MediaKind {
   imageKinds: readonly ImageKind[];
   /** Entity fields filled in when creating, so a create body only needs the required ones. */
   defaults(): Record<string, unknown>;
-  summarize(entity: MediaEntity): MediaSummary;
+  summarize(entity: MediaEntity): Promise<MediaSummary>;
   /** Rejects values that reference records that do not exist. Runs before an entity is created. */
-  checkReferences?(values: Record<string, unknown>): void;
+  checkReferences?(values: Record<string, unknown>): Promise<void>;
   /** Extra properties the detail response carries on top of the entity. */
-  extend?(entity: MediaEntity): Record<string, unknown>;
+  extend?(entity: MediaEntity): Promise<Record<string, unknown>>;
 }

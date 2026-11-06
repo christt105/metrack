@@ -2,7 +2,7 @@ import { cpSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildExport, fingerprintExport } from '@metrack/export';
 import { loadExportInput, type ExportSources } from '../export/loadExportInput.js';
-import { storeImagePath } from '../export/storeImagePath.js';
+import { storeImageReader } from '../export/storeImageReader.js';
 import { writeExport } from '../export/writeExport.js';
 import type { CommandRunner } from './CommandRunner.js';
 import { HUGO_INHERITED_ENV } from './HUGO_INHERITED_ENV.js';
@@ -25,7 +25,7 @@ export class PublishPipeline {
   ) {}
 
   async run(): Promise<PublishOutcome> {
-    const files = buildExport(loadExportInput(this.sources));
+    const files = buildExport(await loadExportInput(this.sources));
     const fingerprint = fingerprintExport(files);
     if (fingerprint === this.state.lastFingerprint()) return 'unchanged';
 
@@ -35,7 +35,7 @@ export class PublishPipeline {
     rmSync(builtDir, { recursive: true, force: true });
     mkdirSync(this.options.workDir, { recursive: true });
     cpSync(this.options.siteTemplateDir, siteDir, { recursive: true });
-    writeExport(files, siteDir, storeImagePath(this.sources.images));
+    await writeExport(files, siteDir, storeImageReader(this.sources.images));
 
     const baseUrlArgs = this.options.baseUrl ? ['--baseURL', this.options.baseUrl] : [];
     await this.runner.run(

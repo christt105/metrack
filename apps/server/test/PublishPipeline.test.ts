@@ -2,18 +2,16 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import type { CommandOptions, CommandRunner } from '../src/publish/CommandRunner.js';
 import { FilePublishState } from '../src/publish/FilePublishState.js';
 import { PublishPipeline } from '../src/publish/PublishPipeline.js';
 import type { Publisher } from '../src/publish/Publisher.js';
-import {
-  BookRepository,
-  MovieRepository,
-  SeasonRepository,
-  SeriesRepository,
-  VideogameRepository,
-} from '../src/storage/repositories/index.js';
+import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 
 const dirs: string[] = [];
@@ -68,14 +66,14 @@ function setup(baseUrl?: string) {
   const template = join(root, 'template');
   mkdirSync(template);
   writeFileSync(join(template, 'hugo.toml'), 'title = "x"');
-  const movies = new MovieRepository(db);
+  const movies = new SqliteMovieRepository(db);
   const sources = {
     movies,
-    series: new SeriesRepository(db),
-    seasons: new SeasonRepository(db),
-    videogames: new VideogameRepository(db),
-    books: new BookRepository(db),
-    images: new ImageStore(db, join(root, 'images')),
+    series: new SqliteSeriesRepository(db),
+    seasons: new SqliteSeasonRepository(db),
+    videogames: new SqliteVideogameRepository(db),
+    books: new SqliteBookRepository(db),
+    images: createImageStore(db, join(root, 'images')),
   };
   const runner = new RecordingRunner();
   const publisher = new FakePublisher();
@@ -118,7 +116,7 @@ function setup(baseUrl?: string) {
 describe('PublishPipeline', () => {
   it('passes the configured base URL to hugo', async () => {
     const { pipeline, runner, addMovie } = setup('https://site.example/');
-    addMovie('Alpha');
+    await addMovie('Alpha');
     await pipeline.run();
     expect(runner.calls[0]!.args).toEqual(
       expect.arrayContaining(['--baseURL', 'https://site.example/']),
@@ -127,14 +125,14 @@ describe('PublishPipeline', () => {
 
   it('leaves the base URL to the template when none is configured', async () => {
     const { pipeline, runner, addMovie } = setup();
-    addMovie('Alpha');
+    await addMovie('Alpha');
     await pipeline.run();
     expect(runner.calls[0]!.args).not.toContain('--baseURL');
   });
 
   it('builds the template plus exported content and publishes the result', async () => {
     const { pipeline, runner, publisher, addMovie, template } = setup();
-    addMovie('Alpha');
+    await addMovie('Alpha');
     expect(await pipeline.run()).toBe('published');
     expect(runner.calls).toHaveLength(1);
     expect(runner.calls[0]).toMatchObject({ command: 'hugo', hadContent: true });
@@ -147,19 +145,19 @@ describe('PublishPipeline', () => {
 
   it('does not build or publish when nothing changed since the last publish', async () => {
     const { pipeline, runner, publisher, addMovie } = setup();
-    addMovie('Alpha');
+    await addMovie('Alpha');
     await pipeline.run();
     expect(await pipeline.run()).toBe('unchanged');
     expect(runner.calls).toHaveLength(1);
     expect(publisher.published).toHaveLength(1);
-    addMovie('Beta');
+    await addMovie('Beta');
     expect(await pipeline.run()).toBe('published');
     expect(publisher.published).toHaveLength(2);
   });
 
   it('does not record a failed publish, so the next attempt tries again', async () => {
     const { pipeline, publisher, addMovie } = setup();
-    addMovie('Alpha');
+    await addMovie('Alpha');
     publisher.failWith = new Error('upload refused');
     await expect(pipeline.run()).rejects.toThrow('upload refused');
     publisher.failWith = null;
@@ -168,7 +166,7 @@ describe('PublishPipeline', () => {
 
   it('fails when the site build fails', async () => {
     const { pipeline, runner, publisher, addMovie } = setup();
-    addMovie('Alpha');
+    await addMovie('Alpha');
     runner.failWith = new Error('hugo exploded');
     await expect(pipeline.run()).rejects.toThrow('hugo exploded');
     expect(publisher.published).toEqual([]);

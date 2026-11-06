@@ -32,7 +32,7 @@ export class SyncService {
       movies: library.movies,
       series: library.series,
       plays,
-      state: loadSyncState(this.targets),
+      state: await loadSyncState(this.targets),
       today: this.now().toISOString().slice(0, 10),
       timeZone: this.options.timeZone,
     });
@@ -40,7 +40,7 @@ export class SyncService {
 
   async apply(): Promise<{ plan: SyncPlan; result: SyncApplyResult }> {
     const plan = await this.report();
-    const { result, created } = this.applier.apply(plan);
+    const { result, created } = await this.applier.apply(plan);
     const refresh = this.options.refreshCreated;
     if (refresh) {
       for (const ref of created) await refresh(ref).catch(() => undefined);

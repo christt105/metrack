@@ -1,10 +1,8 @@
-import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
+import { readFile, stat } from 'node:fs/promises';
 import type { FetchFn } from '../http/FetchFn.js';
-import { IMAGE_COLUMNS } from './imageColumns.js';
+import type { ImageRepository } from '../storage/repositories/ImageRepository.js';
+import type { ImageBlobStore } from './ImageBlobStore.js';
 import { imageRef } from './imageRef.js';
 import { readBodyWithLimit } from './readBodyWithLimit.js';
 import { readImageSize } from './readImageSize.js';
@@ -12,28 +10,24 @@ import type { StoredImage } from './StoredImage.js';
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
-type Row = Record<string, unknown>;
-
 /**
- * Local image store. Files are named by the SHA-256 of their content, so identical
+ * Image store. Files are named by the SHA-256 of their content, so identical
  * images are stored once. Entities point at the copy through `imageRef`. An image keeps the
  * first URL it came from as `sourceUrl`; any other URL that yields the same bytes is recorded
  * as an extra source so `findBySourceUrl` resolves it too.
  */
 export class ImageStore {
   constructor(
-    private readonly db: DatabaseSync,
-    private readonly dir: string,
+    private readonly rows: ImageRepository,
+    private readonly blobs: ImageBlobStore,
     private readonly fetchFn: FetchFn = fetch,
     private readonly now: () => Date = () => new Date(),
-  ) {
-    mkdirSync(dir, { recursive: true });
-  }
+  ) {}
 
   /** Downloads an image unless this exact URL was already stored. */
   async download(url: string): Promise<StoredImage> {
-    const known = this.findBySourceUrl(url);
-    if (known && existsSync(this.pathOf(known))) return known;
+    const known = await this.findBySourceUrl(url);
+    if (known && (await this.hasFile(known))) return known;
 
     const response = await this.fetchFn(url);
     if (!response.ok) throw new Error(`Image download failed (${response.status}) for ${url}`);
@@ -58,8 +52,8 @@ export class ImageStore {
     if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error('Image too large');
     const size = readImageSize(bytes);
     const hash = createHash('sha256').update(bytes).digest('hex');
-    const existing = this.get(hash);
-    if (existing && existsSync(this.pathOf(existing))) return this.withSource(existing, sourceUrl);
+    const existing = await this.rows.get(hash);
+    if (existing && (await this.hasFile(existing))) return this.withSource(existing, sourceUrl);
 
     const image: StoredImage = {
       hash,
@@ -72,125 +66,62 @@ export class ImageStore {
       sourceUrl,
       createdAt: this.now().toISOString(),
     };
-    const target = this.pathOf(image);
-    const temp = `${target}.${randomBytes(8).toString('hex')}.tmp`;
-    try {
-      await writeFile(temp, bytes);
-      await rename(temp, target);
-    } catch (error) {
-      await rm(temp, { force: true });
-      throw error;
-    }
-    const stored = this.get(hash);
-    if (stored) return this.withSource(stored, sourceUrl);
-    this.db
-      .prepare(
-        `INSERT INTO image (hash, extension, mime_type, width, height, byte_size, source_url, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        hash,
-        image.extension,
-        image.mimeType,
-        image.width,
-        image.height,
-        image.byteSize,
-        sourceUrl,
-        image.createdAt,
-      );
-    return image;
+    await this.blobs.write(fileName(image), bytes);
+    await this.rows.insert(image);
+    return this.withSource((await this.rows.get(hash)) ?? image, sourceUrl);
   }
 
-  get(hash: string): StoredImage | undefined {
-    const row = this.db.prepare('SELECT * FROM image WHERE hash = ?').get(hash);
-    return row ? toImage(row) : undefined;
+  get(hash: string): Promise<StoredImage | undefined> {
+    return this.rows.get(hash);
   }
 
-  list(): StoredImage[] {
-    return this.db
-      .prepare('SELECT * FROM image ORDER BY created_at, hash')
-      .all()
-      .map((row) => toImage(row));
+  list(): Promise<StoredImage[]> {
+    return this.rows.list();
   }
 
-  pathOf(image: StoredImage): string {
-    return join(this.dir, `${image.hash}.${image.extension}`);
+  /** Whether the bytes of a known image are actually in the store. */
+  hasFile(image: StoredImage): Promise<boolean> {
+    return this.blobs.has(fileName(image));
   }
 
-  read(image: StoredImage): Buffer {
-    return readFileSync(this.pathOf(image));
+  read(image: StoredImage): Promise<Uint8Array> {
+    return this.blobs.read(fileName(image));
   }
 
   /** Deletes the file and its row and clears every cover or banner that referenced it. */
   async delete(hash: string): Promise<boolean> {
-    const image = this.get(hash);
+    const image = await this.rows.get(hash);
     if (!image) return false;
-    for (const { table, column } of IMAGE_COLUMNS) {
-      this.db.prepare(`UPDATE ${table} SET ${column} = NULL WHERE ${column} = ?`).run(image.ref);
-    }
-    this.db.prepare('DELETE FROM image_source WHERE hash = ?').run(hash);
-    this.db.prepare('DELETE FROM image WHERE hash = ?').run(hash);
-    await rm(this.pathOf(image), { force: true });
+    await this.rows.delete(hash);
+    await this.blobs.delete(fileName(image));
     return true;
   }
 
   /** Hashes of stored images that no entity references. */
-  orphans(): string[] {
-    const referenced = IMAGE_COLUMNS.map(
-      ({ table, column }) => `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
-    ).join(' UNION ');
-    return this.db
-      .prepare(
-        `SELECT hash FROM image WHERE '${imageRef('')}' || hash NOT IN (${referenced}) ORDER BY hash`,
-      )
-      .all()
-      .map((row) => String(row.hash));
+  orphans(): Promise<string[]> {
+    return this.rows.orphans();
   }
 
   /** Deletes every orphan and returns their hashes. */
   async cleanOrphans(): Promise<string[]> {
-    const orphans = this.orphans();
+    const orphans = await this.orphans();
     for (const hash of orphans) await this.delete(hash);
     return orphans;
   }
 
   /** The stored copy of a URL, without ever hitting the network. */
-  findBySourceUrl(url: string): StoredImage | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT * FROM image
-         WHERE source_url = ? OR hash IN (SELECT hash FROM image_source WHERE url = ?)
-         ORDER BY source_url = ? DESC
-         LIMIT 1`,
-      )
-      .get(url, url, url);
-    return row ? toImage(row) : undefined;
+  findBySourceUrl(url: string): Promise<StoredImage | undefined> {
+    return this.rows.findBySourceUrl(url);
   }
 
-  private withSource(image: StoredImage, sourceUrl: string | null): StoredImage {
+  private async withSource(image: StoredImage, sourceUrl: string | null): Promise<StoredImage> {
     if (sourceUrl !== null && sourceUrl !== image.sourceUrl) {
-      this.db
-        .prepare(
-          `INSERT INTO image_source (url, hash) VALUES (?, ?)
-           ON CONFLICT (url) DO UPDATE SET hash = excluded.hash`,
-        )
-        .run(sourceUrl, image.hash);
+      await this.rows.addSource(sourceUrl, image.hash);
     }
     return image;
   }
 }
 
-function toImage(row: Row): StoredImage {
-  const hash = String(row.hash);
-  return {
-    hash,
-    ref: imageRef(hash),
-    extension: String(row.extension),
-    mimeType: String(row.mime_type),
-    width: Number(row.width),
-    height: Number(row.height),
-    byteSize: Number(row.byte_size),
-    sourceUrl: row.source_url === null ? null : String(row.source_url),
-    createdAt: String(row.created_at),
-  };
+function fileName(image: StoredImage): string {
+  return `${image.hash}.${image.extension}`;
 }

@@ -1,17 +1,10 @@
 import { existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ImageStore } from '../images/ImageStore.js';
+import { createImageStore } from '../images/createImageStore.js';
 import { MigrationRunner } from '../storage/MigrationRunner.js';
 import { migrations } from '../storage/migrations/index.js';
-import { openDatabase } from '../storage/openDatabase.js';
-import {
-  BookRepository,
-  MovieRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from '../storage/repositories/index.js';
+import { createSqliteRepositories } from '../storage/sqlite/createSqliteRepositories.js';
+import { openDatabase } from '../storage/sqlite/openDatabase.js';
 import { buildImportPlan } from './buildImportPlan.js';
 import { formatApplyResult } from './formatApplyResult.js';
 import { formatReport } from './formatReport.js';
@@ -51,16 +44,15 @@ export async function runImport(options: ImportOptions): Promise<string> {
   const db = openDatabase(join(options.dataDir, 'metrack.db'));
   try {
     new MigrationRunner(db, migrations).run();
-    const targets = {
-      movies: new MovieRepository(db),
-      series: new SeriesRepository(db),
-      seasons: new SeasonRepository(db),
-      videogames: new VideogameRepository(db),
-      books: new BookRepository(db),
-      unlinked: new UnlinkedTitleRepository(db),
-    };
-    const store = new ImageStore(db, join(options.dataDir, 'images'));
-    const result = await new ImportApplier(db, targets, store, undefined, legacyImages).apply(plan);
+    const repositories = createSqliteRepositories(db);
+    const store = createImageStore(db, join(options.dataDir, 'images'));
+    const result = await new ImportApplier(
+      repositories.transactions,
+      repositories,
+      store,
+      undefined,
+      legacyImages,
+    ).apply(plan);
     const report = formatReport(plan, options.verbose, legacyImages, true);
     return `${report}\n\n${formatApplyResult(result)}`;
   } finally {

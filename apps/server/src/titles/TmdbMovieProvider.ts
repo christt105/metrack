@@ -21,29 +21,31 @@ export class TmdbMovieProvider implements TitleProvider {
 
   async search(query: string, year: number | null): Promise<SearchResult[]> {
     const response = await this.client.search('movie', query, year);
-    return (response.results ?? []).map((r) => ({
-      type: 'movie',
-      provider: this.provider,
-      externalId: String(r.id),
-      title: r.title ?? '',
-      originalTitle: emptyToNull(r.original_title),
-      year: yearFrom(r.release_date),
-      overview: clean(r.overview),
-      posterUrl: r.poster_path ? `${TMDB_POSTER_PREVIEW}${r.poster_path}` : null,
-      existingId: this.movies.findByTmdbId(r.id)?.id ?? null,
-    }));
+    return Promise.all(
+      (response.results ?? []).map(async (r) => ({
+        type: 'movie',
+        provider: this.provider,
+        externalId: String(r.id),
+        title: r.title ?? '',
+        originalTitle: emptyToNull(r.original_title),
+        year: yearFrom(r.release_date),
+        overview: clean(r.overview),
+        posterUrl: r.poster_path ? `${TMDB_POSTER_PREVIEW}${r.poster_path}` : null,
+        existingId: (await this.movies.findByTmdbId(r.id))?.id ?? null,
+      })),
+    );
   }
 
   async add(externalId: string): Promise<EntityRef> {
     const tmdbId = parseNumericId(externalId);
-    const existing = this.movies.findByTmdbId(tmdbId);
+    const existing = await this.movies.findByTmdbId(tmdbId);
     if (existing) {
       throw ApiError.conflict('already_added', 'That movie is already in the tracker', {
         existingId: existing.id,
       });
     }
     const details = await this.client.movie(tmdbId);
-    const movie = this.movies.create({
+    const movie = await this.movies.create({
       ...emptyMovie(),
       tmdbId,
       title: details.title ?? `TMDB ${tmdbId}`,

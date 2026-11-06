@@ -3,11 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { FetchFn } from '../src/http/FetchFn.js';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import { OpenLibraryClient } from '../src/providers/openlibrary/OpenLibraryClient.js';
 import type { OpenLibraryWork } from '../src/providers/openlibrary/OpenLibraryWork.js';
 import type { OpenLibraryWorkRecord } from '../src/providers/openlibrary/OpenLibraryWorkRecord.js';
-import { BookRepository } from '../src/storage/repositories/index.js';
+import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
 import { OpenLibraryBookProvider } from '../src/titles/OpenLibraryBookProvider.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
@@ -79,8 +79,8 @@ function openLibraryFetch(options: {
 
 function setup(fetchFn: FetchFn) {
   const db = openTestDatabase();
-  const books = new BookRepository(db);
-  const images = new ImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-openlibrary-')), fetchFn);
+  const books = new SqliteBookRepository(db);
+  const images = createImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-openlibrary-')), fetchFn);
   const client = new OpenLibraryClient(fetchFn, 'es');
   return { books, provider: new OpenLibraryBookProvider(client, books, images) };
 }
@@ -128,7 +128,7 @@ describe('OpenLibraryBookProvider', () => {
     const t = setup(fetchFn);
     const ref = await t.provider.add('OL8479867W');
     expect(ref.type).toBe('book');
-    const book = t.books.get(ref.id);
+    const book = await t.books.get(ref.id);
     expect(book).toMatchObject({
       openLibraryId: 'OL8479867W',
       isbn: '9789506441746',
@@ -152,7 +152,7 @@ describe('OpenLibraryBookProvider', () => {
       files: { [`${COVERS}/11480483-L.jpg?default=false`]: png(400, 600, 2) },
     });
     const t = setup(fetchFn);
-    const book = t.books.get((await t.provider.add('OL8479867W')).id);
+    const book = await t.books.get((await t.provider.add('OL8479867W')).id);
     expect(book).toMatchObject({
       title: 'The Name of the Wind',
       isbn: null,
@@ -186,7 +186,9 @@ describe('OpenLibraryBookProvider', () => {
     ]) {
       const { fetchFn } = openLibraryFetch({ works: [wind], record: { first_publish_date: date } });
       const t = setup(fetchFn);
-      expect(t.books.get((await t.provider.add('OL8479867W')).id)?.releaseDate).toBe(expected);
+      expect((await t.books.get((await t.provider.add('OL8479867W')).id))?.releaseDate).toBe(
+        expected,
+      );
     }
   });
 

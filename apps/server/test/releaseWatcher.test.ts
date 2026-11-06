@@ -4,13 +4,16 @@ import { ReleaseWatcher } from '../src/alerts/ReleaseWatcher.js';
 import { ReleaseWatchScheduler } from '../src/alerts/ReleaseWatchScheduler.js';
 import type { SeriesRelease } from '../src/alerts/SeriesRelease.js';
 import { emptyMovie, emptySeason, emptySeries } from '../src/media/emptyEntities.js';
-import {
-  MovieRepository,
-  ReleaseAlertRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-} from '../src/storage/repositories/index.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import type { MovieRepository } from '../src/storage/repositories/MovieRepository.js';
+import { SqliteReleaseAlertRepository } from '../src/storage/sqlite/SqliteReleaseAlertRepository.js';
+import type { ReleaseAlertRepository } from '../src/storage/repositories/ReleaseAlertRepository.js';
+import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
+import type { SeasonOverrideRepository } from '../src/storage/repositories/SeasonOverrideRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import type { SeasonRepository } from '../src/storage/repositories/SeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import type { SeriesRepository } from '../src/storage/repositories/SeriesRepository.js';
 import { FakeReleaseSource } from './support/FakeReleaseSource.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { RecordingNotifier } from './support/RecordingNotifier.js';
@@ -49,13 +52,13 @@ describe('ReleaseWatcher', () => {
     clock = new Date(iso);
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     db = openTestDatabase();
-    movies = new MovieRepository(db);
-    series = new SeriesRepository(db);
-    seasons = new SeasonRepository(db);
-    overrides = new SeasonOverrideRepository(db);
-    alerts = new ReleaseAlertRepository(db);
+    movies = new SqliteMovieRepository(db);
+    series = new SqliteSeriesRepository(db);
+    seasons = new SqliteSeasonRepository(db);
+    overrides = new SqliteSeasonOverrideRepository(db);
+    alerts = new SqliteReleaseAlertRepository(db);
     source = new FakeReleaseSource();
     notifier = new RecordingNotifier();
     clock = new Date('2026-10-22T09:00:00Z');
@@ -72,20 +75,22 @@ describe('ReleaseWatcher', () => {
       notifyFromHour: 8,
       now: () => clock,
     });
-    seriesId = series.create({
-      ...emptySeries(),
-      tmdbId: 10,
-      title: 'Lupin',
-      follow: true,
-    }).id;
-    seasons.create({
+    seriesId = (
+      await series.create({
+        ...emptySeries(),
+        tmdbId: 10,
+        title: 'Lupin',
+        follow: true,
+      })
+    ).id;
+    await seasons.create({
       ...emptySeason(),
       seriesId,
       number: 1,
       tmdbSeasonNumber: 1,
       firstAirDate: '2021-01-08',
     });
-    seasons.create({
+    await seasons.create({
       ...emptySeason(),
       seriesId,
       number: 2,
@@ -98,7 +103,7 @@ describe('ReleaseWatcher', () => {
   it('creates the announced season and warns the day before', async () => {
     const summary = await watcher.tick();
     expect(summary).toMatchObject({ checked: 1, seasonsCreated: 1, alertsSent: 1 });
-    const created = seasons.listBySeries(seriesId).find((s) => s.number === 3);
+    const created = (await seasons.listBySeries(seriesId)).find((s) => s.number === 3);
     expect(created).toMatchObject({
       tmdbSeasonNumber: 3,
       firstAirDate: '2026-10-23',
@@ -143,7 +148,7 @@ describe('ReleaseWatcher', () => {
       'Releases today (2026-10-23)',
       'Now streaming in Spain on a subscription service',
     ]);
-    expect(alerts.list().map((a) => a.kind)).toEqual([
+    expect((await alerts.list()).map((a) => a.kind)).toEqual([
       'available_es',
       'releases_today',
       'releases_tomorrow',
@@ -169,7 +174,7 @@ describe('ReleaseWatcher', () => {
   });
 
   it('does not duplicate a season that Jellyfin already numbered differently', async () => {
-    seasons.create({
+    await seasons.create({
       ...emptySeason(),
       seriesId,
       number: 4,
@@ -178,7 +183,9 @@ describe('ReleaseWatcher', () => {
     });
     const summary = await watcher.tick();
     expect(summary.seasonsCreated).toBe(0);
-    expect(seasons.listBySeries(seriesId).map((s) => [s.number, s.tmdbSeasonNumber])).toEqual([
+    expect(
+      (await seasons.listBySeries(seriesId)).map((s) => [s.number, s.tmdbSeasonNumber]),
+    ).toEqual([
       [1, 1],
       [2, 2],
       [4, 3],
@@ -187,7 +194,7 @@ describe('ReleaseWatcher', () => {
   });
 
   it('uses a season override for the number of the new season', async () => {
-    overrides.set({
+    await overrides.set({
       seriesId,
       tmdbSeasonNumber: 3,
       number: 4,
@@ -195,7 +202,7 @@ describe('ReleaseWatcher', () => {
       jellyfinSeasonId: null,
     });
     await watcher.tick();
-    expect(seasons.listBySeries(seriesId).map((s) => s.number)).toEqual([1, 2, 4]);
+    expect((await seasons.listBySeries(seriesId)).map((s) => s.number)).toEqual([1, 2, 4]);
     expect(notifier.sent[0]?.title).toBe('Lupin, season 4');
   });
 
@@ -215,7 +222,7 @@ describe('ReleaseWatcher', () => {
       }),
     );
     expect((await watcher.tick()).seasonsCreated).toBe(0);
-    expect(seasons.listBySeries(seriesId)).toHaveLength(2);
+    expect(await seasons.listBySeries(seriesId)).toHaveLength(2);
   });
 
   it('uses the next episode date when the season has no air date yet', async () => {
@@ -230,7 +237,7 @@ describe('ReleaseWatcher', () => {
       }),
     );
     expect((await watcher.tick()).seasonsCreated).toBe(1);
-    expect(seasons.listBySeries(seriesId).find((s) => s.number === 3)?.firstAirDate).toBe(
+    expect((await seasons.listBySeries(seriesId)).find((s) => s.number === 3)?.firstAirDate).toBe(
       '2026-10-23',
     );
   });
@@ -252,20 +259,25 @@ describe('ReleaseWatcher', () => {
   });
 
   it('skips series that are not followed or have no TMDB id', async () => {
-    series.update(seriesId, { follow: false });
-    series.create({ ...emptySeries(), title: 'No id', follow: true });
+    await series.update(seriesId, { follow: false });
+    await series.create({ ...emptySeries(), title: 'No id', follow: true });
     expect(await watcher.tick()).toMatchObject({ checked: 0 });
   });
 
   it('alerts for followed movies from their Spanish release date', async () => {
-    const movie = movies.create({ ...emptyMovie(), tmdbId: 5, title: 'Heat 2', follow: true });
+    const movie = await movies.create({
+      ...emptyMovie(),
+      tmdbId: 5,
+      title: 'Heat 2',
+      follow: true,
+    });
     source.moviesById.set(5, {
       posterUrl: null,
       releaseDate: '2026-10-23',
       flatrateEs: false,
     });
     source.seriesById.clear();
-    series.update(seriesId, { follow: false });
+    await series.update(seriesId, { follow: false });
     await watcher.tick();
     expect(notifier.sent).toEqual([
       {
@@ -274,11 +286,11 @@ describe('ReleaseWatcher', () => {
         options: { priority: 'default', tags: ['calendar'] },
       },
     ]);
-    expect(alerts.list()[0]).toMatchObject({ subjectType: 'movie', subjectId: movie.id });
+    expect((await alerts.list())[0]).toMatchObject({ subjectType: 'movie', subjectId: movie.id });
   });
 
   it('logs a failing check, keeps going and retries in 30 minutes', async () => {
-    movies.create({ ...emptyMovie(), tmdbId: 99, title: 'Unknown', follow: true });
+    await movies.create({ ...emptyMovie(), tmdbId: 99, title: 'Unknown', follow: true });
     const summary = await watcher.tick();
     expect(summary).toMatchObject({ failures: 1, alertsSent: 1 });
     at('2026-10-22T09:20:00Z');
@@ -290,7 +302,7 @@ describe('ReleaseWatcher', () => {
   it('keeps an alert that could not be delivered pending and retries it', async () => {
     notifier.fails = () => true;
     expect(await watcher.tick()).toMatchObject({ checked: 1, alertsSent: 0, failures: 1 });
-    expect(alerts.list()).toEqual([]);
+    expect(await alerts.list()).toEqual([]);
     at('2026-10-22T09:20:00Z');
     expect((await watcher.tick()).checked).toBe(0);
 
@@ -299,11 +311,11 @@ describe('ReleaseWatcher', () => {
     expect(await watcher.tick()).toMatchObject({ checked: 1, alertsSent: 1, failures: 0 });
     expect(notifier.failed.map((n) => n.title)).toEqual(['Lupin, season 3']);
     expect(notifier.sent.map((n) => n.message)).toEqual(['Releases tomorrow (2026-10-23)']);
-    expect(alerts.list().map((a) => a.kind)).toEqual(['releases_tomorrow']);
+    expect((await alerts.list()).map((a) => a.kind)).toEqual(['releases_tomorrow']);
   });
 
   it('does not resend delivered alerts while another one keeps failing', async () => {
-    movies.create({ ...emptyMovie(), tmdbId: 5, title: 'Heat 2', follow: true });
+    await movies.create({ ...emptyMovie(), tmdbId: 5, title: 'Heat 2', follow: true });
     source.moviesById.set(5, { posterUrl: null, releaseDate: '2026-10-23', flatrateEs: false });
     notifier.fails = (n) => n.title === 'Heat 2';
     expect(await watcher.tick()).toMatchObject({ alertsSent: 1, failures: 1 });
@@ -313,13 +325,13 @@ describe('ReleaseWatcher', () => {
     await watcher.tick();
     expect(notifier.sent.map((n) => n.title)).toEqual(['Lupin, season 3']);
     expect(notifier.failed.map((n) => n.title)).toEqual(['Heat 2', 'Heat 2', 'Heat 2']);
-    expect(alerts.list().map((a) => a.title)).toEqual(['Lupin, season 3']);
+    expect((await alerts.list()).map((a) => a.title)).toEqual(['Lupin, season 3']);
 
     notifier.fails = () => false;
     at('2026-10-22T10:33:00Z');
     await watcher.tick();
     expect(notifier.sent.map((n) => n.title)).toEqual(['Lupin, season 3', 'Heat 2']);
-    expect(alerts.list().map((a) => a.title)).toEqual(['Heat 2', 'Lupin, season 3']);
+    expect((await alerts.list()).map((a) => a.title)).toEqual(['Heat 2', 'Lupin, season 3']);
   });
 });
 

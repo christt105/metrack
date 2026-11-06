@@ -13,15 +13,23 @@ const call = (method: 'GET' | 'PUT' | 'DELETE', url: string) => api.app.inject({
 
 describe('watchlist routes', () => {
   it('follows and unfollows a movie and a series', async () => {
-    const movie = api.movies.create({ ...emptyMovie(), title: 'Heat', releaseDate: '1995-12-15' });
-    const show = api.series.create({ ...emptySeries(), title: 'Lupin', cover: '/api/images/abc' });
-    api.seasons.create({
+    const movie = await api.movies.create({
+      ...emptyMovie(),
+      title: 'Heat',
+      releaseDate: '1995-12-15',
+    });
+    const show = await api.series.create({
+      ...emptySeries(),
+      title: 'Lupin',
+      cover: '/api/images/abc',
+    });
+    await api.seasons.create({
       ...emptySeason(),
       seriesId: show.id,
       number: 1,
       firstAirDate: '2021-01-08',
     });
-    api.seasons.create({
+    await api.seasons.create({
       ...emptySeason(),
       seriesId: show.id,
       number: 2,
@@ -41,7 +49,7 @@ describe('watchlist routes', () => {
         releaseDate: '2026-10-23',
       },
     ]);
-    expect(api.movies.get(movie.id)?.follow).toBe(true);
+    expect((await api.movies.get(movie.id))?.follow).toBe(true);
 
     expect((await call('DELETE', `/api/watchlist/movies/${movie.id}`)).statusCode).toBe(204);
     expect((await call('GET', '/api/watchlist')).json()).toHaveLength(1);
@@ -56,7 +64,7 @@ describe('watchlist routes', () => {
 
   it('lists sent alerts newest first and honors the limit', async () => {
     for (const [i, kind] of (['releases_tomorrow', 'releases_today'] as const).entries()) {
-      api.alerts.record({
+      await api.alerts.record({
         subjectType: 'season',
         subjectId: 1,
         kind,
@@ -74,7 +82,7 @@ describe('watchlist routes', () => {
     expect((await call('GET', '/api/alerts?limit=0')).statusCode).toBe(400);
   });
 
-  it('records an alert only once per subject and kind', () => {
+  it('records an alert only once per subject and kind', async () => {
     const alert = {
       subjectType: 'movie' as const,
       subjectId: 3,
@@ -83,9 +91,9 @@ describe('watchlist routes', () => {
       message: 'm',
       sentAt: '2026-10-23T09:00:00.000Z',
     };
-    expect(api.alerts.record(alert)).toBe(true);
-    expect(api.alerts.record(alert)).toBe(false);
-    expect(api.alerts.keysFor('movie', 3)).toEqual([
+    expect(await api.alerts.record(alert)).toBe(true);
+    expect(await api.alerts.record(alert)).toBe(false);
+    expect(await api.alerts.keysFor('movie', 3)).toEqual([
       { subjectType: 'movie', subjectId: 3, kind: 'available_es' },
     ]);
   });

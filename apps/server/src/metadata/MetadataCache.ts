@@ -4,7 +4,7 @@ import { defaultExpiryPolicy } from './defaultExpiryPolicy.js';
 import type { ExpiryPolicy } from './ExpiryPolicy.js';
 import { hashContent } from './hashContent.js';
 import { isStale } from './isStale.js';
-import type { MetadataStateRepository } from './MetadataStateRepository.js';
+import type { MetadataStateRepository } from '../storage/repositories/MetadataStateRepository.js';
 import type { MetadataTarget } from './MetadataTarget.js';
 import type { RefreshResult } from './RefreshResult.js';
 
@@ -46,9 +46,9 @@ export class MetadataCache {
     target: MetadataTarget<T>,
     force: boolean,
   ): Promise<RefreshResult> {
-    const entity = target.repository.get(id);
+    const entity = await target.repository.get(id);
     if (!entity) throw new Error(`${type} ${id} not found`);
-    const state = this.states.get(type, id);
+    const state = await this.states.get(type, id);
     if (!force && !isStale(state.fetchedAt, target.lifecycle(entity), this.policy, this.now())) {
       return { outcome: 'fresh' };
     }
@@ -63,7 +63,7 @@ export class MetadataCache {
     const fetchedAt = this.now().toISOString();
     const hash = hashContent(provided);
     if (hash === state.metadataHash) {
-      this.states.markFetched(type, id, fetchedAt);
+      await this.states.markFetched(type, id, fetchedAt);
       return { outcome: 'unchanged' };
     }
 
@@ -89,9 +89,9 @@ export class MetadataCache {
         hashContent(patch[field]) !== hashContent((entity as Record<string, unknown>)[field]),
     );
     if (changed.length > 0) {
-      target.repository.update(id, patch as Partial<Omit<T, 'id'>>);
+      await target.repository.update(id, patch as Partial<Omit<T, 'id'>>);
     }
-    this.states.markFetched(type, id, fetchedAt, imageFailed ? undefined : hash);
+    await this.states.markFetched(type, id, fetchedAt, imageFailed ? undefined : hash);
     return { outcome: 'updated', fields: changed };
   }
 }

@@ -1,5 +1,6 @@
 import type { MirrorImages } from '@metrack/export';
 import type { ImageStore } from '../images/ImageStore.js';
+import type { StoredImage } from '../images/StoredImage.js';
 import type { ImageCopy } from './ImageCopy.js';
 import type { VaultImageIndex } from './VaultImageIndex.js';
 
@@ -7,17 +8,36 @@ const REF = /^\/api\/images\/([0-9a-f]{64})$/;
 
 /**
  * Places stored images in the vault: the original URL when there is one, otherwise a vault file
- * with the same bytes, otherwise a copy to be written into the covers or files folder.
+ * with the same bytes, otherwise a copy to be written into the covers or files folder. Works on a
+ * snapshot of the store taken by `load`, so the export can ask synchronously.
  */
 export class MirrorImageResolver implements MirrorImages {
   private readonly copies = new Map<string, ImageCopy>();
 
   constructor(
-    private readonly store: ImageStore,
+    private readonly images: ReadonlyMap<string, StoredImage>,
+    private readonly urlHashes: ReadonlyMap<string, string>,
     private readonly index: VaultImageIndex,
     private readonly linkPrefix: string,
     private readonly folders: { covers: string; files: string },
   ) {}
+
+  /** Snapshots every stored image and the stored copy of each of `urls` that has one. */
+  static async load(
+    store: ImageStore,
+    urls: Iterable<string>,
+    index: VaultImageIndex,
+    linkPrefix: string,
+    folders: { covers: string; files: string },
+  ): Promise<MirrorImageResolver> {
+    const images = new Map((await store.list()).map((image) => [image.hash, image]));
+    const urlHashes = new Map<string, string>();
+    for (const url of new Set(urls)) {
+      const image = await store.findBySourceUrl(url);
+      if (image !== undefined) urlHashes.set(url, image.hash);
+    }
+    return new MirrorImageResolver(images, urlHashes, index, linkPrefix, folders);
+  }
 
   propertyValue(ref: string, current: unknown): string | null {
     const image = this.imageOf(ref);
@@ -39,13 +59,13 @@ export class MirrorImageResolver implements MirrorImages {
     return [...this.copies.values()];
   }
 
-  private imageOf(ref: string) {
+  private imageOf(ref: string): StoredImage | undefined {
     const hash = REF.exec(ref)?.[1];
-    return hash === undefined ? undefined : this.store.get(hash);
+    return hash === undefined ? undefined : this.images.get(hash);
   }
 
   private hashOfValue(value: string): string | null {
-    if (/^https?:\/\//.test(value)) return this.store.findBySourceUrl(value)?.hash ?? null;
+    if (/^https?:\/\//.test(value)) return this.urlHashes.get(value) ?? null;
     return this.index.hashOf(value);
   }
 

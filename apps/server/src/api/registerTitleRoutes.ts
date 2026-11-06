@@ -100,13 +100,13 @@ export function registerTitleRoutes(
     },
   );
 
-  app.get('/api/unlinked', async (): Promise<UnlinkedTitle[]> => unlinked.list());
+  app.get('/api/unlinked', async (): Promise<UnlinkedTitle[]> => await unlinked.list());
 
   app.delete<{ Params: { id: number } }>(
     '/api/unlinked/:id',
     { schema: { params: idParams } },
     async (request, reply) => {
-      if (!unlinked.delete(request.params.id)) throw ApiError.notFound();
+      if (!(await unlinked.delete(request.params.id))) throw ApiError.notFound();
       return reply.code(204).send();
     },
   );

@@ -4,19 +4,17 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BackupService } from '../src/backup/BackupService.js';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
-import { openDatabase } from '../src/storage/openDatabase.js';
-import {
-  BookRepository,
-  MovieRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from '../src/storage/repositories/index.js';
+import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
+import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
+import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { fakeFetch } from './support/fakeFetch.js';
 import { png } from './support/sampleImages.js';
 
@@ -54,14 +52,14 @@ afterEach(() => {
 
 describe('backup and restore of the whole data directory', () => {
   it('restores every table and the image store exactly', async () => {
-    const imageStore = new ImageStore(
+    const imageStore = createImageStore(
       db,
       join(dir, 'images'),
       fakeFetch({ 'https://img.test/cover.png': png(20, 30) }).fetch,
     );
     const image = await imageStore.download('https://img.test/cover.png');
 
-    const series = new SeriesRepository(db).create({
+    const series = await new SqliteSeriesRepository(db).create({
       tmdbId: 1,
       tvdbId: 2,
       jellyfinId: null,
@@ -79,7 +77,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       review: null,
     });
-    new SeasonRepository(db).create({
+    await new SqliteSeasonRepository(db).create({
       seriesId: series.id,
       number: 1,
       tmdbSeasonNumber: 1,
@@ -94,14 +92,14 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       ...tracking,
     });
-    new SeasonOverrideRepository(db).set({
+    await new SqliteSeasonOverrideRepository(db).set({
       seriesId: series.id,
       tmdbSeasonNumber: 1,
       number: 2,
       title: 'Part 2',
       jellyfinSeasonId: 'jf-s2',
     });
-    new MovieRepository(db).create({
+    await new SqliteMovieRepository(db).create({
       tmdbId: 10,
       jellyfinId: null,
       title: 'Aftersun',
@@ -119,7 +117,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: ['drama'],
       ...tracking,
     });
-    new VideogameRepository(db).create({
+    await new SqliteVideogameRepository(db).create({
       igdbId: 1,
       steamAppId: '447150',
       steamGridDbId: null,
@@ -136,7 +134,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       ...tracking,
     });
-    new BookRepository(db).create({
+    await new SqliteBookRepository(db).create({
       openLibraryId: 'OL1M',
       isbn: null,
       title: 'Book',
@@ -152,7 +150,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       ...tracking,
     });
-    new UnlinkedTitleRepository(db).create({
+    await new SqliteUnlinkedTitleRepository(db).create({
       mediaType: 'series',
       title: 'Mystery',
       year: null,

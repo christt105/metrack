@@ -62,7 +62,7 @@ const post = (url: string, payload: object) => api.app.inject({ method: 'POST', 
 
 describe('search', () => {
   it('searches TMDB and flags titles that are already in the tracker', async () => {
-    api.movies.create({ ...emptyMovie(), tmdbId: 603, title: 'Matrix' });
+    await api.movies.create({ ...emptyMovie(), tmdbId: 603, title: 'Matrix' });
     const response = await get('/api/search?type=movie&q=matrix&year=1999');
     expect(response.statusCode).toBe(200);
     expect(response.json().results).toEqual([
@@ -159,7 +159,7 @@ describe('unlinked inbox', () => {
     });
 
   it('lists and dismisses unlinked titles', async () => {
-    const row = unlink('movie', 'Mystery');
+    const row = await unlink('movie', 'Mystery');
     expect((await get('/api/unlinked')).json()).toHaveLength(1);
     expect(
       (await api.app.inject({ method: 'DELETE', url: `/api/unlinked/${row.id}` })).statusCode,
@@ -170,46 +170,50 @@ describe('unlinked inbox', () => {
   });
 
   it('resolves a movie by TMDB id through the provider and removes it from the inbox', async () => {
-    const row = unlink('movie', 'Matrx');
+    const row = await unlink('movie', 'Matrx');
     const response = await post(`/api/unlinked/${row.id}/resolve`, {
       ids: { tmdbId: 603, jellyfinId: 'jf1' },
     });
     expect(response.statusCode).toBe(201);
     expect(response.json()).toMatchObject({ type: 'movie', id: 1 });
-    expect(api.movies.get(1)).toMatchObject({ title: 'Matrix', tmdbId: 603, jellyfinId: 'jf1' });
-    expect(api.unlinked.list()).toEqual([]);
+    expect(await api.movies.get(1)).toMatchObject({
+      title: 'Matrix',
+      tmdbId: 603,
+      jellyfinId: 'jf1',
+    });
+    expect(await api.unlinked.list()).toEqual([]);
   });
 
   it('resolves a game from its own title and the ids given', async () => {
-    const row = unlink('videogame', 'Hades');
+    const row = await unlink('videogame', 'Hades');
     const response = await post(`/api/unlinked/${row.id}/resolve`, {
       ids: { igdbId: 113112, steamAppId: '1145360' },
     });
     expect(response.json()).toMatchObject({ type: 'videogame', refresh: null });
-    expect(api.videogames.list()[0]).toMatchObject({
+    expect((await api.videogames.list())[0]).toMatchObject({
       title: 'Hades',
       igdbId: 113112,
       steamAppId: '1145360',
     });
-    expect(api.unlinked.list()).toEqual([]);
+    expect(await api.unlinked.list()).toEqual([]);
   });
 
   it('keeps the title in the inbox when resolving fails', async () => {
-    const row = unlink('videogame', 'Hades');
-    api.videogames.create({ ...emptyVideogame(), igdbId: 5, title: 'Taken' });
+    const row = await unlink('videogame', 'Hades');
+    await api.videogames.create({ ...emptyVideogame(), igdbId: 5, title: 'Taken' });
     expect((await post(`/api/unlinked/${row.id}/resolve`, { ids: { igdbId: 5 } })).statusCode).toBe(
       409,
     );
-    expect(api.unlinked.list()).toHaveLength(1);
+    expect(await api.unlinked.list()).toHaveLength(1);
   });
 
   it('rejects ids that do not apply, missing ids, seasons and unknown titles', async () => {
-    const movie = unlink('movie', 'x');
+    const movie = await unlink('movie', 'x');
     const none = await post(`/api/unlinked/${movie.id}/resolve`, { ids: {} });
     expect(none.json().code).toBe('ids_required');
     const wrong = await post(`/api/unlinked/${movie.id}/resolve`, { ids: { igdbId: 1 } });
     expect(wrong.json().code).toBe('invalid_ids');
-    const season = unlink('season', 's');
+    const season = await unlink('season', 's');
     expect(
       (await post(`/api/unlinked/${season.id}/resolve`, { ids: { tmdbId: 1 } })).json().code,
     ).toBe('cannot_resolve');

@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { ApplyResult } from './ApplyResult.js';
 import type { ImageSource } from './ImageSource.js';
@@ -22,8 +21,8 @@ export class ImageResolver {
   }
 
   private async resolveRemote(url: string, notePath: string): Promise<string | null> {
-    const known = this.store.findBySourceUrl(url);
-    if (known && existsSync(this.store.pathOf(known))) {
+    const known = await this.store.findBySourceUrl(url);
+    if (known && (await this.store.hasFile(known))) {
       this.stats.remoteLinked += 1;
       return known.ref;
     }

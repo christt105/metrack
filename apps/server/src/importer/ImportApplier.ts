@@ -1,5 +1,5 @@
-import type { DatabaseSync } from 'node:sqlite';
 import type { ImageStore } from '../images/ImageStore.js';
+import type { TransactionRunner } from '../storage/repositories/TransactionRunner.js';
 import type { LegacyImageIndex } from './LegacyImageIndex.js';
 import { ImageResolver } from './ImageResolver.js';
 import { mergeIntoExisting } from './mergeIntoExisting.js';
@@ -20,7 +20,7 @@ type Resolved = { cover: string | null; banner: string | null; review: string | 
  */
 export class ImportApplier {
   constructor(
-    private readonly db: DatabaseSync,
+    private readonly transactions: TransactionRunner,
     private readonly targets: ImportTargets,
     private readonly imageStore: ImageStore,
     private readonly now: () => Date = () => new Date(),
@@ -51,14 +51,7 @@ export class ImportApplier {
       });
     }
 
-    this.db.exec('BEGIN');
-    try {
-      this.write(plan, images, result);
-      this.db.exec('COMMIT');
-    } catch (error) {
-      this.db.exec('ROLLBACK');
-      throw error;
-    }
+    await this.transactions.run(() => this.write(plan, images, result));
     return result;
   }
 
@@ -75,11 +68,11 @@ export class ImportApplier {
     return review;
   }
 
-  private write(
+  private async write(
     plan: ImportPlan,
     images: Map<PlannedEntity<unknown>, Resolved>,
     result: ApplyResult,
-  ): void {
+  ): Promise<void> {
     const { movies, series, seasons, videogames, books, unlinked } = this.targets;
     const withImages = <T extends object>(slot: PlannedEntity<T>) => ({
       ...slot.entity,
@@ -88,8 +81,8 @@ export class ImportApplier {
 
     for (const slot of plan.movies) {
       const existing =
-        slot.entity.tmdbId === null ? undefined : movies.findByTmdbId(slot.entity.tmdbId);
-      upsert(
+        slot.entity.tmdbId === null ? undefined : await movies.findByTmdbId(slot.entity.tmdbId);
+      await upsert(
         result.movies,
         existing,
         withImages(slot),
@@ -101,11 +94,11 @@ export class ImportApplier {
       const { igdbId, steamAppId } = slot.entity;
       const existing =
         igdbId !== null
-          ? videogames.findByIgdbId(igdbId)
+          ? await videogames.findByIgdbId(igdbId)
           : steamAppId !== null
-            ? videogames.findBySteamAppId(steamAppId)
+            ? await videogames.findBySteamAppId(steamAppId)
             : undefined;
-      upsert(
+      await upsert(
         result.videogames,
         existing,
         withImages(slot),
@@ -117,11 +110,11 @@ export class ImportApplier {
       const { openLibraryId, isbn } = slot.entity;
       const existing =
         openLibraryId !== null
-          ? books.findByOpenLibraryId(openLibraryId)
+          ? await books.findByOpenLibraryId(openLibraryId)
           : isbn !== null
-            ? books.findByIsbn(isbn)
+            ? await books.findByIsbn(isbn)
             : undefined;
-      upsert(
+      await upsert(
         result.books,
         existing,
         {
@@ -137,19 +130,19 @@ export class ImportApplier {
     for (const slot of plan.series) {
       const { tmdbId, tvdbId } = slot.entity;
       const existing =
-        (tmdbId !== null ? series.findByTmdbId(tmdbId) : undefined) ??
-        (tvdbId !== null ? series.findByTvdbId(tvdbId) : undefined);
-      const stored = upsert(
+        (tmdbId !== null ? await series.findByTmdbId(tmdbId) : undefined) ??
+        (tvdbId !== null ? await series.findByTvdbId(tvdbId) : undefined);
+      const stored = await upsert(
         result.series,
         existing,
         withImages(slot),
         (e) => series.create(e),
         (id, p) => series.update(id, p),
       );
-      const known = seasons.listBySeries(stored.id);
+      const known = await seasons.listBySeries(stored.id);
       for (const seasonSlot of slot.seasons) {
         const current = known.find((season) => season.number === seasonSlot.entity.number);
-        upsert(
+        await upsert(
           result.seasons,
           current,
           { ...withImages(seasonSlot), seriesId: stored.id },
@@ -166,22 +159,22 @@ export class ImportApplier {
       ...plan.series.flatMap((slot) => [slot.path, ...slot.seasons.map((season) => season.path)]),
     ]);
     const unlinkedPaths = new Set(plan.unlinked.map((title) => title.path));
-    for (const row of unlinked.list()) {
+    for (const row of await unlinked.list()) {
       const stale =
         row.sourceRef !== null &&
         linkedPaths.has(row.sourceRef) &&
         !unlinkedPaths.has(row.sourceRef);
       if (row.source === IMPORT_SOURCE && stale) {
-        unlinked.delete(row.id);
+        await unlinked.delete(row.id);
         result.unlinkedResolved += 1;
       }
     }
     for (const title of plan.unlinked) {
-      if (unlinked.findBySourceRef(IMPORT_SOURCE, title.path)) {
+      if (await unlinked.findBySourceRef(IMPORT_SOURCE, title.path)) {
         result.unlinked.unchanged += 1;
         continue;
       }
-      unlinked.create({
+      await unlinked.create({
         mediaType: title.mediaType,
         title: title.title,
         year: title.year,
@@ -202,13 +195,13 @@ function nonNull(resolved: Resolved | undefined): Partial<Resolved> {
   };
 }
 
-function upsert<T extends { id: number }>(
+async function upsert<T extends { id: number }>(
   tally: Tally,
   existing: T | undefined,
   incoming: Omit<T, 'id'>,
-  create: (entity: Omit<T, 'id'>) => T,
-  update: (id: number, patch: Partial<Omit<T, 'id'>>) => T,
-): T {
+  create: (entity: Omit<T, 'id'>) => Promise<T>,
+  update: (id: number, patch: Partial<Omit<T, 'id'>>) => Promise<T>,
+): Promise<T> {
   if (!existing) {
     tally.created += 1;
     return create(incoming);
