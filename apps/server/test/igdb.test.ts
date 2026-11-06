@@ -2,12 +2,12 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import type { FetchFn } from '../src/http/FetchFn.js';
 import { IgdbClient } from '../src/providers/igdb/IgdbClient.js';
 import type { IgdbGame } from '../src/providers/igdb/IgdbGame.js';
 import { SteamGridDbClient } from '../src/providers/steamgriddb/SteamGridDbClient.js';
-import { VideogameRepository } from '../src/storage/repositories/index.js';
+import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { IgdbGameProvider } from '../src/titles/IgdbGameProvider.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
@@ -80,8 +80,8 @@ function igdbFetch(options: {
 
 function setup(fetchFn: FetchFn, withSteamGridDb = true) {
   const db = openTestDatabase();
-  const games = new VideogameRepository(db);
-  const images = new ImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-igdb-')), fetchFn);
+  const games = new SqliteVideogameRepository(db);
+  const images = createImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-igdb-')), fetchFn);
   const client = new IgdbClient(fetchFn, { clientId: 'cid', clientSecret: 'secret' });
   const steamGridDb = withSteamGridDb ? new SteamGridDbClient(fetchFn, 'sgdb') : null;
   return { games, provider: new IgdbGameProvider(client, games, images, steamGridDb) };
@@ -146,7 +146,7 @@ describe('IgdbGameProvider', () => {
     const t = setup(fetchFn);
     const ref = await t.provider.add('113112');
     expect(ref.type).toBe('videogame');
-    const game = t.games.get(ref.id);
+    const game = await t.games.get(ref.id);
     expect(game).toMatchObject({
       igdbId: 113112,
       steamAppId: '1145360',
@@ -172,7 +172,7 @@ describe('IgdbGameProvider', () => {
       },
     });
     const t = setup(fetchFn, false);
-    const game = t.games.get((await t.provider.add('113112')).id);
+    const game = await t.games.get((await t.provider.add('113112')).id);
     expect(game?.cover).not.toBeNull();
     expect(game?.banner).not.toBeNull();
     expect(game?.steamGridDbId).toBeNull();

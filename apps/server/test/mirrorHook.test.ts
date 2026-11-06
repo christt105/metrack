@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../src/api/buildApp.js';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import { loadMirrorConfig } from '../src/mirror/loadMirrorConfig.js';
 import { PublishQueue } from '../src/publish/PublishQueue.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
@@ -15,7 +15,10 @@ import { png } from './support/sampleImages.js';
 describe('vault mirror hook', () => {
   it('refreshes the mirror after a successful write but not after reads or failures', async () => {
     const db = openTestDatabase();
-    const store = new ImageStore(db, join(mkdtempSync(join(tmpdir(), 'metrack-mirrorhook-')), 'i'));
+    const store = createImageStore(
+      db,
+      join(mkdtempSync(join(tmpdir(), 'metrack-mirrorhook-')), 'i'),
+    );
     const scheduler = new FakeScheduler();
     const queue = new PublishQueue(
       async () => 'done',

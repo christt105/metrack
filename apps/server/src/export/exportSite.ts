@@ -1,6 +1,6 @@
 import { buildExport, fingerprintExport } from '@metrack/export';
 import { loadExportInput, type ExportSources } from './loadExportInput.js';
-import { storeImagePath } from './storeImagePath.js';
+import { storeImageReader } from './storeImageReader.js';
 import { writeExport } from './writeExport.js';
 
 export interface ExportResult {
@@ -9,8 +9,8 @@ export interface ExportResult {
 }
 
 /** Exports the stored data to `outDir` and returns what was written. */
-export function exportSite(sources: ExportSources, outDir: string): ExportResult {
-  const files = buildExport(loadExportInput(sources));
-  writeExport(files, outDir, storeImagePath(sources.images));
+export async function exportSite(sources: ExportSources, outDir: string): Promise<ExportResult> {
+  const files = buildExport(await loadExportInput(sources));
+  await writeExport(files, outDir, storeImageReader(sources.images));
   return { files: files.length, fingerprint: fingerprintExport(files) };
 }

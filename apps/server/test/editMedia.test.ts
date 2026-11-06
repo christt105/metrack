@@ -109,7 +109,7 @@ describe('creating and reading', () => {
     expect(
       (await api.app.inject({ method: 'DELETE', url: `/api/series/${series.id}` })).statusCode,
     ).toBe(204);
-    expect(api.seasons.list()).toEqual([]);
+    expect(await api.seasons.list()).toEqual([]);
     expect(
       (await api.app.inject({ method: 'DELETE', url: `/api/series/${series.id}` })).statusCode,
     ).toBe(404);
@@ -162,7 +162,7 @@ describe('editing', () => {
     const invalid = await patch(`/api/movies/${id}`, { status: 'paused' });
     expect(invalid.statusCode).toBe(409);
     expect(invalid.json().code).toBe('invalid_transition');
-    expect(api.movies.get(id)?.status).toBe('completed');
+    expect((await api.movies.get(id))?.status).toBe('completed');
   });
 
   it('lets dates sent with a status win over the automatic ones', async () => {
@@ -301,7 +301,7 @@ describe('edited fields', () => {
 
     const refreshed = await post(`/api/metadata/movie/${id}/refresh`, {});
     expect(refreshed.json()).toMatchObject({ outcome: 'updated' });
-    expect(api.movies.get(id)).toMatchObject({ title: 'My title', overview: 'Provider' });
+    expect(await api.movies.get(id)).toMatchObject({ title: 'My title', overview: 'Provider' });
   });
 
   it('refreshes through the API and reports missing entities and sources', async () => {

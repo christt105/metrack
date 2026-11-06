@@ -21,7 +21,7 @@ export class ArtworkService {
     id: number,
     kind: ImageKind,
   ): Promise<ImageCandidateList> {
-    const subject = this.subject(collection, id);
+    const subject = await this.subject(collection, id);
     this.assertKind(collection, kind);
     const result: ImageCandidateList = { candidates: [], failures: [] };
     for (const provider of this.providers) {
@@ -45,7 +45,7 @@ export class ArtworkService {
     kind: ImageKind,
     url: string,
   ): Promise<MediaDetail<MediaEntity>> {
-    const subject = this.subject(collection, id);
+    const subject = await this.subject(collection, id);
     this.assertKind(collection, kind);
     if (!this.providers.some((p) => p.supports(subject.type, kind) && p.owns(url))) {
       throw ApiError.badRequest(
@@ -72,12 +72,12 @@ export class ArtworkService {
     }
   }
 
-  private subject(collection: Collection, id: number): ImageSubject {
-    const entity = this.editor.require(collection, id);
+  private async subject(collection: Collection, id: number): Promise<ImageSubject> {
+    const entity = await this.editor.require(collection, id);
     const type = this.editor.kind(collection).type;
     if (type === 'season') {
       const season = entity as Extract<ImageSubject, { type: 'season' }>['entity'];
-      const series = this.series.get(season.seriesId);
+      const series = await this.series.get(season.seriesId);
       if (!series) throw ApiError.notFound();
       return { type, entity: season, series };
     }

@@ -88,28 +88,30 @@ export class OpenLibraryBookProvider implements TitleProvider {
 
   async search(query: string, year: number | null): Promise<SearchResult[]> {
     const found = await this.client.search(query, year);
-    return found.map((work) => {
-      const title = titleOf(work);
-      const authors = work.author_name ?? [];
-      return {
-        type: 'book',
-        provider: this.provider,
-        externalId: workId(work),
-        title,
-        originalTitle: textOf(work.title) !== title ? textOf(work.title) : null,
-        year: work.first_publish_year ?? null,
-        overview: authors.length > 0 ? authors.join(', ') : null,
-        posterUrl: openLibraryCoverUrl(editionOf(work)?.cover_i ?? work.cover_i, 'M'),
-        existingId: this.books.findByOpenLibraryId(workId(work))?.id ?? null,
-      };
-    });
+    return Promise.all(
+      found.map(async (work) => {
+        const title = titleOf(work);
+        const authors = work.author_name ?? [];
+        return {
+          type: 'book',
+          provider: this.provider,
+          externalId: workId(work),
+          title,
+          originalTitle: textOf(work.title) !== title ? textOf(work.title) : null,
+          year: work.first_publish_year ?? null,
+          overview: authors.length > 0 ? authors.join(', ') : null,
+          posterUrl: openLibraryCoverUrl(editionOf(work)?.cover_i ?? work.cover_i, 'M'),
+          existingId: (await this.books.findByOpenLibraryId(workId(work)))?.id ?? null,
+        };
+      }),
+    );
   }
 
   async add(externalId: string): Promise<EntityRef> {
     if (!WORK_ID.test(externalId)) {
       throw ApiError.badRequest('invalid_external_id', `Not a valid id: ${externalId}`);
     }
-    const existing = this.books.findByOpenLibraryId(externalId);
+    const existing = await this.books.findByOpenLibraryId(externalId);
     if (existing) {
       throw ApiError.conflict('already_added', 'That book is already in the tracker', {
         existingId: existing.id,
@@ -124,7 +126,7 @@ export class OpenLibraryBookProvider implements TitleProvider {
       (await this.download(openLibraryCoverUrl(edition?.cover_i, 'L'))) ??
       (await this.download(openLibraryCoverUrl(work.cover_i, 'L')));
 
-    const created = this.books.create({
+    const created = await this.books.create({
       ...emptyBook(),
       openLibraryId: externalId,
       isbn: isbnOf(edition),

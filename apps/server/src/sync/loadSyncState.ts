@@ -2,13 +2,15 @@ import type { SyncState } from '@metrack/domain';
 import type { SyncTargets } from './SyncTargets.js';
 
 /** Reads everything the sync compares against. */
-export function loadSyncState(targets: SyncTargets): SyncState {
-  const series = targets.series.list();
+export async function loadSyncState(targets: SyncTargets): Promise<SyncState> {
+  const series = await targets.series.list();
+  const overrides = [];
+  for (const s of series) overrides.push(...(await targets.overrides.listBySeries(s.id)));
   return {
-    movies: targets.movies.list(),
+    movies: await targets.movies.list(),
     series,
-    seasons: targets.seasons.list(),
-    overrides: series.flatMap((s) => targets.overrides.listBySeries(s.id)),
-    unlinked: targets.unlinked.list(),
+    seasons: await targets.seasons.list(),
+    overrides,
+    unlinked: await targets.unlinked.list(),
   };
 }

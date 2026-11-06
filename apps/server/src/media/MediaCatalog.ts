@@ -35,22 +35,22 @@ function compare(
 export class MediaCatalog {
   constructor(
     private readonly kinds: Record<Collection, MediaKind>,
-    private readonly seasonsOf: (seriesId: number) => Season[],
+    private readonly seasonsOf: (seriesId: number) => Promise<Season[]>,
   ) {}
 
-  list(query: MediaQuery): MediaPage {
+  async list(query: MediaQuery): Promise<MediaPage> {
     const needle = query.q ? normalizeText(query.q.trim()) : '';
     const matches: MediaSummary[] = [];
     const activity = new Map<MediaSummary, Activity>();
     for (const collection of COLLECTIONS) {
       const kind = this.kinds[collection];
       if (query.type && query.type !== kind.type) continue;
-      for (const entity of kind.repository.list()) {
-        const summary = kind.summarize(entity);
-        if (query.status && !this.hasStatus(summary, query.status)) continue;
+      for (const entity of await kind.repository.list()) {
+        const summary = await kind.summarize(entity);
+        if (query.status && !(await this.hasStatus(summary, query.status))) continue;
         if (needle && !this.matchesText(summary, entity, needle)) continue;
         matches.push(summary);
-        if (query.sort === 'recent') activity.set(summary, this.activityOf(summary, entity));
+        if (query.sort === 'recent') activity.set(summary, await this.activityOf(summary, entity));
       }
     }
 
@@ -89,14 +89,14 @@ export class MediaCatalog {
     };
   }
 
-  private activityOf(summary: MediaSummary, entity: { id: number }): Activity {
-    if (summary.type === 'series') return activityOf(this.seasonsOf(summary.id));
+  private async activityOf(summary: MediaSummary, entity: { id: number }): Promise<Activity> {
+    if (summary.type === 'series') return activityOf(await this.seasonsOf(summary.id));
     return activityOf([fieldsOf(entity) as Partial<Tracking>]);
   }
 
-  private hasStatus(summary: MediaSummary, status: string): boolean {
+  private async hasStatus(summary: MediaSummary, status: string): Promise<boolean> {
     if (summary.type === 'series') {
-      return this.seasonsOf(summary.id).some((season) => season.status === status);
+      return (await this.seasonsOf(summary.id)).some((season) => season.status === status);
     }
     return summary.status === status;
   }

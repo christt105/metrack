@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { MediaType } from '@metrack/domain';
-import type { MetadataState } from './MetadataState.js';
+import type { MetadataState } from '../../metadata/MetadataState.js';
+import type { MetadataStateRepository } from '../repositories/MetadataStateRepository.js';
 
 const TABLES: Record<MediaType, string> = {
   movie: 'movie',
@@ -10,11 +11,10 @@ const TABLES: Record<MediaType, string> = {
   book: 'book',
 };
 
-/** Reads and writes the cache bookkeeping columns (`fetched_at`, `metadata_hash`, `edited_fields`). */
-export class MetadataStateRepository {
+export class SqliteMetadataStateRepository implements MetadataStateRepository {
   constructor(private readonly db: DatabaseSync) {}
 
-  get(type: MediaType, id: number): MetadataState {
+  async get(type: MediaType, id: number): Promise<MetadataState> {
     const row = this.db
       .prepare(`SELECT fetched_at, metadata_hash, edited_fields FROM ${TABLES[type]} WHERE id = ?`)
       .get(id);
@@ -26,8 +26,12 @@ export class MetadataStateRepository {
     };
   }
 
-  /** Records a refresh. Pass `metadataHash` only when the content changed. */
-  markFetched(type: MediaType, id: number, fetchedAt: string, metadataHash?: string): void {
+  async markFetched(
+    type: MediaType,
+    id: number,
+    fetchedAt: string,
+    metadataHash?: string,
+  ): Promise<void> {
     if (metadataHash === undefined) {
       this.db.prepare(`UPDATE ${TABLES[type]} SET fetched_at = ? WHERE id = ?`).run(fetchedAt, id);
       return;
@@ -37,15 +41,14 @@ export class MetadataStateRepository {
       .run(fetchedAt, metadataHash, id);
   }
 
-  /** Protects a field from being overwritten by provider data. */
-  markEdited(type: MediaType, id: number, field: string): void {
-    const { editedFields } = this.get(type, id);
+  async markEdited(type: MediaType, id: number, field: string): Promise<void> {
+    const { editedFields } = await this.get(type, id);
     if (editedFields.includes(field)) return;
     this.setEdited(type, id, [...editedFields, field]);
   }
 
-  unmarkEdited(type: MediaType, id: number, field: string): void {
-    const { editedFields } = this.get(type, id);
+  async unmarkEdited(type: MediaType, id: number, field: string): Promise<void> {
+    const { editedFields } = await this.get(type, id);
     this.setEdited(
       type,
       id,

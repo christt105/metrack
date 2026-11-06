@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Config } from '../config/Config.js';
 import { createNotifier } from '../notify/createNotifier.js';
-import { openDatabase } from '../storage/openDatabase.js';
+import { openDatabase } from '../storage/sqlite/openDatabase.js';
 import { BackupJob } from './BackupJob.js';
 import { createBackupService } from './createBackupService.js';
 

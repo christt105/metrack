@@ -24,6 +24,14 @@ function inside(mirrorDir: string, path: string): string {
   return target;
 }
 
+function* remoteUrls(notes: Iterable<ExistingNote>): Generator<string> {
+  for (const note of notes) {
+    for (const value of Object.values(note.frontmatter)) {
+      if (typeof value === 'string' && /^https?:\/\//.test(value)) yield value;
+    }
+  }
+}
+
 interface OnDisk {
   raw: Map<string, string>;
   parsed: Map<string, ExistingNote>;
@@ -58,15 +66,21 @@ function readNotes(mirrorDir: string): OnDisk {
  * are written; notes it wrote before and that no longer match an item are removed; any other note
  * in the folders is left alone.
  */
-export function syncVaultMirror(
+export async function syncVaultMirror(
   sources: ExportSources,
   options: VaultMirrorOptions,
-): VaultMirrorResult {
+): Promise<VaultMirrorResult> {
   const mirrorDir = resolve(options.mirrorDir);
   const onDisk = readNotes(mirrorDir);
   const index = new VaultImageIndex(mirrorDir, options.linkPrefix, Object.values(IMAGE_FOLDERS));
-  const images = new MirrorImageResolver(sources.images, index, options.linkPrefix, IMAGE_FOLDERS);
-  const notes = buildVaultMirror(loadExportInput(sources), {
+  const images = await MirrorImageResolver.load(
+    sources.images,
+    remoteUrls(onDisk.parsed.values()),
+    index,
+    options.linkPrefix,
+    IMAGE_FOLDERS,
+  );
+  const notes = buildVaultMirror(await loadExportInput(sources), {
     existing: onDisk.parsed,
     images,
     webUrl: options.webUrl,
@@ -84,11 +98,11 @@ export function syncVaultMirror(
   const unreadable = new Set(onDisk.skipped.map((entry) => entry.path));
 
   for (const copy of images.pendingCopies()) {
-    const image = sources.images.get(copy.hash);
+    const image = await sources.images.get(copy.hash);
     const target = inside(mirrorDir, copy.path);
     if (image === undefined || existsSync(target)) continue;
     result.copiedImages.push(copy.path);
-    if (options.apply) writeFileAtomic(target, sources.images.read(image));
+    if (options.apply) writeFileAtomic(target, await sources.images.read(image));
   }
 
   const produced = new Set<string>();

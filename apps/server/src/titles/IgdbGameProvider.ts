@@ -47,25 +47,27 @@ export class IgdbGameProvider implements TitleProvider {
 
   async search(query: string, year: number | null): Promise<SearchResult[]> {
     const found = await this.client.search(query, year);
-    return found.map((game) => {
-      const date = dateOf(game);
-      return {
-        type: 'videogame',
-        provider: this.provider,
-        externalId: String(game.id),
-        title: game.name ?? '',
-        originalTitle: null,
-        year: date ? Number(date.slice(0, 4)) : null,
-        overview: textOf(game.summary),
-        posterUrl: igdbImageUrl(game.cover?.url, 'cover_small'),
-        existingId: this.games.findByIgdbId(game.id)?.id ?? null,
-      };
-    });
+    return Promise.all(
+      found.map(async (game) => {
+        const date = dateOf(game);
+        return {
+          type: 'videogame',
+          provider: this.provider,
+          externalId: String(game.id),
+          title: game.name ?? '',
+          originalTitle: null,
+          year: date ? Number(date.slice(0, 4)) : null,
+          overview: textOf(game.summary),
+          posterUrl: igdbImageUrl(game.cover?.url, 'cover_small'),
+          existingId: (await this.games.findByIgdbId(game.id))?.id ?? null,
+        };
+      }),
+    );
   }
 
   async add(externalId: string): Promise<EntityRef> {
     const igdbId = parseNumericId(externalId);
-    const existing = this.games.findByIgdbId(igdbId);
+    const existing = await this.games.findByIgdbId(igdbId);
     if (existing) {
       throw ApiError.conflict('already_added', 'That game is already in the tracker', {
         existingId: existing.id,
@@ -85,7 +87,7 @@ export class IgdbGameProvider implements TitleProvider {
       (await this.download(steam?.banner)) ??
       (await this.download(igdbImageUrl(game.screenshots?.[0]?.url, 'screenshot_huge')));
 
-    const created = this.games.create({
+    const created = await this.games.create({
       ...emptyVideogame(),
       igdbId,
       steamAppId,

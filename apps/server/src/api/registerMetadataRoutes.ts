@@ -29,7 +29,7 @@ export function registerMetadataRoutes(
         );
       }
       const collection = COLLECTIONS.find((c) => MEDIA_TYPE_OF_COLLECTION[c] === type);
-      if (editor && collection) editor.require(collection, id);
+      if (editor && collection) await editor.require(collection, id);
       try {
         return await cache.refresh(type, id, true);
       } catch {

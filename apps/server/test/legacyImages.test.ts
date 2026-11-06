@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { formatReport } from '../src/importer/formatReport.js';
 import { buildImportPlan } from '../src/importer/buildImportPlan.js';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import type { ApplyResult } from '../src/importer/ApplyResult.js';
 import { ImageResolver } from '../src/importer/ImageResolver.js';
 import { ImportApplier } from '../src/importer/ImportApplier.js';
@@ -13,18 +13,17 @@ import { legacyImageName } from '@metrack/export';
 import { LegacyImageIndex } from '../src/importer/LegacyImageIndex.js';
 import { readVaultNotes } from '../src/importer/readVaultNotes.js';
 import { runImport } from '../src/importer/runImport.js';
-import {
-  BookRepository,
-  MovieRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from '../src/storage/repositories/index.js';
+import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
+import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
 import { syntheticVault, REMOTE_COVER, UNKNOWN_REMOTE_COVER } from './support/syntheticVault.js';
 import { writeVault } from './support/writeVault.js';
+import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
 
 const created: string[] = [];
 afterEach(() => {
@@ -115,7 +114,7 @@ describe('ImageResolver', () => {
     ]);
     const dir = mkdtempSync(join(tmpdir(), 'metrack-images-'));
     created.push(dir);
-    const store = new ImageStore(openTestDatabase(), dir);
+    const store = createImageStore(openTestDatabase(), dir);
     const resolveBoth = async (stats: ApplyResult['images']): Promise<(string | null)[]> => {
       const resolver = new ImageResolver(store, stats, [], legacy);
       return [
@@ -128,8 +127,8 @@ describe('ImageResolver', () => {
     const refs = await resolveBoth(firstRun);
     expect(firstRun).toMatchObject({ remoteImported: 2, remoteLinked: 0 });
     expect(refs[1]).toBe(refs[0]);
-    expect(store.list()).toHaveLength(1);
-    expect(store.findBySourceUrl(second)?.ref).toBe(refs[0]);
+    expect(await store.list()).toHaveLength(1);
+    expect((await store.findBySourceUrl(second))?.ref).toBe(refs[0]);
 
     const secondRun = emptyStats();
     expect(await resolveBoth(secondRun)).toEqual(refs);
@@ -139,11 +138,11 @@ describe('ImageResolver', () => {
   it('forgets the extra URLs when the image is deleted', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'metrack-images-'));
     created.push(dir);
-    const store = new ImageStore(openTestDatabase(), dir);
+    const store = createImageStore(openTestDatabase(), dir);
     const image = await store.add(png(3, 3), 'https://img.test/a.png');
     await store.add(png(3, 3), 'https://img.test/b.png');
     await store.delete(image.hash);
-    expect(store.findBySourceUrl('https://img.test/b.png')).toBeUndefined();
+    expect(await store.findBySourceUrl('https://img.test/b.png')).toBeUndefined();
   });
 });
 
@@ -194,21 +193,21 @@ describe('importing images from legacy directories', () => {
     const db = openTestDatabase();
     const dir = mkdtempSync(join(tmpdir(), 'metrack-images-'));
     created.push(dir);
-    const store = new ImageStore(db, dir);
+    const store = createImageStore(db, dir);
     const targets = {
-      movies: new MovieRepository(db),
-      series: new SeriesRepository(db),
-      seasons: new SeasonRepository(db),
-      videogames: new VideogameRepository(db),
-      books: new BookRepository(db),
-      unlinked: new UnlinkedTitleRepository(db),
+      movies: new SqliteMovieRepository(db),
+      series: new SqliteSeriesRepository(db),
+      seasons: new SqliteSeasonRepository(db),
+      videogames: new SqliteVideogameRepository(db),
+      books: new SqliteBookRepository(db),
+      unlinked: new SqliteUnlinkedTitleRepository(db),
     };
     const vault = writeVault(syntheticVault());
     created.push(vault);
     const issues = new IssueLog();
     const plan = buildImportPlan(readVaultNotes(vault, issues), vault, issues);
     const applier = new ImportApplier(
-      db,
+      new SqliteTransactionRunner(db),
       targets,
       store,
       undefined,
@@ -216,9 +215,9 @@ describe('importing images from legacy directories', () => {
     );
     const result = await applier.apply(plan);
     expect(result.images.remoteImported).toBe(1);
-    const stored = store.findBySourceUrl(REMOTE_COVER);
+    const stored = await store.findBySourceUrl(REMOTE_COVER);
     expect(stored).toBeDefined();
-    expect(targets.movies.findByTmdbId(100)?.cover).toBe(stored?.ref);
+    expect((await targets.movies.findByTmdbId(100))?.cover).toBe(stored?.ref);
   });
 
   it('rejects an images directory that does not exist', async () => {

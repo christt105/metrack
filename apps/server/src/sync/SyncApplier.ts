@@ -1,6 +1,6 @@
-import type { DatabaseSync } from 'node:sqlite';
 import type { EntityRef, SeasonChange, SyncApplyResult, SyncPlan } from '@metrack/domain';
 import { emptyMovie, emptySeason, emptySeries } from '../media/emptyEntities.js';
+import type { TransactionRunner } from '../storage/repositories/TransactionRunner.js';
 import type { SyncApplyOutcome } from './SyncApplyOutcome.js';
 import type { SyncTargets } from './SyncTargets.js';
 
@@ -13,12 +13,12 @@ export const SYNC_SOURCE = 'jellyfin';
  */
 export class SyncApplier {
   constructor(
-    private readonly db: DatabaseSync,
+    private readonly transactions: TransactionRunner,
     private readonly targets: SyncTargets,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  apply(plan: SyncPlan): SyncApplyOutcome {
+  async apply(plan: SyncPlan): Promise<SyncApplyOutcome> {
     const result: SyncApplyResult = {
       moviesCreated: 0,
       moviesUpdated: 0,
@@ -29,18 +29,15 @@ export class SyncApplier {
       unlinkedAdded: 0,
     };
     const created: EntityRef[] = [];
-    this.db.exec('BEGIN');
-    try {
-      this.write(plan, result, created);
-      this.db.exec('COMMIT');
-    } catch (error) {
-      this.db.exec('ROLLBACK');
-      throw error;
-    }
+    await this.transactions.run(() => this.write(plan, result, created));
     return { result, created };
   }
 
-  private write(plan: SyncPlan, result: SyncApplyResult, created: EntityRef[]): void {
+  private async write(
+    plan: SyncPlan,
+    result: SyncApplyResult,
+    created: EntityRef[],
+  ): Promise<void> {
     const { movies, series, seasons, unlinked } = this.targets;
     for (const change of plan.movies) {
       const tracking = {
@@ -51,7 +48,7 @@ export class SyncApplier {
         pendingReview: true,
       };
       if (change.movieId === null) {
-        const movie = movies.create({
+        const movie = await movies.create({
           ...emptyMovie(),
           ...tracking,
           tmdbId: change.tmdbId,
@@ -61,7 +58,7 @@ export class SyncApplier {
         created.push({ type: 'movie', id: movie.id });
         result.moviesCreated += 1;
       } else {
-        movies.update(change.movieId, { ...tracking, jellyfinId: change.jellyfinId });
+        await movies.update(change.movieId, { ...tracking, jellyfinId: change.jellyfinId });
         result.moviesUpdated += 1;
       }
     }
@@ -69,16 +66,16 @@ export class SyncApplier {
       const ids = { tmdbId: change.tmdbId, tvdbId: change.tvdbId, jellyfinId: change.jellyfinId };
       let seriesId = change.seriesId;
       if (seriesId === null) {
-        seriesId = series.create({ ...emptySeries(), ...ids, title: change.title }).id;
+        seriesId = (await series.create({ ...emptySeries(), ...ids, title: change.title })).id;
         created.push({ type: 'series', id: seriesId });
         result.seriesCreated += 1;
       } else {
-        series.update(seriesId, ids);
+        await series.update(seriesId, ids);
         result.seriesUpdated += 1;
       }
       for (const season of change.seasons) {
         if (season.seasonId === null) {
-          seasons.create({
+          await seasons.create({
             ...emptySeason(),
             ...seasonFields(season),
             seriesId,
@@ -86,7 +83,7 @@ export class SyncApplier {
           });
           result.seasonsCreated += 1;
         } else {
-          seasons.update(season.seasonId, {
+          await seasons.update(season.seasonId, {
             ...seasonFields(season),
             ...(season.completes ? { pendingReview: true } : {}),
           });
@@ -95,7 +92,7 @@ export class SyncApplier {
       }
     }
     for (const change of plan.unlinked) {
-      unlinked.create({
+      await unlinked.create({
         mediaType: change.mediaType,
         title: change.title,
         year: change.year,

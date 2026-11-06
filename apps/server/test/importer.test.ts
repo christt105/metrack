@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
+import type { ImageStore } from '../src/images/ImageStore.js';
 import { buildImportPlan } from '../src/importer/buildImportPlan.js';
 import { formatReport } from '../src/importer/formatReport.js';
 import { ImportApplier } from '../src/importer/ImportApplier.js';
@@ -15,18 +16,17 @@ import { parseStatus } from '../src/importer/parseStatus.js';
 import { readVaultNotes } from '../src/importer/readVaultNotes.js';
 import { runImport } from '../src/importer/runImport.js';
 import type { ImportPlan } from '../src/importer/ImportPlan.js';
-import {
-  BookRepository,
-  MovieRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from '../src/storage/repositories/index.js';
+import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
+import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { png } from './support/sampleImages.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { REMOTE_COVER, syntheticVault } from './support/syntheticVault.js';
 import { writeVault } from './support/writeVault.js';
+import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
 
 const created: string[] = [];
 const tempDir = (): string => {
@@ -104,7 +104,7 @@ describe('buildImportPlan', () => {
     });
   });
 
-  it('turns a series without season notes into a series with one season', () => {
+  it('turns a series without season notes into a series with one season', async () => {
     const delta = plan.series.find((s) => s.entity.title === 'Delta')!;
     expect(delta.implicitSeason).toBe(true);
     expect(delta.seasons).toHaveLength(1);
@@ -117,7 +117,7 @@ describe('buildImportPlan', () => {
     expect(delta.entity.tvdbId).toBe(900);
   });
 
-  it('keeps explicit seasons ordered and resolves aliased and path wikilinks', () => {
+  it('keeps explicit seasons ordered and resolves aliased and path wikilinks', async () => {
     const zeta = plan.series.find((s) => s.entity.title === 'Zeta')!;
     expect(zeta.implicitSeason).toBe(false);
     expect(zeta.seasons.map((s) => [s.entity.number, s.entity.status])).toEqual([
@@ -148,7 +148,7 @@ describe('buildImportPlan', () => {
     expect(codes('completed-without-date')).toContain('Movies/Beta (2021).md');
   });
 
-  it('sends titles without an id to the unlinked inbox, including their seasons', () => {
+  it('sends titles without an id to the unlinked inbox, including their seasons', async () => {
     expect(plan.unlinked.map((t) => [t.mediaType, t.title]).sort()).toEqual(
       [
         ['movie', 'Alpha Again'],
@@ -186,16 +186,21 @@ describe('ImportApplier', () => {
   beforeEach(() => {
     db = openTestDatabase();
     storeDir = tempDir();
-    store = new ImageStore(db, storeDir);
+    store = createImageStore(db, storeDir);
     repos = {
-      movies: new MovieRepository(db),
-      series: new SeriesRepository(db),
-      seasons: new SeasonRepository(db),
-      videogames: new VideogameRepository(db),
-      books: new BookRepository(db),
-      unlinked: new UnlinkedTitleRepository(db),
+      movies: new SqliteMovieRepository(db),
+      series: new SqliteSeriesRepository(db),
+      seasons: new SqliteSeasonRepository(db),
+      videogames: new SqliteVideogameRepository(db),
+      books: new SqliteBookRepository(db),
+      unlinked: new SqliteUnlinkedTitleRepository(db),
     };
-    applier = new ImportApplier(db, repos, store, () => new Date('2026-10-24T10:00:00Z'));
+    applier = new ImportApplier(
+      new SqliteTransactionRunner(db),
+      repos,
+      store,
+      () => new Date('2026-10-24T10:00:00Z'),
+    );
   });
 
   it('writes every kind and is idempotent', async () => {
@@ -208,17 +213,17 @@ describe('ImportApplier', () => {
     expect(first.books.created).toBe(1);
     expect(first.unlinked.created).toBe(9);
 
-    const counts = (): number[] => [
-      repos.movies.list().length,
-      repos.series.list().length,
-      repos.seasons.list().length,
-      repos.videogames.list().length,
-      repos.books.list().length,
-      repos.unlinked.list().length,
+    const counts = async (): Promise<number[]> => [
+      (await repos.movies.list()).length,
+      (await repos.series.list()).length,
+      (await repos.seasons.list()).length,
+      (await repos.videogames.list()).length,
+      (await repos.books.list()).length,
+      (await repos.unlinked.list()).length,
     ];
-    const before = counts();
+    const before = await counts();
     const again = await applier.apply(plan);
-    expect(counts()).toEqual(before);
+    expect(await counts()).toEqual(before);
     for (const tally of [
       again.movies,
       again.series,
@@ -230,12 +235,12 @@ describe('ImportApplier', () => {
       expect(tally.created).toBe(0);
       expect(tally.updated).toBe(0);
     }
-    expect(repos.movies.findByTmdbId(100)).toMatchObject({
+    expect(await repos.movies.findByTmdbId(100)).toMatchObject({
       finishedAt: '2024-03-05',
       status: 'completed',
     });
-    expect(repos.videogames.findBySteamAppId('730')?.status).toBe('paused');
-    expect(repos.books.findByOpenLibraryId('OL1W')).toMatchObject({
+    expect((await repos.videogames.findBySteamAppId('730'))?.status).toBe('paused');
+    expect(await repos.books.findByOpenLibraryId('OL1W')).toMatchObject({
       authors: ['Someone'],
       pageCount: 320,
     });
@@ -244,28 +249,28 @@ describe('ImportApplier', () => {
   it('imports local covers through the image store and skips remote ones without a copy', async () => {
     const plan = planFor(writeVault(syntheticVault()));
     const result = await applier.apply(plan);
-    const beta = repos.movies.findByTmdbId(101)!;
+    const beta = (await repos.movies.findByTmdbId(101))!;
     expect(beta.cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
-    expect(store.list()).toHaveLength(1);
+    expect(await store.list()).toHaveLength(1);
     expect(result.images.localStored).toBe(1);
     expect(result.images.remoteUnavailable).toBe(2);
-    expect(repos.movies.findByTmdbId(100)).toMatchObject({ cover: null, banner: null });
+    expect(await repos.movies.findByTmdbId(100)).toMatchObject({ cover: null, banner: null });
   });
 
   it('links a remote URL only when a local copy already exists', async () => {
     const stored = await store.add(png(5, 7), REMOTE_COVER);
     const result = await applier.apply(planFor(writeVault(syntheticVault())));
-    expect(repos.movies.findByTmdbId(100)?.cover).toBe(stored.ref);
+    expect((await repos.movies.findByTmdbId(100))?.cover).toBe(stored.ref);
     expect(result.images.remoteLinked).toBe(1);
   });
 
   it('keeps data added after the first import when a note leaves fields empty', async () => {
     const plan = planFor(writeVault(syntheticVault()));
     await applier.apply(plan);
-    const alpha = repos.movies.findByTmdbId(100)!;
-    repos.movies.update(alpha.id, { overview: 'Fetched later', startedAt: '2024-03-01' });
+    const alpha = (await repos.movies.findByTmdbId(100))!;
+    await repos.movies.update(alpha.id, { overview: 'Fetched later', startedAt: '2024-03-01' });
     await applier.apply(plan);
-    expect(repos.movies.get(alpha.id)).toMatchObject({
+    expect(await repos.movies.get(alpha.id)).toMatchObject({
       overview: 'Fetched later',
       startedAt: '2024-03-01',
     });
@@ -278,7 +283,7 @@ describe('ImportApplier', () => {
       '---\ntitle: Alpha\ntype: movie\nstatus: Pausado\ntmdb_id: 100\nrating:\n---\n';
     const result = await applier.apply(planFor(writeVault(files)));
     expect(result.movies.updated).toBe(1);
-    expect(repos.movies.findByTmdbId(100)).toMatchObject({
+    expect(await repos.movies.findByTmdbId(100)).toMatchObject({
       status: 'paused',
       rating: null,
       finishedAt: null,
@@ -289,21 +294,35 @@ describe('ImportApplier', () => {
 
   it('drops an unlinked row once its note gets an id', async () => {
     await applier.apply(planFor(writeVault(syntheticVault())));
-    expect(repos.unlinked.findBySourceRef('obsidian-import', 'Juegos/Nothing.md')).toBeDefined();
+    expect(
+      await repos.unlinked.findBySourceRef('obsidian-import', 'Juegos/Nothing.md'),
+    ).toBeDefined();
     const files = syntheticVault();
     files['Juegos/Nothing.md'] = '---\ntitle: Nothing\ntype: videogame\nigdb_id: 999\n---\n';
     const result = await applier.apply(planFor(writeVault(files)));
     expect(result.unlinkedResolved).toBe(1);
-    expect(repos.unlinked.findBySourceRef('obsidian-import', 'Juegos/Nothing.md')).toBeUndefined();
-    expect(repos.videogames.findByIgdbId(999)?.title).toBe('Nothing');
+    expect(
+      await repos.unlinked.findBySourceRef('obsidian-import', 'Juegos/Nothing.md'),
+    ).toBeUndefined();
+    expect((await repos.videogames.findByIgdbId(999))?.title).toBe('Nothing');
   });
 
   it('rolls back every row when a write fails', async () => {
     const plan = planFor(writeVault(syntheticVault()));
-    repos.series.create({ ...plan.series[0]!.entity, tmdbId: null, tvdbId: 900, title: 'Taken' });
-    repos.series.create({ ...plan.series[0]!.entity, tmdbId: 200, tvdbId: null, title: 'Other' });
+    await repos.series.create({
+      ...plan.series[0]!.entity,
+      tmdbId: null,
+      tvdbId: 900,
+      title: 'Taken',
+    });
+    await repos.series.create({
+      ...plan.series[0]!.entity,
+      tmdbId: 200,
+      tvdbId: null,
+      title: 'Other',
+    });
     await expect(applier.apply(plan)).rejects.toThrow();
-    expect(repos.movies.list()).toHaveLength(0);
+    expect(await repos.movies.list()).toHaveLength(0);
   });
 });
 

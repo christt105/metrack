@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../src/api/buildApp.js';
-import { ImageStore } from '../src/images/ImageStore.js';
+import { createImageStore } from '../src/images/createImageStore.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
@@ -11,7 +11,10 @@ import { png } from './support/sampleImages.js';
 
 async function setup() {
   const db = openTestDatabase();
-  const store = new ImageStore(db, join(mkdtempSync(join(tmpdir(), 'metrack-routes-')), 'images'));
+  const store = createImageStore(
+    db,
+    join(mkdtempSync(join(tmpdir(), 'metrack-routes-')), 'images'),
+  );
   const app = await buildApp({
     appVersion: 'test',
     migrationRunner: new MigrationRunner(db, migrations),
@@ -46,7 +49,7 @@ describe('image routes', () => {
     const a = await store.add(png(1, 1, 1), null);
     const b = await store.add(png(1, 1, 2), null);
     expect((await app.inject({ method: 'DELETE', url: a.ref })).statusCode).toBe(204);
-    expect(store.get(a.hash)).toBeUndefined();
+    expect(await store.get(a.hash)).toBeUndefined();
     const cleanup = await app.inject({ method: 'POST', url: '/api/images/cleanup' });
     expect(cleanup.json()).toEqual({ removed: [b.hash] });
   });

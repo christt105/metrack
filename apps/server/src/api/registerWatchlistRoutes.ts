@@ -31,7 +31,7 @@ export function registerWatchlistRoutes(
     '/api/watchlist/:collection/:id',
     { schema: { params } },
     async (request, reply) => {
-      watchlist.setFollowed(request.params.collection, request.params.id, true);
+      await watchlist.setFollowed(request.params.collection, request.params.id, true);
       return reply.code(204).send();
     },
   );
@@ -40,7 +40,7 @@ export function registerWatchlistRoutes(
     '/api/watchlist/:collection/:id',
     { schema: { params } },
     async (request, reply) => {
-      watchlist.setFollowed(request.params.collection, request.params.id, false);
+      await watchlist.setFollowed(request.params.collection, request.params.id, false);
       return reply.code(204).send();
     },
   );
@@ -48,6 +48,6 @@ export function registerWatchlistRoutes(
   app.get<{ Querystring: { limit: number } }>(
     '/api/alerts',
     { schema: { querystring: alertsQuery } },
-    async (request) => alerts.list(request.query.limit),
+    async (request) => await alerts.list(request.query.limit),
   );
 }

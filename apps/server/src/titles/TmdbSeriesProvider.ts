@@ -25,37 +25,39 @@ export class TmdbSeriesProvider implements TitleProvider {
 
   async search(query: string, year: number | null): Promise<SearchResult[]> {
     const response = await this.client.search('tv', query, year);
-    return (response.results ?? []).map((r) => ({
-      type: 'series',
-      provider: this.provider,
-      externalId: String(r.id),
-      title: r.name ?? '',
-      originalTitle: emptyToNull(r.original_name),
-      year: yearFrom(r.first_air_date),
-      overview: clean(r.overview),
-      posterUrl: r.poster_path ? `${TMDB_POSTER_PREVIEW}${r.poster_path}` : null,
-      existingId: this.series.findByTmdbId(r.id)?.id ?? null,
-    }));
+    return Promise.all(
+      (response.results ?? []).map(async (r) => ({
+        type: 'series',
+        provider: this.provider,
+        externalId: String(r.id),
+        title: r.name ?? '',
+        originalTitle: emptyToNull(r.original_name),
+        year: yearFrom(r.first_air_date),
+        overview: clean(r.overview),
+        posterUrl: r.poster_path ? `${TMDB_POSTER_PREVIEW}${r.poster_path}` : null,
+        existingId: (await this.series.findByTmdbId(r.id))?.id ?? null,
+      })),
+    );
   }
 
   /** Creates the series and one planned season per TMDB season (specials are skipped). */
   async add(externalId: string): Promise<EntityRef> {
     const tmdbId = parseNumericId(externalId);
-    const existing = this.series.findByTmdbId(tmdbId);
+    const existing = await this.series.findByTmdbId(tmdbId);
     if (existing) {
       throw ApiError.conflict('already_added', 'That series is already in the tracker', {
         existingId: existing.id,
       });
     }
     const details = await this.client.tv(tmdbId);
-    const series = this.series.create({
+    const series = await this.series.create({
       ...emptySeries(),
       tmdbId,
       title: details.name ?? `TMDB ${tmdbId}`,
     });
     for (const season of details.seasons ?? []) {
       if (season.season_number < 1) continue;
-      this.seasons.create({
+      await this.seasons.create({
         ...emptySeason(),
         seriesId: series.id,
         number: season.season_number,

@@ -5,12 +5,14 @@ import type { ImageStore } from '../images/ImageStore.js';
 
 export function registerImageRoutes(app: FastifyInstance, images: ImageStore): void {
   app.get<{ Params: { hash: string } }>('/api/images/:hash', async (request, reply) => {
-    const image = isImageHash(request.params.hash) ? images.get(request.params.hash) : undefined;
+    const image = isImageHash(request.params.hash)
+      ? await images.get(request.params.hash)
+      : undefined;
     if (!image) throw ApiError.notFound();
     return reply
       .header('Content-Type', image.mimeType)
       .header('Cache-Control', 'public, max-age=31536000, immutable')
-      .send(images.read(image));
+      .send(await images.read(image));
   });
 
   app.delete<{ Params: { hash: string } }>('/api/images/:hash', async (request, reply) => {

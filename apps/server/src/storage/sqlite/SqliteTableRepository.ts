@@ -1,13 +1,15 @@
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
-
-export type Row = Record<string, unknown>;
-export type RowValues = Record<string, SQLInputValue>;
+import type { EntityRepository } from '../repositories/EntityRepository.js';
+import type { Row } from './Row.js';
+import type { RowValues } from './RowValues.js';
 
 /**
- * Typed CRUD over one table. Subclasses map between entities and rows;
+ * Typed CRUD over one SQLite table. Subclasses map between entities and rows;
  * `update` merges a patch over the stored entity and rewrites the mapped columns.
  */
-export abstract class TableRepository<T extends { id: number }> {
+export abstract class SqliteTableRepository<
+  T extends { id: number },
+> implements EntityRepository<T> {
   constructor(
     protected readonly db: DatabaseSync,
     private readonly table: string,
@@ -16,7 +18,7 @@ export abstract class TableRepository<T extends { id: number }> {
   protected abstract toRow(entity: Omit<T, 'id'>): RowValues;
   protected abstract fromRow(row: Row): T;
 
-  create(input: Omit<T, 'id'>): T {
+  async create(input: Omit<T, 'id'>): Promise<T> {
     const values = this.toRow(input);
     const columns = Object.keys(values);
     const result = this.db
@@ -27,19 +29,15 @@ export abstract class TableRepository<T extends { id: number }> {
     return this.require(Number(result.lastInsertRowid));
   }
 
-  get(id: number): T | undefined {
-    const row = this.db.prepare(`SELECT * FROM ${this.table} WHERE id = ?`).get(id);
-    return row ? this.fromRow(row) : undefined;
+  async get(id: number): Promise<T | undefined> {
+    return this.find(id);
   }
 
-  list(): T[] {
-    return this.db
-      .prepare(`SELECT * FROM ${this.table} ORDER BY id`)
-      .all()
-      .map((row) => this.fromRow(row));
+  async list(): Promise<T[]> {
+    return this.all(`SELECT * FROM ${this.table} ORDER BY id`);
   }
 
-  update(id: number, patch: Partial<Omit<T, 'id'>>): T {
+  async update(id: number, patch: Partial<Omit<T, 'id'>>): Promise<T> {
     const current = Object.fromEntries(
       Object.entries(this.require(id)).filter(([key]) => key !== 'id'),
     );
@@ -51,7 +49,7 @@ export abstract class TableRepository<T extends { id: number }> {
     return this.require(id);
   }
 
-  delete(id: number): boolean {
+  async delete(id: number): Promise<boolean> {
     return Number(this.db.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes) > 0;
   }
 
@@ -63,8 +61,21 @@ export abstract class TableRepository<T extends { id: number }> {
     return row ? this.fromRow(row) : undefined;
   }
 
-  protected require(id: number): T {
-    const entity = this.get(id);
+  /** Every entity a trusted query returns. */
+  protected all(sql: string, ...params: SQLInputValue[]): T[] {
+    return this.db
+      .prepare(sql)
+      .all(...params)
+      .map((row) => this.fromRow(row));
+  }
+
+  private find(id: number): T | undefined {
+    const row = this.db.prepare(`SELECT * FROM ${this.table} WHERE id = ?`).get(id);
+    return row ? this.fromRow(row) : undefined;
+  }
+
+  private require(id: number): T {
+    const entity = this.find(id);
     if (!entity) throw new Error(`${this.table} ${id} not found`);
     return entity;
   }

@@ -64,7 +64,7 @@ function registerCollection(
   app.post<{ Body: Record<string, unknown> }>(
     base,
     { schema: { body: createBody(collection) } },
-    async (request, reply) => reply.code(201).send(editor.create(collection, request.body)),
+    async (request, reply) => reply.code(201).send(await editor.create(collection, request.body)),
   );
 
   app.patch<{ Params: { id: number }; Body: Record<string, unknown> }>(
@@ -77,7 +77,7 @@ function registerCollection(
     `${base}/:id`,
     { schema: { params: idParams } },
     async (request, reply) => {
-      editor.remove(collection, request.params.id);
+      await editor.remove(collection, request.params.id);
       return reply.code(204).send();
     },
   );
@@ -98,7 +98,9 @@ function registerCollection(
     `${base}/:id/rewatches`,
     { schema: { params: idParams, body: dateBody } },
     async (request, reply) =>
-      reply.code(201).send(editor.addRewatch(collection, request.params.id, request.body.date)),
+      reply
+        .code(201)
+        .send(await editor.addRewatch(collection, request.params.id, request.body.date)),
   );
 
   app.delete<{ Params: { id: number; date: string } }>(

@@ -6,7 +6,7 @@ import { runBackupCommand } from '../src/backup/runBackupCommand.js';
 import { loadConfig } from '../src/config/loadConfig.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
-import { openDatabase } from '../src/storage/openDatabase.js';
+import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
 
 let dir: string;
 

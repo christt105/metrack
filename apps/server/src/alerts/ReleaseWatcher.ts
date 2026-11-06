@@ -39,11 +39,11 @@ export class ReleaseWatcher {
     const local = readClock(now, this.deps.timeZone);
     if (local.hour < this.deps.notifyFromHour) return summary;
 
-    for (const series of this.deps.series.listFollowed()) {
+    for (const series of await this.deps.series.listFollowed()) {
       if (series.tmdbId === null) continue;
       await this.check(`series:${series.id}`, now, summary, async () => {
         const release = await this.deps.source.series(series.tmdbId as number);
-        const reconciled = reconcileSeasons(series.id, release, local.date, this.deps);
+        const reconciled = await reconcileSeasons(series.id, release, local.date, this.deps);
         summary.seasonsCreated += reconciled.filter((r) => r.created).length;
         const subjects = reconciled.map<Subject>((r) => ({
           title: `${series.title}, season ${r.season.number}`,
@@ -58,7 +58,7 @@ export class ReleaseWatcher {
         return subjects;
       });
     }
-    for (const movie of this.deps.movies.listFollowed()) {
+    for (const movie of await this.deps.movies.listFollowed()) {
       if (movie.tmdbId === null) continue;
       await this.check(`movie:${movie.id}`, now, summary, async () => {
         const release = await this.deps.source.movie(movie.tmdbId as number);
@@ -114,9 +114,12 @@ export class ReleaseWatcher {
     now: Date,
     summary: WatchSummary,
   ): Promise<void> {
-    const sent = subjects.flatMap((s) =>
-      this.deps.alerts.keysFor(s.candidate.subjectType, s.candidate.subjectId),
-    );
+    const sent: AlertKey[] = [];
+    for (const s of subjects) {
+      sent.push(
+        ...(await this.deps.alerts.keysFor(s.candidate.subjectType, s.candidate.subjectId)),
+      );
+    }
     const due = planReleaseAlerts(
       subjects.map((s) => s.candidate),
       sent,
@@ -136,7 +139,7 @@ export class ReleaseWatcher {
         undelivered += 1;
         continue;
       }
-      this.deps.alerts.record({
+      await this.deps.alerts.record({
         ...key,
         title: subject.title,
         message,

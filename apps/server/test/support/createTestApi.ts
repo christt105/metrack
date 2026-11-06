@@ -8,9 +8,10 @@ import type { ImageProvider } from '../../src/artwork/ImageProvider.js';
 import { SteamGridDbImageProvider } from '../../src/artwork/SteamGridDbImageProvider.js';
 import { TmdbImageProvider } from '../../src/artwork/TmdbImageProvider.js';
 import type { FetchFn } from '../../src/http/FetchFn.js';
-import { ImageStore } from '../../src/images/ImageStore.js';
+import { createImageStore } from '../../src/images/createImageStore.js';
+import type { ImageStore } from '../../src/images/ImageStore.js';
 import { MetadataCache } from '../../src/metadata/MetadataCache.js';
-import { MetadataStateRepository } from '../../src/metadata/MetadataStateRepository.js';
+import { SqliteMetadataStateRepository } from '../../src/storage/sqlite/SqliteMetadataStateRepository.js';
 import { movieLifecycle } from '../../src/metadata/movieLifecycle.js';
 import { seriesLifecycle } from '../../src/metadata/seriesLifecycle.js';
 import { SteamGridDbClient } from '../../src/providers/steamgriddb/SteamGridDbClient.js';
@@ -20,17 +21,22 @@ import { TmdbSeriesSource } from '../../src/providers/tmdb/TmdbSeriesSource.js';
 import { PublishQueue } from '../../src/publish/PublishQueue.js';
 import { MigrationRunner } from '../../src/storage/MigrationRunner.js';
 import { migrations } from '../../src/storage/migrations/index.js';
-import { openDatabase } from '../../src/storage/openDatabase.js';
-import {
-  BookRepository,
-  MovieRepository,
-  ReleaseAlertRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-  VideogameRepository,
-} from '../../src/storage/repositories/index.js';
+import { openDatabase } from '../../src/storage/sqlite/openDatabase.js';
+import { SqliteBookRepository } from '../../src/storage/sqlite/SqliteBookRepository.js';
+import type { BookRepository } from '../../src/storage/repositories/BookRepository.js';
+import { SqliteMovieRepository } from '../../src/storage/sqlite/SqliteMovieRepository.js';
+import type { MovieRepository } from '../../src/storage/repositories/MovieRepository.js';
+import { SqliteReleaseAlertRepository } from '../../src/storage/sqlite/SqliteReleaseAlertRepository.js';
+import type { ReleaseAlertRepository } from '../../src/storage/repositories/ReleaseAlertRepository.js';
+import { SqliteSeasonOverrideRepository } from '../../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
+import { SqliteSeasonRepository } from '../../src/storage/sqlite/SqliteSeasonRepository.js';
+import type { SeasonRepository } from '../../src/storage/repositories/SeasonRepository.js';
+import { SqliteSeriesRepository } from '../../src/storage/sqlite/SqliteSeriesRepository.js';
+import type { SeriesRepository } from '../../src/storage/repositories/SeriesRepository.js';
+import { SqliteUnlinkedTitleRepository } from '../../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
+import type { UnlinkedTitleRepository } from '../../src/storage/repositories/UnlinkedTitleRepository.js';
+import { SqliteVideogameRepository } from '../../src/storage/sqlite/SqliteVideogameRepository.js';
+import type { VideogameRepository } from '../../src/storage/repositories/VideogameRepository.js';
 import { TitleProviders } from '../../src/titles/TitleProviders.js';
 import { TmdbMovieProvider } from '../../src/titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from '../../src/titles/TmdbSeriesProvider.js';
@@ -60,14 +66,14 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
   const runner = new MigrationRunner(db, migrations);
   runner.run();
 
-  const movies = new MovieRepository(db);
-  const series = new SeriesRepository(db);
-  const seasons = new SeasonRepository(db);
-  const videogames = new VideogameRepository(db);
-  const books = new BookRepository(db);
-  const unlinked = new UnlinkedTitleRepository(db);
-  const store = new ImageStore(db, join(dir, 'images'), fetchFn);
-  const states = new MetadataStateRepository(db);
+  const movies = new SqliteMovieRepository(db);
+  const series = new SqliteSeriesRepository(db);
+  const seasons = new SqliteSeasonRepository(db);
+  const videogames = new SqliteVideogameRepository(db);
+  const books = new SqliteBookRepository(db);
+  const unlinked = new SqliteUnlinkedTitleRepository(db);
+  const store = createImageStore(db, join(dir, 'images'), fetchFn);
+  const states = new SqliteMetadataStateRepository(db);
   const cache = new MetadataCache(states, store, undefined, () => NOW);
   const tmdb = new TmdbClient(fetchFn, { apiKey: 'key', language: 'es-ES' });
   cache.register('movie', {
@@ -95,7 +101,7 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
     { info: () => {}, error: () => {} },
     scheduler,
   );
-  const alerts = new ReleaseAlertRepository(db);
+  const alerts = new SqliteReleaseAlertRepository(db);
   const edit = createEditServices({
     sources: {
       movies,
@@ -103,7 +109,7 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
       seasons,
       videogames,
       books,
-      overrides: new SeasonOverrideRepository(db),
+      overrides: new SqliteSeasonOverrideRepository(db),
     },
     unlinked,
     states,

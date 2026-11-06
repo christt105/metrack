@@ -1,9 +1,9 @@
-import type { DatabaseSync } from 'node:sqlite';
 import type { Pool } from 'pg';
 import type { FetchFn } from '../http/FetchFn.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import type { Logger } from '../notify/Logger.js';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
+import type { TransactionRunner } from '../storage/repositories/TransactionRunner.js';
 import { JellyfinClient } from './jellyfin/JellyfinClient.js';
 import { JellyfinLibrarySource } from './jellyfin/JellyfinLibrarySource.js';
 import { openJellystatPool } from './jellystat/openJellystatPool.js';
@@ -20,7 +20,7 @@ import { TvdbResolvingLibrarySource } from './TvdbResolvingLibrarySource.js';
  */
 export function createSyncService(
   config: SyncConfig,
-  db: DatabaseSync,
+  transactions: TransactionRunner,
   targets: SyncTargets,
   logger: Logger,
   tmdb?: { client: TmdbClient; metadata: MetadataCache },
@@ -34,7 +34,7 @@ export function createSyncService(
       : jellyfin,
     new PostgresPlaybackSource(pool, config.userName),
     targets,
-    new SyncApplier(db, targets),
+    new SyncApplier(transactions, targets),
     {
       timeZone: config.timeZone,
       refreshCreated: tmdb && ((ref) => tmdb.metadata.refresh(ref.type, ref.id, true)),

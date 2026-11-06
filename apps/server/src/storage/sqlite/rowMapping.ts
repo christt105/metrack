@@ -1,5 +1,6 @@
 import type { MediaStatus, Tracking } from '@metrack/domain';
-import type { Row, RowValues } from './TableRepository.js';
+import type { Row } from './Row.js';
+import type { RowValues } from './RowValues.js';
 
 export function parseList(value: unknown): string[] {
   return JSON.parse(String(value)) as string[];

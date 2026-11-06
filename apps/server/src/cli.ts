@@ -116,7 +116,7 @@ async function main(argv: string[]): Promise<number> {
   if (command === 'export') {
     const { db, sources } = openExportSources(values['data-dir'] ?? config.dataDir);
     try {
-      const result = exportSite(sources, target);
+      const result = await exportSite(sources, target);
       console.log(
         `Exported ${result.files} files to ${target} (fingerprint ${result.fingerprint})`,
       );
@@ -129,7 +129,7 @@ async function main(argv: string[]): Promise<number> {
     const dataDir = values['data-dir'] ?? config.dataDir;
     const { db, sources } = openExportSources(dataDir);
     try {
-      const result = syncVaultMirror(sources, {
+      const result = await syncVaultMirror(sources, {
         mirrorDir: target,
         linkPrefix: values['link-prefix'] ?? 'Media Tracker',
         webUrl: values['web-url'] ?? process.env.VAULT_MIRROR_WEB_URL ?? null,

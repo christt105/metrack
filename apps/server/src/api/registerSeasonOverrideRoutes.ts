@@ -29,16 +29,16 @@ export function registerSeasonOverrideRoutes(
   series: SeriesRepository,
   overrides: SeasonOverrideRepository,
 ): void {
-  const requireSeries = (id: number): void => {
-    if (!series.get(id)) throw ApiError.notFound();
+  const requireSeries = async (id: number): Promise<void> => {
+    if (!(await series.get(id))) throw ApiError.notFound();
   };
 
   app.get<{ Params: { id: number } }>(
     '/api/series/:id/overrides',
     { schema: { params: { type: 'object', properties: { id: { type: 'integer' } } } } },
     async (request) => {
-      requireSeries(request.params.id);
-      return overrides.listBySeries(request.params.id);
+      await requireSeries(request.params.id);
+      return await overrides.listBySeries(request.params.id);
     },
   );
 
@@ -46,8 +46,8 @@ export function registerSeasonOverrideRoutes(
     '/api/series/:id/overrides/:tmdbSeasonNumber',
     { schema: { params, body } },
     async (request) => {
-      requireSeries(request.params.id);
-      return overrides.set({
+      await requireSeries(request.params.id);
+      return await overrides.set({
         seriesId: request.params.id,
         tmdbSeasonNumber: request.params.tmdbSeasonNumber,
         number: request.body.number ?? null,
@@ -61,8 +61,8 @@ export function registerSeasonOverrideRoutes(
     '/api/series/:id/overrides/:tmdbSeasonNumber',
     { schema: { params } },
     async (request, reply) => {
-      requireSeries(request.params.id);
-      if (!overrides.delete(request.params.id, request.params.tmdbSeasonNumber)) {
+      await requireSeries(request.params.id);
+      if (!(await overrides.delete(request.params.id, request.params.tmdbSeasonNumber))) {
         throw ApiError.notFound();
       }
       return reply.code(204).send();

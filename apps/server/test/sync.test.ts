@@ -6,14 +6,12 @@ import { buildApp } from '../src/api/buildApp.js';
 import type { FetchFn } from '../src/http/FetchFn.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
-import { openDatabase } from '../src/storage/openDatabase.js';
-import {
-  MovieRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-  UnlinkedTitleRepository,
-} from '../src/storage/repositories/index.js';
+import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
+import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
+import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
+import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
+import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
 import { JellyfinClient } from '../src/sync/jellyfin/JellyfinClient.js';
 import type { JellyfinItem } from '../src/sync/jellyfin/JellyfinItem.js';
 import { JellyfinLibrarySource } from '../src/sync/jellyfin/JellyfinLibrarySource.js';
@@ -30,6 +28,7 @@ import { formatSyncReport } from '../src/sync/formatSyncReport.js';
 import { TvdbResolvingLibrarySource } from '../src/sync/TvdbResolvingLibrarySource.js';
 import type { EntityRef } from '@metrack/domain';
 import { TmdbClient } from '../src/providers/tmdb/TmdbClient.js';
+import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
 
 interface Recorded {
   url: URL;
@@ -283,16 +282,22 @@ function setup(library: LibrarySource, plays: PlaybackSource) {
   const runner = new MigrationRunner(db, migrations);
   runner.run();
   const targets = {
-    movies: new MovieRepository(db),
-    series: new SeriesRepository(db),
-    seasons: new SeasonRepository(db),
-    overrides: new SeasonOverrideRepository(db),
-    unlinked: new UnlinkedTitleRepository(db),
+    movies: new SqliteMovieRepository(db),
+    series: new SqliteSeriesRepository(db),
+    seasons: new SqliteSeasonRepository(db),
+    overrides: new SqliteSeasonOverrideRepository(db),
+    unlinked: new SqliteUnlinkedTitleRepository(db),
   };
-  const service = new SyncService(library, plays, targets, new SyncApplier(db, targets), {
-    timeZone: 'Europe/Madrid',
-    now: () => new Date('2026-10-25T12:00:00Z'),
-  });
+  const service = new SyncService(
+    library,
+    plays,
+    targets,
+    new SyncApplier(new SqliteTransactionRunner(db), targets),
+    {
+      timeZone: 'Europe/Madrid',
+      now: () => new Date('2026-10-25T12:00:00Z'),
+    },
+  );
   return { db, runner, targets, service };
 }
 
@@ -339,8 +344,8 @@ const lupinPlays: PlaybackSource = {
   ],
 };
 
-function seedLupin(t: ReturnType<typeof setup>) {
-  const series = t.targets.series.create({
+async function seedLupin(t: ReturnType<typeof setup>) {
+  const series = await t.targets.series.create({
     tmdbId: 96677,
     tvdbId: 375921,
     jellyfinId: null,
@@ -358,7 +363,7 @@ function seedLupin(t: ReturnType<typeof setup>) {
     cover: null,
     banner: null,
   });
-  const season = t.targets.seasons.create({
+  const season = await t.targets.seasons.create({
     seriesId: series.id,
     number: 3,
     tmdbSeasonNumber: 3,
@@ -385,20 +390,20 @@ function seedLupin(t: ReturnType<typeof setup>) {
 describe('SyncService', () => {
   it('reports without writing anything', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    const { season } = seedLupin(t);
+    const { season } = await seedLupin(t);
     const plan = await t.service.report();
     expect(plan.movies).toHaveLength(1);
     expect(plan.unlinked).toHaveLength(1);
-    expect(t.targets.seasons.get(season.id)).toMatchObject({ number: 3, status: 'planned' });
-    expect(t.targets.movies.list()).toEqual([]);
-    expect(t.targets.unlinked.list()).toEqual([]);
+    expect(await t.targets.seasons.get(season.id)).toMatchObject({ number: 3, status: 'planned' });
+    expect(await t.targets.movies.list()).toEqual([]);
+    expect(await t.targets.unlinked.list()).toEqual([]);
     expect(formatSyncReport(plan, false)).toContain('nothing was written');
     t.db.close();
   });
 
   it('applies the plan, leaves notes and ratings alone, and is idempotent', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    const { season, series } = seedLupin(t);
+    const { season, series } = await seedLupin(t);
     const { result } = await t.service.apply();
     expect(result).toMatchObject({
       moviesCreated: 1,
@@ -407,7 +412,7 @@ describe('SyncService', () => {
       unlinkedAdded: 1,
     });
 
-    expect(t.targets.seasons.get(season.id)).toMatchObject({
+    expect(await t.targets.seasons.get(season.id)).toMatchObject({
       number: 4,
       tmdbSeasonNumber: 3,
       jellyfinId: 'sn4',
@@ -418,18 +423,21 @@ describe('SyncService', () => {
       rating: 9,
       review: 'season review',
     });
-    expect(t.targets.series.get(series.id)).toMatchObject({
+    expect(await t.targets.series.get(series.id)).toMatchObject({
       jellyfinId: 's1',
       note: 'my note',
       review: 'series review',
     });
-    expect(t.targets.movies.list()[0]).toMatchObject({
+    expect((await t.targets.movies.list())[0]).toMatchObject({
       tmdbId: 10,
       status: 'completed',
       finishedAt: '2026-10-20',
       rating: null,
     });
-    expect(t.targets.unlinked.list()[0]).toMatchObject({ source: 'jellyfin', sourceRef: 'm2' });
+    expect((await t.targets.unlinked.list())[0]).toMatchObject({
+      source: 'jellyfin',
+      sourceRef: 'm2',
+    });
 
     const again = await t.service.report();
     expect(again.movies).toEqual([]);
@@ -440,17 +448,17 @@ describe('SyncService', () => {
 
   it('marks the viewings it records as pending review', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    const { season } = seedLupin(t);
+    const { season } = await seedLupin(t);
     await t.service.apply();
-    const movie = t.targets.movies.list()[0]!;
+    const movie = (await t.targets.movies.list())[0]!;
     expect(movie.pendingReview).toBe(true);
-    expect(t.targets.seasons.get(season.id)!.pendingReview).toBe(true);
+    expect((await t.targets.seasons.get(season.id))!.pendingReview).toBe(true);
 
-    t.targets.movies.update(movie.id, { pendingReview: false });
-    t.targets.seasons.update(season.id, { pendingReview: false });
+    await t.targets.movies.update(movie.id, { pendingReview: false });
+    await t.targets.seasons.update(season.id, { pendingReview: false });
     await t.service.apply();
-    expect(t.targets.movies.get(movie.id)!.pendingReview).toBe(false);
-    expect(t.targets.seasons.get(season.id)!.pendingReview).toBe(false);
+    expect((await t.targets.movies.get(movie.id))!.pendingReview).toBe(false);
+    expect((await t.targets.seasons.get(season.id))!.pendingReview).toBe(false);
     t.db.close();
   });
 
@@ -461,9 +469,9 @@ describe('SyncService', () => {
       ],
     };
     const t = setup(lupinLibrary, firstEpisode);
-    const { season } = seedLupin(t);
+    const { season } = await seedLupin(t);
     await t.service.apply();
-    expect(t.targets.seasons.get(season.id)).toMatchObject({
+    expect(await t.targets.seasons.get(season.id)).toMatchObject({
       status: 'in_progress',
       pendingReview: false,
     });
@@ -472,8 +480,8 @@ describe('SyncService', () => {
 
   it('rolls back everything when a write fails', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    seedLupin(t);
-    t.targets.movies.create({
+    await seedLupin(t);
+    await t.targets.movies.create({
       ...emptyMovieRow(),
       jellyfinId: 'm1',
       tmdbId: null,
@@ -483,14 +491,14 @@ describe('SyncService', () => {
       throw new Error('boom');
     };
     await expect(t.service.apply()).rejects.toThrow('boom');
-    expect(t.targets.seasons.list()[0]?.number).toBe(3);
-    expect(t.targets.movies.list().map((m) => m.status)).toEqual(['planned']);
+    expect((await t.targets.seasons.list())[0]?.number).toBe(3);
+    expect((await t.targets.movies.list()).map((m) => m.status)).toEqual(['planned']);
     t.db.close();
   });
 
   it('serves the report over HTTP and refuses apply without confirmation', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    seedLupin(t);
+    await seedLupin(t);
     const app = await buildApp({ appVersion: 'test', migrationRunner: t.runner, sync: t.service });
     const report = await app.inject({ method: 'GET', url: '/api/sync/report' });
     expect(report.statusCode).toBe(200);
@@ -503,7 +511,7 @@ describe('SyncService', () => {
       payload: { confirm: false },
     });
     expect(refusedFalse.statusCode).toBe(400);
-    expect(t.targets.movies.list()).toEqual([]);
+    expect(await t.targets.movies.list()).toEqual([]);
     const applied = await app.inject({
       method: 'POST',
       url: '/api/sync/apply',
@@ -516,7 +524,7 @@ describe('SyncService', () => {
 
   it('queues a delayed sync on a webhook, coalescing bursts, and refreshes the published site', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    seedLupin(t);
+    await seedLupin(t);
     const scheduler = new FakeScheduler();
     const logs: string[] = [];
     const logger = {
@@ -548,11 +556,11 @@ describe('SyncService', () => {
       expect(response.statusCode).toBe(202);
     }
     expect(scheduler.delays).toEqual([120_000]);
-    expect(t.targets.movies.list()).toEqual([]);
+    expect(await t.targets.movies.list()).toEqual([]);
 
     await scheduler.fire();
-    expect(t.targets.movies.list()).toHaveLength(1);
-    expect(t.targets.movies.list()[0]).toMatchObject({ pendingReview: true });
+    expect(await t.targets.movies.list()).toHaveLength(1);
+    expect((await t.targets.movies.list())[0]).toMatchObject({ pendingReview: true });
     expect(logs.some((m) => m.includes('1 movies created'))).toBe(true);
     expect(scheduler.delays).toEqual([120_000, 5_000]);
     t.db.close();
@@ -589,12 +597,12 @@ describe('sync with TMDB', () => {
       new TvdbResolvingLibrarySource(tvdbOnly, async (id) => (id === 1 ? 96677 : null)),
       lupinPlays,
     );
-    const { series } = seedLupin(t);
-    t.targets.series.update(series.id, { tvdbId: null });
+    const { series } = await seedLupin(t);
+    await t.targets.series.update(series.id, { tvdbId: null });
     const { result } = await t.service.apply();
     expect(result).toMatchObject({ seriesCreated: 0, seriesUpdated: 1 });
-    expect(t.targets.series.list()).toHaveLength(1);
-    expect(t.targets.series.get(series.id)).toMatchObject({
+    expect(await t.targets.series.list()).toHaveLength(1);
+    expect(await t.targets.series.get(series.id)).toMatchObject({
       tmdbId: 96677,
       tvdbId: 1,
       jellyfinId: 's1',
@@ -617,7 +625,7 @@ describe('sync with TMDB', () => {
       lupinLibrary,
       lupinPlays,
       t.targets,
-      new SyncApplier(t.db, t.targets),
+      new SyncApplier(new SqliteTransactionRunner(t.db), t.targets),
       {
         timeZone: 'Europe/Madrid',
         now: () => new Date('2026-10-25T12:00:00Z'),
@@ -629,8 +637,8 @@ describe('sync with TMDB', () => {
     );
     const { result } = await service.apply();
     expect(result).toMatchObject({ moviesCreated: 1, seriesCreated: 1 });
-    const movieId = t.targets.movies.list()[0]?.id;
-    const seriesId = t.targets.series.list()[0]?.id;
+    const movieId = (await t.targets.movies.list())[0]?.id;
+    const seriesId = (await t.targets.series.list())[0]?.id;
     expect(refreshed).toEqual([
       { type: 'movie', id: movieId },
       { type: 'series', id: seriesId },
