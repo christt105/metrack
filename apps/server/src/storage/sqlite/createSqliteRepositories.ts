@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 import { SqliteBookRepository } from './SqliteBookRepository.js';
 import { SqliteImageRepository } from './SqliteImageRepository.js';
 import { SqliteMetadataStateRepository } from './SqliteMetadataStateRepository.js';
@@ -14,18 +15,18 @@ import { SqliteUnlinkedTitleRepository } from './SqliteUnlinkedTitleRepository.j
 import { SqliteUserRepository } from './SqliteUserRepository.js';
 import { SqliteVideogameRepository } from './SqliteVideogameRepository.js';
 
-/** Every repository over one SQLite connection. */
-export function createSqliteRepositories(db: DatabaseSync): SqliteRepositories {
+/** Every repository over one SQLite connection. Personal data is read and written as the user in scope. */
+export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): SqliteRepositories {
   return {
-    movies: new SqliteMovieRepository(db),
-    series: new SqliteSeriesRepository(db),
-    seasons: new SqliteSeasonRepository(db),
-    videogames: new SqliteVideogameRepository(db),
-    books: new SqliteBookRepository(db),
-    overrides: new SqliteSeasonOverrideRepository(db),
-    unlinked: new SqliteUnlinkedTitleRepository(db),
-    releaseAlerts: new SqliteReleaseAlertRepository(db),
-    metadataStates: new SqliteMetadataStateRepository(db),
+    movies: new SqliteMovieRepository(db, scope),
+    series: new SqliteSeriesRepository(db, scope),
+    seasons: new SqliteSeasonRepository(db, scope),
+    videogames: new SqliteVideogameRepository(db, scope),
+    books: new SqliteBookRepository(db, scope),
+    overrides: new SqliteSeasonOverrideRepository(db, scope),
+    unlinked: new SqliteUnlinkedTitleRepository(db, scope),
+    releaseAlerts: new SqliteReleaseAlertRepository(db, scope),
+    metadataStates: new SqliteMetadataStateRepository(db, scope),
     images: new SqliteImageRepository(db),
     users: new SqliteUserRepository(db),
     sessions: new SqliteSessionRepository(db),

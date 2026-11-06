@@ -96,7 +96,7 @@ export async function reconcileSeasons(
     if (!season || !provider) continue;
     matchedPending.add(fallback.number);
     result.push({
-      season: await seasons.update(season.id, { tmdbSeasonNumber: provider.number }),
+      season: await seasons.updateCatalog(season.id, { tmdbSeasonNumber: provider.number }),
       airDate: provider.airDate,
       created: false,
     });
@@ -131,6 +131,6 @@ async function fillDate(
   airDate: string,
 ): Promise<Season> {
   return season.firstAirDate === null
-    ? await seasons.update(season.id, { firstAirDate: airDate })
+    ? await seasons.updateCatalog(season.id, { firstAirDate: airDate })
     : season;
 }

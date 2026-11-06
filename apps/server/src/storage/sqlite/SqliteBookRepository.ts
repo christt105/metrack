@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 import type { Book } from '@metrack/domain';
 import type { BookRepository } from '../repositories/BookRepository.js';
 import type { Row } from './Row.js';
@@ -20,8 +21,8 @@ const ENTRY_COLUMNS = [
 ];
 
 export class SqliteBookRepository extends SqliteTableRepository<Book> implements BookRepository {
-  constructor(db: DatabaseSync) {
-    super(db, 'book', ENTRY_COLUMNS);
+  constructor(db: DatabaseSync, scope: UserScope) {
+    super(db, scope, 'book', ENTRY_COLUMNS, [['openlibrary_id']]);
   }
 
   async findByOpenLibraryId(openLibraryId: string): Promise<Book | undefined> {

@@ -11,6 +11,7 @@ import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogame
 import { IgdbGameProvider } from '../src/titles/IgdbGameProvider.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 interface Call {
   url: string;
@@ -80,7 +81,7 @@ function igdbFetch(options: {
 
 function setup(fetchFn: FetchFn, withSteamGridDb = true) {
   const db = openTestDatabase();
-  const games = new SqliteVideogameRepository(db);
+  const games = new SqliteVideogameRepository(db, OWNER_SCOPE);
   const images = createImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-igdb-')), fetchFn);
   const client = new IgdbClient(fetchFn, { clientId: 'cid', clientSecret: 'secret' });
   const steamGridDb = withSteamGridDb ? new SteamGridDbClient(fetchFn, 'sgdb') : null;

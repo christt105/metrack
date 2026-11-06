@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 import type { MediaType } from '@metrack/domain';
 import type { MetadataState } from '../../metadata/MetadataState.js';
 import type { MetadataStateRepository } from '../repositories/MetadataStateRepository.js';
@@ -12,15 +13,18 @@ const TABLES: Record<MediaType, string> = {
 };
 
 export class SqliteMetadataStateRepository implements MetadataStateRepository {
-  constructor(private readonly db: DatabaseSync) {}
+  constructor(
+    private readonly db: DatabaseSync,
+    private readonly scope: UserScope,
+  ) {}
 
   async get(type: MediaType, id: number): Promise<MetadataState> {
     const row = this.db
       .prepare(
         `SELECT c.fetched_at, c.metadata_hash, e.overrides FROM ${TABLES[type]} c
-         JOIN ${TABLES[type]}_entry e ON e.${TABLES[type]}_id = c.id WHERE c.id = ?`,
+         JOIN ${TABLES[type]}_entry e ON e.${TABLES[type]}_id = c.id AND e.user_id = ? WHERE c.id = ?`,
       )
-      .get(id);
+      .get(this.scope.userId(), id);
     if (!row) throw new Error(`${type} ${id} not found`);
     return {
       fetchedAt: row.fetched_at === null ? null : String(row.fetched_at),

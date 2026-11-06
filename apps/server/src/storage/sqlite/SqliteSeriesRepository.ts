@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 import type { Series } from '@metrack/domain';
 import type { SeriesRepository } from '../repositories/SeriesRepository.js';
 import type { Row } from './Row.js';
@@ -8,12 +9,17 @@ import { num, parseList, text } from './rowMapping.js';
 
 const ENTRY_COLUMNS = ['jellyfin_id', 'follow', 'note', 'slug', 'tags', 'review'];
 
+const RELATED_DELETES = [
+  'DELETE FROM season_entry WHERE user_id = ? AND season_id IN (SELECT id FROM season WHERE series_id = ?)',
+  'DELETE FROM season_override WHERE user_id = ? AND series_id = ?',
+];
+
 export class SqliteSeriesRepository
   extends SqliteTableRepository<Series>
   implements SeriesRepository
 {
-  constructor(db: DatabaseSync) {
-    super(db, 'series', ENTRY_COLUMNS);
+  constructor(db: DatabaseSync, scope: UserScope) {
+    super(db, scope, 'series', ENTRY_COLUMNS, [['tmdb_id'], ['tvdb_id']], RELATED_DELETES);
   }
 
   async findByTmdbId(tmdbId: number): Promise<Series | undefined> {

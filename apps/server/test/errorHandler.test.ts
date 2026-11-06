@@ -5,6 +5,7 @@ import { ApiError } from '../src/api/ApiError.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { signedInAs } from './support/signedInAs.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 async function setup() {
   const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
@@ -13,6 +14,7 @@ async function setup() {
   const app = await buildApp({
     appVersion: 'test',
     authenticator: signedInAs(),
+    scope: OWNER_SCOPE,
     migrationRunner: runner,
     logger: { info: () => {}, error: (message) => void errors.push(message) },
   });

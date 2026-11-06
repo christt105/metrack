@@ -6,6 +6,8 @@ import { migrations } from '../storage/migrations/index.js';
 import { createSqliteRepositories } from '../storage/sqlite/createSqliteRepositories.js';
 import { openDatabase } from '../storage/sqlite/openDatabase.js';
 import type { ExportSources } from './loadExportInput.js';
+import { FixedUserScope } from '../users/FixedUserScope.js';
+import { OWNER_ID } from '../users/OWNER_ID.js';
 
 /** Opens the database and image store in a data directory with the repositories the exporter reads. */
 export function openExportSources(dataDir: string): { db: DatabaseSync; sources: ExportSources } {
@@ -14,7 +16,7 @@ export function openExportSources(dataDir: string): { db: DatabaseSync; sources:
   return {
     db,
     sources: {
-      ...createSqliteRepositories(db),
+      ...createSqliteRepositories(db, new FixedUserScope(OWNER_ID)),
       images: createImageStore(db, join(dataDir, 'images')),
     },
   };

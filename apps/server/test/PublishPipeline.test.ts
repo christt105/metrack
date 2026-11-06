@@ -13,6 +13,7 @@ import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonReposi
 import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
 import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const dirs: string[] = [];
 const tempDir = (): string => {
@@ -66,13 +67,13 @@ function setup(baseUrl?: string) {
   const template = join(root, 'template');
   mkdirSync(template);
   writeFileSync(join(template, 'hugo.toml'), 'title = "x"');
-  const movies = new SqliteMovieRepository(db);
+  const movies = new SqliteMovieRepository(db, OWNER_SCOPE);
   const sources = {
     movies,
-    series: new SqliteSeriesRepository(db),
-    seasons: new SqliteSeasonRepository(db),
-    videogames: new SqliteVideogameRepository(db),
-    books: new SqliteBookRepository(db),
+    series: new SqliteSeriesRepository(db, OWNER_SCOPE),
+    seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
+    videogames: new SqliteVideogameRepository(db, OWNER_SCOPE),
+    books: new SqliteBookRepository(db, OWNER_SCOPE),
     images: createImageStore(db, join(root, 'images')),
   };
   const runner = new RecordingRunner();

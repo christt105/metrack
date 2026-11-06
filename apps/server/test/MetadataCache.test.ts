@@ -16,6 +16,7 @@ import type { MovieRepository } from '../src/storage/repositories/MovieRepositor
 import { fakeFetch } from './support/fakeFetch.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 class ScriptedSource implements MetadataSource<Movie> {
   calls = 0;
@@ -39,8 +40,8 @@ let movieId: number;
 beforeEach(async () => {
   const db = openTestDatabase();
   clock = new Date('2026-10-24T12:00:00Z');
-  movies = new SqliteMovieRepository(db);
-  states = new SqliteMetadataStateRepository(db);
+  movies = new SqliteMovieRepository(db, OWNER_SCOPE);
+  states = new SqliteMetadataStateRepository(db, OWNER_SCOPE);
   const net = fakeFetch({ [COVER_URL]: png(600, 900) });
   images = createImageStore(
     db,

@@ -17,6 +17,7 @@ import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlin
 import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { fakeFetch } from './support/fakeFetch.js';
 import { png } from './support/sampleImages.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const tracking = {
   status: 'planned' as const,
@@ -59,7 +60,7 @@ describe('backup and restore of the whole data directory', () => {
     );
     const image = await imageStore.download('https://img.test/cover.png');
 
-    const series = await new SqliteSeriesRepository(db).create({
+    const series = await new SqliteSeriesRepository(db, OWNER_SCOPE).create({
       tmdbId: 1,
       tvdbId: 2,
       jellyfinId: null,
@@ -77,7 +78,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       review: null,
     });
-    await new SqliteSeasonRepository(db).create({
+    await new SqliteSeasonRepository(db, OWNER_SCOPE).create({
       seriesId: series.id,
       number: 1,
       tmdbSeasonNumber: 1,
@@ -92,14 +93,14 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       ...tracking,
     });
-    await new SqliteSeasonOverrideRepository(db).set({
+    await new SqliteSeasonOverrideRepository(db, OWNER_SCOPE).set({
       seriesId: series.id,
       tmdbSeasonNumber: 1,
       number: 2,
       title: 'Part 2',
       jellyfinSeasonId: 'jf-s2',
     });
-    await new SqliteMovieRepository(db).create({
+    await new SqliteMovieRepository(db, OWNER_SCOPE).create({
       tmdbId: 10,
       jellyfinId: null,
       title: 'Aftersun',
@@ -117,7 +118,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: ['drama'],
       ...tracking,
     });
-    await new SqliteVideogameRepository(db).create({
+    await new SqliteVideogameRepository(db, OWNER_SCOPE).create({
       igdbId: 1,
       steamAppId: '447150',
       steamGridDbId: null,
@@ -134,7 +135,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       ...tracking,
     });
-    await new SqliteBookRepository(db).create({
+    await new SqliteBookRepository(db, OWNER_SCOPE).create({
       openLibraryId: 'OL1M',
       isbn: null,
       title: 'Book',
@@ -150,7 +151,7 @@ describe('backup and restore of the whole data directory', () => {
       tags: [],
       ...tracking,
     });
-    await new SqliteUnlinkedTitleRepository(db).create({
+    await new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE).create({
       mediaType: 'series',
       title: 'Mystery',
       year: null,

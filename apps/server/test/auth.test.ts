@@ -11,6 +11,7 @@ import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { SqliteSessionRepository } from '../src/storage/sqlite/SqliteSessionRepository.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
+import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
 import { runUsersCommand } from '../src/users/runUsersCommand.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
@@ -35,6 +36,7 @@ async function setup(devLogin = true) {
     appVersion: 'test',
     migrationRunner: new MigrationRunner(db, migrations),
     authenticator: new SessionCookieAuthenticator(sessions),
+    scope: new AsyncUserScope(),
     auth: { sessions, users, devLogin },
     publishQueue: queue,
   });

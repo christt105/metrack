@@ -13,6 +13,8 @@ import { openDatabase } from '../storage/sqlite/openDatabase.js';
 import { createSyncService } from './createSyncService.js';
 import { formatSyncReport } from './formatSyncReport.js';
 import type { SyncConfig } from './SyncConfig.js';
+import { FixedUserScope } from '../users/FixedUserScope.js';
+import { OWNER_ID } from '../users/OWNER_ID.js';
 
 export interface SyncCommandOptions {
   dataDir: string;
@@ -34,7 +36,7 @@ export async function runSyncCommand(
   if (!options.apply && !existsSync(dbPath)) throw new Error(`No database at ${dbPath}`);
   const db = options.apply ? openDatabase(dbPath) : new DatabaseSync(dbPath, { readOnly: true });
   if (options.apply) new MigrationRunner(db, migrations).run();
-  const repositories = createSqliteRepositories(db);
+  const repositories = createSqliteRepositories(db, new FixedUserScope(OWNER_ID));
   const targets = repositories;
   let tmdb;
   if (options.tmdb) {

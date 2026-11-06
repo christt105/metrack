@@ -2,6 +2,9 @@ import { join } from 'node:path';
 import { buildApp } from './api/buildApp.js';
 import { SessionCookieAuthenticator } from './auth/SessionCookieAuthenticator.js';
 import { SessionService } from './auth/SessionService.js';
+import { AsyncUserScope } from './users/AsyncUserScope.js';
+import { OWNER_ID } from './users/OWNER_ID.js';
+import { ScopedScheduler } from './users/ScopedScheduler.js';
 import { createEditServices } from './api/createEditServices.js';
 import type { ImageProvider } from './artwork/ImageProvider.js';
 import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js';
@@ -52,7 +55,9 @@ const db = openDatabase(join(config.dataDir, 'metrack.db'));
 const migrationRunner = new MigrationRunner(db, migrations);
 const schemaVersion = migrationRunner.run();
 
-const repositories = createSqliteRepositories(db);
+const scope = new AsyncUserScope();
+const ownerScheduler = new ScopedScheduler(new TimerScheduler(), scope, OWNER_ID);
+const repositories = createSqliteRepositories(db, scope);
 const {
   movies,
   series,
@@ -153,7 +158,7 @@ if (publishConfig) {
     new CloudflarePagesPublisher(publishConfig, runner),
     new FilePublishState(join(config.dataDir, 'publish-state.json')),
   );
-  publishQueue = new PublishQueue(() => pipeline.run(), notifier, logger, new TimerScheduler());
+  publishQueue = new PublishQueue(() => pipeline.run(), notifier, logger, ownerScheduler);
 } else {
   console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
 }
@@ -172,7 +177,7 @@ if (mirrorConfig) {
       ),
     notifier,
     logger,
-    new TimerScheduler(),
+    ownerScheduler,
     { ...DEFAULT_QUEUE_OPTIONS, label: 'vault mirror' },
   );
   mirrorQueue.markDirty();
@@ -186,7 +191,7 @@ const syncQueue =
         sync: syncSetup.service,
         notifier,
         logger,
-        scheduler: new TimerScheduler(),
+        scheduler: ownerScheduler,
         delayMs: syncConfig.webhookDelayMs,
         downstream: [publishQueue, mirrorQueue],
       })
@@ -206,6 +211,7 @@ const app = await buildApp({
   appVersion: config.appVersion,
   migrationRunner,
   authenticator: new SessionCookieAuthenticator(sessions),
+  scope,
   auth: { sessions, users: repositories.users, devLogin: config.devLogin },
   logger,
   webDir: config.webDir,
@@ -238,7 +244,7 @@ await app.listen({ port: config.port, host: config.host });
 if (config.backup.enabled) {
   scheduler.start();
 }
-releaseScheduler?.start();
+scope.run(OWNER_ID, () => releaseScheduler?.start());
 if (!releaseScheduler)
   console.log(
     'Release alerts are disabled, they need TMDB_API_KEY and ALERTS_ENABLED not set to false',

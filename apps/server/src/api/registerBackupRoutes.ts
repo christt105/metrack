@@ -12,9 +12,9 @@ export interface BackupRouteDeps {
  * only gets a generic error so filesystem details are not exposed.
  */
 export function registerBackupRoutes(app: FastifyInstance, deps: BackupRouteDeps): void {
-  app.get('/api/backups', async () => deps.service.list());
+  app.get('/api/backups', { config: { ownerOnly: true } }, async () => deps.service.list());
 
-  app.post('/api/backups', async (_request, reply) => {
+  app.post('/api/backups', { config: { ownerOnly: true } }, async (_request, reply) => {
     try {
       return reply.code(201).send(await deps.job.run());
     } catch {

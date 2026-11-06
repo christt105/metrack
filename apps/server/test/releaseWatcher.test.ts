@@ -17,6 +17,7 @@ import type { SeriesRepository } from '../src/storage/repositories/SeriesReposit
 import { FakeReleaseSource } from './support/FakeReleaseSource.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { RecordingNotifier } from './support/RecordingNotifier.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const logger = { info: () => {}, error: () => {} };
 
@@ -54,11 +55,11 @@ describe('ReleaseWatcher', () => {
 
   beforeEach(async () => {
     db = openTestDatabase();
-    movies = new SqliteMovieRepository(db);
-    series = new SqliteSeriesRepository(db);
-    seasons = new SqliteSeasonRepository(db);
-    overrides = new SqliteSeasonOverrideRepository(db);
-    alerts = new SqliteReleaseAlertRepository(db);
+    movies = new SqliteMovieRepository(db, OWNER_SCOPE);
+    series = new SqliteSeriesRepository(db, OWNER_SCOPE);
+    seasons = new SqliteSeasonRepository(db, OWNER_SCOPE);
+    overrides = new SqliteSeasonOverrideRepository(db, OWNER_SCOPE);
+    alerts = new SqliteReleaseAlertRepository(db, OWNER_SCOPE);
     source = new FakeReleaseSource();
     notifier = new RecordingNotifier();
     clock = new Date('2026-10-22T09:00:00Z');

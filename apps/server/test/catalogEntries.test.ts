@@ -13,6 +13,7 @@ import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonReposi
 import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 function catalogRow(db: DatabaseSync, table: string, id: number): Record<string, unknown> {
   return { ...db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) };
@@ -32,7 +33,7 @@ describe('catalog entries migration', () => {
         VALUES (5, 50, 'Matrix', '["Action"]', 'completed', '["2026-01-01"]', '["genres"]');
     `);
 
-    new MigrationRunner(db, migrations).run();
+    new MigrationRunner(db, migrations.slice(0, 9)).run();
 
     expect(catalogRow(db, 'series', 7)).toMatchObject({ tmdb_id: 70, title: 'Lupin' });
     expect(catalogRow(db, 'series', 7)).not.toHaveProperty('follow');
@@ -69,14 +70,14 @@ describe('catalog entries migration', () => {
 describe('catalog and personal entry', () => {
   async function movieSetup() {
     const db = openTestDatabase();
-    const movies = new SqliteMovieRepository(db);
+    const movies = new SqliteMovieRepository(db, OWNER_SCOPE);
     const movie = await movies.create({
       ...emptyMovie(),
       tmdbId: 1,
       title: 'Provider title',
       overview: 'Provider plot',
     });
-    return { db, movies, states: new SqliteMetadataStateRepository(db), id: movie.id };
+    return { db, movies, states: new SqliteMetadataStateRepository(db, OWNER_SCOPE), id: movie.id };
   }
 
   it('keeps hand edits out of the catalog, shows them over it and updates them in place', async () => {
@@ -106,8 +107,8 @@ describe('catalog and personal entry', () => {
 
   it('finds titles by their personal Jellyfin link and their followed flag', async () => {
     const db = openTestDatabase();
-    const series = new SqliteSeriesRepository(db);
-    const seasons = new SqliteSeasonRepository(db);
+    const series = new SqliteSeriesRepository(db, OWNER_SCOPE);
+    const seasons = new SqliteSeasonRepository(db, OWNER_SCOPE);
     const s = await series.create({ ...emptySeries(), title: 'Lupin', follow: true });
     await seasons.create({ ...emptySeason(), seriesId: s.id, number: 2, jellyfinId: 'jf-2' });
     await seasons.create({ ...emptySeason(), seriesId: s.id, number: 1 });
