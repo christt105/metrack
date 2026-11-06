@@ -1,5 +1,6 @@
 export type { BookRepository } from './BookRepository.js';
 export type { EntityRepository } from './EntityRepository.js';
+export type { MediaEntityRepository } from './MediaEntityRepository.js';
 export type { ImageRepository } from './ImageRepository.js';
 export type { MetadataStateRepository } from './MetadataStateRepository.js';
 export type { MovieRepository } from './MovieRepository.js';

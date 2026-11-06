@@ -6,9 +6,24 @@ import { SqliteTableRepository } from './SqliteTableRepository.js';
 import { num, parseList, text, trackingFromRow, trackingToRow } from './rowMapping.js';
 import type { DatabaseSync } from 'node:sqlite';
 
+const ENTRY_COLUMNS = [
+  'jellyfin_id',
+  'follow',
+  'note',
+  'slug',
+  'tags',
+  'status',
+  'started_at',
+  'finished_at',
+  'rating',
+  'review',
+  'rewatches',
+  'pending_review',
+];
+
 export class SqliteMovieRepository extends SqliteTableRepository<Movie> implements MovieRepository {
   constructor(db: DatabaseSync) {
-    super(db, 'movie');
+    super(db, 'movie', ENTRY_COLUMNS);
   }
 
   async findByTmdbId(tmdbId: number): Promise<Movie | undefined> {
@@ -16,7 +31,7 @@ export class SqliteMovieRepository extends SqliteTableRepository<Movie> implemen
   }
 
   async listFollowed(): Promise<Movie[]> {
-    return this.all('SELECT * FROM movie WHERE follow = 1 ORDER BY id');
+    return this.where('e.follow = 1 ORDER BY c.id');
   }
 
   protected toRow(m: Omit<Movie, 'id'>): RowValues {

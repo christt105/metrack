@@ -1,7 +1,7 @@
 import type { Movie } from '@metrack/domain';
-import type { EntityRepository } from './EntityRepository.js';
+import type { MediaEntityRepository } from './MediaEntityRepository.js';
 
-export interface MovieRepository extends EntityRepository<Movie> {
+export interface MovieRepository extends MediaEntityRepository<Movie> {
   findByTmdbId(tmdbId: number): Promise<Movie | undefined>;
   listFollowed(): Promise<Movie[]>;
 }

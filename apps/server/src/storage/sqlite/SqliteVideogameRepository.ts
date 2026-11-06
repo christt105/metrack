@@ -6,12 +6,25 @@ import type { RowValues } from './RowValues.js';
 import { SqliteTableRepository } from './SqliteTableRepository.js';
 import { num, parseList, text, trackingFromRow, trackingToRow } from './rowMapping.js';
 
+const ENTRY_COLUMNS = [
+  'note',
+  'slug',
+  'tags',
+  'status',
+  'started_at',
+  'finished_at',
+  'rating',
+  'review',
+  'rewatches',
+  'pending_review',
+];
+
 export class SqliteVideogameRepository
   extends SqliteTableRepository<Videogame>
   implements VideogameRepository
 {
   constructor(db: DatabaseSync) {
-    super(db, 'videogame');
+    super(db, 'videogame', ENTRY_COLUMNS);
   }
 
   async findByIgdbId(igdbId: number): Promise<Videogame | undefined> {

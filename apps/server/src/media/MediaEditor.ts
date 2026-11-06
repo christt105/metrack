@@ -104,10 +104,14 @@ export class MediaEditor {
     if (Object.keys(changes).length === 0)
       return this.describe(collection, await this.require(collection, id));
 
-    const updated = await kind.repository.update(id, changes);
-    for (const field of kind.metadataFields) {
-      if (field in changes && field in rest) await this.states.markEdited(kind.type, id, field);
+    const edits: Record<string, unknown> = {};
+    const others: Record<string, unknown> = {};
+    for (const [field, value] of Object.entries(changes)) {
+      if (kind.metadataFields.includes(field) && field in rest) edits[field] = value;
+      else others[field] = value;
     }
+    let updated = await kind.repository.update(id, others);
+    if (Object.keys(edits).length > 0) updated = await kind.repository.override(id, edits);
     return this.describe(collection, updated);
   }
 
@@ -158,10 +162,10 @@ export class MediaEditor {
   ): Promise<MediaDetail<MediaEntity>> {
     const kind = this.kinds[collection];
     await this.require(collection, id);
-    if (!(await this.states.get(kind.type, id)).editedFields.includes(field)) {
+    if (!(await kind.repository.overriddenFields(id)).includes(field)) {
       throw ApiError.notFound('That field is not marked as edited');
     }
-    await this.states.unmarkEdited(kind.type, id, field);
+    await kind.repository.clearOverride(id, field);
     return this.detail(collection, id);
   }
 
@@ -174,8 +178,7 @@ export class MediaEditor {
   ): Promise<MediaDetail<MediaEntity>> {
     const kind = this.imageKind(collection, image);
     await this.require(collection, id);
-    const updated = await kind.repository.update(id, { [image]: ref });
-    await this.states.markEdited(kind.type, id, image);
+    const updated = await kind.repository.override(id, { [image]: ref });
     return this.describe(collection, updated);
   }
 
@@ -187,8 +190,7 @@ export class MediaEditor {
   ): Promise<MediaDetail<MediaEntity>> {
     const kind = this.imageKind(collection, image);
     const ref = fieldsOf(await this.require(collection, id))[image];
-    const updated = await kind.repository.update(id, { [image]: null });
-    await this.states.markEdited(kind.type, id, image);
+    const updated = await kind.repository.override(id, { [image]: null });
     if (typeof ref === 'string') {
       const hash = ref.slice(imageRef('').length);
       if ((await this.images.orphans()).includes(hash)) await this.images.delete(hash);

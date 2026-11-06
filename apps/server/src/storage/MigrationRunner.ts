@@ -22,9 +22,12 @@ export class MigrationRunner {
   run(): number {
     const current = this.currentVersion();
     for (const migration of this.migrations.filter((m) => m.version > current)) {
+      const foreignKeys = this.foreignKeysEnabled();
+      if (migration.rebuildsTables) this.db.exec('PRAGMA foreign_keys = OFF');
       this.db.exec('BEGIN');
       try {
         migration.up(this.db);
+        if (migration.rebuildsTables) this.checkForeignKeys(migration);
         this.db
           .prepare('INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)')
           .run(migration.version, migration.name, new Date().toISOString());
@@ -32,9 +35,24 @@ export class MigrationRunner {
       } catch (error) {
         this.db.exec('ROLLBACK');
         throw error;
+      } finally {
+        if (migration.rebuildsTables && foreignKeys) this.db.exec('PRAGMA foreign_keys = ON');
       }
     }
     return this.currentVersion();
+  }
+
+  private foreignKeysEnabled(): boolean {
+    return Number(this.db.prepare('PRAGMA foreign_keys').get()?.foreign_keys) === 1;
+  }
+
+  private checkForeignKeys(migration: Migration): void {
+    const broken = this.db.prepare('PRAGMA foreign_key_check').all();
+    if (broken.length > 0) {
+      throw new Error(
+        `Migration ${migration.version} broke ${broken.length} foreign key references`,
+      );
+    }
   }
 
   private ensureControlTable(): void {

@@ -51,6 +51,7 @@ The tracking fields are `status`, `startedAt`, `finishedAt`, `rating`, `review`,
 - `finishedAt` before `startedAt` answers 400 `invalid_dates`.
 - `rewatches` sent in a patch replaces the whole list (sorted, without duplicates). Prefer the two routes below to add or remove one.
 - Metadata fields are marked as hand-edited when a patch actually changes them: `title`, `originalTitle`, `releaseDate`, `firstAirDate`, `overview`, `genres`, `cast`, `director` (movies and series), `developer`, `platforms` (games), `authors`, `publisher`, `pageCount` (books), `episodeCount` (seasons). Sending a form with unchanged values does not mark anything. Ids, tracking, `note`, `tags`, `slug` and `follow` are never marked. Choosing or removing an image marks `cover` or `banner`.
+- Every title is stored as a catalog row (what providers describe: ids, metadata, default cover and banner) plus a personal entry (tracking, `note`, `tags`, `slug`, `follow`, `jellyfinId`, review). A hand edit of a metadata field or an image is kept in the entry and shown over the catalog; a refresh only updates the catalog, and `DELETE .../edited/{field}` drops the hand edit so the catalog value shows again.
 
 ### Rewatches (not for series)
 

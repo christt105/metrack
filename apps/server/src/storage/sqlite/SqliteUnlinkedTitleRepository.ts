@@ -3,11 +3,11 @@ import type { MediaType, UnlinkedTitle } from '@metrack/domain';
 import type { UnlinkedTitleRepository } from '../repositories/UnlinkedTitleRepository.js';
 import type { Row } from './Row.js';
 import type { RowValues } from './RowValues.js';
-import { SqliteTableRepository } from './SqliteTableRepository.js';
+import { SqlitePlainTableRepository } from './SqlitePlainTableRepository.js';
 import { num, text } from './rowMapping.js';
 
 export class SqliteUnlinkedTitleRepository
-  extends SqliteTableRepository<UnlinkedTitle>
+  extends SqlitePlainTableRepository<UnlinkedTitle>
   implements UnlinkedTitleRepository
 {
   constructor(db: DatabaseSync) {

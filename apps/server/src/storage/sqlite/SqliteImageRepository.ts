@@ -64,15 +64,23 @@ export class SqliteImageRepository implements ImageRepository {
     const ref = imageRef(hash);
     for (const { table, column } of IMAGE_COLUMNS) {
       this.db.prepare(`UPDATE ${table} SET ${column} = NULL WHERE ${column} = ?`).run(ref);
+      this.db
+        .prepare(
+          `UPDATE ${table}_entry SET overrides = json_set(overrides, '$.${column}', NULL)
+           WHERE json_extract(overrides, '$.${column}') = ?`,
+        )
+        .run(ref);
     }
     this.db.prepare('DELETE FROM image_source WHERE hash = ?').run(hash);
     this.db.prepare('DELETE FROM image WHERE hash = ?').run(hash);
   }
 
   async orphans(): Promise<string[]> {
-    const referenced = IMAGE_COLUMNS.map(
-      ({ table, column }) => `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
-    ).join(' UNION ');
+    const referenced = IMAGE_COLUMNS.flatMap(({ table, column }) => [
+      `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
+      `SELECT json_extract(overrides, '$.${column}') AS ref FROM ${table}_entry
+       WHERE json_extract(overrides, '$.${column}') IS NOT NULL`,
+    ]).join(' UNION ');
     return this.db
       .prepare(
         `SELECT hash FROM image WHERE '${imageRef('')}' || hash NOT IN (${referenced}) ORDER BY hash`,
