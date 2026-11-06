@@ -8,6 +8,7 @@ import { BackupService } from '../src/backup/BackupService.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
+import { signedInAs } from './support/signedInAs.js';
 
 let dir: string;
 
@@ -32,6 +33,7 @@ describe('backup routes', () => {
     const job = new BackupJob(service, 5, { notify: vi.fn(async () => true) }, logger);
     const app = await buildApp({
       appVersion: 'test',
+      authenticator: signedInAs(),
       migrationRunner: runner,
       backup: { service, job },
     });
@@ -55,6 +57,7 @@ describe('backup routes', () => {
     const runner = new MigrationRunner(openDatabase(':memory:'), migrations);
     const app = await buildApp({
       appVersion: 'test',
+      authenticator: signedInAs(),
       migrationRunner: runner,
       backup: { service, job },
     });

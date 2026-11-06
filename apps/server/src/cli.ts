@@ -11,6 +11,7 @@ import { runSyncCommand } from './sync/runSyncCommand.js';
 import { runImport } from './importer/runImport.js';
 import { formatMirrorResult } from './mirror/formatMirrorResult.js';
 import { syncVaultMirror } from './mirror/syncVaultMirror.js';
+import { runUsersCommand } from './users/runUsersCommand.js';
 
 const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack redirect <outDir> --origin <newSiteAddress> [--old-base <path>]
@@ -20,6 +21,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack sync [--apply] [--verbose] [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
+       metrack users [add <name> [--email <address>]] [--data-dir <dir>]
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
   With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
@@ -43,6 +45,8 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   as written. --web-url (or VAULT_MIRROR_WEB_URL) adds a link back to the web app; --link-prefix is the
   folder's path inside the vault (default "Media Tracker").
 
+  users lists who can sign in; users add creates a user. User 1 owns everything stored before users existed.
+
   export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
   <outDir>, replacing those sections. It reads the database and image store in the data directory.`;
 
@@ -59,6 +63,7 @@ async function main(argv: string[]): Promise<number> {
       'old-base': { type: 'string' },
       'web-url': { type: 'string' },
       'link-prefix': { type: 'string' },
+      email: { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
@@ -70,6 +75,22 @@ async function main(argv: string[]): Promise<number> {
     }
     const env = { ...process.env, DATA_DIR: values['data-dir'] ?? process.env.DATA_DIR };
     console.log(await runBackupCommand(loadConfig(env), command, target));
+    return 0;
+  }
+  if (!values.help && command === 'users') {
+    const [, action, name] = positionals;
+    const adding = action === 'add' && name !== undefined && positionals.length === 3;
+    if ((action !== undefined && !adding) || (values.email !== undefined && !adding)) {
+      console.error(USAGE);
+      return 2;
+    }
+    const dataDir = values['data-dir'] ?? loadConfig(process.env).dataDir;
+    console.log(
+      await runUsersCommand({
+        dataDir,
+        add: adding ? { name, email: values.email ?? null } : undefined,
+      }),
+    );
     return 0;
   }
   if (!values.help && command === 'sync') {

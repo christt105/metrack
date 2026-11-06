@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { createHealthReport } from '@metrack/domain';
+import { registerAuthGuard } from './registerAuthGuard.js';
+import { registerAuthRoutes } from './registerAuthRoutes.js';
 import { registerArtworkRoutes } from './registerArtworkRoutes.js';
 import { registerErrorHandler } from './registerErrorHandler.js';
 import { registerImageRoutes } from './registerImageRoutes.js';
@@ -24,10 +26,15 @@ import { registerBackupRoutes, type BackupRouteDeps } from './registerBackupRout
 import type { SyncService } from '../sync/SyncService.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
 import type { Logger } from '../notify/Logger.js';
+import type { Authenticator } from '../auth/Authenticator.js';
+import type { AuthRouteDeps } from './AuthRouteDeps.js';
 
 export interface AppDeps {
   appVersion: string;
   migrationRunner: MigrationRunner;
+  /** Tells who signed in; every `/api` route that is not public needs a user. */
+  authenticator: Authenticator;
+  auth?: AuthRouteDeps;
   /** Receives the failures answered with a 5xx status. */
   logger?: Logger;
   webDir?: string;
@@ -49,8 +56,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     ajv: { customOptions: { removeAdditional: false, coerceTypes: 'array' } },
   });
   registerErrorHandler(app, deps.logger);
+  registerAuthGuard(app, deps.authenticator);
+  if (deps.auth) registerAuthRoutes(app, deps.auth);
 
-  app.get('/api/health', async (_request, reply) => {
+  app.get('/api/health', { config: { public: true } }, async (_request, reply) => {
     const report = createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion());
     return reply.code(report.status === 'ok' ? 200 : 503).send(report);
   });

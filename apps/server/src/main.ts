@@ -1,5 +1,7 @@
 import { join } from 'node:path';
 import { buildApp } from './api/buildApp.js';
+import { SessionCookieAuthenticator } from './auth/SessionCookieAuthenticator.js';
+import { SessionService } from './auth/SessionService.js';
 import { createEditServices } from './api/createEditServices.js';
 import type { ImageProvider } from './artwork/ImageProvider.js';
 import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js';
@@ -199,9 +201,12 @@ const scheduler = new BackupScheduler(
   logger,
 );
 
+const sessions = new SessionService(repositories.sessions, repositories.users);
 const app = await buildApp({
   appVersion: config.appVersion,
   migrationRunner,
+  authenticator: new SessionCookieAuthenticator(sessions),
+  auth: { sessions, users: repositories.users, devLogin: config.devLogin },
   logger,
   webDir: config.webDir,
   imageStore,
@@ -238,4 +243,6 @@ if (!releaseScheduler)
   console.log(
     'Release alerts are disabled, they need TMDB_API_KEY and ALERTS_ENABLED not set to false',
   );
+if (config.devLogin)
+  console.log('Dev login is on: anyone who reaches the web can sign in as any user');
 console.log(`metrack listening on ${config.host}:${config.port} (schema v${schemaVersion})`);

@@ -10,13 +10,14 @@ export async function mountWithApi(
   component: Component,
   api: Partial<ApiClient>,
   props: Record<string, unknown> = {},
+  provide: Record<symbol, unknown> = {},
 ) {
   const router = createAppRouter(createMemoryHistory());
   await router.push('/');
   await router.isReady();
   const wrapper = mount(component, {
     props,
-    global: { plugins: [router], provide: { [apiKey as symbol]: api } },
+    global: { plugins: [router], provide: { [apiKey as symbol]: api, ...provide } },
   });
   return { wrapper, router };
 }

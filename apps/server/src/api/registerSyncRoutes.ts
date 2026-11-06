@@ -13,7 +13,8 @@ const applyBody = {
 /**
  * Jellyfin viewing sync. `GET /api/sync/report` only computes the plan. `POST /api/sync/apply` needs
  * `{ "confirm": true }`, recomputes the plan on the server and writes it. `POST /api/sync/webhook` is the target of the
- * Jellyfin Webhook plugin: it ignores the body, queues a delayed sync and answers 202. All of them answer 501 when sync is not configured.
+ * Jellyfin Webhook plugin: it ignores the body, queues a delayed sync and answers 202. It needs no session, since it
+ * only schedules work. All of them answer 501 when sync is not configured.
  */
 export function registerSyncRoutes(
   app: FastifyInstance,
@@ -34,7 +35,7 @@ export function registerSyncRoutes(
 
   app.post('/api/sync/apply', { schema: { body: applyBody } }, async () => ready().apply());
 
-  app.post('/api/sync/webhook', async (_request, reply) => {
+  app.post('/api/sync/webhook', { config: { public: true } }, async (_request, reply) => {
     ready();
     queue?.markDirty();
     return reply.code(202).send({ status: 'queued', failures: queue?.failureCount() ?? 0 });

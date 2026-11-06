@@ -4,6 +4,7 @@ import { buildApp } from '../src/api/buildApp.js';
 import { ApiError } from '../src/api/ApiError.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
+import { signedInAs } from './support/signedInAs.js';
 
 async function setup() {
   const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
@@ -11,6 +12,7 @@ async function setup() {
   const errors: string[] = [];
   const app = await buildApp({
     appVersion: 'test',
+    authenticator: signedInAs(),
     migrationRunner: runner,
     logger: { info: () => {}, error: (message) => void errors.push(message) },
   });

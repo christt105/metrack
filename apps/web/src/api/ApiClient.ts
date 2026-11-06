@@ -24,6 +24,7 @@ import type {
   SeriesDetail,
   ReleaseAlert,
   UnlinkedTitle,
+  User,
   WatchlistEntry,
 } from '@metrack/domain';
 import type { BackupInfo } from './BackupInfo';
@@ -33,9 +34,15 @@ import type { EntityOf } from './EntityOf';
 
 type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDetail<EntityOf[C]>;
 
-/** Typed access to the private editing API. The fetch function is injected so tests can fake the network. */
+/**
+ * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
+ * `onUnauthenticated` runs when a call outside `/auth` is refused for lack of a session.
+ */
 export class ApiClient {
-  constructor(private readonly fetchFn: typeof fetch = (...args) => fetch(...args)) {}
+  constructor(
+    private readonly fetchFn: typeof fetch = (...args) => fetch(...args),
+    private readonly onUnauthenticated: () => void = () => {},
+  ) {}
 
   private async request<T>(
     method: string,
@@ -59,6 +66,7 @@ export class ApiClient {
       );
     }
     if (!response.ok && !acceptedStatuses.includes(response.status)) {
+      if (response.status === 401 && !path.startsWith('/auth/')) this.onUnauthenticated();
       throw await this.toError(response);
     }
     if (response.status === 204) return undefined as T;
@@ -81,6 +89,34 @@ export class ApiClient {
         '',
       );
     }
+  }
+
+  /** The signed-in user, or null without a session. */
+  async me(): Promise<User | null> {
+    try {
+      return await this.request<User>('GET', '/auth/me');
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) return null;
+      throw error;
+    }
+  }
+
+  /** Who can sign in with dev login, or null when the server does not offer it. */
+  async devUsers(): Promise<User[] | null> {
+    try {
+      return await this.request<User[]>('GET', '/auth/dev-users');
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
+  devLogin(userId: number): Promise<User> {
+    return this.request('POST', '/auth/dev-login', { userId });
+  }
+
+  logout(): Promise<void> {
+    return this.request('POST', '/auth/logout');
   }
 
   /** A degraded service answers 503 with the same report, which is returned rather than thrown. */

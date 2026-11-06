@@ -50,6 +50,8 @@ export type { ResolveUnlinkedResponse } from './api/ResolveUnlinkedResponse.js';
 export type { RefreshResult } from './api/RefreshResult.js';
 export type { EntityRef } from './api/EntityRef.js';
 export type { ImageCandidateList } from './api/ImageCandidateList.js';
+export type { User } from './api/User.js';
+export type { DevLoginRequest } from './api/DevLoginRequest.js';
 export type { LibraryEpisode } from './sync/LibraryEpisode.js';
 export type { LibrarySeason } from './sync/LibrarySeason.js';
 export type { LibraryMovie } from './sync/LibraryMovie.js';

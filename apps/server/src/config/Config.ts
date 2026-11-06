@@ -9,6 +9,8 @@ export interface Config {
   dataDir: string;
   webDir: string;
   appVersion: string;
+  /** Sign in as any user with no password (DEV_LOGIN=true). Only for a trusted network or development. */
+  devLogin: boolean;
   tmdbApiKey: string | undefined;
   tmdbLanguage: string;
   openLibraryLanguage: string;
