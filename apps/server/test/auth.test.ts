@@ -45,7 +45,7 @@ async function setup(devLogin = true) {
       payload: { userId },
     });
     const header = String(response.headers['set-cookie']);
-    return { response, header, cookie: header.split(';')[0] };
+    return { response, header, cookie: header.split(';')[0] ?? '' };
   };
   return { db, app, users, clock, signIn };
 }
