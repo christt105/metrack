@@ -11,6 +11,7 @@ import { catalogEntriesMigration } from './0009-catalog-entries.js';
 import { usersMigration } from './0010-users.js';
 import { dataOwnersMigration } from './0011-data-owners.js';
 import { userSettingsMigration } from './0012-user-settings.js';
+import { apiTokensMigration } from './0013-api-tokens.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -25,4 +26,5 @@ export const migrations: readonly Migration[] = [
   usersMigration,
   dataOwnersMigration,
   userSettingsMigration,
+  apiTokensMigration,
 ];

@@ -6,6 +6,8 @@ declare module 'fastify' {
     public?: boolean;
     /** Acts on the whole instance (backups, deleting shared images): only the owner may call it. */
     ownerOnly?: boolean;
+    /** Needs the browser session: personal API tokens are refused (settings, managing tokens). */
+    sessionOnly?: boolean;
   }
   interface FastifyRequest {
     /** Who made the request; set by the auth guard on every route that is not public. */

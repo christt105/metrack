@@ -1,5 +1,8 @@
 import type {
   AddTitleRequest,
+  ApiToken,
+  CreatedToken,
+  CreateTokenRequest,
   ApiErrorBody,
   Collection,
   CreateInput,
@@ -274,5 +277,17 @@ export class ApiClient {
 
   updateUserSettings(userId: number, patch: UserSettingsPatch): Promise<UserSettings> {
     return this.request('PATCH', `/users/${userId}/settings`, patch);
+  }
+
+  listTokens(): Promise<ApiToken[]> {
+    return this.request('GET', '/tokens');
+  }
+
+  createToken(request: CreateTokenRequest): Promise<CreatedToken> {
+    return this.request('POST', '/tokens', request);
+  }
+
+  revokeToken(id: number): Promise<void> {
+    return this.request('DELETE', `/tokens/${id}`);
   }
 }

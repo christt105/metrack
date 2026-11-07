@@ -1,13 +1,13 @@
 # HTTP API
 
-The private editing API served by `apps/server` under `/api`. Every route needs a signed-in session except the ones marked public below (see the security model in the README). Requests and responses are JSON unless noted. Every type named here is exported from `@metrack/domain` (`packages/domain/src/api` and the entity types next to it), so the web app imports the contract instead of redefining it.
+The private editing API served by `apps/server` under `/api`. Every route needs a signed-in session or a personal API token except the ones marked public below (see the security model in the README). Requests and responses are JSON unless noted. Every type named here is exported from `@metrack/domain` (`packages/domain/src/api` and the entity types next to it), so the web app imports the contract instead of redefining it.
 
 ## Conventions
 
 - Dates are ISO `YYYY-MM-DD` and must be real calendar dates. Ratings are numbers from 0 to 10.
 - Bodies are validated against a schema. Unknown fields are rejected, not ignored.
-- Errors always have the shape `ApiErrorBody`: `{ "error": "message for people", "code": "stable_code", "details": optional }`. Status codes: 400 validation or bad input, 401 no session (`unauthenticated`), 403 an instance-wide action for the owner only (`owner_only`), 404 unknown record, 409 conflict with the current state, 501 a provider or source that is not configured, 502 a provider failed.
-- Common codes: `unauthenticated`, `owner_only`, `catalog_shared`, `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `sync_not_configured`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
+- Errors always have the shape `ApiErrorBody`: `{ "error": "message for people", "code": "stable_code", "details": optional }`. Status codes: 400 validation or bad input, 401 no session (`unauthenticated`) or a bad token (`bad_token`), 403 an instance-wide action for the owner only (`owner_only`), a route that needs the browser session (`session_required`) or a write with a read-only token (`read_only_token`), 404 unknown record, 409 conflict with the current state, 501 a provider or source that is not configured, 502 a provider failed.
+- Common codes: `unauthenticated`, `bad_token`, `owner_only`, `session_required`, `read_only_token`, `catalog_shared`, `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `sync_not_configured`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
 - Any successful write under `/api` marks the public site as changed, so the publisher rebuilds it after a short debounce. Reads never do.
 - Images are never linked to a provider. `cover` and `banner` always hold `/api/images/<hash>`, a copy in the server image store.
 
@@ -20,6 +20,24 @@ A session is an `HttpOnly`, `SameSite=Lax` cookie named `metrack_session` that l
 - Everything else answers for the signed-in user only. An id that belongs to someone else is a 404, as if it did not exist. Titles are a shared catalog plus a personal entry: adding a title that another user already has reuses the same id, and changing a catalog field that is not a hand edit (an external id, a season number) of a title someone else also has answers 409 `catalog_shared` with the fields in `details.fields`.
 - Only user 1, the owner, may call the instance-wide routes: `GET` and `POST /api/backups`, `POST /api/images/cleanup` and `DELETE /api/images/:hash`. Others get 403 `owner_only`. Sync and publishing act on the signed-in user, with the Jellyfin account and Pages project in their settings.
 - `GET /api/auth/dev-users` and `POST /api/auth/dev-login` (`DevLoginRequest`, `{ "userId": 2 }`, answers the `User` and sets the cookie): only with `DEV_LOGIN=true`, otherwise they answer 404. They let anyone who reaches the server sign in as any user with no password, for development and a trusted local network.
+
+## Personal API tokens
+
+Programs (a sync connector, the Obsidian plugin) call the API on a user's behalf with a token in `Authorization: Bearer <secret>` instead of the session cookie. A request with an `Authorization` header is judged by its token alone: an unknown, malformed, revoked or expired one answers 401 `bad_token` even next to a valid cookie. The server stores only the SHA-256 of each secret, which starts with `mt_`.
+
+- Scopes (`TokenScope`, `TOKEN_SCOPES`): `read` may only `GET`, anything else answers 403 `read_only_token`; `write` may also change the user's library.
+- A token never reaches the owner-only routes (even the owner's own token), the settings or token routes: they answer 403 `session_required`.
+- Last use is recorded at most once a minute. Deleting a user deletes their tokens.
+
+Managing tokens needs the browser session:
+
+- `GET /api/tokens`: the signed-in user's tokens as `ApiToken[]` (`{ id, name, scope, createdAt, expiresAt, lastUsedAt }`), newest first. The secret is never listed.
+- `POST /api/tokens` (`CreateTokenRequest`: `{ name, scope, expiresInDays }`): `name` is 1 to `TOKEN_NAME_MAX` (60) characters after trimming (`invalid_token_name`), `expiresInDays` one of `TOKEN_LIFETIMES_DAYS` (30, 90, 365, or `null` for never; `invalid_token_lifetime`). Answers 201 `CreatedToken` (`{ token, secret }`); the secret is shown only here.
+- `DELETE /api/tokens/{id}`: revokes one of the user's tokens, 204; 404 when they have no token with that id.
+
+```sh
+curl -H "Authorization: Bearer mt_..." http://localhost:8097/api/media
+```
 
 ## Collections
 
@@ -134,6 +152,6 @@ Importing the Obsidian notes stays a command of the server CLI (`metrack import`
 
 ## Settings
 
-- `GET /api/settings`: `OwnSettings`, the signed-in user's `settings` (`UserSettings`: what their sync, alerts, publishing and vault mirror act on, `null` when unset) and whether they are the `owner`.
+- `GET /api/settings` (browser session only): `OwnSettings`, the signed-in user's `settings` (`UserSettings`: what their sync, alerts, publishing and vault mirror act on, `null` when unset) and whether they are the `owner`.
 - `GET /api/users` (owner only): `UserWithSettings[]`, every user with their settings, by id.
 - `PATCH /api/users/{id}/settings` (owner only): changes some of `jellyfinUser`, `ntfyTopic`, `publishProject`, `publishBaseUrl` and `mirrorLinkPrefix`; a string is trimmed, `null` or an empty string clears the setting. Answers the stored `UserSettings`; 400 `invalid_settings` with the problem of each invalid value in `details`, 400 for any other field (the vault folder `mirrorDir` is only set from the command line), 403 for anyone but the owner, 404 for an unknown user.
