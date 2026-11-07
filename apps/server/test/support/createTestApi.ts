@@ -43,11 +43,16 @@ import { TmdbSeriesProvider } from '../../src/titles/TmdbSeriesProvider.js';
 import { WatchlistService } from '../../src/alerts/WatchlistService.js';
 import { FakeScheduler } from './FakeScheduler.js';
 import { signedInAs } from './signedInAs.js';
+import type { Authenticator } from '../../src/auth/Authenticator.js';
+import type { UserScope } from '../../src/users/UserScope.js';
+import type { DatabaseSync } from 'node:sqlite';
+import { OWNER_SCOPE } from './ownerScope.js';
 
 export const NOW = new Date('2026-03-05T12:00:00Z');
 
 export interface TestApi {
   app: FastifyInstance;
+  db: DatabaseSync;
   store: ImageStore;
   scheduler: FakeScheduler;
   movies: MovieRepository;
@@ -61,20 +66,31 @@ export interface TestApi {
 }
 
 /** The full API over a temporary database file and a fake network. TMDB and SteamGridDB are always configured. */
-export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
+export interface TestApiOptions {
+  /** Defaults to always acting as the owner. */
+  scope?: UserScope;
+  /** Defaults to treating every request as the owner's. */
+  authenticator?: Authenticator;
+}
+
+export async function createTestApi(
+  fetchFn: FetchFn,
+  options: TestApiOptions = {},
+): Promise<TestApi> {
+  const scope = options.scope ?? OWNER_SCOPE;
   const dir = mkdtempSync(join(tmpdir(), 'metrack-api-'));
   const db = openDatabase(join(dir, 'metrack.db'));
   const runner = new MigrationRunner(db, migrations);
   runner.run();
 
-  const movies = new SqliteMovieRepository(db);
-  const series = new SqliteSeriesRepository(db);
-  const seasons = new SqliteSeasonRepository(db);
-  const videogames = new SqliteVideogameRepository(db);
-  const books = new SqliteBookRepository(db);
-  const unlinked = new SqliteUnlinkedTitleRepository(db);
+  const movies = new SqliteMovieRepository(db, scope);
+  const series = new SqliteSeriesRepository(db, scope);
+  const seasons = new SqliteSeasonRepository(db, scope);
+  const videogames = new SqliteVideogameRepository(db, scope);
+  const books = new SqliteBookRepository(db, scope);
+  const unlinked = new SqliteUnlinkedTitleRepository(db, scope);
   const store = createImageStore(db, join(dir, 'images'), fetchFn);
-  const states = new SqliteMetadataStateRepository(db);
+  const states = new SqliteMetadataStateRepository(db, scope);
   const cache = new MetadataCache(states, store, undefined, () => NOW);
   const tmdb = new TmdbClient(fetchFn, { apiKey: 'key', language: 'es-ES' });
   cache.register('movie', {
@@ -102,7 +118,7 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
     { info: () => {}, error: () => {} },
     scheduler,
   );
-  const alerts = new SqliteReleaseAlertRepository(db);
+  const alerts = new SqliteReleaseAlertRepository(db, scope);
   const edit = createEditServices({
     sources: {
       movies,
@@ -110,7 +126,7 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
       seasons,
       videogames,
       books,
-      overrides: new SqliteSeasonOverrideRepository(db),
+      overrides: new SqliteSeasonOverrideRepository(db, scope),
     },
     unlinked,
     states,
@@ -122,7 +138,8 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
   });
   const app = await buildApp({
     appVersion: 'test',
-    authenticator: signedInAs(),
+    authenticator: options.authenticator ?? signedInAs(),
+    scope,
     migrationRunner: runner,
     imageStore: store,
     metadataCache: cache,
@@ -132,6 +149,7 @@ export async function createTestApi(fetchFn: FetchFn): Promise<TestApi> {
   });
   return {
     app,
+    db,
     store,
     scheduler,
     movies,

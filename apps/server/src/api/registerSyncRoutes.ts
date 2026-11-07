@@ -31,9 +31,13 @@ export function registerSyncRoutes(
     return sync;
   };
 
-  app.get('/api/sync/report', async () => ready().report());
+  app.get('/api/sync/report', { config: { ownerOnly: true } }, async () => ready().report());
 
-  app.post('/api/sync/apply', { schema: { body: applyBody } }, async () => ready().apply());
+  app.post(
+    '/api/sync/apply',
+    { config: { ownerOnly: true }, schema: { body: applyBody } },
+    async () => ready().apply(),
+  );
 
   app.post('/api/sync/webhook', { config: { public: true } }, async (_request, reply) => {
     ready();

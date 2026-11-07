@@ -5,6 +5,7 @@ import type { RowValues } from './RowValues.js';
 import { SqliteTableRepository } from './SqliteTableRepository.js';
 import { num, parseList, text, trackingFromRow, trackingToRow } from './rowMapping.js';
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 
 const ENTRY_COLUMNS = [
   'jellyfin_id',
@@ -22,8 +23,8 @@ const ENTRY_COLUMNS = [
 ];
 
 export class SqliteMovieRepository extends SqliteTableRepository<Movie> implements MovieRepository {
-  constructor(db: DatabaseSync) {
-    super(db, 'movie', ENTRY_COLUMNS);
+  constructor(db: DatabaseSync, scope: UserScope) {
+    super(db, scope, 'movie', ENTRY_COLUMNS, [['tmdb_id']]);
   }
 
   async findByTmdbId(tmdbId: number): Promise<Movie | undefined> {

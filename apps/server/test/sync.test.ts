@@ -30,6 +30,7 @@ import type { EntityRef } from '@metrack/domain';
 import { TmdbClient } from '../src/providers/tmdb/TmdbClient.js';
 import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
 import { signedInAs } from './support/signedInAs.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 interface Recorded {
   url: URL;
@@ -283,11 +284,11 @@ function setup(library: LibrarySource, plays: PlaybackSource) {
   const runner = new MigrationRunner(db, migrations);
   runner.run();
   const targets = {
-    movies: new SqliteMovieRepository(db),
-    series: new SqliteSeriesRepository(db),
-    seasons: new SqliteSeasonRepository(db),
-    overrides: new SqliteSeasonOverrideRepository(db),
-    unlinked: new SqliteUnlinkedTitleRepository(db),
+    movies: new SqliteMovieRepository(db, OWNER_SCOPE),
+    series: new SqliteSeriesRepository(db, OWNER_SCOPE),
+    seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
+    overrides: new SqliteSeasonOverrideRepository(db, OWNER_SCOPE),
+    unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
   };
   const service = new SyncService(
     library,
@@ -503,6 +504,7 @@ describe('SyncService', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: t.runner,
       sync: t.service,
     });
@@ -550,6 +552,7 @@ describe('SyncService', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: t.runner,
       sync: t.service,
       syncQueue: queue,
@@ -578,6 +581,7 @@ describe('SyncService', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: t.runner,
     });
     const response = await app.inject({ method: 'POST', url: '/api/sync/webhook', payload: {} });
@@ -590,6 +594,7 @@ describe('SyncService', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: t.runner,
     });
     const response = await app.inject({ method: 'GET', url: '/api/sync/report' });

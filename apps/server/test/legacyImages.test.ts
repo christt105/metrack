@@ -24,6 +24,7 @@ import { png } from './support/sampleImages.js';
 import { syntheticVault, REMOTE_COVER, UNKNOWN_REMOTE_COVER } from './support/syntheticVault.js';
 import { writeVault } from './support/writeVault.js';
 import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const created: string[] = [];
 afterEach(() => {
@@ -195,12 +196,12 @@ describe('importing images from legacy directories', () => {
     created.push(dir);
     const store = createImageStore(db, dir);
     const targets = {
-      movies: new SqliteMovieRepository(db),
-      series: new SqliteSeriesRepository(db),
-      seasons: new SqliteSeasonRepository(db),
-      videogames: new SqliteVideogameRepository(db),
-      books: new SqliteBookRepository(db),
-      unlinked: new SqliteUnlinkedTitleRepository(db),
+      movies: new SqliteMovieRepository(db, OWNER_SCOPE),
+      series: new SqliteSeriesRepository(db, OWNER_SCOPE),
+      seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
+      videogames: new SqliteVideogameRepository(db, OWNER_SCOPE),
+      books: new SqliteBookRepository(db, OWNER_SCOPE),
+      unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
     };
     const vault = writeVault(syntheticVault());
     created.push(vault);

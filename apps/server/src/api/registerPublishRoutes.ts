@@ -11,7 +11,7 @@ export function registerPublishRoutes(app: FastifyInstance, queue: PublishQueue)
     if (writes && request.url.startsWith('/api/') && reply.statusCode < 400) queue.markDirty();
   });
 
-  app.post('/api/publish', async (_request, reply) => {
+  app.post('/api/publish', { config: { ownerOnly: true } }, async (_request, reply) => {
     queue.markDirty();
     return reply.code(202).send({ status: 'queued', failures: queue.failureCount() });
   });

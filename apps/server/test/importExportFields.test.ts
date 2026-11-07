@@ -17,6 +17,7 @@ import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
 import { writeVault } from './support/writeVault.js';
 import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const note = (frontmatter: string, body = ''): string => `---\n${frontmatter}\n---\n${body}`;
 const dirs: string[] = [];
@@ -30,12 +31,12 @@ async function importVault(files: Record<string, string | Buffer>) {
   dirs.push(vaultDir, storeDir);
   const db = openTestDatabase();
   const targets = {
-    movies: new SqliteMovieRepository(db),
-    series: new SqliteSeriesRepository(db),
-    seasons: new SqliteSeasonRepository(db),
-    videogames: new SqliteVideogameRepository(db),
-    books: new SqliteBookRepository(db),
-    unlinked: new SqliteUnlinkedTitleRepository(db),
+    movies: new SqliteMovieRepository(db, OWNER_SCOPE),
+    series: new SqliteSeriesRepository(db, OWNER_SCOPE),
+    seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
+    videogames: new SqliteVideogameRepository(db, OWNER_SCOPE),
+    books: new SqliteBookRepository(db, OWNER_SCOPE),
+    unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
   };
   const issues = new IssueLog();
   const plan = buildImportPlan(readVaultNotes(vaultDir, issues), vaultDir, issues);

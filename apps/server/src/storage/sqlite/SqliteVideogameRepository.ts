@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 import type { Videogame } from '@metrack/domain';
 import type { VideogameRepository } from '../repositories/VideogameRepository.js';
 import type { Row } from './Row.js';
@@ -23,8 +24,8 @@ export class SqliteVideogameRepository
   extends SqliteTableRepository<Videogame>
   implements VideogameRepository
 {
-  constructor(db: DatabaseSync) {
-    super(db, 'videogame', ENTRY_COLUMNS);
+  constructor(db: DatabaseSync, scope: UserScope) {
+    super(db, scope, 'videogame', ENTRY_COLUMNS, [['igdb_id']]);
   }
 
   async findByIgdbId(igdbId: number): Promise<Videogame | undefined> {

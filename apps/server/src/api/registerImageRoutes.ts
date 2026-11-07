@@ -15,11 +15,18 @@ export function registerImageRoutes(app: FastifyInstance, images: ImageStore): v
       .send(await images.read(image));
   });
 
-  app.delete<{ Params: { hash: string } }>('/api/images/:hash', async (request, reply) => {
-    const removed = isImageHash(request.params.hash) && (await images.delete(request.params.hash));
-    if (!removed) throw ApiError.notFound();
-    return reply.code(204).send();
-  });
+  app.delete<{ Params: { hash: string } }>(
+    '/api/images/:hash',
+    { config: { ownerOnly: true } },
+    async (request, reply) => {
+      const removed =
+        isImageHash(request.params.hash) && (await images.delete(request.params.hash));
+      if (!removed) throw ApiError.notFound();
+      return reply.code(204).send();
+    },
+  );
 
-  app.post('/api/images/cleanup', async () => ({ removed: await images.cleanOrphans() }));
+  app.post('/api/images/cleanup', { config: { ownerOnly: true } }, async () => ({
+    removed: await images.cleanOrphans(),
+  }));
 }

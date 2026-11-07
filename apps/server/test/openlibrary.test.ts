@@ -11,6 +11,7 @@ import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository
 import { OpenLibraryBookProvider } from '../src/titles/OpenLibraryBookProvider.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const COVERS = 'https://covers.openlibrary.org/b/id';
 
@@ -79,7 +80,7 @@ function openLibraryFetch(options: {
 
 function setup(fetchFn: FetchFn) {
   const db = openTestDatabase();
-  const books = new SqliteBookRepository(db);
+  const books = new SqliteBookRepository(db, OWNER_SCOPE);
   const images = createImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-openlibrary-')), fetchFn);
   const client = new OpenLibraryClient(fetchFn, 'es');
   return { books, provider: new OpenLibraryBookProvider(client, books, images) };

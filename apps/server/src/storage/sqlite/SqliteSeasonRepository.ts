@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 import type { Season } from '@metrack/domain';
 import type { SeasonRepository } from '../repositories/SeasonRepository.js';
 import type { Row } from './Row.js';
@@ -23,8 +24,8 @@ export class SqliteSeasonRepository
   extends SqliteTableRepository<Season>
   implements SeasonRepository
 {
-  constructor(db: DatabaseSync) {
-    super(db, 'season', ENTRY_COLUMNS);
+  constructor(db: DatabaseSync, scope: UserScope) {
+    super(db, scope, 'season', ENTRY_COLUMNS, [['series_id', 'number']]);
   }
 
   async listBySeries(seriesId: number): Promise<Season[]> {

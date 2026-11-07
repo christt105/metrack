@@ -9,6 +9,7 @@ import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
 import { signedInAs } from './support/signedInAs.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 let dir: string;
 
@@ -34,6 +35,7 @@ describe('backup routes', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: runner,
       backup: { service, job },
     });
@@ -58,6 +60,7 @@ describe('backup routes', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: runner,
       backup: { service, job },
     });

@@ -6,8 +6,8 @@ The private editing API served by `apps/server` under `/api`. Every route needs 
 
 - Dates are ISO `YYYY-MM-DD` and must be real calendar dates. Ratings are numbers from 0 to 10.
 - Bodies are validated against a schema. Unknown fields are rejected, not ignored.
-- Errors always have the shape `ApiErrorBody`: `{ "error": "message for people", "code": "stable_code", "details": optional }`. Status codes: 400 validation or bad input, 401 no session (`unauthenticated`), 404 unknown record, 409 conflict with the current state, 501 a provider or source that is not configured, 502 a provider failed.
-- Common codes: `unauthenticated`, `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `sync_not_configured`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
+- Errors always have the shape `ApiErrorBody`: `{ "error": "message for people", "code": "stable_code", "details": optional }`. Status codes: 400 validation or bad input, 401 no session (`unauthenticated`), 403 an instance-wide action for the owner only (`owner_only`), 404 unknown record, 409 conflict with the current state, 501 a provider or source that is not configured, 502 a provider failed.
+- Common codes: `unauthenticated`, `owner_only`, `catalog_shared`, `validation_error`, `not_found`, `conflict` (a unique id is taken), `invalid_reference`, `invalid_date`, `invalid_dates`, `invalid_transition`, `invalid_rewatch`, `already_added`, `provider_not_configured`, `no_metadata_source`, `provider_error`, `provider_not_found`, `sync_not_configured`, `unsupported_image_kind`, `url_not_allowed`, `image_download_failed`, `ids_required`, `invalid_ids`, `cannot_resolve`.
 - Any successful write under `/api` marks the public site as changed, so the publisher rebuilds it after a short debounce. Reads never do.
 - Images are never linked to a provider. `cover` and `banner` always hold `/api/images/<hash>`, a copy in the server image store.
 
@@ -17,6 +17,8 @@ A session is an `HttpOnly`, `SameSite=Lax` cookie named `metrack_session` that l
 
 - `GET /api/auth/me`: the signed-in `User` (`{ id, name, email }`).
 - `POST /api/auth/logout`: ends the session and clears the cookie, 204 (also without a session).
+- Everything else answers for the signed-in user only. An id that belongs to someone else is a 404, as if it did not exist. Titles are a shared catalog plus a personal entry: adding a title that another user already has reuses the same id, and changing a catalog field that is not a hand edit (an external id, a season number) of a title someone else also has answers 409 `catalog_shared` with the fields in `details.fields`.
+- Only user 1, the owner, may call the instance-wide routes: `GET /api/sync/report`, `POST /api/sync/apply`, `POST /api/publish`, `GET` and `POST /api/backups`, `POST /api/images/cleanup` and `DELETE /api/images/:hash`. Others get 403 `owner_only`.
 - `GET /api/auth/dev-users` and `POST /api/auth/dev-login` (`DevLoginRequest`, `{ "userId": 2 }`, answers the `User` and sets the cookie): only with `DEV_LOGIN=true`, otherwise they answer 404. They let anyone who reaches the server sign in as any user with no password, for development and a trusted local network.
 
 ## Collections

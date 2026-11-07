@@ -4,6 +4,7 @@ import { buildApp } from '../src/api/buildApp.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { signedInAs } from './support/signedInAs.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 describe('GET /api/health', () => {
   it('returns status and schema version after migrations', async () => {
@@ -12,6 +13,7 @@ describe('GET /api/health', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: runner,
     });
     const response = await app.inject({ method: 'GET', url: '/api/health' });
@@ -28,6 +30,7 @@ describe('GET /api/health', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: runner,
     });
     const response = await app.inject({ method: 'GET', url: '/api/health' });
@@ -40,6 +43,7 @@ describe('GET /api/health', () => {
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
       migrationRunner: runner,
     });
     const response = await app.inject({ method: 'GET', url: '/api/nope' });

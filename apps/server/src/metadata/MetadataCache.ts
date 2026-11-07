@@ -89,7 +89,7 @@ export class MetadataCache {
         hashContent(patch[field]) !== hashContent((entity as Record<string, unknown>)[field]),
     );
     if (changed.length > 0) {
-      await target.repository.update(id, patch as Partial<Omit<T, 'id'>>);
+      await target.repository.updateCatalog(id, patch as Partial<Omit<T, 'id'>>);
     }
     await this.states.markFetched(type, id, fetchedAt, imageFailed ? undefined : hash);
     return { outcome: 'updated', fields: changed };

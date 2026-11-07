@@ -28,12 +28,15 @@ import type { MigrationRunner } from '../storage/MigrationRunner.js';
 import type { Logger } from '../notify/Logger.js';
 import type { Authenticator } from '../auth/Authenticator.js';
 import type { AuthRouteDeps } from './AuthRouteDeps.js';
+import type { UserScope } from '../users/UserScope.js';
 
 export interface AppDeps {
   appVersion: string;
   migrationRunner: MigrationRunner;
   /** Tells who signed in; every `/api` route that is not public needs a user. */
   authenticator: Authenticator;
+  /** Binds each request to its user. */
+  scope: UserScope;
   auth?: AuthRouteDeps;
   /** Receives the failures answered with a 5xx status. */
   logger?: Logger;
@@ -56,7 +59,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     ajv: { customOptions: { removeAdditional: false, coerceTypes: 'array' } },
   });
   registerErrorHandler(app, deps.logger);
-  registerAuthGuard(app, deps.authenticator);
+  registerAuthGuard(app, deps.authenticator, deps.scope);
   if (deps.auth) registerAuthRoutes(app, deps.auth);
 
   app.get('/api/health', { config: { public: true } }, async (_request, reply) => {

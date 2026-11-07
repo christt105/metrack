@@ -12,6 +12,8 @@ import { ImportApplier } from './ImportApplier.js';
 import { LegacyImageIndex } from './LegacyImageIndex.js';
 import { IssueLog } from './IssueLog.js';
 import { readVaultNotes } from './readVaultNotes.js';
+import { FixedUserScope } from '../users/FixedUserScope.js';
+import { OWNER_ID } from '../users/OWNER_ID.js';
 
 export interface ImportOptions {
   vaultDir: string;
@@ -44,7 +46,7 @@ export async function runImport(options: ImportOptions): Promise<string> {
   const db = openDatabase(join(options.dataDir, 'metrack.db'));
   try {
     new MigrationRunner(db, migrations).run();
-    const repositories = createSqliteRepositories(db);
+    const repositories = createSqliteRepositories(db, new FixedUserScope(OWNER_ID));
     const store = createImageStore(db, join(options.dataDir, 'images'));
     const result = await new ImportApplier(
       repositories.transactions,

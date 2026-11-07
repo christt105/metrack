@@ -3,6 +3,7 @@ import type { ApiErrorBody } from '@metrack/domain';
 import type { Logger } from '../notify/Logger.js';
 import { HttpError } from '../http/HttpError.js';
 import { ApiError } from './ApiError.js';
+import { SharedCatalogError } from '../storage/SharedCatalogError.js';
 
 interface Failure {
   status: number;
@@ -14,6 +15,12 @@ function describe(error: unknown): Failure {
     const body: ApiErrorBody = { error: error.message, code: error.code };
     if (error.details !== undefined) body.details = error.details;
     return { status: error.status, body };
+  }
+  if (error instanceof SharedCatalogError) {
+    return {
+      status: 409,
+      body: { error: error.message, code: 'catalog_shared', details: { fields: error.fields } },
+    };
   }
   if (error instanceof HttpError) {
     const missing = error.status === 404;

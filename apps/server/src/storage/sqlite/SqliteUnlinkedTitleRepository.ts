@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { UserScope } from '../../users/UserScope.js';
 import type { MediaType, UnlinkedTitle } from '@metrack/domain';
 import type { UnlinkedTitleRepository } from '../repositories/UnlinkedTitleRepository.js';
 import type { Row } from './Row.js';
@@ -10,12 +11,12 @@ export class SqliteUnlinkedTitleRepository
   extends SqlitePlainTableRepository<UnlinkedTitle>
   implements UnlinkedTitleRepository
 {
-  constructor(db: DatabaseSync) {
-    super(db, 'unlinked_title');
+  constructor(db: DatabaseSync, scope: UserScope) {
+    super(db, scope, 'unlinked_title');
   }
 
   async findBySourceRef(source: string, sourceRef: string): Promise<UnlinkedTitle | undefined> {
-    return (await this.list()).find((t) => t.source === source && t.sourceRef === sourceRef);
+    return this.all('source = ? AND source_ref = ? ORDER BY id LIMIT 1', source, sourceRef)[0];
   }
 
   protected toRow(t: Omit<UnlinkedTitle, 'id'>): RowValues {

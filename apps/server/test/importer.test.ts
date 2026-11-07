@@ -27,6 +27,7 @@ import { openTestDatabase } from './support/openTestDatabase.js';
 import { REMOTE_COVER, syntheticVault } from './support/syntheticVault.js';
 import { writeVault } from './support/writeVault.js';
 import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
+import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const created: string[] = [];
 const tempDir = (): string => {
@@ -188,12 +189,12 @@ describe('ImportApplier', () => {
     storeDir = tempDir();
     store = createImageStore(db, storeDir);
     repos = {
-      movies: new SqliteMovieRepository(db),
-      series: new SqliteSeriesRepository(db),
-      seasons: new SqliteSeasonRepository(db),
-      videogames: new SqliteVideogameRepository(db),
-      books: new SqliteBookRepository(db),
-      unlinked: new SqliteUnlinkedTitleRepository(db),
+      movies: new SqliteMovieRepository(db, OWNER_SCOPE),
+      series: new SqliteSeriesRepository(db, OWNER_SCOPE),
+      seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
+      videogames: new SqliteVideogameRepository(db, OWNER_SCOPE),
+      books: new SqliteBookRepository(db, OWNER_SCOPE),
+      unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
     };
     applier = new ImportApplier(
       new SqliteTransactionRunner(db),
