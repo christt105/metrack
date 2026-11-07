@@ -104,20 +104,30 @@ describe('dev login', () => {
     await users.create({ name: 'Friend', email: 'friend@example.com' });
     const listed = await app.inject({ method: 'GET', url: '/api/auth/dev-users' });
     expect(listed.json()).toEqual([
-      { id: 1, name: 'Owner', email: null },
-      { id: 2, name: 'Friend', email: 'friend@example.com' },
+      { id: 1, name: 'Owner', email: null, role: 'owner' },
+      { id: 2, name: 'Friend', email: 'friend@example.com', role: 'normal' },
     ]);
 
     const { response, header, cookie } = await signIn(2);
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ id: 2, name: 'Friend', email: 'friend@example.com' });
+    expect(response.json()).toEqual({
+      id: 2,
+      name: 'Friend',
+      email: 'friend@example.com',
+      role: 'normal',
+    });
     expect(header).toContain('HttpOnly');
     expect(header).toContain('SameSite=Lax');
     expect(header).toContain('Path=/');
     expect(header).not.toContain('Secure');
 
     const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
-    expect(me.json()).toEqual({ id: 2, name: 'Friend', email: 'friend@example.com' });
+    expect(me.json()).toEqual({
+      id: 2,
+      name: 'Friend',
+      email: 'friend@example.com',
+      role: 'normal',
+    });
   });
 
   it('answers 404 for a user that does not exist and 400 for a bad body', async () => {
@@ -187,7 +197,7 @@ describe('sessions', () => {
 describe('users', () => {
   it('starts with user 1 as the owner of what was stored before users existed', async () => {
     const { users } = await setup();
-    expect(await users.list()).toEqual([{ id: 1, name: 'Owner', email: null }]);
+    expect(await users.list()).toEqual([{ id: 1, name: 'Owner', email: null, role: 'owner' }]);
   });
 
   it('keeps emails unique regardless of case', async () => {
@@ -200,13 +210,28 @@ describe('users', () => {
 
   it('are listed and added from the CLI', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
-    expect(await runUsersCommand({ dataDir })).toBe('1  Owner  [no jobs]');
+    expect(await runUsersCommand({ dataDir })).toBe('1  Owner  owner  [no jobs]');
     expect(
       await runUsersCommand({ dataDir, add: { name: 'Friend', email: 'friend@example.com' } }),
-    ).toBe('Created 2  Friend  <friend@example.com>');
+    ).toBe('Created 2  Friend  <friend@example.com>  normal');
     expect(await runUsersCommand({ dataDir })).toBe(
-      '1  Owner  [no jobs]\n2  Friend  <friend@example.com>  [no jobs]',
+      '1  Owner  owner  [no jobs]\n2  Friend  <friend@example.com>  normal  [no jobs]',
     );
+  });
+
+  it('get a role from the CLI, except user 1 who is always the owner', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
+    await runUsersCommand({ dataDir, add: { name: 'Friend', email: null } });
+    expect(
+      await runUsersCommand({ dataDir, set: { userId: 2, changes: {}, role: 'trusted' } }),
+    ).toContain('2  Friend  trusted');
+    expect(await runUsersCommand({ dataDir })).toContain('2  Friend  trusted  [no jobs]');
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 2, changes: {}, role: 'owner' } }),
+    ).rejects.toThrow('Role must be one of trusted, normal');
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 1, changes: {}, role: 'normal' } }),
+    ).rejects.toThrow('User 1 is always the owner');
   });
 
   it('get their job settings from the CLI, where an empty value clears one', async () => {
@@ -219,7 +244,7 @@ describe('users', () => {
     expect(shown).toContain('jellyfinUser: haku');
     expect(shown).toContain('ntfyTopic: -');
     expect(await runUsersCommand({ dataDir })).toBe(
-      '1  Owner  [no jobs]\n2  Friend  [sync, mirror]',
+      '1  Owner  owner  [no jobs]\n2  Friend  normal  [sync, mirror]',
     );
     await runUsersCommand({ dataDir, set: { userId: 2, changes: { mirrorDir: '' } } });
     expect(await runUsersCommand({ dataDir, set: { userId: 2, changes: {} } })).toContain(

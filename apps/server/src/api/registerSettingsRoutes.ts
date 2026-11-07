@@ -1,6 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import {
+  ASSIGNABLE_ROLES,
   applySettingsPatch,
+  type RoleChange,
+  type User,
   WEB_EDITABLE_SETTINGS,
   type OwnSettings,
   type UserSettings,
@@ -20,6 +23,13 @@ const params = {
   required: ['id'],
 } as const;
 
+const roleBody = {
+  type: 'object',
+  properties: { role: { type: 'string', enum: [...ASSIGNABLE_ROLES] } },
+  required: ['role'],
+  additionalProperties: false,
+} as const;
+
 const patchBody = {
   type: 'object',
   properties: Object.fromEntries(
@@ -32,6 +42,7 @@ const patchBody = {
  * `GET /api/settings` shows the signed-in user what their background jobs act on. Each setting points the instance's
  * credentials (Jellyfin, ntfy, Cloudflare) or its disk at something, so only the owner changes them: `GET /api/users`
  * lists everyone with their settings and `PATCH /api/users/{id}/settings` changes the web-editable ones of any user.
+ * `PUT /api/users/{id}/role` makes a user trusted or normal; user 1 is always the owner.
  */
 export function registerSettingsRoutes(
   app: FastifyInstance,
@@ -74,6 +85,20 @@ export function registerSettingsRoutes(
       }
       await settings.save(id, result.settings);
       return result.settings;
+    },
+  );
+
+  app.put<{ Params: { id: number }; Body: RoleChange }>(
+    '/api/users/:id/role',
+    { config: { ownerOnly: true }, schema: { params, body: roleBody } },
+    async (request): Promise<User> => {
+      const { id } = request.params;
+      if (id === OWNER_ID) {
+        throw ApiError.badRequest('owner_role_fixed', 'The owner is always user 1');
+      }
+      if (!(await users.get(id))) throw ApiError.notFound('That user does not exist');
+      await users.setRole(id, request.body.role);
+      return (await users.get(id)) as User;
     },
   );
 }

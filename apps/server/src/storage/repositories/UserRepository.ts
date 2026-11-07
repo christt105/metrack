@@ -1,4 +1,4 @@
-import type { User } from '@metrack/domain';
+import type { User, UserRole } from '@metrack/domain';
 import type { NewUser } from './NewUser.js';
 
 export interface UserRepository {
@@ -6,4 +6,5 @@ export interface UserRepository {
   get(id: number): Promise<User | undefined>;
   /** Ordered by id. */
   list(): Promise<User[]>;
+  setRole(id: number, role: UserRole): Promise<void>;
 }

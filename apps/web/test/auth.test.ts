@@ -11,8 +11,8 @@ import { installAuthGuard } from '../src/router/installAuthGuard';
 import LoginView from '../src/views/LoginView.vue';
 import { mountWithApi } from './mountWithApi';
 
-const OWNER: User = { id: 1, name: 'Owner', email: null };
-const FRIEND: User = { id: 2, name: 'Friend', email: 'friend@example.com' };
+const OWNER: User = { id: 1, name: 'Owner', email: null, role: 'owner' };
+const FRIEND: User = { id: 2, name: 'Friend', email: 'friend@example.com', role: 'normal' };
 
 function guardedRouter(me: () => Promise<User | null>) {
   const session = new Session({ me } as unknown as ApiClient);

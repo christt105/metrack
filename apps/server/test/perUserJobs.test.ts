@@ -39,9 +39,9 @@ import { RecordingNotifier } from './support/RecordingNotifier.js';
 const FRIEND_ID = 2;
 const STRANGER_ID = 3;
 const USERS: User[] = [
-  { id: OWNER_ID, name: 'Owner', email: null },
-  { id: FRIEND_ID, name: 'Friend', email: null },
-  { id: STRANGER_ID, name: 'Stranger', email: null },
+  { id: OWNER_ID, name: 'Owner', email: null, role: 'owner' },
+  { id: FRIEND_ID, name: 'Friend', email: null, role: 'normal' },
+  { id: STRANGER_ID, name: 'Stranger', email: null, role: 'normal' },
 ];
 
 /** Signs each request in as the user named by the `x-test-user` header. */

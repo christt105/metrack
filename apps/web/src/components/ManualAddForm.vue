@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { canAddByHand } from '@metrack/domain';
+import { sessionKey } from '../auth/sessionKey';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import ErrorNotice from './ErrorNotice.vue';
@@ -9,6 +11,11 @@ const props = defineProps<{ collection: 'games' | 'books' }>();
 
 const api = useApi();
 const router = useRouter();
+const session = inject(sessionKey, null);
+const allowed = computed(() => {
+  const user = session?.user.value;
+  return user ? canAddByHand(user.role) : true;
+});
 const title = ref('');
 const busy = ref(false);
 const error = ref<unknown>(null);
@@ -30,8 +37,9 @@ async function create(): Promise<void> {
 <template>
   <section class="panel">
     <h2>{{ messages.search.manualHeading }}</h2>
-    <p class="muted">{{ messages.search.manualHint }}</p>
-    <form class="row" @submit.prevent="create">
+    <p v-if="!allowed" class="muted">{{ messages.search.manualTrustedOnly }}</p>
+    <p v-if="allowed" class="muted">{{ messages.search.manualHint }}</p>
+    <form v-if="allowed" class="row" @submit.prevent="create">
       <input
         v-model="title"
         type="text"

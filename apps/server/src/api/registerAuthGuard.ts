@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { canAddByHand } from '@metrack/domain';
 import type { ApiTokenService } from '../auth/ApiTokenService.js';
 import type { Authenticator } from '../auth/Authenticator.js';
 import { readBearerToken } from '../auth/readBearerToken.js';
@@ -16,7 +17,7 @@ const READ_METHODS = new Set(['GET', 'HEAD']);
  *
  * A request with an `Authorization` header signs in with a personal API token instead of the
  * session cookie. Tokens never reach `ownerOnly` or `sessionOnly` routes, and a `read` token only
- * reads.
+ * reads. Routes marked `config.trustedOnly` answer 403 to normal users, however they sign in.
  */
 export function registerAuthGuard(
   app: FastifyInstance,
@@ -46,17 +47,23 @@ export function registerAuthGuard(
         return reply.code(403).send({ error: 'This token can only read', code: 'read_only_token' });
       }
       request.user = signIn.user;
-      return;
+    } else {
+      const user = await authenticator.userFor(request.headers);
+      if (!user) {
+        return reply.code(401).send({ error: 'Sign in first', code: 'unauthenticated' });
+      }
+      if (config.ownerOnly && user.id !== OWNER_ID) {
+        return reply.code(403).send({ error: 'Only the owner can do this', code: 'owner_only' });
+      }
+      request.user = user;
     }
-    const user = await authenticator.userFor(request.headers);
-    if (!user) {
-      return reply.code(401).send({ error: 'Sign in first', code: 'unauthenticated' });
+    if (config.trustedOnly && !canAddByHand(request.user.role)) {
+      return reply
+        .code(403)
+        .send({ error: 'Only trusted users can do this', code: 'trusted_only' });
     }
-    if (config.ownerOnly && user.id !== OWNER_ID) {
-      return reply.code(403).send({ error: 'Only the owner can do this', code: 'owner_only' });
-    }
-    request.user = user;
   });
+
   app.addHook('onRequest', (request, _reply, done) => {
     if (request.user) scope.run(request.user.id, done);
     else done();

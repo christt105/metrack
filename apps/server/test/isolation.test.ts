@@ -11,8 +11,8 @@ import { png } from './support/sampleImages.js';
 
 const TMDB = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/original';
-const OWNER: User = { id: OWNER_ID, name: 'Owner', email: null };
-const FRIEND: User = { id: 2, name: 'Friend', email: null };
+const OWNER: User = { id: OWNER_ID, name: 'Owner', email: null, role: 'owner' };
+const FRIEND: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 
 /** Signs each request in as the user named by the `x-test-user` header. */
 const byHeader: Authenticator = {

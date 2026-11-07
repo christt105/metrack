@@ -22,7 +22,7 @@ const ENTRY_COLUMNS = [
 
 export class SqliteBookRepository extends SqliteTableRepository<Book> implements BookRepository {
   constructor(db: DatabaseSync, scope: UserScope) {
-    super(db, scope, 'book', ENTRY_COLUMNS, [['openlibrary_id']]);
+    super(db, scope, 'book', ENTRY_COLUMNS, [['openlibrary_id']], [], true);
   }
 
   async findByOpenLibraryId(openLibraryId: string): Promise<Book | undefined> {

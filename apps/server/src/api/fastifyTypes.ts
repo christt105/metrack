@@ -8,6 +8,8 @@ declare module 'fastify' {
     ownerOnly?: boolean;
     /** Needs the browser session: personal API tokens are refused (settings, managing tokens). */
     sessionOnly?: boolean;
+    /** Adds items by hand: owner and trusted users only (`canAddByHand`). */
+    trustedOnly?: boolean;
   }
   interface FastifyRequest {
     /** Who made the request; set by the auth guard on every route that is not public. */
