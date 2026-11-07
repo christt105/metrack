@@ -1,5 +1,5 @@
 import type { CommandRunner } from './CommandRunner.js';
-import type { PublishConfig } from './PublishConfig.js';
+import type { CloudflarePagesTarget } from './CloudflarePagesTarget.js';
 import type { Publisher } from './Publisher.js';
 
 /** Parent environment variables wrangler needs: paths, locale, proxies and CAs. */
@@ -23,14 +23,7 @@ export const WRANGLER_INHERITED_ENV: readonly string[] = [
 /** Uploads a built site to Cloudflare Pages with `wrangler pages deploy` (direct upload). */
 export class CloudflarePagesPublisher implements Publisher {
   constructor(
-    private readonly config: Pick<
-      PublishConfig,
-      | 'wranglerBinary'
-      | 'cloudflareApiToken'
-      | 'cloudflareAccountId'
-      | 'cloudflareProject'
-      | 'cloudflareBranch'
-    >,
+    private readonly config: CloudflarePagesTarget,
     private readonly runner: CommandRunner,
   ) {}
 

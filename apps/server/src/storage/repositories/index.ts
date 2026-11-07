@@ -16,3 +16,4 @@ export type { NewUser } from './NewUser.js';
 export type { SessionRepository } from './SessionRepository.js';
 export type { StoredSession } from './StoredSession.js';
 export type { UserRepository } from './UserRepository.js';
+export type { UserSettingsRepository } from './UserSettingsRepository.js';

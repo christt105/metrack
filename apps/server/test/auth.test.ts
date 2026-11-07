@@ -7,6 +7,7 @@ import { readCookie } from '../src/auth/readCookie.js';
 import { SessionCookieAuthenticator } from '../src/auth/SessionCookieAuthenticator.js';
 import { SessionService } from '../src/auth/SessionService.js';
 import { PublishQueue } from '../src/publish/PublishQueue.js';
+import { ownerQueues } from './support/ownerQueues.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { SqliteSessionRepository } from '../src/storage/sqlite/SqliteSessionRepository.js';
@@ -38,7 +39,7 @@ async function setup(devLogin = true) {
     authenticator: new SessionCookieAuthenticator(sessions),
     scope: new AsyncUserScope(),
     auth: { sessions, users, devLogin },
-    publishQueue: queue,
+    publishQueues: ownerQueues(queue),
   });
   const signIn = async (userId: number) => {
     const response = await app.inject({
@@ -199,11 +200,34 @@ describe('users', () => {
 
   it('are listed and added from the CLI', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
-    expect(await runUsersCommand({ dataDir })).toBe('1  Owner');
+    expect(await runUsersCommand({ dataDir })).toBe('1  Owner  [no jobs]');
     expect(
       await runUsersCommand({ dataDir, add: { name: 'Friend', email: 'friend@example.com' } }),
     ).toBe('Created 2  Friend  <friend@example.com>');
-    expect(await runUsersCommand({ dataDir })).toBe('1  Owner\n2  Friend  <friend@example.com>');
+    expect(await runUsersCommand({ dataDir })).toBe(
+      '1  Owner  [no jobs]\n2  Friend  <friend@example.com>  [no jobs]',
+    );
+  });
+
+  it('get their job settings from the CLI, where an empty value clears one', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
+    await runUsersCommand({ dataDir, add: { name: 'Friend', email: null } });
+    const shown = await runUsersCommand({
+      dataDir,
+      set: { userId: 2, changes: { jellyfinUser: 'haku', mirrorDir: '/vault/Friend' } },
+    });
+    expect(shown).toContain('jellyfinUser: haku');
+    expect(shown).toContain('ntfyTopic: -');
+    expect(await runUsersCommand({ dataDir })).toBe(
+      '1  Owner  [no jobs]\n2  Friend  [sync, mirror]',
+    );
+    await runUsersCommand({ dataDir, set: { userId: 2, changes: { mirrorDir: '' } } });
+    expect(await runUsersCommand({ dataDir, set: { userId: 2, changes: {} } })).toContain(
+      'mirrorDir: -',
+    );
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 9, changes: { ntfyTopic: 't' } } }),
+    ).rejects.toThrow('There is no user 9');
   });
 });
 

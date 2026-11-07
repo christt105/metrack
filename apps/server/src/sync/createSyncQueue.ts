@@ -2,29 +2,34 @@ import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
 import { DEFAULT_QUEUE_OPTIONS, PublishQueue } from '../publish/PublishQueue.js';
 import type { Scheduler } from '../publish/Scheduler.js';
+import type { UserQueues } from '../users/UserQueues.js';
 import { describeSyncResult } from './describeSyncResult.js';
-import type { SyncService } from './SyncService.js';
+import type { UserSyncServices } from './UserSyncServices.js';
 
 export interface SyncQueueDeps {
-  sync: SyncService;
+  services: UserSyncServices;
+  userId: number;
   notifier: Notifier;
   logger: Logger;
+  /** Must run the callbacks as `userId`. */
   scheduler: Scheduler;
   delayMs: number;
   /** Queues that must run again after a sync wrote something. */
-  downstream: readonly (PublishQueue | undefined)[];
+  downstream: readonly (UserQueues | undefined)[];
 }
 
 /**
- * Runs the sync after Jellyfin webhooks. Bursts of events become one run, an event during a run
+ * Runs one user's sync after Jellyfin webhooks. Bursts of events become one run, an event during a run
  * triggers another afterwards and failures retry with backoff. Whatever the sync wrote is
  * published and mirrored like any other edit.
  */
 export function createSyncQueue(deps: SyncQueueDeps): PublishQueue {
   return new PublishQueue(
     async () => {
-      const { result } = await deps.sync.apply();
-      for (const queue of deps.downstream) queue?.markDirty();
+      const sync = await deps.services.forUser(deps.userId);
+      if (!sync) return 'skipped, no Jellyfin user is set';
+      const { result } = await sync.apply();
+      for (const queues of deps.downstream) await queues?.markAllDirty();
       return describeSyncResult(result);
     },
     deps.notifier,

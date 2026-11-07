@@ -18,7 +18,22 @@ Self-hosted media tracker for movies, series (tracked per season), games and boo
 
 Every API route needs a signed-in session except health, logout and the Jellyfin webhook (which only schedules a sync). Users are listed with `metrack users` and created with `metrack users add <name> [--email <address>]` (in Docker: `docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js users add <name>`); user 1 owns everything stored before users existed. Sign-in with Google is planned; for now the only way to sign in is dev login (`DEV_LOGIN=true`), where the sign-in page lists every user and anyone who can open it picks one with no password. With dev login off, nobody can sign in.
 
-Dev login is only safe on a trusted local network, so until there is a real sign-in method do not expose metrack to the internet. Only the published static site is meant to be public. Each user only sees and edits their own library: every personal row (tracking, reviews, notes, hand edits, followed titles, season overrides, the unlinked inbox and sent alerts) has an owner, and every query filters by the signed-in user. What providers describe about a title (TMDB, IGDB, Open Library) is a shared catalog, so two users who add the same film share one catalog row and keep separate entries; changing an external id of a title someone else also has is refused. Instance-wide actions (Jellyfin sync, publishing, backups, image cleanup) and the background jobs belong to the owner, user 1, for now.
+Dev login is only safe on a trusted local network, so until there is a real sign-in method do not expose metrack to the internet. Only the published static site is meant to be public. Each user only sees and edits their own library: every personal row (tracking, reviews, notes, hand edits, followed titles, season overrides, the unlinked inbox and sent alerts) has an owner, and every query filters by the signed-in user. What providers describe about a title (TMDB, IGDB, Open Library) is a shared catalog, so two users who add the same film share one catalog row and keep separate entries; changing an external id of a title someone else also has is refused. Backups and deleting images (images are shared by hash) act on the whole instance and belong to the owner, user 1.
+
+### Per-user settings
+
+The background jobs run once for each user whose settings enable them, each as that user, so a job only reads and writes its user's library: the Jellyfin sync reads that user's Jellyfin account, release alerts watch what that user follows and go to their ntfy topic, publishing builds their site from their data into their Cloudflare Pages project, and the vault mirror writes their notes into their folder. The instance keeps the connections and credentials (Jellyfin and Jellystat, the ntfy server and token, the Cloudflare account, the site template); a user's settings only say what to act on:
+
+| Setting            | Enables                               | Starts from (user 1)       |
+| ------------------ | ------------------------------------- | -------------------------- |
+| `jellyfinUser`     | Jellyfin sync of that account         | `JELLYFIN_USER`, `admin`   |
+| `ntfyTopic`        | Release alerts and job failure alerts | `NTFY_TOPIC`               |
+| `publishProject`   | Publishing to that Pages project      | `CLOUDFLARE_PAGES_PROJECT` |
+| `publishBaseUrl`   | The site address passed to Hugo       | `PUBLISH_BASE_URL`         |
+| `mirrorDir`        | The vault mirror into that folder     | `VAULT_MIRROR_DIR`         |
+| `mirrorLinkPrefix` | That folder's path inside the vault   | `VAULT_MIRROR_LINK_PREFIX` |
+
+The first time the server starts with this table, user 1's settings are stored from those variables (`admin` only when sync is configured), so an existing install keeps doing exactly what it did. From then on the stored settings win; a variable that disagrees is logged at start and ignored. Settings are changed from the command line, because they point the instance's credentials at an account, a project or a folder: `metrack users set <id> [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>] [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>]`, where an empty value clears one; `metrack users set <id>` alone shows them and `metrack users` lists which jobs run for each user. Changes apply to the next run without a restart, except that a newly set vault folder is first mirrored after the next write or restart. Job state lives in the data directory: user 1 keeps `publish-state.json`, `publish/` and `vault-mirror-state.json` at its root, other users have them under `users/<id>/`. Because titles are a shared catalog, any write marks every user's site and mirror as changed; a run whose export did not change does nothing.
 
 ## Quick start
 
@@ -109,11 +124,10 @@ The notes written are recorded in `vault-mirror-state.json` in the data director
 
 ### Automatic mirror
 
-With `VAULT_MIRROR_DIR` set, the server runs the mirror once at start and again a few seconds after every successful write under `/api` (the same trigger as publishing), so the vault follows every edit. `VAULT_MIRROR_WEB_URL` and `VAULT_MIRROR_LINK_PREFIX` work like the CLI options. Failures are logged, retried with backoff and reported once through ntfy. When the server runs as root (the Docker image), written files and folders take the owner of the folder they are written into, so the vault keeps belonging to its user. In Docker, mount the vault folder and point the variable at it:
+For every user with a vault folder in their settings (`mirrorDir`, see Per-user settings), the server runs the mirror once at start and again a few seconds after every successful write under `/api` (the same trigger as publishing), so the vault follows every edit. `VAULT_MIRROR_WEB_URL` and the `mirrorLinkPrefix` setting work like the CLI options; `metrack mirror --user <id>` mirrors another user's notes. Failures are logged, retried with backoff and reported once through the user's ntfy topic. When the server runs as root (the Docker image), written files and folders take the owner of the folder they are written into, so the vault keeps belonging to its user. In Docker, mount the vault folder and set it for the user (`metrack users set 1 --mirror-dir "/vault/Media Tracker"`, or `VAULT_MIRROR_DIR` before the first start):
 
 ```yaml
 environment:
-  VAULT_MIRROR_DIR: /vault/Media Tracker
   VAULT_MIRROR_WEB_URL: http://192.168.1.15:8100
 volumes:
   - /path/to/vault/Media Tracker:/vault/Media Tracker
@@ -133,14 +147,15 @@ A series with season notes exports a `tv` page that only groups its seasons (sta
 
 ## Publishing
 
-The service builds the site and uploads it to Cloudflare Pages by direct upload (`wrangler pages deploy`), so images never go through git. The image ships both tools at pinned versions, set by the `HUGO_VERSION` and `WRANGLER_VERSION` build arguments in the `Dockerfile`: Hugo extended (checksum verified at build time) and wrangler, installed globally, so publishing needs no download at runtime. Wrangler receives the Cloudflare credentials plus only an allowlist of the server's environment (`WRANGLER_INHERITED_ENV`: paths, locale, proxy and CA variables). Publishing is event driven: any successful write under `/api` marks the site as changed, `POST /api/publish` does the same on request, and a short debounce turns a burst of edits into one attempt. An attempt exports the data and compares its fingerprint with the last published one, so nothing is built or uploaded when the site would be identical. Otherwise it copies the site template, adds the export, runs `hugo` and uploads the result. A failed attempt is retried with exponential backoff (1 minute, doubling, up to 1 hour). A run of failures sends one ntfy alert (the same `NTFY_*` settings as backups, otherwise only logged), and one more message when a publish succeeds again. `hugo` runs with an allowlist of the environment as well (`HUGO_INHERITED_ENV`: paths, locale, `HUGO_*`, the Go module variables, proxies and CAs), so no credential of the server reaches the theme build.
+The service builds the site and uploads it to Cloudflare Pages by direct upload (`wrangler pages deploy`), so images never go through git. The image ships both tools at pinned versions, set by the `HUGO_VERSION` and `WRANGLER_VERSION` build arguments in the `Dockerfile`: Hugo extended (checksum verified at build time) and wrangler, installed globally, so publishing needs no download at runtime. Wrangler receives the Cloudflare credentials plus only an allowlist of the server's environment (`WRANGLER_INHERITED_ENV`: paths, locale, proxy and CA variables). Each user with a Cloudflare Pages project in their settings (`publishProject`, see Per-user settings) gets their own site, built from their library. Publishing is event driven: any successful write under `/api` marks the sites as changed, `POST /api/publish` does the same for the signed-in user's site, and a short debounce turns a burst of edits into one attempt. An attempt exports the data and compares its fingerprint with the last published one, so nothing is built or uploaded when the site would be identical. Otherwise it copies the site template, adds the export, runs `hugo` and uploads the result. A failed attempt is retried with exponential backoff (1 minute, doubling, up to 1 hour). A run of failures sends one ntfy alert to the user's topic (otherwise only logged), and one more message when a publish succeeds again. `hugo` runs with an allowlist of the environment as well (`HUGO_INHERITED_ENV`: paths, locale, `HUGO_*`, the Go module variables, proxies and CAs), so no credential of the server reaches the theme build.
 
-Publishing stays off, with a log line naming what is missing, unless all of these are set. Credentials are only ever read from the environment.
+Publishing stays off, with a log line naming what is missing, unless all of these are set. Credentials are only ever read from the environment; the project and the site address are per-user settings.
 
 - `PUBLISH_SITE_TEMPLATE_DIR`: Hugo project without the exported content sections.
-- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PAGES_PROJECT`: the Pages project to deploy to.
+- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`: the Cloudflare account the Pages projects belong to.
 - `HUGO_BIN` (default `hugo`), `WRANGLER_BIN` (default `wrangler`) and `CLOUDFLARE_PAGES_BRANCH` (default `main`).
-- `PUBLISH_BASE_URL` (optional): public address of the site, passed to Hugo as `--baseURL`. Set it to the address the site is served from (for example `https://my-site.pages.dev/`): without it the template's `baseURL` applies, and a relative one makes the RSS feeds emit relative links and cover URLs that feed readers cannot resolve.
+
+The `publishBaseUrl` setting (optional, user 1 starts from `PUBLISH_BASE_URL`) is the public address of the site, passed to Hugo as `--baseURL`. Set it to the address the site is served from (for example `https://my-site.pages.dev/`): without it the template's `baseURL` applies, and a relative one makes the RSS feeds emit relative links and cover URLs that feed readers cannot resolve.
 
 The image does not include Go, so the theme's Hugo modules must be vendored in the site template (`hugo mod vendor`, which writes `_vendor/`); with them vendored the build needs no network. The old MediaTracker site builds this way inside the image. The upload to Cloudflare is not covered by automated tests: the publisher is tested with a fake command runner and the pipeline with a fake publisher. Changes to the site template alone do not trigger a publish, because the fingerprint covers only the exported content.
 
@@ -189,6 +204,8 @@ Each backup is a directory `metrack-<UTC timestamp>` containing `metrack.db`, a 
 | `BACKUP_INTERVAL_HOURS`                | `24`                | Minimum age of the newest backup before a new one is taken                                              |
 | `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN` | unset               | Send a failure alert to ntfy; `NTFY_TOKEN` is optional. Without URL and topic, failures are only logged |
 
+`NTFY_URL` and `NTFY_TOKEN` are also the server every user's alerts go through, to the topic in their settings; `NTFY_TOPIC` is only for instance alerts such as backups, and the starting topic of user 1.
+
 Manual use:
 
 ```sh
@@ -223,20 +240,19 @@ Backups are immutable directories, so syncing the whole folder is safe. Restore 
 
 ## Jellyfin viewing sync
 
-The service can compare what was played in Jellyfin with the tracking. The structure (seasons, episodes, provider ids) comes from the Jellyfin API and the dates from Jellystat's `jf_playback_activity` table, read directly from its Postgres database in a read-only session. Jellyfin 12 only accepts the `Authorization: MediaBrowser Token="..."` header, which is what the client sends. Jellystat only records real playback, so items marked as watched by hand never show up. Syncing is off unless the four required variables are set.
+The service can compare what was played in Jellyfin with the tracking. The structure (seasons, episodes, provider ids) comes from the Jellyfin API and the dates from Jellystat's `jf_playback_activity` table, read directly from its Postgres database in a read-only session. Jellyfin 12 only accepts the `Authorization: MediaBrowser Token="..."` header, which is what the client sends. Jellystat only records real playback, so items marked as watched by hand never show up. Syncing is off unless the four required variables are set, and then runs for each user with a Jellyfin account in their settings (`jellyfinUser`, see Per-user settings); a user without one is never synced, so nobody's viewings are read for them.
 
 | Variable                                     | Default                   | Meaning                                             |
 | -------------------------------------------- | ------------------------- | --------------------------------------------------- |
 | `JELLYFIN_URL`, `JELLYFIN_TOKEN`             | required                  | Jellyfin address and an API key                     |
 | `JELLYSTAT_DB_HOST`, `JELLYSTAT_DB_PASSWORD` | required                  | Jellystat Postgres host and password                |
 | `JELLYSTAT_DB_PORT`, `_USER`, `_NAME`        | 5432, postgres, jellystat | Rest of the connection                              |
-| `JELLYFIN_USER`                              | `admin`                   | Jellyfin account whose viewings are tracked         |
 | `SYNC_TIME_ZONE`                             | `Europe/Madrid`           | Time zone that decides on which day a viewing falls |
 | `SYNC_WEBHOOK_DELAY_SECONDS`                 | 120                       | Quiet time after a webhook before the sync runs     |
 
 Rules: an item counts as watched when 90% of its runtime was played in one day, or, when playback never reaches that because intros and credits were skipped, when Jellyfin marks it as played for the tracked account (the day with the most playback is used). A watched movie without a finish date completes with that day, and later viewings become rewatches (a viewing the day after the recorded date is taken as the same one). The first watched episode puts the season in progress with `started_at`; once every episode is watched and none is still to air the season completes with `finished_at` set to the day the last one was first watched. Ratings, reviews and notes are never touched. Every movie viewing the sync records (a first viewing or a rewatch) and every season it completes is marked as pending review: the title is published, but the site feeds leave it out until it is confirmed in the web app (Save and confirm), so a feed entry never goes out before the rating and review are written. Library seasons are paired with stored seasons by Jellyfin id, a season override, the date of the first episode (never the number, so TMDB season 3 pairs with Jellyfin season 4 for Lupin) and finally the number for stored seasons that have no air date. Series are paired with stored ones by TheTVDB id, then TMDB id; when Jellyfin only has the TheTVDB id and `TMDB_API_KEY` is set, the TMDB id is looked up first, so a series added from TMDB is not created twice. Movies and series the sync creates get their TMDB metadata and artwork right after the write (a failed refresh leaves them as created). Titles without any id go to the unlinked inbox. Playback of items that left the library or came back under new ids cannot be matched and is only counted.
 
-To sync without clicking, point the Jellyfin Webhook plugin at `POST /api/sync/webhook`. The body is ignored: every request queues one sync after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet (so Jellystat has recorded the playback), a burst of events is one run, an event during a run triggers another afterwards, and failures retry with backoff and alert through ntfy. What the sync writes is published and mirrored like any other edit. In the plugin add a Generic destination with that URL, a JSON body such as `{"event": "{{NotificationType}}"}`, the `Content-Type: application/json` header, the notification types Playback Stop and User Data Saved, and your user as the only user filter.
+To sync without clicking, point the Jellyfin Webhook plugin at `POST /api/sync/webhook`. The body is ignored: every request queues one sync for each user with a Jellyfin account after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet (so Jellystat has recorded the playback), a burst of events is one run, an event during a run triggers another afterwards, and failures retry with backoff and alert through ntfy. What the sync writes is published and mirrored like any other edit. In the plugin add a Generic destination with that URL, a JSON body such as `{"event": "{{NotificationType}}"}`, the `Content-Type: application/json` header, the notification types Playback Stop and User Data Saved, and your user as the only user filter.
 
 The first pass is report only:
 
@@ -245,7 +261,7 @@ node --disable-warning=ExperimentalWarning apps/server/dist/cli.js sync --verbos
 curl http://localhost:8097/api/sync/report
 ```
 
-`sync` without `--apply` opens the database read-only. `sync --apply` and `POST /api/sync/apply` with `{ "confirm": true }` recompute the plan and write it in one transaction. The settings page has the same two steps.
+`sync` (as user 1, or `--user <id>`) without `--apply` opens the database read-only. `sync --apply` and `POST /api/sync/apply` with `{ "confirm": true }` recompute the plan for the signed-in user and write it in one transaction. The settings page has the same two steps.
 
 ## Release alerts
 
@@ -256,7 +272,7 @@ Following a series (`follow`) or a movie puts it on the watchlist (the "Followin
 
 The release date of a season is its `air_date`, or the date of `next_episode_to_air` when that is the first episode and the season has no date yet. For a movie it is the earliest Spanish premiere or limited release in `release_dates`, falling back to `release_date`. When TMDB announces a season of a followed series that is not stored, the season is created as `planned`. It is paired with an existing season by its stored TMDB number, then by the date of its first episode, and a season override can give it another number. Seasons that are missing locally but were released long ago are left alone. When the season shows up in Jellyfin under another number, the Jellyfin sync pairs it by date, so nothing is duplicated.
 
-How often a title is asked about depends on how close its release is: every 30 minutes from the day before to the day after, every 3 hours while providers may still be catching up, and twice a day otherwise. The scheduler ticks every 10 minutes and keeps the due times in memory. Nothing is checked or sent before `ALERTS_NOTIFY_FROM_HOUR`, so alerts do not arrive at night. An alert is recorded in `release_alert` only once ntfy has accepted it, and recorded alerts are listed on the Following page; an alert ntfy does not accept stays pending and is retried 30 minutes later. Alerts need `TMDB_API_KEY`; without `NTFY_URL` and `NTFY_TOPIC` they are only logged.
+How often a title is asked about depends on how close its release is: every 30 minutes from the day before to the day after, every 3 hours while providers may still be catching up, and twice a day otherwise. The scheduler ticks every 10 minutes and keeps the due times in memory. Nothing is checked or sent before `ALERTS_NOTIFY_FROM_HOUR`, so alerts do not arrive at night. An alert is recorded in `release_alert` only once ntfy has accepted it, and recorded alerts are listed on the Following page; an alert ntfy does not accept stays pending and is retried 30 minutes later. Every user with an ntfy topic in their settings (`ntfyTopic`) gets alerts for what they follow, with their own due times. Alerts need `TMDB_API_KEY` and `NTFY_URL`.
 
 | Variable                  | Default         | Meaning                                                      |
 | ------------------------- | --------------- | ------------------------------------------------------------ |

@@ -42,6 +42,7 @@ import { TmdbMovieProvider } from '../../src/titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from '../../src/titles/TmdbSeriesProvider.js';
 import { WatchlistService } from '../../src/alerts/WatchlistService.js';
 import { FakeScheduler } from './FakeScheduler.js';
+import { ownerQueues } from './ownerQueues.js';
 import { signedInAs } from './signedInAs.js';
 import type { Authenticator } from '../../src/auth/Authenticator.js';
 import type { UserScope } from '../../src/users/UserScope.js';
@@ -143,7 +144,7 @@ export async function createTestApi(
     migrationRunner: runner,
     imageStore: store,
     metadataCache: cache,
-    publishQueue: queue,
+    publishQueues: ownerQueues(queue),
     edit,
     watch: { watchlist: new WatchlistService(edit.editor, movies, series, seasons), alerts },
   });

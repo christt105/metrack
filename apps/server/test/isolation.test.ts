@@ -220,17 +220,20 @@ describe('the catalog is shared, the entry is personal', () => {
 describe('instance-wide actions', () => {
   it('are only for the owner', async () => {
     for (const [method, url] of [
-      ['POST', '/api/publish'],
       ['POST', '/api/images/cleanup'],
       ['DELETE', '/api/images/abc'],
-      ['GET', '/api/sync/report'],
-      ['POST', '/api/sync/apply'],
     ] as const) {
       const response = await api.app.inject({ method, url, headers: { 'x-test-user': '2' } });
       expect(response.statusCode, url).toBe(403);
       expect(response.json().code).toBe('owner_only');
     }
+  });
+
+  it('do not include publishing, which is per user', async () => {
     expect((await owner.post('/api/publish')).statusCode).toBe(202);
+    const response = await friend.post('/api/publish');
+    expect(response.statusCode).toBe(501);
+    expect(response.json().code).toBe('publish_not_configured');
   });
 });
 

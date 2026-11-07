@@ -9,14 +9,17 @@ import type { ExportSources } from './loadExportInput.js';
 import { FixedUserScope } from '../users/FixedUserScope.js';
 import { OWNER_ID } from '../users/OWNER_ID.js';
 
-/** Opens the database and image store in a data directory with the repositories the exporter reads. */
-export function openExportSources(dataDir: string): { db: DatabaseSync; sources: ExportSources } {
+/** Opens the database and image store in a data directory with the repositories the exporter reads, as one user. */
+export function openExportSources(
+  dataDir: string,
+  userId: number = OWNER_ID,
+): { db: DatabaseSync; sources: ExportSources } {
   const db = openDatabase(join(dataDir, 'metrack.db'));
   new MigrationRunner(db, migrations).run();
   return {
     db,
     sources: {
-      ...createSqliteRepositories(db, new FixedUserScope(OWNER_ID)),
+      ...createSqliteRepositories(db, new FixedUserScope(userId)),
       images: createImageStore(db, join(dataDir, 'images')),
     },
   };

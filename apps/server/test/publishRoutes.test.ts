@@ -8,6 +8,7 @@ import { PublishQueue } from '../src/publish/PublishQueue.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
+import { ownerQueues } from './support/ownerQueues.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { png } from './support/sampleImages.js';
 import { signedInAs } from './support/signedInAs.js';
@@ -29,7 +30,7 @@ async function setup() {
     scope: OWNER_SCOPE,
     migrationRunner: new MigrationRunner(db, migrations),
     imageStore: store,
-    publishQueue: queue,
+    publishQueues: ownerQueues(queue),
   });
   return { app, store, scheduler };
 }

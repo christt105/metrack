@@ -12,16 +12,21 @@ import { runImport } from './importer/runImport.js';
 import { formatMirrorResult } from './mirror/formatMirrorResult.js';
 import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 import { runUsersCommand } from './users/runUsersCommand.js';
+import { OWNER_ID } from './users/OWNER_ID.js';
+import { userDataPath } from './users/userDataPath.js';
+import type { UserSettings } from './users/UserSettings.js';
 
 const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack redirect <outDir> --origin <newSiteAddress> [--old-base <path>]
        metrack backups [--data-dir <dir>]
        metrack backup [--data-dir <dir>]
        metrack restore <backupName> [--data-dir <dir>]
-       metrack sync [--apply] [--verbose] [--data-dir <dir>]
+       metrack sync [--apply] [--verbose] [--user <id>] [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
-       metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
+       metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
+       metrack users set <id> [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
+                     [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>] [--data-dir <dir>]
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
   With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
@@ -29,8 +34,8 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   URLs are matched to files there by name and imported. Nothing is downloaded.
 
   sync compares the Jellyfin playback history (Jellyfin API plus the Jellystat database, configured with JELLYFIN_URL,
-  JELLYFIN_TOKEN, JELLYSTAT_DB_HOST, JELLYSTAT_DB_PASSWORD and optionally JELLYFIN_USER, default admin) with the
-  tracking in the data directory. Without --apply it only prints the plan and the database is opened read-only.
+  JELLYFIN_TOKEN, JELLYSTAT_DB_HOST and JELLYSTAT_DB_PASSWORD) of the Jellyfin account in a user's settings with that
+  user's tracking (--user, default 1). Without --apply it only prints the plan and the database is opened read-only.
   With --apply it writes the plan.
 
   redirect writes 404.html and index.html for the old GitHub Pages site. Every old address is sent to the same
@@ -45,7 +50,12 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   as written. --web-url (or VAULT_MIRROR_WEB_URL) adds a link back to the web app; --link-prefix is the
   folder's path inside the vault (default "Media Tracker").
 
-  users lists who can sign in; users add creates a user. User 1 owns everything stored before users existed.
+  users lists who can sign in and which background jobs run for each; users add creates a user. User 1 owns
+  everything stored before users existed. users set changes what a user's jobs act on (an empty value clears it):
+  the Jellyfin account synced, the ntfy topic for release alerts and job failures, the Cloudflare Pages project and
+  address of their site, and the vault folder their notes are mirrored into. A job runs only for users who set what
+  it needs. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
+  VAULT_MIRROR_DIR and VAULT_MIRROR_LINK_PREFIX the first time the server starts; after that the stored ones win.
 
   export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
   <outDir>, replacing those sections. It reads the database and image store in the data directory.`;
@@ -64,10 +74,34 @@ async function main(argv: string[]): Promise<number> {
       'web-url': { type: 'string' },
       'link-prefix': { type: 'string' },
       email: { type: 'string' },
+      user: { type: 'string' },
+      'jellyfin-user': { type: 'string' },
+      'ntfy-topic': { type: 'string' },
+      'publish-project': { type: 'string' },
+      'publish-base-url': { type: 'string' },
+      'mirror-dir': { type: 'string' },
+      'mirror-link-prefix': { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
   const [command, target] = positionals;
+  const settingChanges = Object.fromEntries(
+    (
+      [
+        ['jellyfinUser', values['jellyfin-user']],
+        ['ntfyTopic', values['ntfy-topic']],
+        ['publishProject', values['publish-project']],
+        ['publishBaseUrl', values['publish-base-url']],
+        ['mirrorDir', values['mirror-dir']],
+        ['mirrorLinkPrefix', values['mirror-link-prefix']],
+      ] as const
+    ).filter(([, value]) => value !== undefined),
+  ) as Partial<Record<keyof UserSettings, string>>;
+  const userId = values.user === undefined ? OWNER_ID : Number(values.user);
+  if (!Number.isInteger(userId) || userId < 1) {
+    console.error(USAGE);
+    return 2;
+  }
   if (!values.help && (command === 'backups' || command === 'backup' || command === 'restore')) {
     if (positionals.length > (command === 'restore' ? 2 : 1)) {
       console.error(USAGE);
@@ -80,7 +114,15 @@ async function main(argv: string[]): Promise<number> {
   if (!values.help && command === 'users') {
     const [, action, name] = positionals;
     const adding = action === 'add' && name !== undefined && positionals.length === 3;
-    if ((action !== undefined && !adding) || (values.email !== undefined && !adding)) {
+    const setId = action === 'set' && positionals.length === 3 ? Number(name) : undefined;
+    const setting = setId !== undefined && Number.isInteger(setId) && setId > 0;
+    const changesSettings = Object.keys(settingChanges).length > 0;
+    if (
+      (action !== undefined && !adding && !setting) ||
+      (values.email !== undefined && !adding) ||
+      (changesSettings && !setting) ||
+      values.user !== undefined
+    ) {
       console.error(USAGE);
       return 2;
     }
@@ -89,6 +131,7 @@ async function main(argv: string[]): Promise<number> {
       await runUsersCommand({
         dataDir,
         add: adding ? { name, email: values.email ?? null } : undefined,
+        set: setting ? { userId: setId, changes: settingChanges } : undefined,
       }),
     );
     return 0;
@@ -109,6 +152,7 @@ async function main(argv: string[]): Promise<number> {
         dataDir: values['data-dir'] ?? appConfig.dataDir,
         apply: values.apply,
         verbose: values.verbose,
+        userId,
         tmdb: appConfig.tmdbApiKey
           ? { apiKey: appConfig.tmdbApiKey, language: appConfig.tmdbLanguage }
           : undefined,
@@ -148,13 +192,13 @@ async function main(argv: string[]): Promise<number> {
   }
   if (command === 'mirror') {
     const dataDir = values['data-dir'] ?? config.dataDir;
-    const { db, sources } = openExportSources(dataDir);
+    const { db, sources } = openExportSources(dataDir, userId);
     try {
       const result = await syncVaultMirror(sources, {
         mirrorDir: target,
         linkPrefix: values['link-prefix'] ?? 'Media Tracker',
         webUrl: values['web-url'] ?? process.env.VAULT_MIRROR_WEB_URL ?? null,
-        statePath: join(dataDir, 'vault-mirror-state.json'),
+        statePath: userDataPath(dataDir, userId, 'vault-mirror-state.json'),
         apply: values.apply,
       });
       console.log(formatMirrorResult(result, values.apply, values.verbose));

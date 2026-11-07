@@ -1,3 +1,4 @@
+/** What every user's site is built and uploaded with. Each user sets their own project and address. */
 export interface PublishConfig {
   /** A Hugo project (config, layouts, assets, data, static pages) without the exported content sections. */
   siteTemplateDir: string;
@@ -5,9 +6,6 @@ export interface PublishConfig {
   wranglerBinary: string;
   cloudflareApiToken: string;
   cloudflareAccountId: string;
-  cloudflareProject: string;
-  /** Production branch of the Cloudflare Pages project. */
+  /** Production branch of the Cloudflare Pages projects. */
   cloudflareBranch: string;
-  /** Public address of the site. Feeds and canonical links need absolute URLs, so set it to where the site is served. */
-  baseUrl: string | undefined;
 }
