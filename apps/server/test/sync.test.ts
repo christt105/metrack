@@ -35,6 +35,8 @@ import { ownerQueues } from './support/ownerQueues.js';
 import { SqliteUserSettingsRepository } from '../src/storage/sqlite/SqliteUserSettingsRepository.js';
 import { UserSyncServices } from '../src/sync/UserSyncServices.js';
 import { OWNER_ID } from '../src/users/OWNER_ID.js';
+import { UserQueues } from '../src/users/UserQueues.js';
+import { WebhookSecret } from '../src/api/WebhookSecret.js';
 
 interface Recorded {
   url: URL;
@@ -261,6 +263,25 @@ describe('loadSyncConfig', () => {
       jellystat: { port: 5432, user: 'postgres', database: 'jellystat' },
       webhookDelayMs: 120_000,
     });
+  });
+
+  it('reads the webhook secret and rejects a short one', () => {
+    const env = {
+      JELLYFIN_URL: 'http://jf',
+      JELLYFIN_TOKEN: 't',
+      JELLYSTAT_DB_HOST: 'db',
+      JELLYSTAT_DB_PASSWORD: 'p',
+    };
+    expect(loadSyncConfig(env).config?.webhookSecret).toBeUndefined();
+    expect(
+      loadSyncConfig({ ...env, SYNC_WEBHOOK_SECRET: '' }).config?.webhookSecret,
+    ).toBeUndefined();
+    expect(
+      loadSyncConfig({ ...env, SYNC_WEBHOOK_SECRET: 'a-long-enough-one' }).config?.webhookSecret,
+    ).toBe('a-long-enough-one');
+    expect(() => loadSyncConfig({ ...env, SYNC_WEBHOOK_SECRET: 'short' })).toThrow(
+      'SYNC_WEBHOOK_SECRET',
+    );
   });
 
   it('reads the webhook delay and rejects nonsense', () => {
@@ -580,6 +601,41 @@ describe('SyncService', () => {
     expect((await t.targets.movies.list())[0]).toMatchObject({ pendingReview: true });
     expect(logs.some((m) => m.includes('1 movies created'))).toBe(true);
     expect(scheduler.delays).toEqual([120_000, 5_000]);
+    t.db.close();
+  });
+
+  it('needs the webhook secret, in the header or the query, when one is set', async () => {
+    const t = setup(lupinLibrary, lupinPlays);
+    let marked = 0;
+    const queues = new UserQueues(
+      async () => [OWNER_ID],
+      () => ({ markDirty: () => void (marked += 1) }) as unknown as PublishQueue,
+    );
+    const app = await buildApp({
+      appVersion: 'test',
+      authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
+      migrationRunner: t.runner,
+      sync: t.services,
+      syncQueues: queues,
+      syncWebhookSecret: new WebhookSecret('s3cret-s3cret-s3cret'),
+    });
+    const post = (url: string, headers: Record<string, string> = {}) =>
+      app.inject({ method: 'POST', url, headers, payload: {} });
+
+    expect((await post('/api/sync/webhook')).statusCode).toBe(401);
+    expect((await post('/api/sync/webhook?token=wrong')).statusCode).toBe(401);
+    expect(
+      (await post('/api/sync/webhook', { 'x-webhook-secret': 's3cret-s3cret-s3cre' })).statusCode,
+    ).toBe(401);
+    expect((await post('/api/sync/webhook')).json().code).toBe('bad_webhook_secret');
+    expect(marked).toBe(0);
+
+    expect(
+      (await post('/api/sync/webhook', { 'x-webhook-secret': 's3cret-s3cret-s3cret' })).statusCode,
+    ).toBe(202);
+    expect((await post('/api/sync/webhook?token=s3cret-s3cret-s3cret')).statusCode).toBe(202);
+    expect(marked).toBe(2);
     t.db.close();
   });
 

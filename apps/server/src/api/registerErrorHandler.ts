@@ -2,6 +2,7 @@ import type { FastifyError, FastifyInstance } from 'fastify';
 import type { ApiErrorBody } from '@metrack/domain';
 import type { Logger } from '../notify/Logger.js';
 import { HttpError } from '../http/HttpError.js';
+import { redactUrl } from './redactUrl.js';
 import { ApiError } from './ApiError.js';
 import { SharedCatalogError } from '../storage/SharedCatalogError.js';
 
@@ -71,7 +72,7 @@ export function registerErrorHandler(app: FastifyInstance, logger?: Logger): voi
     const { status, body } = describe(error);
     if (status >= 500 && logger) {
       const detail = error instanceof Error ? (error.stack ?? error.message) : String(error);
-      logger.error(`${request.method} ${request.url} failed with ${status}: ${detail}`);
+      logger.error(`${request.method} ${redactUrl(request.url)} failed with ${status}: ${detail}`);
     }
     return reply.code(status).send(body);
   });

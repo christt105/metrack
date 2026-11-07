@@ -119,7 +119,7 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 
 - `GET /api/sync/report`: the `SyncPlan` a sync would apply: `movies` (`MovieChange`), `series` (`SeriesChange` with its `seasons`), `unlinked`, `warnings`, `ignoredPlays` and `unmatchedTitles`. Reads Jellyfin and Jellystat and the database; writes nothing.
 - `POST /api/sync/apply` with `{ "confirm": true }`: recomputes the plan on the server (a client-supplied plan is never trusted), writes it in one transaction and answers `{ plan, result: SyncApplyResult }`. A body without `confirm: true` is a 400.
-- `POST /api/sync/webhook`: the target of the Jellyfin Webhook plugin. The body is ignored. Queues a sync for every user with a Jellyfin account after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet and answers 202 `{ status: "queued", users }` (how many were queued); 501 when sync is not configured.
+- `POST /api/sync/webhook`: the target of the Jellyfin Webhook plugin. The body is ignored. Queues a sync for every user with a Jellyfin account after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet and answers 202 `{ status: "queued", users }` (how many were queued); 501 when sync is not configured. When `SYNC_WEBHOOK_SECRET` is set, the request must carry it in the `X-Webhook-Secret` header or the `token` query parameter, or it answers 401 `bad_webhook_secret`.
 - Report and apply act on the signed-in user with the Jellyfin account in their settings. Both answer 501 `sync_not_configured` unless the Jellyfin and Jellystat variables are set (see the README) and the user has a Jellyfin account set.
 
 ## Release alerts

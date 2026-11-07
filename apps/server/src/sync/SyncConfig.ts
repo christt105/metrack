@@ -9,4 +9,6 @@ export interface SyncConfig {
   timeZone: string;
   /** Quiet time after a Jellyfin webhook before the sync runs, so Jellystat has recorded the playback. */
   webhookDelayMs: number;
+  /** Shared secret the Jellyfin webhook must present, when set. */
+  webhookSecret: string | undefined;
 }
