@@ -28,7 +28,8 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
        metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
-                     [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>] [--data-dir <dir>]
+                     [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>]
+                     [--handle <name>] [--public-page on|off] [--data-dir <dir>]
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
   With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
@@ -59,7 +60,8 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   everything stored before users existed. users set changes what a user's jobs act on (an empty value clears it):
   the Jellyfin account synced, the ntfy topic for release alerts and job failures, the Cloudflare Pages project and
   address of their site, and the vault folder their notes are mirrored into. A job runs only for users who set what
-  it needs. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
+  it needs. --handle sets the name their public page is served under (/u/<handle>/; an empty value clears it) and
+  --public-page on|off switches the page; it needs a handle. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
   VAULT_MIRROR_DIR and VAULT_MIRROR_LINK_PREFIX the first time the server starts; after that the stored ones win.
 
   export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
@@ -84,6 +86,8 @@ async function main(argv: string[]): Promise<number> {
       'ntfy-topic': { type: 'string' },
       'publish-project': { type: 'string' },
       role: { type: 'string' },
+      handle: { type: 'string' },
+      'public-page': { type: 'string' },
       'publish-base-url': { type: 'string' },
       'mirror-dir': { type: 'string' },
       'mirror-link-prefix': { type: 'string' },
@@ -133,7 +137,12 @@ async function main(argv: string[]): Promise<number> {
     if (
       (action !== undefined && !adding && !setting) ||
       (values.email !== undefined && !adding) ||
-      ((changesSettings || values.role !== undefined) && !setting) ||
+      ((changesSettings ||
+        values.role !== undefined ||
+        values.handle !== undefined ||
+        values['public-page'] !== undefined) &&
+        !setting) ||
+      (values['public-page'] !== undefined && !['on', 'off'].includes(values['public-page'])) ||
       values.user !== undefined
     ) {
       console.error(USAGE);
@@ -144,7 +153,16 @@ async function main(argv: string[]): Promise<number> {
       await runUsersCommand({
         dataDir,
         add: adding ? { name, email: values.email ?? null } : undefined,
-        set: setting ? { userId: setId, changes: settingChanges, role: values.role } : undefined,
+        set: setting
+          ? {
+              userId: setId,
+              changes: settingChanges,
+              role: values.role,
+              handle: values.handle,
+              publicPage:
+                values['public-page'] === undefined ? undefined : values['public-page'] === 'on',
+            }
+          : undefined,
       }),
     );
     return 0;

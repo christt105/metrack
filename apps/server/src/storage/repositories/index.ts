@@ -20,3 +20,4 @@ export type { UserSettingsRepository } from './UserSettingsRepository.js';
 export type { ApiTokenRepository } from './ApiTokenRepository.js';
 export type { NewApiToken } from './NewApiToken.js';
 export type { StoredApiToken } from './StoredApiToken.js';
+export type { PublicProfileRepository } from './PublicProfileRepository.js';

@@ -50,6 +50,7 @@ import type { Authenticator } from '../../src/auth/Authenticator.js';
 import type { UserScope } from '../../src/users/UserScope.js';
 import type { DatabaseSync } from 'node:sqlite';
 import { OWNER_SCOPE } from './ownerScope.js';
+import { SqlitePublicProfileRepository } from '../../src/storage/sqlite/SqlitePublicProfileRepository.js';
 import { SqliteUserRepository } from '../../src/storage/sqlite/SqliteUserRepository.js';
 import { SqliteUserSettingsRepository } from '../../src/storage/sqlite/SqliteUserSettingsRepository.js';
 
@@ -146,6 +147,7 @@ export async function createTestApi(
     imageProviders,
     now: () => NOW,
   });
+  const profiles = new SqlitePublicProfileRepository(db);
   const app = await buildApp({
     appVersion: 'test',
     authenticator: options.authenticator ?? signedInAs(),
@@ -159,7 +161,9 @@ export async function createTestApi(
     settings: {
       users: new SqliteUserRepository(db),
       settings: new SqliteUserSettingsRepository(db),
+      profiles,
     },
+    site: { profiles, sources: { movies, series, seasons, videogames, books }, baseUrl: null },
   });
   return {
     app,

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import type { OwnSettings, SyncPlan } from '@metrack/domain';
 import ErrorNotice from '../components/ErrorNotice.vue';
+import PublicPagePanel from '../components/PublicPagePanel.vue';
 import SettingsList from '../components/SettingsList.vue';
 import TokensPanel from '../components/TokensPanel.vue';
 import UserSettingsEditor from '../components/UserSettingsEditor.vue';
@@ -95,6 +96,7 @@ const backup = () =>
       <ErrorNotice :error="ownError" />
       <SettingsList v-if="own" :settings="own.settings" />
     </div>
+    <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
     <TokensPanel />
     <div class="panel">
       <h2>{{ messages.images.title }}</h2>

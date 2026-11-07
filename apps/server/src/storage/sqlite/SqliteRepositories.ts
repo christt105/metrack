@@ -11,6 +11,7 @@ import type { SeriesRepository } from '../repositories/SeriesRepository.js';
 import type { TransactionRunner } from '../repositories/TransactionRunner.js';
 import type { UnlinkedTitleRepository } from '../repositories/UnlinkedTitleRepository.js';
 import type { UserRepository } from '../repositories/UserRepository.js';
+import type { PublicProfileRepository } from '../repositories/PublicProfileRepository.js';
 import type { UserSettingsRepository } from '../repositories/UserSettingsRepository.js';
 import type { VideogameRepository } from '../repositories/VideogameRepository.js';
 
@@ -27,6 +28,7 @@ export interface SqliteRepositories {
   images: ImageRepository;
   users: UserRepository;
   settings: UserSettingsRepository;
+  profiles: PublicProfileRepository;
   sessions: SessionRepository;
   apiTokens: ApiTokenRepository;
   transactions: TransactionRunner;

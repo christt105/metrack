@@ -6,6 +6,7 @@ import { SqliteImageRepository } from './SqliteImageRepository.js';
 import { SqliteMetadataStateRepository } from './SqliteMetadataStateRepository.js';
 import { SqliteMovieRepository } from './SqliteMovieRepository.js';
 import type { SqliteRepositories } from './SqliteRepositories.js';
+import { SqlitePublicProfileRepository } from './SqlitePublicProfileRepository.js';
 import { SqliteReleaseAlertRepository } from './SqliteReleaseAlertRepository.js';
 import { SqliteSeasonOverrideRepository } from './SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from './SqliteSeasonRepository.js';
@@ -32,6 +33,7 @@ export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): Sq
     images: new SqliteImageRepository(db),
     users: new SqliteUserRepository(db),
     settings: new SqliteUserSettingsRepository(db),
+    profiles: new SqlitePublicProfileRepository(db),
     sessions: new SqliteSessionRepository(db),
     apiTokens: new SqliteApiTokenRepository(db),
     transactions: new SqliteTransactionRunner(db),

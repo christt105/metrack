@@ -32,9 +32,11 @@ const friend: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 
 function ownerApi() {
   return {
-    ownSettings: vi
-      .fn()
-      .mockResolvedValue({ settings: ownerSettings, owner: true } satisfies OwnSettings),
+    ownSettings: vi.fn().mockResolvedValue({
+      settings: ownerSettings,
+      publicPage: { handle: null, enabled: false },
+      owner: true,
+    } satisfies OwnSettings),
     listUsers: vi.fn().mockResolvedValue([
       { user: owner, settings: ownerSettings },
       { user: friend, settings: noSettings },
@@ -196,6 +198,7 @@ describe('SettingsView user settings', () => {
       health: vi.fn().mockResolvedValue(health),
       ownSettings: vi.fn().mockResolvedValue({
         settings: { ...noSettings, jellyfinUser: 'haku' },
+        publicPage: { handle: null, enabled: false },
         owner: false,
       } satisfies OwnSettings),
       listBackups,
@@ -282,9 +285,11 @@ describe('SettingsView images', () => {
   it('shows every user how much of their image quota they use', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       health: vi.fn().mockResolvedValue(health),
-      ownSettings: vi
-        .fn()
-        .mockResolvedValue({ settings: noSettings, owner: false } satisfies OwnSettings),
+      ownSettings: vi.fn().mockResolvedValue({
+        settings: noSettings,
+        publicPage: { handle: null, enabled: false },
+        owner: false,
+      } satisfies OwnSettings),
       imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: 209_715_200 }),
     });
     await flushPromises();
@@ -294,9 +299,11 @@ describe('SettingsView images', () => {
   it('says the owner has no limit', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       health: vi.fn().mockResolvedValue(health),
-      ownSettings: vi
-        .fn()
-        .mockResolvedValue({ settings: noSettings, owner: false } satisfies OwnSettings),
+      ownSettings: vi.fn().mockResolvedValue({
+        settings: noSettings,
+        publicPage: { handle: null, enabled: false },
+        owner: false,
+      } satisfies OwnSettings),
       imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: null }),
     });
     await flushPromises();

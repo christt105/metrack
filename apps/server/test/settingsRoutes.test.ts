@@ -7,6 +7,7 @@ import { buildApp } from '../src/api/buildApp.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
+import { SqlitePublicProfileRepository } from '../src/storage/sqlite/SqlitePublicProfileRepository.js';
 import { SqliteUserSettingsRepository } from '../src/storage/sqlite/SqliteUserSettingsRepository.js';
 import { NO_SETTINGS } from '../src/users/NO_SETTINGS.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
@@ -39,7 +40,7 @@ beforeEach(async () => {
     authenticator: byHeader,
     scope: new AsyncUserScope(),
     migrationRunner: runner,
-    settings: { users, settings },
+    settings: { users, settings, profiles: new SqlitePublicProfileRepository(db) },
   });
 });
 
@@ -52,10 +53,15 @@ describe('settings routes', () => {
     const own = await request(OWNER, 'GET', '/api/settings');
     expect(own.json()).toEqual({
       owner: true,
+      publicPage: { handle: null, enabled: false },
       settings: { ...NO_SETTINGS, jellyfinUser: 'admin', mirrorDir: '/vault/Media Tracker' },
     });
     const friend = await request(FRIEND, 'GET', '/api/settings');
-    expect(friend.json()).toEqual({ owner: false, settings: NO_SETTINGS });
+    expect(friend.json()).toEqual({
+      owner: false,
+      publicPage: { handle: null, enabled: false },
+      settings: NO_SETTINGS,
+    });
   });
 
   it('list everyone only to the owner', async () => {
