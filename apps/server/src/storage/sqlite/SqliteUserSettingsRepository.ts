@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { UserSettings } from '../../users/UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 import type { UserSettingsRepository } from '../repositories/UserSettingsRepository.js';
 import type { Row } from './Row.js';
 import { text } from './rowMapping.js';

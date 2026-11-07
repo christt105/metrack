@@ -3,7 +3,7 @@ import type { UserSettingsRepository } from '../storage/repositories/UserSetting
 import { OWNER_ID } from './OWNER_ID.js';
 import { ownerSettingsFromEnv } from './ownerSettingsFromEnv.js';
 import { SETTING_VARIABLES } from './SETTING_VARIABLES.js';
-import type { UserSettings } from './UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 
 /**
  * Stores the owner's settings from the environment the first time, so the jobs keep doing what they did. From

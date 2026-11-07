@@ -14,7 +14,7 @@ import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 import { runUsersCommand } from './users/runUsersCommand.js';
 import { OWNER_ID } from './users/OWNER_ID.js';
 import { userDataPath } from './users/userDataPath.js';
-import type { UserSettings } from './users/UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 
 const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack redirect <outDir> --origin <newSiteAddress> [--old-base <path>]

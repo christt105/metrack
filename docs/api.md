@@ -131,3 +131,9 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 ## Not in the API
 
 Importing the Obsidian notes stays a command of the server CLI (`metrack import`), and the export is run by the publisher or by `metrack export`. Both read and write the same database and image store as the server.
+
+## Settings
+
+- `GET /api/settings`: `OwnSettings`, the signed-in user's `settings` (`UserSettings`: what their sync, alerts, publishing and vault mirror act on, `null` when unset) and whether they are the `owner`.
+- `GET /api/users` (owner only): `UserWithSettings[]`, every user with their settings, by id.
+- `PATCH /api/users/{id}/settings` (owner only): changes some of `jellyfinUser`, `ntfyTopic`, `publishProject`, `publishBaseUrl` and `mirrorLinkPrefix`; a string is trimmed, `null` or an empty string clears the setting. Answers the stored `UserSettings`; 400 `invalid_settings` with the problem of each invalid value in `details`, 400 for any other field (the vault folder `mirrorDir` is only set from the command line), 403 for anyone but the owner, 404 for an unknown user.

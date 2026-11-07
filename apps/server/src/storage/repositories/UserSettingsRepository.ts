@@ -1,4 +1,4 @@
-import type { UserSettings } from '../../users/UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 
 /**
  * Settings by explicit user id. It is not scoped: the instance reads everyone's to decide whose jobs run, and

@@ -29,6 +29,9 @@ import type { Logger } from '../notify/Logger.js';
 import type { Authenticator } from '../auth/Authenticator.js';
 import type { AuthRouteDeps } from './AuthRouteDeps.js';
 import type { UserScope } from '../users/UserScope.js';
+import type { UserRepository } from '../storage/repositories/UserRepository.js';
+import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
+import { registerSettingsRoutes } from './registerSettingsRoutes.js';
 
 export interface AppDeps {
   appVersion: string;
@@ -51,6 +54,8 @@ export interface AppDeps {
   backup?: BackupRouteDeps;
   sync?: UserSyncServices;
   syncQueues?: UserQueues;
+  /** Shows each user their settings and lets the owner change everyone's. */
+  settings?: { users: UserRepository; settings: UserSettingsRepository };
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
 }
 
@@ -80,6 +85,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   }
   if (deps.watch) registerWatchlistRoutes(app, deps.watch.watchlist, deps.watch.alerts);
   registerSyncRoutes(app, deps.sync, deps.syncQueues);
+  if (deps.settings) registerSettingsRoutes(app, deps.settings.users, deps.settings.settings);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueues) registerPublishRoutes(app, deps.publishQueues);
   if (deps.mirrorQueues) registerMirrorHook(app, deps.mirrorQueues);

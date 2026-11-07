@@ -1,4 +1,4 @@
-import type { UserSettings } from './UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 
 /** A user who set nothing: no background job runs for them. */
 export const NO_SETTINGS: UserSettings = {

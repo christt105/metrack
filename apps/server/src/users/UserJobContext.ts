@@ -7,7 +7,7 @@ import type { Scheduler } from '../publish/Scheduler.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import { ScopedScheduler } from './ScopedScheduler.js';
 import type { UserScope } from './UserScope.js';
-import type { UserSettings } from './UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 
 export interface UserJobContextDeps {
   timer: Scheduler;

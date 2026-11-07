@@ -214,6 +214,7 @@ const app = await buildApp({
   backup: { service: backupService, job: backupJob },
   sync: syncServices,
   syncQueues,
+  settings: { users: repositories.users, settings: repositories.settings },
   watch: {
     watchlist: new WatchlistService(edit.editor, movies, series, seasons),
     alerts: releaseAlerts,

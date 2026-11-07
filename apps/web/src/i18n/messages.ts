@@ -4,6 +4,7 @@ import type {
   MediaSortField,
   MediaStatus,
   MediaType,
+  UserSettings,
 } from '@metrack/domain';
 
 /** Every user-facing text of the app. Translating the interface means replacing this module. */
@@ -203,6 +204,25 @@ export const messages = {
     syncWarnings: (n: number) => `${n} warning(s)`,
     syncUnmatched: (plays: number, titles: number) =>
       `${plays} play(s) of ${titles} title(s) are no longer in the library and are ignored`,
+    jobs: 'Your background jobs',
+    jobsHint:
+      'What your Jellyfin sync, release alerts, publishing and vault mirror act on. A job runs only when its setting is set. Only the owner can change them.',
+    notSet: 'Not set',
+    users: 'Users',
+    usersHint:
+      "Each setting points this server's Jellyfin, ntfy or Cloudflare credentials at something, so only the owner changes them. An empty field clears the setting.",
+    mirrorDirHint: (userId: number) =>
+      `Set from the command line: metrack users set ${userId} --mirror-dir <folder>`,
+    save: 'Save',
+    saved: (name: string) => `Saved the settings of ${name}.`,
+    settingLabels: {
+      jellyfinUser: 'Jellyfin account',
+      ntfyTopic: 'ntfy topic',
+      publishProject: 'Cloudflare Pages project',
+      publishBaseUrl: 'Site address',
+      mirrorDir: 'Vault folder',
+      mirrorLinkPrefix: 'Folder path in the vault',
+    } satisfies Record<keyof UserSettings, string>,
   },
   typeLabels: {
     movie: 'Movie',

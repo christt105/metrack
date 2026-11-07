@@ -31,7 +31,7 @@ import { OWNER_ID } from '../src/users/OWNER_ID.js';
 import { seedOwnerSettings } from '../src/users/seedOwnerSettings.js';
 import { userDataPath } from '../src/users/userDataPath.js';
 import { UserJobContext } from '../src/users/UserJobContext.js';
-import type { UserSettings } from '../src/users/UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 import { FakeReleaseSource } from './support/FakeReleaseSource.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
 import { RecordingNotifier } from './support/RecordingNotifier.js';
