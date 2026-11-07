@@ -15,28 +15,33 @@ export function registerImageRoutes(app: FastifyInstance, images: ImageStore): v
 
   app.post<{ Body: Buffer }>(
     '/api/images',
-    { bodyLimit: images.maxUploadBytes },
+    { bodyLimit: images.maxUploadBytes, config: { trustedOnly: true } },
     async (request, reply) => {
       if (!Buffer.isBuffer(request.body) || request.body.byteLength === 0) {
         throw ApiError.badRequest('unsupported_image', 'Send the image file as the request body');
       }
       const user = requireUser(request.user);
-      const image = await images.upload(new Uint8Array(request.body), user.id);
+      const image = await images.upload(
+        new Uint8Array(request.body),
+        user.id,
+        user.role === 'owner',
+      );
       const uploaded: UploadedImage = {
         ref: image.ref,
         mimeType: image.mimeType,
         width: image.width,
         height: image.height,
         byteSize: image.byteSize,
-        usage: await images.usage(user.id),
+        usage: await images.usage(user.id, user.role === 'owner'),
       };
       return reply.code(201).send(uploaded);
     },
   );
 
-  app.get('/api/images/usage', async (request): Promise<ImageUsage> =>
-    images.usage(requireUser(request.user).id),
-  );
+  app.get('/api/images/usage', async (request): Promise<ImageUsage> => {
+    const user = requireUser(request.user);
+    return images.usage(user.id, user.role === 'owner');
+  });
 
   app.get<{ Params: { hash: string } }>('/api/images/:hash', async (request, reply) => {
     const { hash } = request.params;

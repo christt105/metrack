@@ -19,7 +19,7 @@ export interface ImageRepository {
    * Hashes of stored images nothing uses: no cover or banner points at their reference or at a URL they
    * were stored from, and no review embeds their reference.
    */
-  orphans(): Promise<string[]>;
+  orphans(createdBefore?: string): Promise<string[]>;
   /** Records that the user owns the image; owning it twice is a no-op. */
   addOwner(hash: string, userId: number, createdAt: string): Promise<void>;
   /** The users who own the image, none for provider images. */

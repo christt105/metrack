@@ -49,21 +49,39 @@ const trusted = as(2);
 const normal = as(3);
 
 describe('uploading images', () => {
-  it('stores an upload for any user as WebP and reports their usage', async () => {
-    const response = await normal.upload(await solidImage(40, 30, 'jpeg'), 'image/jpeg');
+  it('stores a trusted user’s upload as WebP and reports their usage', async () => {
+    const response = await trusted.upload(await solidImage(40, 30, 'jpeg'), 'image/jpeg');
     expect(response.statusCode).toBe(201);
     const uploaded = response.json();
     expect(uploaded).toMatchObject({ mimeType: 'image/webp', width: 40, height: 30 });
     expect(uploaded.usage).toEqual({ usedBytes: uploaded.byteSize, quotaBytes: 4000 });
-    expect((await normal.get('/api/images/usage')).json()).toEqual(uploaded.usage);
-    expect((await trusted.get('/api/images/usage')).json().usedBytes).toBe(0);
+    expect((await trusted.get('/api/images/usage')).json()).toEqual(uploaded.usage);
+    expect((await normal.get('/api/images/usage')).json().usedBytes).toBe(0);
+  });
+
+  it('refuses uploads to normal users', async () => {
+    const response = await normal.upload(await solidImage(40, 30));
+    expect(response.statusCode).toBe(403);
+    expect(response.json().code).toBe('trusted_only');
+    expect(await api.store.list()).toEqual([]);
+  });
+
+  it('gives the owner no quota, however much they upload', async () => {
+    const first = (await owner.upload(await noiseImage(128, 128))).json();
+    expect(first.usage).toEqual({ usedBytes: first.byteSize, quotaBytes: null });
+    expect(first.byteSize).toBeGreaterThan(4000);
+    const second = await owner.upload(await noiseImage(129, 129));
+    expect(second.statusCode).toBe(201);
+    const usage = (await owner.get('/api/images/usage')).json();
+    expect(usage.quotaBytes).toBeNull();
+    expect(usage.usedBytes).toBeGreaterThan(8000);
   });
 
   it('answers each refusal with its own code', async () => {
-    expect((await normal.upload(Buffer.from('<html>'))).json().code).toBe('unsupported_image');
-    const small = await normal.upload(await solidImage(64, 64), 'application/octet-stream');
+    expect((await trusted.upload(Buffer.from('<html>'))).json().code).toBe('unsupported_image');
+    const small = await trusted.upload(await solidImage(64, 64), 'application/octet-stream');
     expect(small.statusCode).toBe(201);
-    const last = await normal.upload(await noiseImage(128, 128));
+    const last = await trusted.upload(await noiseImage(128, 128));
     expect(last.statusCode).toBe(409);
     expect(last.json().code).toBe('image_quota_exceeded');
   });
@@ -93,7 +111,7 @@ describe('own covers and banners', () => {
   it('lets a trusted user set an upload of theirs, never someone else’s', async () => {
     const id = (await owner.post('/api/movies', { title: 'Matrix', tmdbId: 603 })).json().id;
     const mine = (await trusted.upload(await solidImage(20, 30))).json();
-    const theirs = (await normal.upload(await solidImage(21, 30))).json();
+    const theirs = (await owner.upload(await solidImage(21, 30))).json();
     api.db.prepare('INSERT INTO movie_entry (user_id, movie_id) VALUES (2, ?), (3, ?)').run(id, id);
     const set = await trusted.put(`/api/movies/${id}/images/cover`, { url: mine.ref });
     expect(set.statusCode).toBe(200);
@@ -113,15 +131,15 @@ describe('own covers and banners', () => {
     expect((await trusted.get('/api/images/usage')).json().usedBytes).toBeGreaterThan(0);
   });
 
-  it('refuses own covers to normal users, who can still upload for reviews', async () => {
+  it('refuses own covers to normal users', async () => {
     const id = (await owner.post('/api/movies', { title: 'Matrix', tmdbId: 603 })).json().id;
     api.db.prepare('INSERT INTO movie_entry (user_id, movie_id) VALUES (3, ?)').run(id);
-    const upload = (await normal.upload(await solidImage(20, 30))).json();
+    const upload = (await trusted.upload(await solidImage(20, 30))).json();
     for (const url of [upload.ref, PUBLIC_IMAGE]) {
       const response = await normal.put(`/api/movies/${id}/images/cover`, { url });
       expect(response.statusCode).toBe(403);
       expect(response.json().code).toBe('trusted_only');
     }
-    expect((await normal.get('/api/images/usage')).json().usedBytes).toBe(upload.byteSize);
+    expect((await normal.get('/api/images/usage')).json().usedBytes).toBe(0);
   });
 });

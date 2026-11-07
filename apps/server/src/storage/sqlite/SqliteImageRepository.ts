@@ -91,7 +91,7 @@ export class SqliteImageRepository implements ImageRepository {
     this.db.prepare('DELETE FROM image WHERE hash = ?').run(hash);
   }
 
-  async orphans(): Promise<string[]> {
+  async orphans(createdBefore?: string): Promise<string[]> {
     const referenced = IMAGE_COLUMNS.flatMap(({ table, column }) => [
       `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
       `SELECT json_extract(overrides, '$.${column}') AS ref FROM ${table}_entry
@@ -112,9 +112,15 @@ export class SqliteImageRepository implements ImageRepository {
              WHERE image_source.hash = image.hash AND url IN (SELECT ref FROM referenced)
            )
            AND NOT (${embedded})
+           AND (? IS NULL OR (
+             image.created_at < ?
+             AND NOT EXISTS (
+               SELECT 1 FROM image_owner WHERE image_owner.hash = image.hash AND image_owner.created_at >= ?
+             )
+           ))
          ORDER BY hash`,
       )
-      .all()
+      .all(createdBefore ?? null, createdBefore ?? null, createdBefore ?? null)
       .map((row) => String(row.hash));
   }
 

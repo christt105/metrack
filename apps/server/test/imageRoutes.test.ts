@@ -24,7 +24,7 @@ async function setup() {
     migrationRunner: new MigrationRunner(db, migrations),
     imageStore: store,
   });
-  return { app, store };
+  return { app, store, db };
 }
 
 describe('image routes', () => {
@@ -49,9 +49,10 @@ describe('image routes', () => {
   });
 
   it('deletes one image and cleans orphans', async () => {
-    const { app, store } = await setup();
+    const { app, store, db } = await setup();
     const a = await store.add(png(1, 1, 1), null);
     const b = await store.add(png(1, 1, 2), null);
+    db.prepare("UPDATE image SET created_at = '2020-01-01T00:00:00.000Z'").run();
     expect((await app.inject({ method: 'DELETE', url: a.ref })).statusCode).toBe(204);
     expect(await store.get(a.hash)).toBeUndefined();
     const cleanup = await app.inject({ method: 'POST', url: '/api/images/cleanup' });

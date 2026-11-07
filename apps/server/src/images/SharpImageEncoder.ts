@@ -4,7 +4,7 @@ import type { ImageEncoder } from './ImageEncoder.js';
 import type { ImageEncoding } from './ImageEncoding.js';
 import { ImageRejectedError } from './ImageRejectedError.js';
 
-export const DEFAULT_IMAGE_ENCODING: ImageEncoding = { maxDimension: 2560, quality: 82 };
+export const DEFAULT_IMAGE_ENCODING: ImageEncoding = { maxDimension: 1920, quality: 82 };
 
 const MAX_INPUT_PIXELS = 50_000_000;
 

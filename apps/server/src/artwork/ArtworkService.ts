@@ -78,7 +78,9 @@ export class ArtworkService {
       }
       ref = url;
     } else {
-      ref = await this.fetching(async () => (await this.images.copyForUser(url, user.id)).ref);
+      ref = await this.fetching(
+        async () => (await this.images.copyForUser(url, user.id, user.role === 'owner')).ref,
+      );
     }
     return this.editor.setImage(collection, id, kind, ref);
   }

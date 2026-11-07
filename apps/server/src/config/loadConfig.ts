@@ -30,8 +30,8 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     },
     images: {
       quotaBytes: positiveInteger(env, 'IMAGE_QUOTA_MB', 200) * MB,
-      maxUploadBytes: positiveInteger(env, 'IMAGE_UPLOAD_MAX_MB', 10) * MB,
-      maxDimension: positiveInteger(env, 'IMAGE_MAX_DIMENSION', 2560),
+      maxUploadBytes: positiveInteger(env, 'IMAGE_UPLOAD_MAX_MB', 5) * MB,
+      maxDimension: positiveInteger(env, 'IMAGE_MAX_DIMENSION', 1920),
       quality: Math.min(positiveInteger(env, 'IMAGE_WEBP_QUALITY', 82), 100),
     },
     alerts: {

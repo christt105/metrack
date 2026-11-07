@@ -101,10 +101,12 @@ const backup = () =>
       <ErrorNotice :error="imageUsageError" />
       <p v-if="imageUsage" data-test="image-usage">
         {{
-          messages.images.usage(
-            messages.images.megabytes(imageUsage.usedBytes),
-            messages.images.megabytes(imageUsage.quotaBytes),
-          )
+          imageUsage.quotaBytes === null
+            ? messages.images.usageUnlimited(messages.images.megabytes(imageUsage.usedBytes))
+            : messages.images.usage(
+                messages.images.megabytes(imageUsage.usedBytes),
+                messages.images.megabytes(imageUsage.quotaBytes),
+              )
         }}
       </p>
     </div>

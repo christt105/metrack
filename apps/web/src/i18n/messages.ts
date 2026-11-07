@@ -123,6 +123,8 @@ export const messages = {
     title: 'Images',
     usage: (used: string, quota: string) =>
       `Your own images (uploads and covers of your own) take ${used} of ${quota}.`,
+    usageUnlimited: (used: string) =>
+      `Your own images (uploads and covers of your own) take ${used}. The owner has no limit.`,
     megabytes: (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`,
   },
   rewatches: {

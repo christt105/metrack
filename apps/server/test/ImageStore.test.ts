@@ -127,7 +127,7 @@ describe('ImageStore', () => {
     const unused = await store.add(png(1, 1, 2), null);
     insertMovie(used.ref);
     expect(await store.orphans()).toEqual([unused.hash]);
-    expect(await store.cleanOrphans()).toEqual([unused.hash]);
+    expect(await store.cleanOrphans(0)).toEqual([unused.hash]);
     expect((await store.list()).map((i) => i.hash)).toEqual([used.hash]);
     expect(readdirSync(dir)).toEqual([`${used.hash}.png`]);
   });

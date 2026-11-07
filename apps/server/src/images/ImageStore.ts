@@ -17,7 +17,8 @@ import type { UrlGuard } from './UrlGuard.js';
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 export const DEFAULT_QUOTA_BYTES = 200 * 1024 * 1024;
-export const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const DEFAULT_MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+export const ORPHAN_GRACE_MS = 24 * 60 * 60 * 1000;
 
 const MAX_REDIRECTS = 3;
 
@@ -77,16 +78,16 @@ export class ImageStore {
     return this.add(await this.fetchLimited(url, MAX_IMAGE_BYTES), url);
   }
 
-  /** Stores a file a user uploaded, as WebP, and counts it for their quota. */
-  async upload(bytes: Uint8Array, userId: number): Promise<StoredImage> {
+  /** Stores a file a user uploaded, as WebP, and counts it for their quota unless they have none. */
+  async upload(bytes: Uint8Array, userId: number, unlimited = false): Promise<StoredImage> {
     if (bytes.byteLength > this.maxUploadBytes) throw tooLarge(this.maxUploadBytes);
-    return this.addOwned(await this.encoder.encode(bytes), null, userId);
+    return this.addOwned(await this.encoder.encode(bytes), null, userId, unlimited);
   }
 
   /** Copies an image from a URL of any public site for a user, as WebP, and counts it for their quota. */
-  async copyForUser(url: string, userId: number): Promise<StoredImage> {
+  async copyForUser(url: string, userId: number, unlimited = false): Promise<StoredImage> {
     const bytes = await this.fetchGuarded(url);
-    return this.addOwned(await this.encoder.encode(bytes), url, userId);
+    return this.addOwned(await this.encoder.encode(bytes), url, userId, unlimited);
   }
 
   /** Copies an existing local file into the store, optionally recording the URL it stands for. */
@@ -103,9 +104,12 @@ export class ImageStore {
     return this.write(prepared, bytes, sourceUrl);
   }
 
-  /** How many bytes of their own images a user keeps, against their quota. */
-  async usage(userId: number): Promise<ImageUsage> {
-    return { usedBytes: await this.rows.usedBytes(userId), quotaBytes: this.quotaBytes };
+  /** How many bytes of their own images a user keeps, against their quota (`null` when they have none). */
+  async usage(userId: number, unlimited = false): Promise<ImageUsage> {
+    return {
+      usedBytes: await this.rows.usedBytes(userId),
+      quotaBytes: unlimited ? null : this.quotaBytes,
+    };
   }
 
   /** Whether the user is one of the owners of the image. */
@@ -152,15 +156,18 @@ export class ImageStore {
 
   /**
    * Hashes of stored images nothing uses: no cover or banner points at them, by reference or by the linked
-   * URL they archive, and no review embeds them.
+   * URL they archive, and no review embeds them. With `graceMs`, images stored or claimed more recently
+   * than that are left out.
    */
-  orphans(): Promise<string[]> {
-    return this.rows.orphans();
+  orphans(graceMs = 0): Promise<string[]> {
+    return this.rows.orphans(
+      graceMs > 0 ? new Date(this.now().getTime() - graceMs).toISOString() : undefined,
+    );
   }
 
-  /** Deletes every orphan and returns their hashes. */
-  async cleanOrphans(): Promise<string[]> {
-    const orphans = await this.orphans();
+  /** Deletes every orphan older than the grace period (24 hours) and returns their hashes. */
+  async cleanOrphans(graceMs = ORPHAN_GRACE_MS): Promise<string[]> {
+    const orphans = await this.orphans(graceMs);
     for (const hash of orphans) await this.delete(hash);
     return orphans;
   }
@@ -179,13 +186,14 @@ export class ImageStore {
     bytes: Uint8Array,
     sourceUrl: string | null,
     userId: number,
+    unlimited: boolean,
   ): Promise<StoredImage> {
     const prepared = this.prepare(bytes, sourceUrl);
     const existing = await this.rows.get(prepared.hash);
     const present = existing !== undefined && (await this.hasFile(existing));
     const owners = present ? await this.rows.ownerIds(prepared.hash) : [];
     if (present && owners.length === 0) return this.withSource(existing, sourceUrl);
-    if (!owners.includes(userId)) {
+    if (!unlimited && !owners.includes(userId)) {
       const used = await this.rows.usedBytes(userId);
       if (used + bytes.byteLength > this.quotaBytes) {
         throw new ImageRejectedError(

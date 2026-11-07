@@ -231,7 +231,28 @@ describe('orphans', () => {
       ).run(userId, movie.lastInsertRowid, `![](${ref})`);
     }
     db.prepare('DELETE FROM user WHERE id = 3').run();
-    expect(await images.cleanOrphans()).toEqual([mine.hash]);
+    expect(await images.cleanOrphans(0)).toEqual([mine.hash]);
     expect(await images.usage(2)).toMatchObject({ usedBytes: both.byteSize });
+  });
+
+  it('keeps unused images younger than the grace period', async () => {
+    const images = store();
+    const fresh = await images.upload(await solidImage(8, 8), 1);
+    const old = await images.upload(await solidImage(9, 9), 1);
+    const claimed = await images.upload(await solidImage(10, 10), 1);
+    const day = 24 * 60 * 60 * 1000;
+    const at = (ms: number) => new Date(Date.parse('2026-11-07T12:00:00Z') - ms).toISOString();
+    db.prepare('UPDATE image SET created_at = ? WHERE hash = ?').run(at(day - 60_000), fresh.hash);
+    db.prepare('UPDATE image SET created_at = ? WHERE hash = ?').run(at(day + 60_000), old.hash);
+    db.prepare('UPDATE image SET created_at = ? WHERE hash = ?').run(at(3 * day), claimed.hash);
+    db.prepare('UPDATE image_owner SET created_at = ?').run(at(3 * day));
+    db.prepare('UPDATE image_owner SET created_at = ? WHERE hash = ?').run(
+      at(60_000),
+      claimed.hash,
+    );
+    expect(await images.cleanOrphans()).toEqual([old.hash]);
+    expect((await images.list()).map((i) => i.hash).sort()).toEqual(
+      [fresh.hash, claimed.hash].sort(),
+    );
   });
 });
