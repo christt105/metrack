@@ -1,18 +1,7 @@
-import { chownSync, existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { renameSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-
-function matchParentOwner(path: string): void {
-  if (process.getuid?.() !== 0) return;
-  const parent = statSync(dirname(path));
-  chownSync(path, parent.uid, parent.gid);
-}
-
-function ensureDir(dir: string): void {
-  if (existsSync(dir)) return;
-  ensureDir(dirname(dir));
-  mkdirSync(dir);
-  matchParentOwner(dir);
-}
+import { ensureOwnedDir } from '../files/ensureOwnedDir.js';
+import { matchParentOwner } from '../files/matchParentOwner.js';
 
 /**
  * Writes through a temporary file in the same folder so sync tools never see a half-written file.
@@ -20,7 +9,7 @@ function ensureDir(dir: string): void {
  * owned by its user.
  */
 export function writeFileAtomic(path: string, data: string | Uint8Array): void {
-  ensureDir(dirname(path));
+  ensureOwnedDir(dirname(path));
   const temporary = join(dirname(path), `.${basename(path)}.metrack-tmp`);
   writeFileSync(temporary, data);
   matchParentOwner(temporary);
