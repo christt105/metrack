@@ -21,6 +21,8 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack backups [--data-dir <dir>]
        metrack backup [--data-dir <dir>]
        metrack restore <backupName> [--data-dir <dir>]
+       metrack copies [--data-dir <dir>]
+       metrack retrieve <backupName> [--data-dir <dir>]
        metrack sync [--apply] [--verbose] [--user <id>] [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
@@ -42,7 +44,9 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   path on --origin (the old site was served under --old-base, default /MediaTracker). Nothing else is touched.
 
   backups lists stored backups, backup creates one now (and prunes to BACKUP_RETENTION), restore replaces the
-  database and image store with a backup (stop the server first).
+  database and image store with a backup (stop the server first). When BACKUP_COPY_DIR is set, every backup is
+  also copied there; copies lists the copied backups and retrieve rebuilds one of them under the backup folder so
+  restore can use it.
 
   mirror writes one read-only note per item into the Media Tracker folder of the vault, with the names and
   folders the Obsidian plugin used, so the vault can link to them. Without --apply it only reports what would
@@ -104,8 +108,15 @@ async function main(argv: string[]): Promise<number> {
     console.error(USAGE);
     return 2;
   }
-  if (!values.help && (command === 'backups' || command === 'backup' || command === 'restore')) {
-    if (positionals.length > (command === 'restore' ? 2 : 1)) {
+  if (
+    !values.help &&
+    (command === 'backups' ||
+      command === 'backup' ||
+      command === 'restore' ||
+      command === 'copies' ||
+      command === 'retrieve')
+  ) {
+    if (positionals.length > (command === 'restore' || command === 'retrieve' ? 2 : 1)) {
       console.error(USAGE);
       return 2;
     }
