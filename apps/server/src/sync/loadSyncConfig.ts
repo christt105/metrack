@@ -7,6 +7,8 @@ const REQUIRED = [
   'JELLYSTAT_DB_PASSWORD',
 ] as const;
 
+const MIN_SECRET_LENGTH = 16;
+
 export interface SyncConfigResult {
   config: SyncConfig | undefined;
   /** Names of the required variables that are not set. Empty when syncing is configured. */
@@ -25,6 +27,10 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
   if (!Number.isInteger(delaySeconds) || delaySeconds < 0 || delaySeconds > 3600) {
     throw new Error(`Invalid SYNC_WEBHOOK_DELAY_SECONDS: ${env.SYNC_WEBHOOK_DELAY_SECONDS}`);
   }
+  const webhookSecret = env.SYNC_WEBHOOK_SECRET || undefined;
+  if (webhookSecret !== undefined && webhookSecret.length < MIN_SECRET_LENGTH) {
+    throw new Error(`SYNC_WEBHOOK_SECRET must be at least ${MIN_SECRET_LENGTH} characters`);
+  }
   return {
     missing: [],
     config: {
@@ -41,6 +47,7 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
       },
       timeZone: env.SYNC_TIME_ZONE || 'Europe/Madrid',
       webhookDelayMs: delaySeconds * 1000,
+      webhookSecret,
     },
   };
 }

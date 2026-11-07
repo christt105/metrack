@@ -32,6 +32,7 @@ import type { UserScope } from '../users/UserScope.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import { registerSettingsRoutes } from './registerSettingsRoutes.js';
+import type { WebhookSecret } from './WebhookSecret.js';
 
 export interface AppDeps {
   appVersion: string;
@@ -56,6 +57,8 @@ export interface AppDeps {
   syncQueues?: UserQueues;
   /** Shows each user their settings and lets the owner change everyone's. */
   settings?: { users: UserRepository; settings: UserSettingsRepository };
+  /** Required from the Jellyfin webhook when set. */
+  syncWebhookSecret?: WebhookSecret;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
 }
 
@@ -84,7 +87,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
   if (deps.watch) registerWatchlistRoutes(app, deps.watch.watchlist, deps.watch.alerts);
-  registerSyncRoutes(app, deps.sync, deps.syncQueues);
+  registerSyncRoutes(app, deps.sync, deps.syncQueues, deps.syncWebhookSecret);
   if (deps.settings) registerSettingsRoutes(app, deps.settings.users, deps.settings.settings);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueues) registerPublishRoutes(app, deps.publishQueues);

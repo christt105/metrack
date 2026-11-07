@@ -43,6 +43,7 @@ import { TmdbMovieProvider } from './titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from './titles/TmdbSeriesProvider.js';
 import { createSyncService } from './sync/createSyncService.js';
 import { loadSyncConfig } from './sync/loadSyncConfig.js';
+import { WebhookSecret } from './api/WebhookSecret.js';
 import { openDatabase } from './storage/sqlite/openDatabase.js';
 import { createSqliteRepositories } from './storage/sqlite/createSqliteRepositories.js';
 
@@ -215,6 +216,9 @@ const app = await buildApp({
   sync: syncServices,
   syncQueues,
   settings: { users: repositories.users, settings: repositories.settings },
+  syncWebhookSecret: syncConfig?.webhookSecret
+    ? new WebhookSecret(syncConfig.webhookSecret)
+    : undefined,
   watch: {
     watchlist: new WatchlistService(edit.editor, movies, series, seasons),
     alerts: releaseAlerts,

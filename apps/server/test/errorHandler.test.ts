@@ -38,6 +38,13 @@ describe('error handler', () => {
     expect(errors[0]).toContain('kaboom');
   });
 
+  it('masks the webhook secret in the logged URL', async () => {
+    const { app, errors } = await setup();
+    await app.inject({ method: 'GET', url: '/api/boom?a=1&token=s3cret&b=2' });
+    expect(errors[0]).toContain('GET /api/boom?a=1&token=***&b=2 failed with 500');
+    expect(errors[0]).not.toContain('s3cret');
+  });
+
   it('does not log client errors', async () => {
     const { app, errors } = await setup();
     const response = await app.inject({ method: 'GET', url: '/api/missing' });
