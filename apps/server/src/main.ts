@@ -215,6 +215,7 @@ const app = await buildApp({
   backup: { service: backupService, job: backupJob },
   sync: syncServices,
   syncQueues,
+  settings: { users: repositories.users, settings: repositories.settings },
   syncWebhookSecret: syncConfig?.webhookSecret
     ? new WebhookSecret(syncConfig.webhookSecret)
     : undefined,

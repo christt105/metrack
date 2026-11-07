@@ -1,8 +1,9 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import SettingsView from '../src/views/SettingsView.vue';
-import type { SyncPlan } from '@metrack/domain';
+import type { OwnSettings, SyncPlan, User, UserSettings } from '@metrack/domain';
 import type { BackupInfo } from '../src/api/BackupInfo';
+import { ApiRequestError } from '../src/api/ApiRequestError';
 import { mountWithApi } from './mountWithApi';
 
 const health = { status: 'ok', appVersion: 'dev', schemaVersion: 3 };
@@ -12,12 +13,42 @@ const existing: BackupInfo = {
   sizeBytes: 2_097_152,
   hasImages: true,
 };
+const noSettings: UserSettings = {
+  jellyfinUser: null,
+  ntfyTopic: null,
+  publishProject: null,
+  publishBaseUrl: null,
+  mirrorDir: null,
+  mirrorLinkPrefix: null,
+};
+const ownerSettings: UserSettings = {
+  ...noSettings,
+  jellyfinUser: 'admin',
+  publishProject: 'media-tracker',
+  mirrorDir: '/vault/Media Tracker',
+};
+const owner: User = { id: 1, name: 'Owner', email: null };
+const friend: User = { id: 2, name: 'Friend', email: null };
+
+function ownerApi() {
+  return {
+    ownSettings: vi
+      .fn()
+      .mockResolvedValue({ settings: ownerSettings, owner: true } satisfies OwnSettings),
+    listUsers: vi.fn().mockResolvedValue([
+      { user: owner, settings: ownerSettings },
+      { user: friend, settings: noSettings },
+    ]),
+  };
+}
+
 const created: BackupInfo = { ...existing, name: 'metrack-20261002T000000000Z' };
 
 describe('SettingsView backups', () => {
   it('lists stored backups', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
       listBackups: vi.fn().mockResolvedValue([existing]),
     });
     await flushPromises();
@@ -28,6 +59,7 @@ describe('SettingsView backups', () => {
   it('shows an empty state', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
       listBackups: vi.fn().mockResolvedValue([]),
     });
     await flushPromises();
@@ -42,6 +74,7 @@ describe('SettingsView backups', () => {
     const createBackup = vi.fn().mockResolvedValue(created);
     const { wrapper } = await mountWithApi(SettingsView, {
       health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
       listBackups,
       createBackup,
     });
@@ -93,6 +126,7 @@ describe('SettingsView Jellyfin sync', () => {
   };
   const base = {
     health: vi.fn().mockResolvedValue(health),
+    ...ownerApi(),
     listBackups: vi.fn().mockResolvedValue([]),
   };
 
@@ -151,5 +185,77 @@ describe('SettingsView Jellyfin sync', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('Nothing to change.');
     expect(wrapper.findAll('button').some((b) => b.text() === 'Apply changes')).toBe(false);
+  });
+});
+
+describe('SettingsView user settings', () => {
+  it('shows a user their settings and hides what only the owner can do', async () => {
+    const listBackups = vi.fn();
+    const listUsers = vi.fn();
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ownSettings: vi.fn().mockResolvedValue({
+        settings: { ...noSettings, jellyfinUser: 'haku' },
+        owner: false,
+      } satisfies OwnSettings),
+      listBackups,
+      listUsers,
+    });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Your background jobs');
+    expect(wrapper.text()).toContain('haku');
+    expect(wrapper.text()).toContain('Jellyfin viewings');
+    expect(wrapper.text()).not.toContain('Publish now');
+    expect(wrapper.text()).not.toContain('Backups');
+    expect(wrapper.find('form.user').exists()).toBe(false);
+    expect(listBackups).not.toHaveBeenCalled();
+    expect(listUsers).not.toHaveBeenCalled();
+  });
+
+  it('lets the owner change what can be changed from the web', async () => {
+    const updateUserSettings = vi
+      .fn()
+      .mockResolvedValue({ ...noSettings, jellyfinUser: 'haku', ntfyTopic: 'friend' });
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
+      listBackups: vi.fn().mockResolvedValue([]),
+      updateUserSettings,
+    });
+    await flushPromises();
+    const forms = wrapper.findAll('form.user');
+    expect(forms).toHaveLength(2);
+    expect(forms[0]!.find('input[name="mirrorDir"]').exists()).toBe(false);
+    expect(forms[0]!.text()).toContain('/vault/Media Tracker');
+    await forms[1]!.find('input[name="jellyfinUser"]').setValue('haku');
+    await forms[1]!.find('input[name="ntfyTopic"]').setValue('friend');
+    await forms[1]!.trigger('submit');
+    await flushPromises();
+    expect(updateUserSettings).toHaveBeenCalledWith(2, {
+      jellyfinUser: 'haku',
+      ntfyTopic: 'friend',
+    });
+    expect(wrapper.text()).toContain('Saved the settings of Friend.');
+  });
+
+  it('shows the problem next to each invalid setting', async () => {
+    const updateUserSettings = vi.fn().mockRejectedValue(
+      new ApiRequestError('Some settings are not valid', 400, 'invalid_settings', {
+        ntfyTopic: 'letters, digits, "-" and "_", up to 64',
+      }),
+    );
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
+      listBackups: vi.fn().mockResolvedValue([]),
+      updateUserSettings,
+    });
+    await flushPromises();
+    const form = wrapper.findAll('form.user')[1]!;
+    await form.find('input[name="ntfyTopic"]').setValue('two words');
+    await form.trigger('submit');
+    await flushPromises();
+    expect(form.find('.problem').text()).toContain('up to 64');
+    expect(form.find('input[name="ntfyTopic"]').attributes('aria-invalid')).toBe('true');
   });
 });

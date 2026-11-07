@@ -1,12 +1,11 @@
 import { join } from 'node:path';
-import type { User } from '@metrack/domain';
+import { applySettingsPatch, type User, type UserSettings } from '@metrack/domain';
 import { MigrationRunner } from '../storage/MigrationRunner.js';
 import { migrations } from '../storage/migrations/index.js';
 import { openDatabase } from '../storage/sqlite/openDatabase.js';
 import { SqliteUserRepository } from '../storage/sqlite/SqliteUserRepository.js';
 import { SqliteUserSettingsRepository } from '../storage/sqlite/SqliteUserSettingsRepository.js';
 import { NO_SETTINGS } from './NO_SETTINGS.js';
-import type { UserSettings } from './UserSettings.js';
 
 export interface UsersCommand {
   dataDir: string;
@@ -28,12 +27,15 @@ export async function runUsersCommand(command: UsersCommand): Promise<string> {
       const { userId, changes } = command.set;
       const user = await users.get(userId);
       if (!user) throw new Error(`There is no user ${userId}`);
-      const updated: UserSettings = { ...((await settings.get(userId)) ?? NO_SETTINGS) };
-      for (const [key, value] of Object.entries(changes) as [keyof UserSettings, string][]) {
-        updated[key] = value === '' ? null : value;
+      const result = applySettingsPatch((await settings.get(userId)) ?? NO_SETTINGS, changes);
+      if (!result.ok) {
+        const problems = Object.entries(result.problems).map(
+          ([key, problem]) => `${key}: ${problem}`,
+        );
+        throw new Error(`Invalid settings: ${problems.join('; ')}`);
       }
-      if (Object.keys(changes).length > 0) await settings.save(userId, updated);
-      return `${describe(user)}\n${describeSettings(updated)}`;
+      if (Object.keys(changes).length > 0) await settings.save(userId, result.settings);
+      return `${describe(user)}\n${describeSettings(result.settings)}`;
     }
     const stored = new Map((await settings.list()).map((entry) => [entry.userId, entry.settings]));
     return (await users.list())

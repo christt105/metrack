@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { SyncPlan } from '@metrack/domain';
+import type { OwnSettings, SyncPlan } from '@metrack/domain';
 import ErrorNotice from '../components/ErrorNotice.vue';
+import SettingsList from '../components/SettingsList.vue';
+import UserSettingsEditor from '../components/UserSettingsEditor.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
 import { messages } from '../i18n/messages';
@@ -9,11 +11,22 @@ import { countSyncChanges } from '../logic/countSyncChanges';
 
 const api = useApi();
 const { data: health, error: healthError } = useLoader(() => api.health());
+let ownRequest: Promise<OwnSettings> | undefined;
+const loadOwn = (): Promise<OwnSettings> => (ownRequest ??= api.ownSettings());
+const { data: own, error: ownError, reload: reloadOwn } = useLoader(loadOwn);
+const owner = computed(() => own.value?.owner === true);
+const ownerOnly = async <T,>(load: () => Promise<T>): Promise<T | null> =>
+  (await loadOwn()).owner ? load() : null;
 const {
   data: backups,
   error: backupsError,
   reload: reloadBackups,
-} = useLoader(() => api.listBackups());
+} = useLoader(() => ownerOnly(() => api.listBackups()));
+const { data: users, error: usersError } = useLoader(() => ownerOnly(() => api.listUsers()));
+const refreshOwn = async (): Promise<void> => {
+  ownRequest = undefined;
+  await reloadOwn();
+};
 const actionError = ref<unknown>(null);
 const actionResult = ref<string | null>(null);
 const busy = ref(false);
@@ -75,19 +88,25 @@ const backup = () =>
       </dl>
     </div>
     <div class="panel">
+      <h2>{{ messages.settings.jobs }}</h2>
+      <p class="muted">{{ messages.settings.jobsHint }}</p>
+      <ErrorNotice :error="ownError" />
+      <SettingsList v-if="own" :settings="own.settings" />
+    </div>
+    <div v-if="own?.settings.publishProject" class="panel">
       <h2>{{ messages.settings.publishing }}</h2>
       <p class="muted">{{ messages.settings.publishHint }}</p>
       <button type="button" :disabled="busy" @click="publish">
         {{ messages.settings.publish }}
       </button>
     </div>
-    <div class="panel">
+    <div v-if="owner" class="panel">
       <h2>{{ messages.settings.storage }}</h2>
       <button type="button" :disabled="busy" @click="cleanup">
         {{ messages.settings.cleanup }}
       </button>
     </div>
-    <div class="panel">
+    <div v-if="owner" class="panel">
       <h2>{{ messages.settings.backups }}</h2>
       <ErrorNotice :error="backupsError" />
       <p v-if="backups && backups.length === 0" class="muted">
@@ -106,7 +125,7 @@ const backup = () =>
         {{ messages.settings.backupNow }}
       </button>
     </div>
-    <div class="panel">
+    <div v-if="own?.settings.jellyfinUser" class="panel">
       <h2>{{ messages.settings.sync }}</h2>
       <p class="muted">{{ messages.settings.syncHint }}</p>
       <ul v-if="plan" class="sync">
@@ -126,6 +145,18 @@ const backup = () =>
       <button v-if="syncChanges > 0" type="button" :disabled="busy" @click="applySync">
         {{ messages.settings.syncApply }}
       </button>
+    </div>
+    <div v-if="owner" class="panel">
+      <h2>{{ messages.settings.users }}</h2>
+      <p class="muted">{{ messages.settings.usersHint }}</p>
+      <ErrorNotice :error="usersError" />
+      <UserSettingsEditor
+        v-for="entry in users ?? []"
+        :key="entry.user.id"
+        :user="entry.user"
+        :settings="entry.settings"
+        @saved="refreshOwn"
+      />
     </div>
     <p v-if="actionResult" class="notice success" role="status">{{ actionResult }}</p>
     <ErrorNotice :error="actionError" />

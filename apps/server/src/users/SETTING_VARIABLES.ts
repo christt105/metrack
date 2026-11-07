@@ -1,4 +1,4 @@
-import type { UserSettings } from './UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 
 /** The environment variable each owner setting starts from. */
 export const SETTING_VARIABLES: Record<keyof UserSettings, string> = {

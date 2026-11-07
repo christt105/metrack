@@ -25,6 +25,10 @@ import type {
   ReleaseAlert,
   UnlinkedTitle,
   User,
+  UserSettings,
+  UserSettingsPatch,
+  UserWithSettings,
+  OwnSettings,
   WatchlistEntry,
 } from '@metrack/domain';
 import type { BackupInfo } from './BackupInfo';
@@ -258,5 +262,17 @@ export class ApiClient {
 
   listAlerts(): Promise<ReleaseAlert[]> {
     return this.request('GET', '/alerts');
+  }
+
+  ownSettings(): Promise<OwnSettings> {
+    return this.request('GET', '/settings');
+  }
+
+  listUsers(): Promise<UserWithSettings[]> {
+    return this.request('GET', '/users');
+  }
+
+  updateUserSettings(userId: number, patch: UserSettingsPatch): Promise<UserSettings> {
+    return this.request('PATCH', `/users/${userId}/settings`, patch);
   }
 }

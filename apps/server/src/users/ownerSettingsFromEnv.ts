@@ -1,5 +1,5 @@
 import { loadSyncConfig } from '../sync/loadSyncConfig.js';
-import type { UserSettings } from './UserSettings.js';
+import type { UserSettings } from '@metrack/domain';
 
 /** The settings the owner's jobs used when they were configured only through the environment. */
 export function ownerSettingsFromEnv(env: Record<string, string | undefined>): UserSettings {

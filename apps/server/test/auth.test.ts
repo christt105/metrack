@@ -228,6 +228,9 @@ describe('users', () => {
     await expect(
       runUsersCommand({ dataDir, set: { userId: 9, changes: { ntfyTopic: 't' } } }),
     ).rejects.toThrow('There is no user 9');
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 2, changes: { ntfyTopic: 'two words' } } }),
+    ).rejects.toThrow('Invalid settings: ntfyTopic');
   });
 });
 
