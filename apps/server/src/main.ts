@@ -30,7 +30,7 @@ import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
 import { UserReleaseWatchers } from './alerts/UserReleaseWatchers.js';
 import { WatchlistService } from './alerts/WatchlistService.js';
 import { TmdbReleaseSource } from './providers/tmdb/TmdbReleaseSource.js';
-import { BackupJob } from './backup/BackupJob.js';
+import { createBackupJob } from './backup/createBackupJob.js';
 import { BackupScheduler } from './backup/BackupScheduler.js';
 import { createBackupService } from './backup/createBackupService.js';
 import { createNotifier } from './notify/createNotifier.js';
@@ -190,7 +190,7 @@ const syncQueues =
     : undefined;
 
 const backupService = createBackupService(config, db);
-const backupJob = new BackupJob(backupService, config.backup.retention, notifier, logger);
+const backupJob = createBackupJob(config, backupService, notifier, logger);
 const scheduler = new BackupScheduler(
   backupService,
   backupJob,

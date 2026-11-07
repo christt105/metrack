@@ -227,16 +227,33 @@ docker compose start metrack
 
 A test restores a backup over a modified database and image store and checks the result matches the original and the replaced data is kept in the safety directory.
 
-### Off-server copy
+### Copy to another disk
 
-The service does not copy backups off the machine. Run something on the host against the bind-mounted `${METRACK_DATA}/backups` directory, for example a daily cron job:
+Backups live next to the database, so a dead disk takes both. Set `BACKUP_COPY_DIR` to a folder on another disk, mounted into the container, and after each successful backup the server copies every backup still missing there: the database of each one as `databases/metrack-<UTC timestamp>.db` (checked with `PRAGMA integrity_check` before it is accepted) and the images into one shared `images/` folder. Images are named by their hash and never change, so each is copied once however many backups hold it, and a copy grows with new images rather than with days. A database is only written after all its images, and every file goes through a temporary name, so an interrupted copy leaves nothing half-written. When running as root, new files take the owner of the folder they land in.
 
-```sh
-rsync -a --delete /path/to/metrack-data/backups/ backup-host:/srv/backups/metrack/
-rclone sync /path/to/metrack-data/backups remote:metrack-backups
+| Variable                | Default | Meaning                                                                    |
+| ----------------------- | ------- | -------------------------------------------------------------------------- |
+| `BACKUP_COPY_DIR`       | unset   | Folder that receives the copy; unset means no copy                         |
+| `BACKUP_COPY_RETENTION` | `365`   | Number of copied databases to keep; images are never removed from the copy |
+
+A failed copy does not fail the backup. It is logged, sends one alert per run of failures and one more when a copy succeeds again, and the next backup copies everything still missing, so days missed while the disk was unavailable catch up.
+
+```yaml
+volumes:
+  - ${METRACK_DATA:-./data}:/data
+  - /mnt/other-disk/metrack:/backup-copy
+environment:
+  BACKUP_COPY_DIR: /backup-copy
 ```
 
-Backups are immutable directories, so syncing the whole folder is safe. Restore from an off-server copy by placing the backup directory back under `backups/` and running the restore above.
+To restore from the copy, `retrieve` rebuilds a copied backup as a regular backup under `backups/` (with every image in the copy; remove unused images afterwards to drop the extra ones), and `restore` takes it from there:
+
+```sh
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js copies
+docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js retrieve metrack-20261024T031500000Z
+```
+
+To copy off the machine instead, sync the bind-mounted `${METRACK_DATA}/backups` folder from the host, for example `rclone sync /path/to/metrack-data/backups remote:metrack-backups`. Backups are immutable directories, so syncing the whole folder is safe; place one back under `backups/` to restore it.
 
 ## Jellyfin viewing sync
 

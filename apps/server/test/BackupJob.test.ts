@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { BackupJob } from '../src/backup/BackupJob.js';
+import type { BackupCopier } from '../src/backup/BackupCopier.js';
 import type { BackupService } from '../src/backup/BackupService.js';
 import type { Notifier } from '../src/notify/Notifier.js';
 
@@ -72,5 +73,48 @@ describe('BackupJob', () => {
     const job = new BackupJob(service, 7, { notify }, logger);
     for (let i = 0; i < 5; i++) await expect(job.run()).rejects.toThrow('disk full');
     expect(notify).toHaveBeenCalledTimes(3);
+  });
+
+  it('copies after a backup and alerts once per copy failure streak without failing the backup', async () => {
+    const service = {
+      create: vi.fn(() => info),
+      prune: vi.fn(() => []),
+    } as unknown as BackupService;
+    let copyFails = true;
+    const copier = {
+      sync: vi.fn(() => {
+        if (copyFails) throw new Error('disk not mounted');
+        return { copied: ['n'], images: 2, pruned: [] };
+      }),
+    } as unknown as BackupCopier;
+    const notifier: Notifier = { notify: vi.fn(async () => true) };
+    const job = new BackupJob(service, 7, notifier, logger, copier);
+
+    await expect(job.run()).resolves.toBe(info);
+    await expect(job.run()).resolves.toBe(info);
+    expect(notifier.notify).toHaveBeenCalledTimes(1);
+    expect(notifier.notify).toHaveBeenCalledWith('metrack backup copy failed', 'disk not mounted');
+
+    copyFails = false;
+    await job.run();
+    expect(copier.sync).toHaveBeenCalledTimes(3);
+    expect(notifier.notify).toHaveBeenLastCalledWith(
+      'metrack backup copy recovered',
+      'the backup copy is up to date',
+      { priority: 'default', tags: ['white_check_mark'] },
+    );
+  });
+
+  it('does not copy when the backup fails', async () => {
+    const service = {
+      create: vi.fn(() => {
+        throw new Error('disk full');
+      }),
+      prune: vi.fn(),
+    } as unknown as BackupService;
+    const copier = { sync: vi.fn() } as unknown as BackupCopier;
+    const notifier: Notifier = { notify: vi.fn(async () => true) };
+    await expect(new BackupJob(service, 7, notifier, logger, copier).run()).rejects.toThrow();
+    expect(copier.sync).not.toHaveBeenCalled();
   });
 });

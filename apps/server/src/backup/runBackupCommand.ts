@@ -3,13 +3,18 @@ import { join } from 'node:path';
 import type { Config } from '../config/Config.js';
 import { createNotifier } from '../notify/createNotifier.js';
 import { openDatabase } from '../storage/sqlite/openDatabase.js';
-import { BackupJob } from './BackupJob.js';
+import { BackupCopier } from './BackupCopier.js';
+import type { BackupCommand } from './BackupCommand.js';
+import { createBackupJob } from './createBackupJob.js';
 import { createBackupService } from './createBackupService.js';
 
-/** Runs the backup CLI commands `backups`, `backup` and `restore <name>` against the data directory. */
+/**
+ * Runs the backup CLI commands against the data directory: `backups`, `backup`, `restore <name>`,
+ * and for the copy in BACKUP_COPY_DIR, `copies` and `retrieve <name>`.
+ */
 export async function runBackupCommand(
   config: Config,
-  command: 'backups' | 'backup' | 'restore',
+  command: BackupCommand,
   name: string | undefined,
 ): Promise<string> {
   const dbPath = join(config.dataDir, 'metrack.db');
@@ -27,13 +32,15 @@ export async function runBackupCommand(
         .join('\n');
     }
     if (command === 'backup') {
-      const job = new BackupJob(
-        service,
-        config.backup.retention,
-        createNotifier(config.ntfy, console),
-        console,
-      );
+      const job = createBackupJob(config, service, createNotifier(config.ntfy, console), console);
       return (await job.run()).name;
+    }
+    if (command === 'copies' || command === 'retrieve') {
+      if (!config.backup.copy) throw new Error('BACKUP_COPY_DIR is not set');
+      const copier = new BackupCopier(service, config.backup.dir, config.backup.copy);
+      if (command === 'copies') return copier.list().join('\n');
+      if (!name) throw new Error('retrieve needs a backup name');
+      return `copied ${name} back to ${copier.retrieve(name)}; restore it with: restore ${name}`;
     }
     if (!name) {
       throw new Error('restore needs a backup name');
