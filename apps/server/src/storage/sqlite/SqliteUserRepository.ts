@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { User } from '@metrack/domain';
+import type { User, UserRole } from '@metrack/domain';
 import type { NewUser } from '../repositories/NewUser.js';
 import type { UserRepository } from '../repositories/UserRepository.js';
 import type { Row } from './Row.js';
@@ -28,8 +28,17 @@ export class SqliteUserRepository implements UserRepository {
   async list(): Promise<User[]> {
     return this.db.prepare('SELECT * FROM user ORDER BY id').all().map(fromRow);
   }
+
+  async setRole(id: number, role: UserRole): Promise<void> {
+    this.db.prepare('UPDATE user SET role = ? WHERE id = ?').run(role, id);
+  }
 }
 
 function fromRow(row: Row): User {
-  return { id: Number(row.id), name: String(row.name), email: text(row.email) };
+  return {
+    id: Number(row.id),
+    name: String(row.name),
+    email: text(row.email),
+    role: String(row.role) as UserRole,
+  };
 }

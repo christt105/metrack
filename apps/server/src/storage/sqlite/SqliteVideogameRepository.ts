@@ -25,7 +25,7 @@ export class SqliteVideogameRepository
   implements VideogameRepository
 {
   constructor(db: DatabaseSync, scope: UserScope) {
-    super(db, scope, 'videogame', ENTRY_COLUMNS, [['igdb_id']]);
+    super(db, scope, 'videogame', ENTRY_COLUMNS, [['igdb_id']], [], true);
   }
 
   async findByIgdbId(igdbId: number): Promise<Videogame | undefined> {

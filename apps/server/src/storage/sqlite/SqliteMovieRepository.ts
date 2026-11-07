@@ -24,7 +24,7 @@ const ENTRY_COLUMNS = [
 
 export class SqliteMovieRepository extends SqliteTableRepository<Movie> implements MovieRepository {
   constructor(db: DatabaseSync, scope: UserScope) {
-    super(db, scope, 'movie', ENTRY_COLUMNS, [['tmdb_id']]);
+    super(db, scope, 'movie', ENTRY_COLUMNS, [['tmdb_id']], [], true);
   }
 
   async findByTmdbId(tmdbId: number): Promise<Movie | undefined> {

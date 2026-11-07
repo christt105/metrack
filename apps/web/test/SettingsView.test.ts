@@ -27,8 +27,8 @@ const ownerSettings: UserSettings = {
   publishProject: 'media-tracker',
   mirrorDir: '/vault/Media Tracker',
 };
-const owner: User = { id: 1, name: 'Owner', email: null };
-const friend: User = { id: 2, name: 'Friend', email: null };
+const owner: User = { id: 1, name: 'Owner', email: null, role: 'owner' };
+const friend: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 
 function ownerApi() {
   return {
@@ -257,5 +257,23 @@ describe('SettingsView user settings', () => {
     await flushPromises();
     expect(form.find('.problem').text()).toContain('up to 64');
     expect(form.find('input[name="ntfyTopic"]').attributes('aria-invalid')).toBe('true');
+  });
+
+  it('lets the owner make another user trusted, but never change the owner', async () => {
+    const setUserRole = vi.fn().mockResolvedValue({ ...friend, role: 'trusted' });
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
+      listBackups: vi.fn().mockResolvedValue([]),
+      setUserRole,
+    });
+    await flushPromises();
+    const forms = wrapper.findAll('form.user');
+    expect(forms[0]!.find('select[name="role"]').exists()).toBe(false);
+    expect(forms[0]!.text()).toContain('Owner');
+    await forms[1]!.find('select[name="role"]').setValue('trusted');
+    await flushPromises();
+    expect(setUserRole).toHaveBeenCalledWith(2, 'trusted');
+    expect(wrapper.text()).toContain('Friend is now Trusted: may add items by hand.');
   });
 });

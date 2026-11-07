@@ -12,8 +12,8 @@ import { NO_SETTINGS } from '../src/users/NO_SETTINGS.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
 import { OWNER_ID } from '../src/users/OWNER_ID.js';
 
-const OWNER: User = { id: OWNER_ID, name: 'Owner', email: null };
-const FRIEND: User = { id: 2, name: 'Friend', email: null };
+const OWNER: User = { id: OWNER_ID, name: 'Owner', email: null, role: 'owner' };
+const FRIEND: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 
 const byHeader: Authenticator = {
   userFor: async (headers) => [OWNER, FRIEND].find((u) => u.id === Number(headers['x-test-user'])),

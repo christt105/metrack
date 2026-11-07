@@ -48,6 +48,8 @@ import type { Authenticator } from '../../src/auth/Authenticator.js';
 import type { UserScope } from '../../src/users/UserScope.js';
 import type { DatabaseSync } from 'node:sqlite';
 import { OWNER_SCOPE } from './ownerScope.js';
+import { SqliteUserRepository } from '../../src/storage/sqlite/SqliteUserRepository.js';
+import { SqliteUserSettingsRepository } from '../../src/storage/sqlite/SqliteUserSettingsRepository.js';
 
 export const NOW = new Date('2026-03-05T12:00:00Z');
 
@@ -147,6 +149,10 @@ export async function createTestApi(
     publishQueues: ownerQueues(queue),
     edit,
     watch: { watchlist: new WatchlistService(edit.editor, movies, series, seasons), alerts },
+    settings: {
+      users: new SqliteUserRepository(db),
+      settings: new SqliteUserSettingsRepository(db),
+    },
   });
   return {
     app,

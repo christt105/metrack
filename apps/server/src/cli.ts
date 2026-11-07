@@ -25,7 +25,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
-       metrack users set <id> [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
+       metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
                      [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>] [--data-dir <dir>]
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
@@ -50,7 +50,8 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   as written. --web-url (or VAULT_MIRROR_WEB_URL) adds a link back to the web app; --link-prefix is the
   folder's path inside the vault (default "Media Tracker").
 
-  users lists who can sign in and which background jobs run for each; users add creates a user. User 1 owns
+  users lists who can sign in, their role and which background jobs run for each; users add creates a normal
+  user, and users set --role makes one trusted (may add items by hand) or normal again; user 1 is the owner. User 1 owns
   everything stored before users existed. users set changes what a user's jobs act on (an empty value clears it):
   the Jellyfin account synced, the ntfy topic for release alerts and job failures, the Cloudflare Pages project and
   address of their site, and the vault folder their notes are mirrored into. A job runs only for users who set what
@@ -78,6 +79,7 @@ async function main(argv: string[]): Promise<number> {
       'jellyfin-user': { type: 'string' },
       'ntfy-topic': { type: 'string' },
       'publish-project': { type: 'string' },
+      role: { type: 'string' },
       'publish-base-url': { type: 'string' },
       'mirror-dir': { type: 'string' },
       'mirror-link-prefix': { type: 'string' },
@@ -120,7 +122,7 @@ async function main(argv: string[]): Promise<number> {
     if (
       (action !== undefined && !adding && !setting) ||
       (values.email !== undefined && !adding) ||
-      (changesSettings && !setting) ||
+      ((changesSettings || values.role !== undefined) && !setting) ||
       values.user !== undefined
     ) {
       console.error(USAGE);
@@ -131,7 +133,7 @@ async function main(argv: string[]): Promise<number> {
       await runUsersCommand({
         dataDir,
         add: adding ? { name, email: values.email ?? null } : undefined,
-        set: setting ? { userId: setId, changes: settingChanges } : undefined,
+        set: setting ? { userId: setId, changes: settingChanges, role: values.role } : undefined,
       }),
     );
     return 0;

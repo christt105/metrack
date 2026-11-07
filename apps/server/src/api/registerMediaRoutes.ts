@@ -63,7 +63,7 @@ function registerCollection(
 
   app.post<{ Body: Record<string, unknown> }>(
     base,
-    { schema: { body: createBody(collection) } },
+    { config: { trustedOnly: true }, schema: { body: createBody(collection) } },
     async (request, reply) => reply.code(201).send(await editor.create(collection, request.body)),
   );
 

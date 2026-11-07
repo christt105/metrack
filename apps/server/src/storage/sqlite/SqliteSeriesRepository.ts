@@ -19,7 +19,7 @@ export class SqliteSeriesRepository
   implements SeriesRepository
 {
   constructor(db: DatabaseSync, scope: UserScope) {
-    super(db, scope, 'series', ENTRY_COLUMNS, [['tmdb_id'], ['tvdb_id']], RELATED_DELETES);
+    super(db, scope, 'series', ENTRY_COLUMNS, [['tmdb_id'], ['tvdb_id']], RELATED_DELETES, true);
   }
 
   async findByTmdbId(tmdbId: number): Promise<Series | undefined> {

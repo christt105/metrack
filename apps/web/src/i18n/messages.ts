@@ -1,4 +1,5 @@
 import type {
+  UserRole,
   TokenScope,
   Collection,
   ImageKind,
@@ -139,6 +140,8 @@ export const messages = {
     addTitle: 'Add to library',
     manualHeading: 'Add by hand',
     manualHint: 'Create the entry now and fill in the rest on its page.',
+    manualTrustedOnly:
+      'Only trusted users can add items no provider knows. Ask the owner if you need one.',
     manualTitle: 'Title',
     create: 'Create',
     added: 'Added.',
@@ -216,6 +219,13 @@ export const messages = {
       `Set from the command line: metrack users set ${userId} --mirror-dir <folder>`,
     save: 'Save',
     saved: (name: string) => `Saved the settings of ${name}.`,
+    role: 'Role',
+    roleSaved: (name: string, role: string) => `${name} is now ${role}.`,
+    roleLabels: {
+      owner: 'Owner',
+      trusted: 'Trusted: may add items by hand',
+      normal: 'Normal',
+    } satisfies Record<UserRole, string>,
     settingLabels: {
       jellyfinUser: 'Jellyfin account',
       ntfyTopic: 'ntfy topic',

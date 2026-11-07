@@ -12,7 +12,9 @@ import type { RowValues } from './RowValues.js';
  * live in the entry, and `catalogKeys` the column sets that identify a catalog row, so adding a title that
  * is already in the catalog reuses its row. Hand edits of catalog fields are kept in the entry's
  * `overrides` and win over the catalog when reading. `relatedDeletes` are trusted statements, run with the
- * user id and the entity id, that remove the user's rows hanging from a deleted entry.
+ * user id and the entity id, that remove the user's rows hanging from a deleted entry. In an `ownable` table a
+ * catalog row without any key (an item added by hand) belongs to the user who created it (`owner_id`), and
+ * stops belonging to anyone once it gets a key, since it is then the shared catalog row of that title.
  */
 export abstract class SqliteTableRepository<
   T extends { id: number },
@@ -28,6 +30,7 @@ export abstract class SqliteTableRepository<
     entryColumns: readonly string[],
     private readonly catalogKeys: readonly (readonly string[])[],
     private readonly relatedDeletes: readonly string[] = [],
+    private readonly ownable = false,
   ) {
     this.entryTable = `${table}_entry`;
     this.key = `${table}_id`;
@@ -41,7 +44,11 @@ export abstract class SqliteTableRepository<
     const { catalog, entry } = this.split(this.toRow(input));
     const userId = this.scope.userId();
     const id = this.atomically(() => {
-      const catalogId = this.findCatalogRow(catalog) ?? this.insertCatalogRow(catalog);
+      const catalogId =
+        this.findCatalogRow(catalog) ??
+        this.insertCatalogRow(
+          this.ownable && !this.hasKey(catalog) ? { ...catalog, owner_id: userId } : catalog,
+        );
       const entryColumns = ['user_id', this.key, ...Object.keys(entry)];
       this.db
         .prepare(
@@ -181,6 +188,12 @@ export abstract class SqliteTableRepository<
     );
   }
 
+  private hasKey(catalog: RowValues): boolean {
+    return this.catalogKeys.some((columns) =>
+      columns.every((column) => catalog[column] !== null && catalog[column] !== undefined),
+    );
+  }
+
   private findCatalogRow(catalog: RowValues): number | undefined {
     for (const columns of this.catalogKeys) {
       const values = columns.map((column) => catalog[column]);
@@ -211,10 +224,14 @@ export abstract class SqliteTableRepository<
     overrides: Record<string, unknown>,
   ): void {
     const userId = this.scope.userId();
+    const catalog =
+      this.ownable && this.hasKey(values.catalog)
+        ? { ...values.catalog, owner_id: null }
+        : values.catalog;
     this.atomically(() => {
       this.db
-        .prepare(`UPDATE ${this.table} SET ${assignments(values.catalog)} WHERE id = ?`)
-        .run(...Object.values(values.catalog), id);
+        .prepare(`UPDATE ${this.table} SET ${assignments(catalog)} WHERE id = ?`)
+        .run(...Object.values(catalog), id);
       this.db
         .prepare(
           `UPDATE ${this.entryTable} SET ${assignments(values.entry)}, overrides = ?

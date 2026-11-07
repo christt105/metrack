@@ -1,5 +1,6 @@
 import type {
   AddTitleRequest,
+  UserRole,
   ApiToken,
   CreatedToken,
   CreateTokenRequest,
@@ -289,5 +290,9 @@ export class ApiClient {
 
   revokeToken(id: number): Promise<void> {
     return this.request('DELETE', `/tokens/${id}`);
+  }
+
+  setUserRole(userId: number, role: UserRole): Promise<User> {
+    return this.request('PUT', `/users/${userId}/role`, { role });
   }
 }
