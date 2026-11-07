@@ -29,6 +29,7 @@ import type { Logger } from '../notify/Logger.js';
 import type { Authenticator } from '../auth/Authenticator.js';
 import type { AuthRouteDeps } from './AuthRouteDeps.js';
 import type { UserScope } from '../users/UserScope.js';
+import type { WebhookSecret } from './WebhookSecret.js';
 
 export interface AppDeps {
   appVersion: string;
@@ -51,6 +52,8 @@ export interface AppDeps {
   backup?: BackupRouteDeps;
   sync?: UserSyncServices;
   syncQueues?: UserQueues;
+  /** Required from the Jellyfin webhook when set. */
+  syncWebhookSecret?: WebhookSecret;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
 }
 
@@ -79,7 +82,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
   if (deps.watch) registerWatchlistRoutes(app, deps.watch.watchlist, deps.watch.alerts);
-  registerSyncRoutes(app, deps.sync, deps.syncQueues);
+  registerSyncRoutes(app, deps.sync, deps.syncQueues, deps.syncWebhookSecret);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueues) registerPublishRoutes(app, deps.publishQueues);
   if (deps.mirrorQueues) registerMirrorHook(app, deps.mirrorQueues);

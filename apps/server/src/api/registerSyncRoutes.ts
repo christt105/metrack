@@ -3,6 +3,7 @@ import type { SyncService } from '../sync/SyncService.js';
 import type { UserSyncServices } from '../sync/UserSyncServices.js';
 import type { UserQueues } from '../users/UserQueues.js';
 import { ApiError } from './ApiError.js';
+import type { WebhookSecret } from './WebhookSecret.js';
 
 const applyBody = {
   type: 'object',
@@ -16,12 +17,13 @@ const applyBody = {
  * only computes the plan. `POST /api/sync/apply` needs `{ "confirm": true }`, recomputes the plan on the server and
  * writes it. `POST /api/sync/webhook` is the target of the Jellyfin Webhook plugin: it ignores the body, queues a
  * delayed sync for every user with a Jellyfin account and answers 202. It needs no session, since it only schedules
- * work. All of them answer 501 when sync is not configured, and the first two also when the user has no account set.
+ * work, but when a webhook secret is set it answers 401 to a request without it. All of them answer 501 when sync is not configured, and the first two also when the user has no account set.
  */
 export function registerSyncRoutes(
   app: FastifyInstance,
   sync: UserSyncServices | undefined,
   queues?: UserQueues,
+  webhookSecret?: WebhookSecret,
 ): void {
   const ready = (): UserSyncServices => {
     if (!sync) {
@@ -46,7 +48,12 @@ export function registerSyncRoutes(
     (await forRequest(request)).apply(),
   );
 
-  app.post('/api/sync/webhook', { config: { public: true } }, async (_request, reply) => {
+  app.post('/api/sync/webhook', { config: { public: true } }, async (request, reply) => {
+    if (webhookSecret && !webhookSecret.matches(request)) {
+      return reply
+        .code(401)
+        .send({ error: 'Missing or wrong webhook secret', code: 'bad_webhook_secret' });
+    }
     ready();
     const users = (await queues?.markAllDirty()) ?? 0;
     return reply.code(202).send({ status: 'queued', users });
