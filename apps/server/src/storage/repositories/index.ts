@@ -17,3 +17,6 @@ export type { SessionRepository } from './SessionRepository.js';
 export type { StoredSession } from './StoredSession.js';
 export type { UserRepository } from './UserRepository.js';
 export type { UserSettingsRepository } from './UserSettingsRepository.js';
+export type { ApiTokenRepository } from './ApiTokenRepository.js';
+export type { NewApiToken } from './NewApiToken.js';
+export type { StoredApiToken } from './StoredApiToken.js';

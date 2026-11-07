@@ -41,10 +41,14 @@ export function registerSettingsRoutes(
   const settingsOf = async (userId: number): Promise<UserSettings> =>
     (await settings.get(userId)) ?? NO_SETTINGS;
 
-  app.get('/api/settings', async (request): Promise<OwnSettings> => {
-    const userId = request.user?.id ?? 0;
-    return { settings: await settingsOf(userId), owner: userId === OWNER_ID };
-  });
+  app.get(
+    '/api/settings',
+    { config: { sessionOnly: true } },
+    async (request): Promise<OwnSettings> => {
+      const userId = request.user?.id ?? 0;
+      return { settings: await settingsOf(userId), owner: userId === OWNER_ID };
+    },
+  );
 
   app.get('/api/users', { config: { ownerOnly: true } }, async (): Promise<UserWithSettings[]> => {
     const stored = new Map((await settings.list()).map((entry) => [entry.userId, entry.settings]));

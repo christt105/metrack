@@ -32,6 +32,8 @@ import type { UserScope } from '../users/UserScope.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import { registerSettingsRoutes } from './registerSettingsRoutes.js';
+import { registerTokenRoutes } from './registerTokenRoutes.js';
+import type { ApiTokenService } from '../auth/ApiTokenService.js';
 import type { WebhookSecret } from './WebhookSecret.js';
 
 export interface AppDeps {
@@ -42,6 +44,8 @@ export interface AppDeps {
   /** Binds each request to its user. */
   scope: UserScope;
   auth?: AuthRouteDeps;
+  /** Personal API tokens: lets programs sign in with `Authorization: Bearer`, and their routes. */
+  tokens?: ApiTokenService;
   /** Receives the failures answered with a 5xx status. */
   logger?: Logger;
   webDir?: string;
@@ -68,8 +72,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     ajv: { customOptions: { removeAdditional: false, coerceTypes: 'array' } },
   });
   registerErrorHandler(app, deps.logger);
-  registerAuthGuard(app, deps.authenticator, deps.scope);
+  registerAuthGuard(app, deps.authenticator, deps.scope, deps.tokens);
   if (deps.auth) registerAuthRoutes(app, deps.auth);
+  if (deps.tokens) registerTokenRoutes(app, deps.tokens);
 
   app.get('/api/health', { config: { public: true } }, async (_request, reply) => {
     const report = createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion());

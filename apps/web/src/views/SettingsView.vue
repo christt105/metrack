@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { OwnSettings, SyncPlan } from '@metrack/domain';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import SettingsList from '../components/SettingsList.vue';
+import TokensPanel from '../components/TokensPanel.vue';
 import UserSettingsEditor from '../components/UserSettingsEditor.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
@@ -93,6 +94,7 @@ const backup = () =>
       <ErrorNotice :error="ownError" />
       <SettingsList v-if="own" :settings="own.settings" />
     </div>
+    <TokensPanel />
     <div v-if="own?.settings.publishProject" class="panel">
       <h2>{{ messages.settings.publishing }}</h2>
       <p class="muted">{{ messages.settings.publishHint }}</p>

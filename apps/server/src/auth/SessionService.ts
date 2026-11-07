@@ -1,7 +1,8 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import type { User } from '@metrack/domain';
 import type { SessionRepository } from '../storage/repositories/SessionRepository.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
+import { hashSecret } from './hashSecret.js';
 import type { StartedSession } from './StartedSession.js';
 
 export const SESSION_TTL_MS = 30 * 24 * 3_600_000;
@@ -24,7 +25,7 @@ export class SessionService {
     const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(now.getTime() + this.ttlMs);
     await this.sessions.create({
-      id: hashToken(token),
+      id: hashSecret(token),
       userId,
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
@@ -34,16 +35,12 @@ export class SessionService {
 
   /** The user a token signs in, or undefined when it is unknown or expired. */
   async resolve(token: string): Promise<User | undefined> {
-    const session = await this.sessions.get(hashToken(token));
+    const session = await this.sessions.get(hashSecret(token));
     if (!session || session.expiresAt <= this.now().toISOString()) return undefined;
     return this.users.get(session.userId);
   }
 
   async end(token: string): Promise<void> {
-    await this.sessions.delete(hashToken(token));
+    await this.sessions.delete(hashSecret(token));
   }
-}
-
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
 }

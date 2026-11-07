@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { buildApp } from './api/buildApp.js';
+import { ApiTokenService } from './auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from './auth/SessionCookieAuthenticator.js';
 import { SessionService } from './auth/SessionService.js';
 import { AsyncUserScope } from './users/AsyncUserScope.js';
@@ -205,6 +206,7 @@ const app = await buildApp({
   authenticator: new SessionCookieAuthenticator(sessions),
   scope,
   auth: { sessions, users: repositories.users, devLogin: config.devLogin },
+  tokens: new ApiTokenService(repositories.apiTokens, repositories.users),
   logger,
   webDir: config.webDir,
   imageStore,

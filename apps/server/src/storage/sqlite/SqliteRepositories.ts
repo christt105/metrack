@@ -1,3 +1,4 @@
+import type { ApiTokenRepository } from '../repositories/ApiTokenRepository.js';
 import type { BookRepository } from '../repositories/BookRepository.js';
 import type { ImageRepository } from '../repositories/ImageRepository.js';
 import type { MetadataStateRepository } from '../repositories/MetadataStateRepository.js';
@@ -27,5 +28,6 @@ export interface SqliteRepositories {
   users: UserRepository;
   settings: UserSettingsRepository;
   sessions: SessionRepository;
+  apiTokens: ApiTokenRepository;
   transactions: TransactionRunner;
 }

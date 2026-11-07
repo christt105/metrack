@@ -1,4 +1,5 @@
 import type {
+  TokenScope,
   Collection,
   ImageKind,
   MediaSortField,
@@ -223,6 +224,32 @@ export const messages = {
       mirrorDir: 'Vault folder',
       mirrorLinkPrefix: 'Folder path in the vault',
     } satisfies Record<keyof UserSettings, string>,
+  },
+  tokens: {
+    title: 'API tokens',
+    hint: 'Let a program, such as a sync connector or the Obsidian plugin, use your library without your browser session. A token never reaches settings, tokens or owner-only actions.',
+    empty: 'No tokens yet.',
+    name: 'Name',
+    scope: 'Access',
+    lifetime: 'Expires',
+    create: 'Create token',
+    revoke: 'Revoke',
+    revokeConfirm: (name: string) => `Revoke ${name}? Programs using it stop working.`,
+    created: 'Copy the token now: it is not shown again.',
+    copy: 'Copy',
+    copied: 'Copied.',
+    scopeLabels: { read: 'Read only', write: 'Read and write' } satisfies Record<
+      TokenScope,
+      string
+    >,
+    lifetimeLabel: (days: number | null) => (days === null ? 'Never' : `In ${days} days`),
+    details: (scope: string, created: string, expires: string | null, used: string | null) =>
+      [
+        scope,
+        `created ${created}`,
+        expires === null ? 'never expires' : `expires ${expires}`,
+        used === null ? 'never used' : `last used ${used}`,
+      ].join(' · '),
   },
   typeLabels: {
     movie: 'Movie',

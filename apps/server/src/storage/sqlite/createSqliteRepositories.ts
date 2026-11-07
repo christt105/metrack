@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { UserScope } from '../../users/UserScope.js';
+import { SqliteApiTokenRepository } from './SqliteApiTokenRepository.js';
 import { SqliteBookRepository } from './SqliteBookRepository.js';
 import { SqliteImageRepository } from './SqliteImageRepository.js';
 import { SqliteMetadataStateRepository } from './SqliteMetadataStateRepository.js';
@@ -32,6 +33,7 @@ export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): Sq
     users: new SqliteUserRepository(db),
     settings: new SqliteUserSettingsRepository(db),
     sessions: new SqliteSessionRepository(db),
+    apiTokens: new SqliteApiTokenRepository(db),
     transactions: new SqliteTransactionRunner(db),
   };
 }
