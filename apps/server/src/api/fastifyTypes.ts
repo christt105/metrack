@@ -4,7 +4,7 @@ declare module 'fastify' {
   interface FastifyContextConfig {
     /** Answers without a session. Every other `/api` route needs one. */
     public?: boolean;
-    /** Acts on the whole instance (sync, publishing, backups, image cleanup): only the owner may call it. */
+    /** Acts on the whole instance (backups, deleting shared images): only the owner may call it. */
     ownerOnly?: boolean;
   }
   interface FastifyRequest {

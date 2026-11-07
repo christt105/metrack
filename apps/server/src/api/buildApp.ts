@@ -21,9 +21,9 @@ import type { WatchlistService } from '../alerts/WatchlistService.js';
 import type { EditServices } from './EditServices.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
-import type { PublishQueue } from '../publish/PublishQueue.js';
 import { registerBackupRoutes, type BackupRouteDeps } from './registerBackupRoutes.js';
-import type { SyncService } from '../sync/SyncService.js';
+import type { UserSyncServices } from '../sync/UserSyncServices.js';
+import type { UserQueues } from '../users/UserQueues.js';
 import type { MigrationRunner } from '../storage/MigrationRunner.js';
 import type { Logger } from '../notify/Logger.js';
 import type { Authenticator } from '../auth/Authenticator.js';
@@ -43,13 +43,14 @@ export interface AppDeps {
   webDir?: string;
   imageStore?: ImageStore;
   metadataCache?: MetadataCache;
-  publishQueue?: PublishQueue;
-  /** Refreshes the read-only notes in the vault after each change. */
-  mirrorQueue?: PublishQueue;
+  /** Publishes the site of each user who has one. */
+  publishQueues?: UserQueues;
+  /** Refreshes each user's read-only notes in their vault after a change. */
+  mirrorQueues?: UserQueues;
   edit?: EditServices;
   backup?: BackupRouteDeps;
-  sync?: SyncService;
-  syncQueue?: PublishQueue;
+  sync?: UserSyncServices;
+  syncQueues?: UserQueues;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
 }
 
@@ -78,10 +79,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     registerTitleRoutes(app, titleProviders, unlinked, resolver);
   }
   if (deps.watch) registerWatchlistRoutes(app, deps.watch.watchlist, deps.watch.alerts);
-  registerSyncRoutes(app, deps.sync, deps.syncQueue);
+  registerSyncRoutes(app, deps.sync, deps.syncQueues);
   if (deps.backup) registerBackupRoutes(app, deps.backup);
-  if (deps.publishQueue) registerPublishRoutes(app, deps.publishQueue);
-  if (deps.mirrorQueue) registerMirrorHook(app, deps.mirrorQueue);
+  if (deps.publishQueues) registerPublishRoutes(app, deps.publishQueues);
+  if (deps.mirrorQueues) registerMirrorHook(app, deps.mirrorQueues);
 
   const webDir = deps.webDir ? resolve(deps.webDir) : undefined;
   const serveWeb = webDir !== undefined && existsSync(webDir);

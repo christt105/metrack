@@ -14,12 +14,14 @@ import { createSyncService } from './createSyncService.js';
 import { formatSyncReport } from './formatSyncReport.js';
 import type { SyncConfig } from './SyncConfig.js';
 import { FixedUserScope } from '../users/FixedUserScope.js';
-import { OWNER_ID } from '../users/OWNER_ID.js';
+import { openJellystatPool } from './jellystat/openJellystatPool.js';
 
 export interface SyncCommandOptions {
   dataDir: string;
   apply: boolean;
   verbose: boolean;
+  /** Whose tracking is compared, with the Jellyfin account in their settings. */
+  userId: number;
   /** When set, TheTVDB-only series are paired through TMDB and created titles get their metadata. */
   tmdb?: TmdbClientOptions;
 }
@@ -36,7 +38,14 @@ export async function runSyncCommand(
   if (!options.apply && !existsSync(dbPath)) throw new Error(`No database at ${dbPath}`);
   const db = options.apply ? openDatabase(dbPath) : new DatabaseSync(dbPath, { readOnly: true });
   if (options.apply) new MigrationRunner(db, migrations).run();
-  const repositories = createSqliteRepositories(db, new FixedUserScope(OWNER_ID));
+  const repositories = createSqliteRepositories(db, new FixedUserScope(options.userId));
+  const jellyfinUser = (await repositories.settings.get(options.userId))?.jellyfinUser;
+  if (!jellyfinUser) {
+    db.close();
+    throw new Error(
+      `User ${options.userId} has no Jellyfin user, set one with metrack users set ${options.userId} --jellyfin-user <name>`,
+    );
+  }
   const targets = repositories;
   let tmdb;
   if (options.tmdb) {
@@ -48,11 +57,13 @@ export async function runSyncCommand(
     registerTmdbMetadata(metadata, client, targets);
     tmdb = { client, metadata };
   }
-  const { service, pool } = createSyncService(
+  const pool = openJellystatPool(config.jellystat, console);
+  const service = createSyncService(
     config,
+    jellyfinUser,
+    pool,
     repositories.transactions,
     targets,
-    console,
     tmdb,
   );
   try {

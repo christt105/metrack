@@ -1,5 +1,4 @@
 import type { Logger } from '../notify/Logger.js';
-import type { ReleaseWatcher } from './ReleaseWatcher.js';
 
 /** Runs the watcher on a fixed tick. The watcher decides which titles are actually due. */
 export class ReleaseWatchScheduler {
@@ -7,7 +6,7 @@ export class ReleaseWatchScheduler {
   private running = false;
 
   constructor(
-    private readonly watcher: ReleaseWatcher,
+    private readonly watcher: { tick(): Promise<unknown> },
     private readonly logger: Logger,
   ) {}
 

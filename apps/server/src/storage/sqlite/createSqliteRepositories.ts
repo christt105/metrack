@@ -13,6 +13,7 @@ import { SqliteSeriesRepository } from './SqliteSeriesRepository.js';
 import { SqliteTransactionRunner } from './SqliteTransactionRunner.js';
 import { SqliteUnlinkedTitleRepository } from './SqliteUnlinkedTitleRepository.js';
 import { SqliteUserRepository } from './SqliteUserRepository.js';
+import { SqliteUserSettingsRepository } from './SqliteUserSettingsRepository.js';
 import { SqliteVideogameRepository } from './SqliteVideogameRepository.js';
 
 /** Every repository over one SQLite connection. Personal data is read and written as the user in scope. */
@@ -29,6 +30,7 @@ export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): Sq
     metadataStates: new SqliteMetadataStateRepository(db, scope),
     images: new SqliteImageRepository(db),
     users: new SqliteUserRepository(db),
+    settings: new SqliteUserSettingsRepository(db),
     sessions: new SqliteSessionRepository(db),
     transactions: new SqliteTransactionRunner(db),
   };

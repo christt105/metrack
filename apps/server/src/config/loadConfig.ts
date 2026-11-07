@@ -31,12 +31,14 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       timeZone: env.ALERTS_TIMEZONE ?? 'Europe/Madrid',
       notifyFromHour: hour(env, 'ALERTS_NOTIFY_FROM_HOUR', 8),
     },
+    mirrorWebUrl: env.VAULT_MIRROR_WEB_URL || null,
   };
   if (env.IGDB_CLIENT_ID && env.IGDB_CLIENT_SECRET) {
     config.igdb = { clientId: env.IGDB_CLIENT_ID, clientSecret: env.IGDB_CLIENT_SECRET };
   }
-  if (env.NTFY_URL && env.NTFY_TOPIC) {
-    config.ntfy = { url: env.NTFY_URL, topic: env.NTFY_TOPIC, token: env.NTFY_TOKEN || undefined };
+  if (env.NTFY_URL) {
+    config.ntfyServer = { url: env.NTFY_URL, token: env.NTFY_TOKEN || undefined };
+    if (env.NTFY_TOPIC) config.ntfy = { ...config.ntfyServer, topic: env.NTFY_TOPIC };
   }
   return config;
 }

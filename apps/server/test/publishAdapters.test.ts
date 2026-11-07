@@ -16,18 +16,12 @@ describe('loadPublishConfig', () => {
     PUBLISH_SITE_TEMPLATE_DIR: '/site',
     CLOUDFLARE_API_TOKEN: 'token',
     CLOUDFLARE_ACCOUNT_ID: 'account',
-    CLOUDFLARE_PAGES_PROJECT: 'metrack-site',
   };
 
   it('is disabled and names what is missing when a variable is absent', () => {
     expect(loadPublishConfig({})).toEqual({
       config: undefined,
-      missing: [
-        'PUBLISH_SITE_TEMPLATE_DIR',
-        'CLOUDFLARE_API_TOKEN',
-        'CLOUDFLARE_ACCOUNT_ID',
-        'CLOUDFLARE_PAGES_PROJECT',
-      ],
+      missing: ['PUBLISH_SITE_TEMPLATE_DIR', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'],
     });
     expect(loadPublishConfig({ ...env, CLOUDFLARE_API_TOKEN: '' }).missing).toEqual([
       'CLOUDFLARE_API_TOKEN',
@@ -41,9 +35,7 @@ describe('loadPublishConfig', () => {
       wranglerBinary: 'wrangler',
       cloudflareApiToken: 'token',
       cloudflareAccountId: 'account',
-      cloudflareProject: 'metrack-site',
       cloudflareBranch: 'main',
-      baseUrl: undefined,
     });
     expect(
       loadPublishConfig({
@@ -51,13 +43,11 @@ describe('loadPublishConfig', () => {
         HUGO_BIN: '/opt/hugo',
         WRANGLER_BIN: '/opt/wrangler',
         CLOUDFLARE_PAGES_BRANCH: 'live',
-        PUBLISH_BASE_URL: 'https://site.example/',
       }).config,
     ).toMatchObject({
       hugoBinary: '/opt/hugo',
       wranglerBinary: '/opt/wrangler',
       cloudflareBranch: 'live',
-      baseUrl: 'https://site.example/',
     });
   });
 });

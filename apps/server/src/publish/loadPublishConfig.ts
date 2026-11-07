@@ -4,7 +4,6 @@ const REQUIRED = [
   'PUBLISH_SITE_TEMPLATE_DIR',
   'CLOUDFLARE_API_TOKEN',
   'CLOUDFLARE_ACCOUNT_ID',
-  'CLOUDFLARE_PAGES_PROJECT',
 ] as const;
 
 export interface PublishConfigResult {
@@ -13,7 +12,10 @@ export interface PublishConfigResult {
   missing: string[];
 }
 
-/** Reads publishing settings from the environment. Publishing is off unless all of them are set. */
+/**
+ * Reads what publishing needs from the environment. Publishing is off unless all of it is set; then each user with a
+ * Cloudflare Pages project in their settings gets their site published.
+ */
 export function loadPublishConfig(env: Record<string, string | undefined>): PublishConfigResult {
   const missing = REQUIRED.filter((name) => !env[name]);
   if (missing.length > 0) return { config: undefined, missing };
@@ -25,9 +27,7 @@ export function loadPublishConfig(env: Record<string, string | undefined>): Publ
       wranglerBinary: env.WRANGLER_BIN || 'wrangler',
       cloudflareApiToken: env.CLOUDFLARE_API_TOKEN!,
       cloudflareAccountId: env.CLOUDFLARE_ACCOUNT_ID!,
-      cloudflareProject: env.CLOUDFLARE_PAGES_PROJECT!,
       cloudflareBranch: env.CLOUDFLARE_PAGES_BRANCH || 'main',
-      baseUrl: env.PUBLISH_BASE_URL || undefined,
     },
   };
 }

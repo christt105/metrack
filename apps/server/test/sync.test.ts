@@ -31,6 +31,10 @@ import { TmdbClient } from '../src/providers/tmdb/TmdbClient.js';
 import { SqliteTransactionRunner } from '../src/storage/sqlite/SqliteTransactionRunner.js';
 import { signedInAs } from './support/signedInAs.js';
 import { OWNER_SCOPE } from './support/ownerScope.js';
+import { ownerQueues } from './support/ownerQueues.js';
+import { SqliteUserSettingsRepository } from '../src/storage/sqlite/SqliteUserSettingsRepository.js';
+import { UserSyncServices } from '../src/sync/UserSyncServices.js';
+import { OWNER_ID } from '../src/users/OWNER_ID.js';
 
 interface Recorded {
   url: URL;
@@ -251,8 +255,8 @@ describe('loadSyncConfig', () => {
       JELLYSTAT_DB_HOST: 'db',
       JELLYSTAT_DB_PASSWORD: 'p',
     });
+    expect(config).not.toHaveProperty('userName');
     expect(config).toMatchObject({
-      userName: 'admin',
       timeZone: 'Europe/Madrid',
       jellystat: { port: 5432, user: 'postgres', database: 'jellystat' },
       webhookDelayMs: 120_000,
@@ -300,7 +304,9 @@ function setup(library: LibrarySource, plays: PlaybackSource) {
       now: () => new Date('2026-10-25T12:00:00Z'),
     },
   );
-  return { db, runner, targets, service };
+  db.prepare("INSERT INTO user_setting (user_id, jellyfin_user) VALUES (1, 'admin')").run();
+  const services = new UserSyncServices(new SqliteUserSettingsRepository(db), () => service);
+  return { db, runner, targets, service, services };
 }
 
 const lupinLibrary: LibrarySource = {
@@ -506,7 +512,7 @@ describe('SyncService', () => {
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
       migrationRunner: t.runner,
-      sync: t.service,
+      sync: t.services,
     });
     const report = await app.inject({ method: 'GET', url: '/api/sync/report' });
     expect(report.statusCode).toBe(200);
@@ -542,20 +548,21 @@ describe('SyncService', () => {
     const notifier = { notify: async () => true };
     const published = new PublishQueue(async () => 'published', notifier, logger, scheduler);
     const queue = createSyncQueue({
-      sync: t.service,
+      services: t.services,
+      userId: OWNER_ID,
       notifier,
       logger,
       scheduler,
       delayMs: 120_000,
-      downstream: [published, undefined],
+      downstream: [ownerQueues(published), undefined],
     });
     const app = await buildApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
       migrationRunner: t.runner,
-      sync: t.service,
-      syncQueue: queue,
+      sync: t.services,
+      syncQueues: ownerQueues(queue),
     });
     for (let i = 0; i < 3; i += 1) {
       const response = await app.inject({

@@ -18,7 +18,7 @@ A session is an `HttpOnly`, `SameSite=Lax` cookie named `metrack_session` that l
 - `GET /api/auth/me`: the signed-in `User` (`{ id, name, email }`).
 - `POST /api/auth/logout`: ends the session and clears the cookie, 204 (also without a session).
 - Everything else answers for the signed-in user only. An id that belongs to someone else is a 404, as if it did not exist. Titles are a shared catalog plus a personal entry: adding a title that another user already has reuses the same id, and changing a catalog field that is not a hand edit (an external id, a season number) of a title someone else also has answers 409 `catalog_shared` with the fields in `details.fields`.
-- Only user 1, the owner, may call the instance-wide routes: `GET /api/sync/report`, `POST /api/sync/apply`, `POST /api/publish`, `GET` and `POST /api/backups`, `POST /api/images/cleanup` and `DELETE /api/images/:hash`. Others get 403 `owner_only`.
+- Only user 1, the owner, may call the instance-wide routes: `GET` and `POST /api/backups`, `POST /api/images/cleanup` and `DELETE /api/images/:hash`. Others get 403 `owner_only`. Sync and publishing act on the signed-in user, with the Jellyfin account and Pages project in their settings.
 - `GET /api/auth/dev-users` and `POST /api/auth/dev-login` (`DevLoginRequest`, `{ "userId": 2 }`, answers the `User` and sets the cookie): only with `DEV_LOGIN=true`, otherwise they answer 404. They let anyone who reaches the server sign in as any user with no password, for development and a trusted local network.
 
 ## Collections
@@ -107,7 +107,7 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 
 ## Publishing and health
 
-- `POST /api/publish`: queues a publish and answers 202 `{ "status": "queued", "failures": n }`.
+- `POST /api/publish`: queues a publish of the signed-in user's site and answers 202 `{ "status": "queued", "failures": n }`; 501 `publish_not_configured` when they have no Cloudflare Pages project set.
 - `GET /api/health`: `HealthReport`. Answers 200 when `status` is `ok` and 503 with the same body when it is `degraded`, so the container health check fails.
 
 ## Backups
@@ -119,8 +119,8 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 
 - `GET /api/sync/report`: the `SyncPlan` a sync would apply: `movies` (`MovieChange`), `series` (`SeriesChange` with its `seasons`), `unlinked`, `warnings`, `ignoredPlays` and `unmatchedTitles`. Reads Jellyfin and Jellystat and the database; writes nothing.
 - `POST /api/sync/apply` with `{ "confirm": true }`: recomputes the plan on the server (a client-supplied plan is never trusted), writes it in one transaction and answers `{ plan, result: SyncApplyResult }`. A body without `confirm: true` is a 400.
-- `POST /api/sync/webhook`: the target of the Jellyfin Webhook plugin. The body is ignored. Queues a sync after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet and answers 202 `{ status: "queued", failures }`; 501 when sync is not configured.
-- Both answer 501 `sync_not_configured` unless the Jellyfin and Jellystat variables are set (see the README).
+- `POST /api/sync/webhook`: the target of the Jellyfin Webhook plugin. The body is ignored. Queues a sync for every user with a Jellyfin account after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet and answers 202 `{ status: "queued", users }` (how many were queued); 501 when sync is not configured.
+- Report and apply act on the signed-in user with the Jellyfin account in their settings. Both answer 501 `sync_not_configured` unless the Jellyfin and Jellystat variables are set (see the README) and the user has a Jellyfin account set.
 
 ## Release alerts
 

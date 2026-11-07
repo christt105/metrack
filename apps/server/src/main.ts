@@ -3,8 +3,8 @@ import { buildApp } from './api/buildApp.js';
 import { SessionCookieAuthenticator } from './auth/SessionCookieAuthenticator.js';
 import { SessionService } from './auth/SessionService.js';
 import { AsyncUserScope } from './users/AsyncUserScope.js';
-import { OWNER_ID } from './users/OWNER_ID.js';
-import { ScopedScheduler } from './users/ScopedScheduler.js';
+import { seedOwnerSettings } from './users/seedOwnerSettings.js';
+import { UserJobContext } from './users/UserJobContext.js';
 import { createEditServices } from './api/createEditServices.js';
 import type { ImageProvider } from './artwork/ImageProvider.js';
 import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js';
@@ -13,16 +13,13 @@ import { loadConfig } from './config/loadConfig.js';
 import { createImageStore } from './images/createImageStore.js';
 import { MetadataCache } from './metadata/MetadataCache.js';
 import { registerTmdbMetadata } from './metadata/registerTmdbMetadata.js';
-import { CloudflarePagesPublisher } from './publish/CloudflarePagesPublisher.js';
-import { FilePublishState } from './publish/FilePublishState.js';
+import { createUserPublishQueues } from './publish/createUserPublishQueues.js';
 import { loadPublishConfig } from './publish/loadPublishConfig.js';
 import { NodeCommandRunner } from './publish/NodeCommandRunner.js';
-import { PublishPipeline } from './publish/PublishPipeline.js';
-import { DEFAULT_QUEUE_OPTIONS, PublishQueue } from './publish/PublishQueue.js';
-import { createSyncQueue } from './sync/createSyncQueue.js';
-import { describeMirrorResult } from './mirror/describeMirrorResult.js';
-import { loadMirrorConfig } from './mirror/loadMirrorConfig.js';
-import { syncVaultMirror } from './mirror/syncVaultMirror.js';
+import { createUserSyncQueues } from './sync/createUserSyncQueues.js';
+import { openJellystatPool } from './sync/jellystat/openJellystatPool.js';
+import { UserSyncServices } from './sync/UserSyncServices.js';
+import { createUserMirrorQueues } from './mirror/createUserMirrorQueues.js';
 import { TimerScheduler } from './publish/TimerScheduler.js';
 import { IgdbClient } from './providers/igdb/IgdbClient.js';
 import { OpenLibraryClient } from './providers/openlibrary/OpenLibraryClient.js';
@@ -30,6 +27,7 @@ import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js'
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { ReleaseWatcher } from './alerts/ReleaseWatcher.js';
 import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
+import { UserReleaseWatchers } from './alerts/UserReleaseWatchers.js';
 import { WatchlistService } from './alerts/WatchlistService.js';
 import { TmdbReleaseSource } from './providers/tmdb/TmdbReleaseSource.js';
 import { BackupJob } from './backup/BackupJob.js';
@@ -56,8 +54,15 @@ const migrationRunner = new MigrationRunner(db, migrations);
 const schemaVersion = migrationRunner.run();
 
 const scope = new AsyncUserScope();
-const ownerScheduler = new ScopedScheduler(new TimerScheduler(), scope, OWNER_ID);
 const repositories = createSqliteRepositories(db, scope);
+await seedOwnerSettings(repositories.settings, process.env, logger);
+const jobs = new UserJobContext({
+  timer: new TimerScheduler(),
+  scope,
+  settings: repositories.settings,
+  ntfy: config.ntfyServer,
+  logger,
+});
 const {
   movies,
   series,
@@ -83,20 +88,27 @@ if (tmdb) {
   titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
   titleProviders.register(new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore));
   imageProviders.push(new TmdbImageProvider(tmdb));
-  if (config.alerts.enabled) {
+  if (config.alerts.enabled && jobs.canNotify) {
+    const source = new TmdbReleaseSource(tmdb);
     releaseScheduler = new ReleaseWatchScheduler(
-      new ReleaseWatcher({
-        movies,
-        series,
-        seasons,
-        overrides,
-        alerts: releaseAlerts,
-        source: new TmdbReleaseSource(tmdb),
-        notifier,
+      new UserReleaseWatchers(
+        () => jobs.usersWith((settings) => settings.ntfyTopic),
+        (userId) =>
+          new ReleaseWatcher({
+            movies,
+            series,
+            seasons,
+            overrides,
+            alerts: releaseAlerts,
+            source,
+            notifier: jobs.notifier(userId),
+            logger: jobs.logger(userId),
+            timeZone: config.alerts.timeZone,
+            notifyFromHour: config.alerts.notifyFromHour,
+          }),
+        scope,
         logger,
-        timeZone: config.alerts.timeZone,
-        notifyFromHour: config.alerts.notifyFromHour,
-      }),
+      ),
       logger,
     );
   }
@@ -129,72 +141,51 @@ const edit = createEditServices({
 });
 
 const { config: syncConfig, missing: syncMissing } = loadSyncConfig(process.env);
-const syncSetup = syncConfig
-  ? createSyncService(
-      syncConfig,
-      repositories.transactions,
-      { movies, series, seasons, overrides, unlinked },
-      logger,
-      tmdb && { client: tmdb, metadata: metadataCache },
-    )
-  : undefined;
-if (!syncSetup) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
+const jellystatPool = syncConfig ? openJellystatPool(syncConfig.jellystat, logger) : undefined;
+const syncServices =
+  syncConfig && jellystatPool
+    ? new UserSyncServices(repositories.settings, (jellyfinUser) =>
+        createSyncService(
+          syncConfig,
+          jellyfinUser,
+          jellystatPool,
+          repositories.transactions,
+          { movies, series, seasons, overrides, unlinked },
+          tmdb && { client: tmdb, metadata: metadataCache },
+        ),
+      )
+    : undefined;
+if (!syncServices) console.log(`Jellyfin sync is disabled, missing: ${syncMissing.join(', ')}`);
 
 const exportSources = { movies, series, seasons, videogames, books, images: imageStore };
 
 const { config: publishConfig, missing: publishMissing } = loadPublishConfig(process.env);
-let publishQueue: PublishQueue | undefined;
-if (publishConfig) {
-  const runner = new NodeCommandRunner();
-  const pipeline = new PublishPipeline(
-    exportSources,
-    {
-      siteTemplateDir: publishConfig.siteTemplateDir,
-      workDir: join(config.dataDir, 'publish'),
-      hugoBinary: publishConfig.hugoBinary,
-      baseUrl: publishConfig.baseUrl,
-    },
-    runner,
-    new CloudflarePagesPublisher(publishConfig, runner),
-    new FilePublishState(join(config.dataDir, 'publish-state.json')),
-  );
-  publishQueue = new PublishQueue(() => pipeline.run(), notifier, logger, ownerScheduler);
-} else {
-  console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
-}
+const publishQueues = publishConfig
+  ? createUserPublishQueues({
+      config: publishConfig,
+      sources: exportSources,
+      dataDir: config.dataDir,
+      runner: new NodeCommandRunner(),
+      jobs,
+    })
+  : undefined;
+if (!publishQueues) console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
 
-const mirrorConfig = loadMirrorConfig(process.env);
-let mirrorQueue: PublishQueue | undefined;
-if (mirrorConfig) {
-  mirrorQueue = new PublishQueue(
-    async () =>
-      describeMirrorResult(
-        await syncVaultMirror(exportSources, {
-          ...mirrorConfig,
-          statePath: join(config.dataDir, 'vault-mirror-state.json'),
-          apply: true,
-        }),
-      ),
-    notifier,
-    logger,
-    ownerScheduler,
-    { ...DEFAULT_QUEUE_OPTIONS, label: 'vault mirror' },
-  );
-  mirrorQueue.markDirty();
-} else {
-  console.log('The vault mirror is disabled, VAULT_MIRROR_DIR is not set');
-}
+const mirrorQueues = createUserMirrorQueues({
+  sources: exportSources,
+  dataDir: config.dataDir,
+  webUrl: config.mirrorWebUrl,
+  jobs,
+});
+const mirrored = await mirrorQueues.markAllDirty();
+if (mirrored === 0) console.log('The vault mirror is off: no user has a vault folder set');
 
-const syncQueue =
-  syncSetup && syncConfig
-    ? createSyncQueue({
-        sync: syncSetup.service,
-        notifier,
-        logger,
-        scheduler: ownerScheduler,
-        delayMs: syncConfig.webhookDelayMs,
-        downstream: [publishQueue, mirrorQueue],
-      })
+const syncQueues =
+  syncServices && syncConfig
+    ? createUserSyncQueues(syncServices, jobs, syncConfig.webhookDelayMs, [
+        publishQueues,
+        mirrorQueues,
+      ])
     : undefined;
 
 const backupService = createBackupService(config, db);
@@ -217,12 +208,12 @@ const app = await buildApp({
   webDir: config.webDir,
   imageStore,
   metadataCache,
-  publishQueue,
-  mirrorQueue,
+  publishQueues,
+  mirrorQueues,
   edit,
   backup: { service: backupService, job: backupJob },
-  sync: syncSetup?.service,
-  syncQueue,
+  sync: syncServices,
+  syncQueues,
   watch: {
     watchlist: new WatchlistService(edit.editor, movies, series, seasons),
     alerts: releaseAlerts,
@@ -233,7 +224,7 @@ const shutdown = async (): Promise<void> => {
   scheduler.stop();
   releaseScheduler?.stop();
   await app.close();
-  await syncSetup?.pool.end();
+  await jellystatPool?.end();
   db.close();
   process.exit(0);
 };
@@ -244,10 +235,10 @@ await app.listen({ port: config.port, host: config.host });
 if (config.backup.enabled) {
   scheduler.start();
 }
-scope.run(OWNER_ID, () => releaseScheduler?.start());
+releaseScheduler?.start();
 if (!releaseScheduler)
   console.log(
-    'Release alerts are disabled, they need TMDB_API_KEY and ALERTS_ENABLED not set to false',
+    'Release alerts are disabled, they need TMDB_API_KEY, NTFY_URL and ALERTS_ENABLED not set to false',
   );
 if (config.devLogin)
   console.log('Dev login is on: anyone who reaches the web can sign in as any user');

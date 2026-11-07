@@ -31,7 +31,6 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
       jellyfin: {
         url: env.JELLYFIN_URL!,
         token: env.JELLYFIN_TOKEN!,
-        userName: env.JELLYFIN_USER || 'admin',
       },
       jellystat: {
         host: env.JELLYSTAT_DB_HOST!,
@@ -40,7 +39,6 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
         password: env.JELLYSTAT_DB_PASSWORD!,
         database: env.JELLYSTAT_DB_NAME || 'jellystat',
       },
-      userName: env.JELLYFIN_USER || 'admin',
       timeZone: env.SYNC_TIME_ZONE || 'Europe/Madrid',
       webhookDelayMs: delaySeconds * 1000,
     },
