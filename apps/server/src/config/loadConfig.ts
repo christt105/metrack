@@ -33,6 +33,12 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     },
     mirrorWebUrl: env.VAULT_MIRROR_WEB_URL || null,
   };
+  if (env.BACKUP_COPY_DIR) {
+    config.backup.copy = {
+      dir: env.BACKUP_COPY_DIR,
+      retention: positiveInteger(env, 'BACKUP_COPY_RETENTION', 365),
+    };
+  }
   if (env.IGDB_CLIENT_ID && env.IGDB_CLIENT_SECRET) {
     config.igdb = { clientId: env.IGDB_CLIENT_ID, clientSecret: env.IGDB_CLIENT_SECRET };
   }

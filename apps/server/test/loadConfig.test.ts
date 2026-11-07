@@ -45,6 +45,21 @@ describe('loadConfig', () => {
     expect(loadConfig({ DATA_DIR: '/data', BACKUP_DIR: '' }).backup.dir).toBe('/data/backups');
   });
 
+  it('copies backups only when BACKUP_COPY_DIR is set, keeping 365 databases by default', () => {
+    expect(loadConfig({}).backup.copy).toBeUndefined();
+    expect(loadConfig({ BACKUP_COPY_DIR: '/backup-copy' }).backup.copy).toEqual({
+      dir: '/backup-copy',
+      retention: 365,
+    });
+    expect(
+      loadConfig({ BACKUP_COPY_DIR: '/backup-copy', BACKUP_COPY_RETENTION: '30' }).backup.copy
+        ?.retention,
+    ).toBe(30);
+    expect(() =>
+      loadConfig({ BACKUP_COPY_DIR: '/backup-copy', BACKUP_COPY_RETENTION: '0' }),
+    ).toThrow('Invalid BACKUP_COPY_RETENTION');
+  });
+
   it('defaults release alerts to Madrid time from 8 and validates the hour', () => {
     expect(loadConfig({}).alerts).toEqual({
       enabled: true,
