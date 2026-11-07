@@ -15,7 +15,7 @@ import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieReposito
 import type { MovieRepository } from '../src/storage/repositories/MovieRepository.js';
 import { fakeFetch } from './support/fakeFetch.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
-import { png } from './support/sampleImages.js';
+import { solidImage } from './support/sampleImages.js';
 import { OWNER_SCOPE } from './support/ownerScope.js';
 
 class ScriptedSource implements MetadataSource<Movie> {
@@ -29,6 +29,7 @@ class ScriptedSource implements MetadataSource<Movie> {
 }
 
 const COVER_URL = 'https://img.test/poster.png';
+const LINKED_URL = 'https://image.tmdb.org/t/p/original/poster.jpg';
 let clock: Date;
 let movies: MovieRepository;
 let states: SqliteMetadataStateRepository;
@@ -42,7 +43,10 @@ beforeEach(async () => {
   clock = new Date('2026-10-24T12:00:00Z');
   movies = new SqliteMovieRepository(db, OWNER_SCOPE);
   states = new SqliteMetadataStateRepository(db, OWNER_SCOPE);
-  const net = fakeFetch({ [COVER_URL]: png(600, 900) });
+  const net = fakeFetch({
+    [COVER_URL]: await solidImage(600, 900),
+    [LINKED_URL]: await solidImage(500, 750, 'jpeg'),
+  });
   images = createImageStore(
     db,
     join(mkdtempSync(join(tmpdir(), 'metrack-cache-')), 'images'),
@@ -73,6 +77,15 @@ describe('MetadataCache', () => {
     expect(movie.cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
     expect(await images.list()).toHaveLength(1);
     expect(await states.get('movie', movieId)).toMatchObject({ fetchedAt: clock.toISOString() });
+  });
+
+  it('links a TMDB cover to the provider URL and keeps the original as an archive', async () => {
+    source.next = { ...source.next, coverUrl: LINKED_URL };
+    await cache.refresh('movie', movieId);
+    expect(((await movies.get(movieId)) as Movie).cover).toBe(LINKED_URL);
+    const [archived] = await images.list();
+    expect(archived).toMatchObject({ sourceUrl: LINKED_URL, mimeType: 'image/jpeg' });
+    expect(await images.orphans()).toEqual([]);
   });
 
   it('does not ask the provider again until the entry expires', async () => {

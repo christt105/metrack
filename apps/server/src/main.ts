@@ -12,6 +12,7 @@ import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js'
 import { TmdbImageProvider } from './artwork/TmdbImageProvider.js';
 import { loadConfig } from './config/loadConfig.js';
 import { createImageStore } from './images/createImageStore.js';
+import { storeOptionsFor } from './images/storeOptionsFor.js';
 import { MetadataCache } from './metadata/MetadataCache.js';
 import { registerTmdbMetadata } from './metadata/registerTmdbMetadata.js';
 import { createUserPublishQueues } from './publish/createUserPublishQueues.js';
@@ -77,7 +78,13 @@ const {
   metadataStates,
 } = repositories;
 
-const imageStore = createImageStore(db, join(config.dataDir, 'images'));
+const imageStore = createImageStore(
+  db,
+  join(config.dataDir, 'images'),
+  fetch,
+  () => new Date(),
+  storeOptionsFor(config.images),
+);
 const metadataCache = new MetadataCache(metadataStates, imageStore);
 const titleProviders = new TitleProviders();
 const imageProviders: ImageProvider[] = [];

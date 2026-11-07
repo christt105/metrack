@@ -34,6 +34,8 @@ import type {
   UserWithSettings,
   OwnSettings,
   WatchlistEntry,
+  ImageUsage,
+  UploadedImage,
 } from '@metrack/domain';
 import type { BackupInfo } from './BackupInfo';
 import { ApiRequestError } from './ApiRequestError';
@@ -59,7 +61,10 @@ export class ApiClient {
     acceptedStatuses: readonly number[] = [],
   ): Promise<T> {
     const init: RequestInit = { method };
-    if (body !== undefined) {
+    if (body instanceof Blob) {
+      init.headers = { 'content-type': body.type || 'application/octet-stream' };
+      init.body = body;
+    } else if (body !== undefined) {
       init.headers = { 'content-type': 'application/json' };
       init.body = JSON.stringify(body);
     }
@@ -226,6 +231,15 @@ export class ApiClient {
 
   clearImage<C extends Collection>(collection: C, id: number, kind: ImageKind): Promise<Detail<C>> {
     return this.request('DELETE', `/${collection}/${id}/images/${kind}`);
+  }
+
+  /** Uploads an image file; the server stores it as WebP and counts it for the user's quota. */
+  uploadImage(file: Blob): Promise<UploadedImage> {
+    return this.request('POST', '/images', file);
+  }
+
+  imageUsage(): Promise<ImageUsage> {
+    return this.request('GET', '/images/usage');
   }
 
   cleanupImages(): Promise<{ removed: string[] }> {

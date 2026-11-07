@@ -10,6 +10,8 @@ import { TmdbImageProvider } from '../../src/artwork/TmdbImageProvider.js';
 import type { FetchFn } from '../../src/http/FetchFn.js';
 import { createImageStore } from '../../src/images/createImageStore.js';
 import type { ImageStore } from '../../src/images/ImageStore.js';
+import type { ImageStoreOptions } from '../../src/images/ImageStoreOptions.js';
+import { testUrlGuard } from './testUrlGuard.js';
 import { MetadataCache } from '../../src/metadata/MetadataCache.js';
 import { SqliteMetadataStateRepository } from '../../src/storage/sqlite/SqliteMetadataStateRepository.js';
 import { movieLifecycle } from '../../src/metadata/movieLifecycle.js';
@@ -74,6 +76,8 @@ export interface TestApiOptions {
   scope?: UserScope;
   /** Defaults to treating every request as the owner's. */
   authenticator?: Authenticator;
+  /** Defaults to the real encoder and quota, with `testUrlGuard`. */
+  images?: ImageStoreOptions;
 }
 
 export async function createTestApi(
@@ -92,7 +96,10 @@ export async function createTestApi(
   const videogames = new SqliteVideogameRepository(db, scope);
   const books = new SqliteBookRepository(db, scope);
   const unlinked = new SqliteUnlinkedTitleRepository(db, scope);
-  const store = createImageStore(db, join(dir, 'images'), fetchFn);
+  const store = createImageStore(db, join(dir, 'images'), fetchFn, undefined, {
+    urlGuard: testUrlGuard,
+    ...options.images,
+  });
   const states = new SqliteMetadataStateRepository(db, scope);
   const cache = new MetadataCache(states, store, undefined, () => NOW);
   const tmdb = new TmdbClient(fetchFn, { apiKey: 'key', language: 'es-ES' });

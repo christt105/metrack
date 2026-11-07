@@ -108,6 +108,35 @@ describe('syncVaultMirror', () => {
     );
   });
 
+  it('writes a linked cover as its provider URL unless the note already has the same image', async () => {
+    const { vault, dataDir } = await importedVault();
+    await mirror(vault, dataDir, true);
+    const alphaUrl = 'https://image.tmdb.org/t/p/original/alpha.jpg';
+    const betaUrl = 'https://image.tmdb.org/t/p/original/beta.jpg';
+    const { db, sources } = openExportSources(dataDir);
+    try {
+      const movies = await sources.movies.list();
+      const alpha = movies.find((movie) => movie.title === 'Alpha')!;
+      const beta = movies.find((movie) => movie.title === 'Beta')!;
+      const local = await sources.images.get(String(beta.cover).slice('/api/images/'.length));
+      await sources.images.add(await sources.images.read(local!), betaUrl);
+      await sources.movies.update(alpha.id, { cover: alphaUrl });
+      await sources.movies.update(beta.id, { cover: betaUrl });
+    } finally {
+      db.close();
+    }
+    await mirror(vault, dataDir, true);
+    expect(readFileSync(join(vault, 'Movies/Alpha (2020).md'), 'utf8')).toContain(
+      `cover: ${alphaUrl}`,
+    );
+    expect(readFileSync(join(vault, 'Movies/Beta (2021).md'), 'utf8')).toContain(
+      'cover: "[[Media Tracker/Portadas/Local Cover.png]]"',
+    );
+    const again = await mirror(vault, dataDir, true);
+    expect(again.updated).toEqual([]);
+    expect(again.copiedImages).toEqual([]);
+  });
+
   it('reads back through the importer as the same library', async () => {
     const { vault, dataDir } = await importedVault();
     await mirror(vault, dataDir, true);

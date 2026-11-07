@@ -9,7 +9,7 @@ import { createImageStore } from '../src/images/createImageStore.js';
 import { MAX_IMAGE_BYTES } from '../src/images/ImageStore.js';
 import { fakeFetch } from './support/fakeFetch.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
-import { jpeg, png } from './support/sampleImages.js';
+import { jpeg, png, solidImage } from './support/sampleImages.js';
 
 let db: DatabaseSync;
 let dir: string;
@@ -44,27 +44,26 @@ const insertMovie = (cover: string | null) =>
   db.prepare('INSERT INTO movie (title, cover) VALUES (?, ?)').run('Movie', cover);
 
 describe('ImageStore', () => {
-  it('downloads, names the file by content hash and stores the size', async () => {
-    const net = fakeFetch({ 'https://img.test/a.png': png(600, 900) });
+  it('downloads as WebP, names the file by content hash and stores the size', async () => {
+    const net = fakeFetch({ 'https://img.test/a.png': await solidImage(600, 900) });
     const store = createImageStore(db, dir, net.fetch);
     const image = await store.download('https://img.test/a.png');
     expect(image).toMatchObject({
       width: 600,
       height: 900,
-      mimeType: 'image/png',
+      mimeType: 'image/webp',
+      extension: 'webp',
       sourceUrl: 'https://img.test/a.png',
     });
     expect(image.hash).toMatch(/^[0-9a-f]{64}$/);
     expect(image.ref).toBe(`/api/images/${image.hash}`);
-    expect(readdirSync(dir)).toEqual([`${image.hash}.png`]);
+    expect(readdirSync(dir)).toEqual([`${image.hash}.webp`]);
     expect(await store.get(image.hash)).toEqual(image);
   });
 
   it('does not download a known URL twice and stores identical content once', async () => {
-    const net = fakeFetch({
-      'https://img.test/a.png': png(10, 10),
-      'https://img.test/b.png': png(10, 10),
-    });
+    const bytes = await solidImage(10, 10);
+    const net = fakeFetch({ 'https://img.test/a.png': bytes, 'https://img.test/b.png': bytes });
     const store = createImageStore(db, dir, net.fetch);
     const first = await store.download('https://img.test/a.png');
     await store.download('https://img.test/a.png');
@@ -128,7 +127,7 @@ describe('ImageStore', () => {
     const unused = await store.add(png(1, 1, 2), null);
     insertMovie(used.ref);
     expect(await store.orphans()).toEqual([unused.hash]);
-    expect(await store.cleanOrphans()).toEqual([unused.hash]);
+    expect(await store.cleanOrphans(0)).toEqual([unused.hash]);
     expect((await store.list()).map((i) => i.hash)).toEqual([used.hash]);
     expect(readdirSync(dir)).toEqual([`${used.hash}.png`]);
   });

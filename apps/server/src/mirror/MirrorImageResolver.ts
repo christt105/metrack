@@ -5,9 +5,10 @@ import type { ImageCopy } from './ImageCopy.js';
 import type { VaultImageIndex } from './VaultImageIndex.js';
 
 const REF = /^\/api\/images\/([0-9a-f]{64})$/;
+const REMOTE = /^https?:\/\//;
 
 /**
- * Places stored images in the vault: the original URL when there is one, otherwise a vault file
+ * Places stored images in the vault: the original URL when there is one (a linked provider URL stays as it is), otherwise a vault file
  * with the same bytes, otherwise a copy to be written into the covers or files folder. Works on a
  * snapshot of the store taken by `load`, so the export can ask synchronously.
  */
@@ -40,6 +41,13 @@ export class MirrorImageResolver implements MirrorImages {
   }
 
   propertyValue(ref: string, current: unknown): string | null {
+    if (REMOTE.test(ref)) {
+      const hash = this.urlHashes.get(ref);
+      const same =
+        current === ref ||
+        (hash !== undefined && typeof current === 'string' && this.hashOfValue(current) === hash);
+      return same ? (current as string) : ref;
+    }
     const image = this.imageOf(ref);
     if (image === undefined) return null;
     if (typeof current === 'string' && this.hashOfValue(current) === image.hash) return current;
@@ -65,7 +73,7 @@ export class MirrorImageResolver implements MirrorImages {
   }
 
   private hashOfValue(value: string): string | null {
-    if (/^https?:\/\//.test(value)) return this.urlHashes.get(value) ?? null;
+    if (REMOTE.test(value)) return this.urlHashes.get(value) ?? null;
     return this.index.hashOf(value);
   }
 

@@ -113,7 +113,7 @@ export class IgdbGameProvider implements TitleProvider {
   private async download(url: string | null | undefined): Promise<string | null> {
     if (!url) return null;
     try {
-      return (await this.images.download(url)).ref;
+      return await this.images.reference(url);
     } catch {
       return null;
     }

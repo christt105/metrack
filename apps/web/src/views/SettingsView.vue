@@ -23,6 +23,7 @@ const {
   error: backupsError,
   reload: reloadBackups,
 } = useLoader(() => ownerOnly(() => api.listBackups()));
+const { data: imageUsage, error: imageUsageError } = useLoader(() => api.imageUsage());
 const { data: users, error: usersError } = useLoader(() => ownerOnly(() => api.listUsers()));
 const refreshOwn = async (): Promise<void> => {
   ownRequest = undefined;
@@ -95,6 +96,20 @@ const backup = () =>
       <SettingsList v-if="own" :settings="own.settings" />
     </div>
     <TokensPanel />
+    <div class="panel">
+      <h2>{{ messages.images.title }}</h2>
+      <ErrorNotice :error="imageUsageError" />
+      <p v-if="imageUsage" data-test="image-usage">
+        {{
+          imageUsage.quotaBytes === null
+            ? messages.images.usageUnlimited(messages.images.megabytes(imageUsage.usedBytes))
+            : messages.images.usage(
+                messages.images.megabytes(imageUsage.usedBytes),
+                messages.images.megabytes(imageUsage.quotaBytes),
+              )
+        }}
+      </p>
+    </div>
     <div v-if="own?.settings.publishProject" class="panel">
       <h2>{{ messages.settings.publishing }}</h2>
       <p class="muted">{{ messages.settings.publishHint }}</p>

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { buildVaultMirror, MIRROR_FOLDERS } from '@metrack/export';
-import type { ExistingNote } from '@metrack/export';
+import type { ExistingNote, ExportInput } from '@metrack/export';
 import type { ExportSources } from '../export/loadExportInput.js';
 import { loadExportInput } from '../export/loadExportInput.js';
 import { parseFrontmatter } from '../importer/parseFrontmatter.js';
@@ -27,6 +27,21 @@ function inside(mirrorDir: string, path: string): string {
 function* remoteUrls(notes: Iterable<ExistingNote>): Generator<string> {
   for (const note of notes) {
     for (const value of Object.values(note.frontmatter)) {
+      if (typeof value === 'string' && /^https?:\/\//.test(value)) yield value;
+    }
+  }
+}
+
+function* linkedArtwork(input: ExportInput): Generator<string> {
+  const entities = [
+    ...input.movies,
+    ...input.series,
+    ...input.seasons,
+    ...input.videogames,
+    ...input.books,
+  ];
+  for (const entity of entities) {
+    for (const value of [entity.cover, 'banner' in entity ? entity.banner : null]) {
       if (typeof value === 'string' && /^https?:\/\//.test(value)) yield value;
     }
   }
@@ -73,14 +88,15 @@ export async function syncVaultMirror(
   const mirrorDir = resolve(options.mirrorDir);
   const onDisk = readNotes(mirrorDir);
   const index = new VaultImageIndex(mirrorDir, options.linkPrefix, Object.values(IMAGE_FOLDERS));
+  const input = await loadExportInput(sources);
   const images = await MirrorImageResolver.load(
     sources.images,
-    remoteUrls(onDisk.parsed.values()),
+    [...remoteUrls(onDisk.parsed.values()), ...linkedArtwork(input)],
     index,
     options.linkPrefix,
     IMAGE_FOLDERS,
   );
-  const notes = buildVaultMirror(await loadExportInput(sources), {
+  const notes = buildVaultMirror(input, {
     existing: onDisk.parsed,
     images,
     webUrl: options.webUrl,

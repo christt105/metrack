@@ -6,4 +6,6 @@ export interface ExportImage {
   extension: string;
   /** The remote address the image was fetched from, when known. */
   sourceUrl: string | null;
+  /** Other remote addresses known to yield the same bytes. */
+  otherUrls?: readonly string[];
 }

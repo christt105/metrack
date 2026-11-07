@@ -182,7 +182,7 @@ export class MediaEditor {
     return this.describe(collection, updated);
   }
 
-  /** Clears a cover or banner and removes the stored file when nothing else uses it. */
+  /** Clears a cover or banner and removes the stored file (a copy or a linked image's archive) when nothing else uses it. */
   async clearImage(
     collection: Collection,
     id: number,
@@ -192,8 +192,12 @@ export class MediaEditor {
     const ref = fieldsOf(await this.require(collection, id))[image];
     const updated = await kind.repository.override(id, { [image]: null });
     if (typeof ref === 'string') {
-      const hash = ref.slice(imageRef('').length);
-      if ((await this.images.orphans()).includes(hash)) await this.images.delete(hash);
+      const hash = ref.startsWith(imageRef(''))
+        ? ref.slice(imageRef('').length)
+        : (await this.images.findBySourceUrl(ref))?.hash;
+      if (hash !== undefined && (await this.images.orphans()).includes(hash)) {
+        await this.images.delete(hash);
+      }
     }
     return this.describe(collection, updated);
   }

@@ -7,6 +7,7 @@ import type { ExportedFile } from './ExportedFile.js';
 import type { ExportInput } from './ExportInput.js';
 import type { Page } from './Page.js';
 import { renderPage } from './renderPage.js';
+import type { ExportImage } from './ExportImage.js';
 
 /**
  * Builds the Hugo content tree for the theme from the stored data. Pure and deterministic: the
@@ -16,6 +17,7 @@ export function buildExport(input: ExportInput): ExportedFile[] {
   const context = {
     slugs: assignSlugs(input),
     imagesByRef: new Map(input.images.map((image) => [image.ref, image])),
+    imagesByUrl: imagesByUrl(input.images),
   };
   const pages: Page[] = [
     ...input.movies.map((movie) => buildMoviePage(movie, context)),
@@ -32,4 +34,15 @@ export function buildExport(input: ExportInput): ExportedFile[] {
   return pages
     .flatMap((page) => renderPage(page, context))
     .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
+function imagesByUrl(images: readonly ExportImage[]): Map<string, ExportImage> {
+  const byUrl = new Map<string, ExportImage>();
+  for (const image of images) {
+    for (const url of image.otherUrls ?? []) byUrl.set(url, image);
+  }
+  for (const image of images) {
+    if (image.sourceUrl !== null) byUrl.set(image.sourceUrl, image);
+  }
+  return byUrl;
 }

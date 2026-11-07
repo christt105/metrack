@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { Collection, ImageKind } from '@metrack/domain';
+import { sizedImageUrl, type Collection, type ImageKind } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
@@ -43,7 +43,7 @@ async function clear(kind: ImageKind): Promise<void> {
         <div class="preview">
           <img
             v-if="current(kind)"
-            :src="current(kind) ?? ''"
+            :src="sizedImageUrl(current(kind) ?? '', kind === 'banner' ? 'banner' : 'cover')"
             :alt="messages.imageKindLabels[kind]"
           />
           <span v-else class="muted">{{ messages.artwork.noImage }}</span>

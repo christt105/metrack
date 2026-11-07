@@ -277,3 +277,31 @@ describe('SettingsView user settings', () => {
     expect(wrapper.text()).toContain('Friend is now Trusted: may add items by hand.');
   });
 });
+
+describe('SettingsView images', () => {
+  it('shows every user how much of their image quota they use', async () => {
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ownSettings: vi
+        .fn()
+        .mockResolvedValue({ settings: noSettings, owner: false } satisfies OwnSettings),
+      imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: 209_715_200 }),
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-test="image-usage"]').text()).toContain('33.0 MB of 200.0 MB');
+  });
+
+  it('says the owner has no limit', async () => {
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ownSettings: vi
+        .fn()
+        .mockResolvedValue({ settings: noSettings, owner: false } satisfies OwnSettings),
+      imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: null }),
+    });
+    await flushPromises();
+    const text = wrapper.find('[data-test="image-usage"]').text();
+    expect(text).toContain('33.0 MB');
+    expect(text).toContain('no limit');
+  });
+});

@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { COLLECTIONS, IMAGE_KINDS, type ImageChoice, type ImageKind } from '@metrack/domain';
 import type { ArtworkService } from '../artwork/ArtworkService.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
+import { requireUser } from './requireUser.js';
+import './fastifyTypes.js';
 
 const params = {
   type: 'object',
@@ -38,7 +40,13 @@ export function registerArtworkRoutes(
       path,
       { schema: { params, body } },
       async (request) =>
-        artwork.choose(collection, request.params.id, request.params.kind, request.body.url),
+        artwork.choose(
+          collection,
+          request.params.id,
+          request.params.kind,
+          request.body.url,
+          requireUser(request.user),
+        ),
     );
 
     app.delete<{ Params: ImageParams }>(path, { schema: { params } }, async (request) =>

@@ -10,7 +10,7 @@ import type { OpenLibraryWorkRecord } from '../src/providers/openlibrary/OpenLib
 import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
 import { OpenLibraryBookProvider } from '../src/titles/OpenLibraryBookProvider.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
-import { png } from './support/sampleImages.js';
+import { solidImage } from './support/sampleImages.js';
 import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const COVERS = 'https://covers.openlibrary.org/b/id';
@@ -124,7 +124,7 @@ describe('OpenLibraryBookProvider', () => {
     const { fetchFn } = openLibraryFetch({
       works: [wind],
       record: windRecord,
-      files: { [`${COVERS}/15264593-L.jpg?default=false`]: png(400, 600, 1) },
+      files: { [`${COVERS}/15264593-L.jpg?default=false`]: await solidImage(400, 600) },
     });
     const t = setup(fetchFn);
     const ref = await t.provider.add('OL8479867W');
@@ -150,7 +150,7 @@ describe('OpenLibraryBookProvider', () => {
     const { fetchFn } = openLibraryFetch({
       works: [work],
       record: null,
-      files: { [`${COVERS}/11480483-L.jpg?default=false`]: png(400, 600, 2) },
+      files: { [`${COVERS}/11480483-L.jpg?default=false`]: await solidImage(400, 600, 'jpeg') },
     });
     const t = setup(fetchFn);
     const book = await t.books.get((await t.provider.add('OL8479867W')).id);

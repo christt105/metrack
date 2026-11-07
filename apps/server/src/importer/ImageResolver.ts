@@ -1,9 +1,13 @@
+import { isLinkedImageUrl } from '@metrack/domain';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { ApplyResult } from './ApplyResult.js';
 import type { ImageSource } from './ImageSource.js';
 import type { LegacyImageIndex } from './LegacyImageIndex.js';
 
-/** Turns note image values into stored image references without touching the network. */
+/**
+ * Turns note image values into stored image references without touching the network. Linked provider
+ * URLs (TMDB, Steam, IGDB) stay as they are, archived when the old site has a copy.
+ */
 export class ImageResolver {
   private readonly localRefs = new Map<string, string>();
 
@@ -21,24 +25,25 @@ export class ImageResolver {
   }
 
   private async resolveRemote(url: string, notePath: string): Promise<string | null> {
+    const linked = isLinkedImageUrl(url);
     const known = await this.store.findBySourceUrl(url);
     if (known && (await this.store.hasFile(known))) {
       this.stats.remoteLinked += 1;
-      return known.ref;
+      return linked ? url : known.ref;
     }
     const file = this.legacy?.find(url) ?? null;
     if (file !== null) {
       try {
         const image = await this.store.importFile(file, url);
         this.stats.remoteImported += 1;
-        return image.ref;
+        return linked ? url : image.ref;
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         this.warnings.push(`${notePath}: could not import ${file} for ${url}: ${reason}`);
       }
     }
     this.stats.remoteUnavailable += 1;
-    return null;
+    return linked ? url : null;
   }
 
   private async resolveLocal(path: string, notePath: string): Promise<string | null> {

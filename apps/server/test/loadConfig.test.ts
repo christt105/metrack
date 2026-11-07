@@ -22,6 +22,15 @@ describe('loadConfig', () => {
     ).toBe('fr');
   });
 
+  it('defaults image limits to 5 MB uploads, 1920 px, 200 MB quota and quality 82', () => {
+    expect(loadConfig({}).images).toEqual({
+      quotaBytes: 200 * 1024 * 1024,
+      maxUploadBytes: 5 * 1024 * 1024,
+      maxDimension: 1920,
+      quality: 82,
+    });
+  });
+
   it('defaults backups to daily with 14 kept under the data directory', () => {
     expect(loadConfig({ DATA_DIR: '/data' }).backup).toEqual({
       enabled: true,

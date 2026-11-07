@@ -108,10 +108,10 @@ describe('ImageResolver', () => {
   });
 
   it('registers every URL whose bytes were already stored, so a second run only links', async () => {
-    const first = 'https://image.tmdb.org/t/p/original/first.jpg';
-    const second = 'https://image.tmdb.org/t/p/original/second.jpg';
+    const first = 'https://artworks.thetvdb.com/banners/first.jpg';
+    const second = 'https://artworks.thetvdb.com/banners/second.jpg';
     const legacy = new LegacyImageIndex([
-      writeFiles({ 'tmdb_first.jpg': png(4, 4), 'tmdb_second.jpg': png(4, 4) }),
+      writeFiles({ 'tvdb_first.jpg': png(4, 4), 'tvdb_second.jpg': png(4, 4) }),
     ]);
     const dir = mkdtempSync(join(tmpdir(), 'metrack-images-'));
     created.push(dir);
@@ -134,6 +134,21 @@ describe('ImageResolver', () => {
     const secondRun = emptyStats();
     expect(await resolveBoth(secondRun)).toEqual(refs);
     expect(secondRun).toMatchObject({ remoteImported: 0, remoteLinked: 2 });
+  });
+
+  it('keeps linked provider URLs as they are, archiving the copy the old site has', async () => {
+    const tmdb = 'https://image.tmdb.org/t/p/original/first.jpg';
+    const legacy = new LegacyImageIndex([writeFiles({ 'tmdb_first.jpg': png(4, 4) })]);
+    const dir = mkdtempSync(join(tmpdir(), 'metrack-images-'));
+    created.push(dir);
+    const store = createImageStore(openTestDatabase(), dir);
+    const stats = emptyStats();
+    const resolver = new ImageResolver(store, stats, [], legacy);
+    expect(await resolver.resolve({ kind: 'remote', url: tmdb }, 'a.md')).toBe(tmdb);
+    const gone = 'https://image.tmdb.org/t/p/original/gone.jpg';
+    expect(await resolver.resolve({ kind: 'remote', url: gone }, 'b.md')).toBe(gone);
+    expect(stats).toMatchObject({ remoteImported: 1, remoteUnavailable: 1 });
+    expect((await store.findBySourceUrl(tmdb))?.mimeType).toBe('image/png');
   });
 
   it('forgets the extra URLs when the image is deleted', async () => {

@@ -16,7 +16,7 @@ import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesReposi
 import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
 import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { fakeFetch } from './support/fakeFetch.js';
-import { png } from './support/sampleImages.js';
+import { solidImage } from './support/sampleImages.js';
 import { OWNER_SCOPE } from './support/ownerScope.js';
 
 const tracking = {
@@ -56,7 +56,7 @@ describe('backup and restore of the whole data directory', () => {
     const imageStore = createImageStore(
       db,
       join(dir, 'images'),
-      fakeFetch({ 'https://img.test/cover.png': png(20, 30) }).fetch,
+      fakeFetch({ 'https://img.test/cover.png': await solidImage(20, 30) }).fetch,
     );
     const image = await imageStore.download('https://img.test/cover.png');
 
