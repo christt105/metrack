@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { sizedImageUrl } from '@metrack/domain';
 import { messages } from '../i18n/messages';
 import type { LibraryCard } from '../logic/buildCards';
 import { detailPath } from '../logic/mediaRoutes';
@@ -21,7 +22,12 @@ const meta = computed(() => {
 <template>
   <RouterLink :to="to" class="card">
     <div class="poster">
-      <img v-if="card.cover" :src="card.cover" :alt="card.title" loading="lazy" />
+      <img
+        v-if="card.cover"
+        :src="sizedImageUrl(card.cover, 'thumb')"
+        :alt="card.title"
+        loading="lazy"
+      />
       <span v-else class="placeholder">{{ card.title.slice(0, 1) }}</span>
       <span v-if="card.rating !== null" class="rating">{{ card.rating }}</span>
     </div>

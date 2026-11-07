@@ -1,4 +1,4 @@
-/** Cover and banner references, either local image paths or provider URLs until the image store exists. */
+/** Cover and banner: a stored image reference (`/api/images/<hash>`) or the URL of a linked provider image. */
 export interface Artwork {
   cover: string | null;
   banner: string | null;

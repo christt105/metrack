@@ -1,5 +1,14 @@
-import type { Collection, ImageCandidateList, ImageKind, MediaDetail } from '@metrack/domain';
+import {
+  canUseOwnArtwork,
+  type Collection,
+  type ImageCandidateList,
+  type ImageKind,
+  type MediaDetail,
+  type User,
+} from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
+import { imageRef, isImageHash } from '../images/imageRef.js';
+import { ImageRejectedError } from '../images/ImageRejectedError.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
 import type { MediaEntity } from '../media/MediaEntity.js';
@@ -7,7 +16,7 @@ import type { SeriesRepository } from '../storage/repositories/SeriesRepository.
 import type { ImageProvider } from './ImageProvider.js';
 import type { ImageSubject } from './ImageSubject.js';
 
-/** Lists artwork candidates from the providers and stores the one the user picks. */
+/** Lists artwork candidates from the providers and sets the one the user picks. */
 export class ArtworkService {
   constructor(
     private readonly editor: MediaEditor,
@@ -38,32 +47,53 @@ export class ArtworkService {
     return result;
   }
 
-  /** Downloads the image into the store and points the entity at the stored copy. */
+  /**
+   * Points the entity at an image. A provider candidate is linked or copied as that provider requires;
+   * owner and trusted users may also give a URL of any public site, copied as their own, or the reference
+   * of an image they uploaded.
+   */
   async choose(
     collection: Collection,
     id: number,
     kind: ImageKind,
     url: string,
+    user: User,
   ): Promise<MediaDetail<MediaEntity>> {
     const subject = await this.subject(collection, id);
     this.assertKind(collection, kind);
-    if (!this.providers.some((p) => p.supports(subject.type, kind) && p.owns(url))) {
-      throw ApiError.badRequest(
-        'url_not_allowed',
-        'That image does not come from a known provider',
-      );
-    }
+    const fromProvider = this.providers.some((p) => p.supports(subject.type, kind) && p.owns(url));
     let ref: string;
+    if (fromProvider) {
+      ref = await this.fetching(() => this.images.reference(url));
+    } else if (!canUseOwnArtwork(user.role)) {
+      throw new ApiError(
+        403,
+        'trusted_only',
+        'Only trusted users can use covers and banners of their own',
+      );
+    } else if (url.startsWith(imageRef(''))) {
+      const hash = url.slice(imageRef('').length);
+      if (!isImageHash(hash) || !(await this.images.owns(hash, user.id))) {
+        throw ApiError.badRequest('image_not_found', 'That image is not one of yours');
+      }
+      ref = url;
+    } else {
+      ref = await this.fetching(async () => (await this.images.copyForUser(url, user.id)).ref);
+    }
+    return this.editor.setImage(collection, id, kind, ref);
+  }
+
+  private async fetching(work: () => Promise<string>): Promise<string> {
     try {
-      ref = (await this.images.download(url)).ref;
+      return await work();
     } catch (error) {
+      if (error instanceof ImageRejectedError) throw error;
       throw new ApiError(
         502,
         'image_download_failed',
         error instanceof Error ? error.message : 'Image download failed',
       );
     }
-    return this.editor.setImage(collection, id, kind, ref);
   }
 
   private assertKind(collection: Collection, kind: ImageKind): void {

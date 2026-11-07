@@ -1,4 +1,5 @@
 import type { BackupConfig } from '../backup/BackupConfig.js';
+import type { ImageLimits } from '../images/ImageLimits.js';
 import type { AlertsConfig } from './AlertsConfig.js';
 import type { NtfyConfig } from '../notify/NtfyConfig.js';
 import type { NtfyServer } from '../notify/NtfyServer.js';
@@ -18,6 +19,7 @@ export interface Config {
   steamGridDbToken: string | undefined;
   igdb?: IgdbClientOptions;
   backup: BackupConfig;
+  images: ImageLimits;
   alerts: AlertsConfig;
   /** Instance alerts, such as failed backups. */
   ntfy?: NtfyConfig;

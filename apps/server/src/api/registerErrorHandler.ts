@@ -5,6 +5,7 @@ import { HttpError } from '../http/HttpError.js';
 import { redactUrl } from './redactUrl.js';
 import { ApiError } from './ApiError.js';
 import { SharedCatalogError } from '../storage/SharedCatalogError.js';
+import { ImageRejectedError } from '../images/ImageRejectedError.js';
 
 interface Failure {
   status: number;
@@ -22,6 +23,9 @@ function describe(error: unknown): Failure {
       status: 409,
       body: { error: error.message, code: 'catalog_shared', details: { fields: error.fields } },
     };
+  }
+  if (error instanceof ImageRejectedError) {
+    return { status: error.status, body: { error: error.message, code: error.code } };
   }
   if (error instanceof HttpError) {
     const missing = error.status === 404;
@@ -56,6 +60,12 @@ function describe(error: unknown): Failure {
         body: { error: 'The referenced record does not exist', code: 'invalid_reference' },
       };
     }
+  }
+  if (failure.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
+    return {
+      status: 413,
+      body: { error: 'The request body is too large', code: 'body_too_large' },
+    };
   }
   if (failure.statusCode && failure.statusCode >= 400 && failure.statusCode < 500) {
     return { status: failure.statusCode, body: { error: failure.message, code: 'bad_request' } };

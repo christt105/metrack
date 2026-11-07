@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import type { Collection, ImageCandidateList, ImageKind } from '@metrack/domain';
+import { computed, inject, onMounted, ref } from 'vue';
+import {
+  canUseOwnArtwork,
+  type Collection,
+  type ImageCandidateList,
+  type ImageKind,
+} from '@metrack/domain';
+import { sessionKey } from '../auth/sessionKey';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import ErrorNotice from './ErrorNotice.vue';
@@ -12,6 +18,13 @@ const api = useApi();
 const list = ref<ImageCandidateList | null>(null);
 const error = ref<unknown>(null);
 const choosing = ref<string | null>(null);
+const session = inject(sessionKey, null);
+const ownAllowed = computed(() => {
+  const user = session?.user.value;
+  return user ? canUseOwnArtwork(user.role) : false;
+});
+const ownUrl = ref('');
+const fileInput = ref<HTMLInputElement | null>(null);
 
 onMounted(async () => {
   try {
@@ -20,6 +33,23 @@ onMounted(async () => {
     error.value = cause;
   }
 });
+
+async function upload(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  choosing.value = messages.artwork.uploading;
+  error.value = null;
+  try {
+    const uploaded = await api.uploadImage(file);
+    emit('chosen', await api.chooseImage(props.collection, props.id, props.kind, uploaded.ref));
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    choosing.value = null;
+  }
+}
 
 async function choose(url: string): Promise<void> {
   choosing.value = url;
@@ -68,6 +98,42 @@ async function choose(url: string): Promise<void> {
         </small>
       </button>
     </div>
+    <div v-if="ownAllowed" class="own">
+      <strong>{{ messages.artwork.ownTitle }}</strong>
+      <button
+        type="button"
+        class="small"
+        :disabled="choosing !== null"
+        data-test="own-upload-button"
+        @click="fileInput?.click()"
+      >
+        {{
+          choosing === messages.artwork.uploading
+            ? messages.artwork.uploading
+            : messages.artwork.upload
+        }}
+      </button>
+      <input
+        ref="fileInput"
+        type="file"
+        accept="image/*"
+        hidden
+        data-test="own-upload"
+        @change="upload"
+      />
+      <form class="row" @submit.prevent="choose(ownUrl.trim())">
+        <input
+          v-model="ownUrl"
+          type="url"
+          :placeholder="messages.artwork.fromUrl"
+          :aria-label="messages.artwork.fromUrl"
+          data-test="own-url"
+        />
+        <button type="submit" class="small" :disabled="choosing !== null || ownUrl.trim() === ''">
+          {{ messages.artwork.useUrl }}
+        </button>
+      </form>
+    </div>
     <ErrorNotice :error="error" />
   </div>
 </template>
@@ -90,6 +156,18 @@ async function choose(url: string): Promise<void> {
   gap: 10px;
   max-height: 420px;
   overflow-y: auto;
+}
+
+.own {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.own input[type='url'] {
+  min-width: 220px;
 }
 
 .candidates.banner {

@@ -85,7 +85,7 @@ function setup(fetchFn: FetchFn, withSteamGridDb = true) {
   const images = createImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-igdb-')), fetchFn);
   const client = new IgdbClient(fetchFn, { clientId: 'cid', clientSecret: 'secret' });
   const steamGridDb = withSteamGridDb ? new SteamGridDbClient(fetchFn, 'sgdb') : null;
-  return { games, provider: new IgdbGameProvider(client, games, images, steamGridDb) };
+  return { games, images, provider: new IgdbGameProvider(client, games, images, steamGridDb) };
 }
 
 describe('IgdbClient', () => {
@@ -160,8 +160,9 @@ describe('IgdbGameProvider', () => {
       platforms: ['PC (Microsoft Windows)'],
       status: 'planned',
     });
-    expect(game?.cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
-    expect(game?.banner).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
+    expect(game?.cover).toBe(`${STEAM}/1145360/library_600x900_2x.jpg`);
+    expect(game?.banner).toBe(`${STEAM}/1145360/library_hero.jpg`);
+    expect(await t.images.findBySourceUrl(`${STEAM}/1145360/library_hero.jpg`)).toBeDefined();
   });
 
   it('falls back to the IGDB cover and screenshot when Steam has no artwork', async () => {

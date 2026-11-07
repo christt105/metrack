@@ -113,8 +113,10 @@ describe('adding titles', () => {
       genres: ['Action'],
       status: 'planned',
     });
-    expect(movie.cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
-    expect((await get(movie.cover)).statusCode).toBe(200);
+    expect(movie.cover).toBe(`${IMG}/p.jpg`);
+    const archived = await api.store.findBySourceUrl(`${IMG}/p.jpg`);
+    expect(archived).toBeDefined();
+    expect((await get(archived?.ref ?? '')).statusCode).toBe(200);
   });
 
   it('adds a series with one planned season per TMDB season, skipping specials', async () => {
@@ -133,7 +135,7 @@ describe('adding titles', () => {
       },
       { number: 2, title: 'Part 2', cover: null },
     ]);
-    expect(detail.seasons[0].cover).toMatch(/^\/api\/images\//);
+    expect(detail.seasons[0].cover).toBe(`${IMG}/s1.jpg`);
   });
 
   it('refuses a title that is already added and a title the provider does not know', async () => {

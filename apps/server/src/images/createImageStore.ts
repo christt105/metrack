@@ -3,6 +3,7 @@ import type { FetchFn } from '../http/FetchFn.js';
 import { SqliteImageRepository } from '../storage/sqlite/SqliteImageRepository.js';
 import { DiskImageBlobStore } from './DiskImageBlobStore.js';
 import { ImageStore } from './ImageStore.js';
+import type { ImageStoreOptions } from './ImageStoreOptions.js';
 
 /** An image store with its rows in SQLite and its files in a local directory. */
 export function createImageStore(
@@ -10,6 +11,13 @@ export function createImageStore(
   dir: string,
   fetchFn: FetchFn = fetch,
   now: () => Date = () => new Date(),
+  options: ImageStoreOptions = {},
 ): ImageStore {
-  return new ImageStore(new SqliteImageRepository(db), new DiskImageBlobStore(dir), fetchFn, now);
+  return new ImageStore(
+    new SqliteImageRepository(db),
+    new DiskImageBlobStore(dir),
+    fetchFn,
+    now,
+    options,
+  );
 }

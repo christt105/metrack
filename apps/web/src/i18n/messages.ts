@@ -113,6 +113,17 @@ export const messages = {
     close: 'Close',
     providerFailed: (provider: string, error: string) => `${provider}: ${error}`,
     choose: 'Use this image',
+    ownTitle: 'Your own image',
+    upload: 'Upload a file',
+    fromUrl: 'Image address',
+    useUrl: 'Use address',
+    uploading: 'Uploading...',
+  },
+  images: {
+    title: 'Images',
+    usage: (used: string, quota: string) =>
+      `Your own images (uploads and covers of your own) take ${used} of ${quota}.`,
+    megabytes: (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`,
   },
   rewatches: {
     empty: 'No rewatches.',

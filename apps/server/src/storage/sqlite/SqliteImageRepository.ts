@@ -5,6 +5,14 @@ import type { StoredImage } from '../../images/StoredImage.js';
 import type { ImageRepository } from '../repositories/ImageRepository.js';
 import type { Row } from './Row.js';
 
+const REVIEW_TABLES = [
+  'movie_entry',
+  'series_entry',
+  'season_entry',
+  'videogame_entry',
+  'book_entry',
+];
+
 export class SqliteImageRepository implements ImageRepository {
   constructor(private readonly db: DatabaseSync) {}
 
@@ -48,6 +56,13 @@ export class SqliteImageRepository implements ImageRepository {
       .run(url, hash);
   }
 
+  async listSources(): Promise<{ url: string; hash: string }[]> {
+    return this.db
+      .prepare('SELECT url, hash FROM image_source ORDER BY url')
+      .all()
+      .map((row) => ({ url: String(row.url), hash: String(row.hash) }));
+  }
+
   async findBySourceUrl(url: string): Promise<StoredImage | undefined> {
     const row = this.db
       .prepare(
@@ -71,6 +86,7 @@ export class SqliteImageRepository implements ImageRepository {
         )
         .run(ref);
     }
+    this.db.prepare('DELETE FROM image_owner WHERE hash = ?').run(hash);
     this.db.prepare('DELETE FROM image_source WHERE hash = ?').run(hash);
     this.db.prepare('DELETE FROM image WHERE hash = ?').run(hash);
   }
@@ -81,13 +97,69 @@ export class SqliteImageRepository implements ImageRepository {
       `SELECT json_extract(overrides, '$.${column}') AS ref FROM ${table}_entry
        WHERE json_extract(overrides, '$.${column}') IS NOT NULL`,
     ]).join(' UNION ');
+    const embedded = REVIEW_TABLES.map(
+      (table) =>
+        `EXISTS (SELECT 1 FROM ${table} WHERE instr(review, '${imageRef('')}' || image.hash) > 0)`,
+    ).join(' OR ');
     return this.db
       .prepare(
-        `SELECT hash FROM image WHERE '${imageRef('')}' || hash NOT IN (${referenced}) ORDER BY hash`,
+        `WITH referenced (ref) AS (${referenced})
+         SELECT hash FROM image
+         WHERE '${imageRef('')}' || hash NOT IN (SELECT ref FROM referenced)
+           AND (source_url IS NULL OR source_url NOT IN (SELECT ref FROM referenced))
+           AND NOT EXISTS (
+             SELECT 1 FROM image_source
+             WHERE image_source.hash = image.hash AND url IN (SELECT ref FROM referenced)
+           )
+           AND NOT (${embedded})
+         ORDER BY hash`,
       )
       .all()
       .map((row) => String(row.hash));
   }
+
+  async addOwner(hash: string, userId: number, createdAt: string): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO image_owner (hash, user_id, created_at) VALUES (?, ?, ?)
+         ON CONFLICT (hash, user_id) DO NOTHING`,
+      )
+      .run(hash, userId, createdAt);
+  }
+
+  async ownerIds(hash: string): Promise<number[]> {
+    return this.db
+      .prepare('SELECT user_id FROM image_owner WHERE hash = ? ORDER BY user_id')
+      .all(hash)
+      .map((row) => Number(row.user_id));
+  }
+
+  async usedBytes(userId: number): Promise<number> {
+    const row = this.db
+      .prepare(
+        `SELECT COALESCE(SUM(image.byte_size), 0) AS used FROM image_owner
+         JOIN image ON image.hash = image_owner.hash
+         WHERE image_owner.user_id = ?`,
+      )
+      .get(userId);
+    return Number(row?.used ?? 0);
+  }
+
+  async isShownByCatalog(hash: string): Promise<boolean> {
+    const ref = imageRef(hash);
+    return IMAGE_COLUMNS.some(
+      ({ table, column }) =>
+        this.db
+          .prepare(`SELECT 1 FROM ${table} WHERE ${column} = ? AND ${ownerFilter(table)} LIMIT 1`)
+          .get(ref) !== undefined,
+    );
+  }
+}
+
+function ownerFilter(table: string): string {
+  return table === 'season'
+    ? 'series_id IN (SELECT id FROM series WHERE owner_id IS NULL)'
+    : 'owner_id IS NULL';
 }
 
 function toImage(row: Row): StoredImage {

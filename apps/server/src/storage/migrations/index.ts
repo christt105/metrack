@@ -13,6 +13,7 @@ import { dataOwnersMigration } from './0011-data-owners.js';
 import { userSettingsMigration } from './0012-user-settings.js';
 import { apiTokensMigration } from './0013-api-tokens.js';
 import { userRolesMigration } from './0014-user-roles.js';
+import { imageOwnersMigration } from './0015-image-owners.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -29,4 +30,5 @@ export const migrations: readonly Migration[] = [
   userSettingsMigration,
   apiTokensMigration,
   userRolesMigration,
+  imageOwnersMigration,
 ];

@@ -76,7 +76,7 @@ export class TmdbSeriesProvider implements TitleProvider {
   private async download(url: string | null): Promise<string | null> {
     if (!url) return null;
     try {
-      return (await this.images.download(url)).ref;
+      return await this.images.reference(url);
     } catch {
       return null;
     }

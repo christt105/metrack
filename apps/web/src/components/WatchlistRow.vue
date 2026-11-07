@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { WatchlistEntry } from '@metrack/domain';
+import { sizedImageUrl, type WatchlistEntry } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import ErrorNotice from './ErrorNotice.vue';
@@ -32,7 +32,12 @@ async function unfollow(): Promise<void> {
 <template>
   <li class="entry">
     <RouterLink :to="to" class="poster">
-      <img v-if="entry.cover" :src="entry.cover" :alt="entry.title" loading="lazy" />
+      <img
+        v-if="entry.cover"
+        :src="sizedImageUrl(entry.cover, 'thumb')"
+        :alt="entry.title"
+        loading="lazy"
+      />
       <span v-else class="placeholder">{{ entry.title.slice(0, 1) }}</span>
     </RouterLink>
     <div class="body">

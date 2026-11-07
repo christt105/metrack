@@ -66,6 +66,30 @@ describe('buildExport', () => {
     );
   });
 
+  it('bundles the archived copy of a linked cover and names re-encoded copies .webp', () => {
+    const linked = 'https://image.tmdb.org/t/p/original/poster.jpg';
+    const grid = 'https://cdn2.steamgriddb.com/grid/abc.png';
+    const files = buildExport({
+      ...empty,
+      images: [
+        {
+          ref: '/api/images/c1',
+          hash: 'c1',
+          extension: 'jpg',
+          sourceUrl: null,
+          otherUrls: [linked],
+        },
+        { ref: '/api/images/g1', hash: 'g1', extension: 'webp', sourceUrl: grid },
+      ],
+      movies: [movie({ cover: linked, banner: 'https://image.tmdb.org/t/p/original/gone.jpg' })],
+      videogames: [game({ cover: '/api/images/g1' })],
+    });
+    const index = text(files, 'content/movies/Alpha (2020)/index.md');
+    expect(index).toContain('image: c1.jpg');
+    expect(index).not.toContain('banner_image');
+    expect(files.map((f) => f.path)).toContain('content/games/Game/steamgriddb_abc.webp');
+  });
+
   it('puts a lone note-less season on the series page', () => {
     const files = buildExport({
       ...empty,

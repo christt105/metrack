@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestApi, type TestApi } from './support/createTestApi.js';
 import { pathFetch } from './support/pathFetch.js';
-import { png } from './support/sampleImages.js';
+import { png, solidImage } from './support/sampleImages.js';
+import { signedInAs } from './support/signedInAs.js';
+import { emptyMovie } from '../src/media/emptyEntities.js';
 
 const TMDB = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/original';
@@ -37,7 +39,7 @@ beforeEach(async () => {
       [`${IMG}/a.jpg`]: png(1000, 1500, 1),
       [`${IMG}/b.jpg`]: png(1920, 1080, 2),
       [`${IMG}/s2.jpg`]: png(500, 750, 3),
-      [GRID]: png(600, 900, 4),
+      [GRID]: await solidImage(600, 900),
     }).fetch,
   );
 });
@@ -139,25 +141,37 @@ describe('image candidates', () => {
 });
 
 describe('choosing and removing images', () => {
-  it('downloads the chosen image into the store and protects it from refreshes', async () => {
+  it('links a TMDB image, archives the original and protects it from refreshes', async () => {
     const id = await movie();
     const response = await call('PUT', `/api/movies/${id}/images/cover`, { url: `${IMG}/a.jpg` });
     expect(response.statusCode).toBe(200);
     const detail = response.json();
-    expect(detail.cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
+    expect(detail.cover).toBe(`${IMG}/a.jpg`);
     expect(detail.editedFields).toContain('cover');
-    expect(await api.store.list()).toHaveLength(1);
-    const served = await call('GET', detail.cover);
+    const [archived] = await api.store.list();
+    expect(archived?.sourceUrl).toBe(`${IMG}/a.jpg`);
+    const served = await call('GET', archived?.ref ?? '');
     expect(served.rawPayload.equals(png(1000, 1500, 1))).toBe(true);
   });
 
-  it('refuses URLs that no provider owns', async () => {
+  it('copies a SteamGridDB image as WebP that belongs to nobody', async () => {
+    const game = (
+      await api.app.inject({
+        method: 'POST',
+        url: '/api/games',
+        payload: { title: 'Hades', steamGridDbId: 77 },
+      })
+    ).json();
+    const detail = (await call('PUT', `/api/games/${game.id}/images/cover`, { url: GRID })).json();
+    expect(detail.cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
+    const [copy] = await api.store.list();
+    expect(copy).toMatchObject({ mimeType: 'image/webp', sourceUrl: GRID });
+    expect(await api.store.usage(1)).toMatchObject({ usedBytes: 0 });
+  });
+
+  it('refuses addresses that are not web images or point into the home network', async () => {
     const id = await movie();
-    for (const url of [
-      'http://image.tmdb.org/t/p/original/a.jpg',
-      'https://evil.test/a.jpg',
-      'not a url',
-    ]) {
+    for (const url of ['not a url', 'ftp://files.test/a.jpg', 'https://nas.internal/a.jpg']) {
       const response = await call('PUT', `/api/movies/${id}/images/cover`, { url });
       expect(response.statusCode).toBe(400);
       expect(response.json().code).toBe('url_not_allowed');
@@ -165,11 +179,22 @@ describe('choosing and removing images', () => {
     expect(await api.store.list()).toEqual([]);
   });
 
-  it('refuses a SteamGridDB image for a movie', async () => {
-    const id = await movie();
-    expect((await call('PUT', `/api/movies/${id}/images/cover`, { url: GRID })).statusCode).toBe(
-      400,
-    );
+  it('refuses a normal user anything but a candidate of the right provider', async () => {
+    api = await createTestApi(pathFetch({}).fetch, {
+      authenticator: signedInAs({ id: 1, name: 'Normal', email: null, role: 'normal' }),
+    });
+    const { id } = await api.movies.create({ ...emptyMovie(), title: 'Matrix', tmdbId: 603 });
+    for (const url of [
+      'http://image.tmdb.org/t/p/original/a.jpg',
+      'https://evil.test/a.jpg',
+      GRID,
+      '/api/images/' + '0'.repeat(64),
+    ]) {
+      const response = await call('PUT', `/api/movies/${id}/images/cover`, { url });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().code).toBe('trusted_only');
+    }
+    expect(await api.store.list()).toEqual([]);
   });
 
   it('reports a failed download as 502 and leaves the entity alone', async () => {

@@ -1,6 +1,8 @@
 import { join } from 'node:path';
 import type { Config } from './Config.js';
 
+const MB = 1024 * 1024;
+
 /** Reads the service configuration from an environment-like object. */
 export function loadConfig(env: Record<string, string | undefined>): Config {
   const port = Number(env.PORT ?? 8097);
@@ -25,6 +27,12 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       dir: env.BACKUP_DIR || join(dataDir, 'backups'),
       retention: positiveInteger(env, 'BACKUP_RETENTION', 14),
       intervalHours: positiveInteger(env, 'BACKUP_INTERVAL_HOURS', 24),
+    },
+    images: {
+      quotaBytes: positiveInteger(env, 'IMAGE_QUOTA_MB', 200) * MB,
+      maxUploadBytes: positiveInteger(env, 'IMAGE_UPLOAD_MAX_MB', 10) * MB,
+      maxDimension: positiveInteger(env, 'IMAGE_MAX_DIMENSION', 2560),
+      quality: Math.min(positiveInteger(env, 'IMAGE_WEBP_QUALITY', 82), 100),
     },
     alerts: {
       enabled: env.ALERTS_ENABLED !== 'false',
