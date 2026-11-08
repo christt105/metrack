@@ -140,6 +140,16 @@ export class SqliteImageRepository implements ImageRepository {
       .map((row) => Number(row.user_id));
   }
 
+  async ownedBy(userId: number): Promise<StoredImage[]> {
+    return this.db
+      .prepare(
+        `SELECT image.* FROM image_owner JOIN image ON image.hash = image_owner.hash
+         WHERE image_owner.user_id = ? ORDER BY image.created_at, image.hash`,
+      )
+      .all(userId)
+      .map((row) => toImage(row));
+  }
+
   async usedBytes(userId: number): Promise<number> {
     const row = this.db
       .prepare(

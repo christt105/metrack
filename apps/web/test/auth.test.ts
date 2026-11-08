@@ -111,3 +111,34 @@ describe('LoginView', () => {
     expect(wrapper.findAll('button')).toHaveLength(0);
   });
 });
+
+describe('sessions and a waiting deletion', () => {
+  const scheduled = {
+    requestedAt: '2026-11-08T10:00:00.000Z',
+    deleteAt: '2026-11-15T10:00:00.000Z',
+  };
+
+  it('learns about a waiting deletion on sign-in and forgets it on sign-out', async () => {
+    const accountStatus = vi.fn(async () => ({ deletion: scheduled, canDelete: true }));
+    const session = new Session({
+      me: async () => FRIEND,
+      accountStatus,
+      logout: async () => {},
+    } as unknown as ApiClient);
+    expect(await session.current()).toEqual(FRIEND);
+    expect(session.deletion.value).toEqual(scheduled);
+    await session.signOut();
+    expect(session.deletion.value).toBeNull();
+  });
+
+  it('carries on when the account status cannot be read', async () => {
+    const session = new Session({
+      me: async () => FRIEND,
+      accountStatus: async () => {
+        throw new ApiRequestError('down', 0, 'network_error');
+      },
+    } as unknown as ApiClient);
+    expect(await session.current()).toEqual(FRIEND);
+    expect(session.deletion.value).toBeNull();
+  });
+});

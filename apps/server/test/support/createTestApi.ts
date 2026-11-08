@@ -42,6 +42,12 @@ import type { VideogameRepository } from '../../src/storage/repositories/Videoga
 import { TitleProviders } from '../../src/titles/TitleProviders.js';
 import { TmdbMovieProvider } from '../../src/titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from '../../src/titles/TmdbSeriesProvider.js';
+import { ApiTokenService } from '../../src/auth/ApiTokenService.js';
+import { AccountDeletionService } from '../../src/account/AccountDeletionService.js';
+import { AccountExporter } from '../../src/account/AccountExporter.js';
+import { SqliteAccountRepository } from '../../src/storage/sqlite/SqliteAccountRepository.js';
+import { SqliteApiTokenRepository } from '../../src/storage/sqlite/SqliteApiTokenRepository.js';
+import { SqliteHandAddedCatalogRepository } from '../../src/storage/sqlite/SqliteHandAddedCatalogRepository.js';
 import { WatchlistService } from '../../src/alerts/WatchlistService.js';
 import { FakeScheduler } from './FakeScheduler.js';
 import { ownerQueues } from './ownerQueues.js';
@@ -69,6 +75,12 @@ export interface TestApi {
   unlinked: UnlinkedTitleRepository;
   cache: MetadataCache;
   alerts: ReleaseAlertRepository;
+  /** The data directory of the test: its database, `images/` and `users/`. */
+  dir: string;
+  deletion: AccountDeletionService;
+  tokens: ApiTokenService;
+  /** What the account deletion service reads as the current time; move it to pass the grace period. */
+  clock: { now: Date };
 }
 
 /** The full API over a temporary database file and a fake network. TMDB and SteamGridDB are always configured. */
@@ -132,6 +144,7 @@ export async function createTestApi(
     scheduler,
   );
   const alerts = new SqliteReleaseAlertRepository(db, scope);
+  const overrides = new SqliteSeasonOverrideRepository(db, scope);
   const edit = createEditServices({
     sources: {
       movies,
@@ -139,7 +152,7 @@ export async function createTestApi(
       seasons,
       videogames,
       books,
-      overrides: new SqliteSeasonOverrideRepository(db, scope),
+      overrides,
     },
     unlinked,
     states,
@@ -150,9 +163,22 @@ export async function createTestApi(
     now: () => NOW,
   });
   const profiles = new SqlitePublicProfileRepository(db);
+  const users = new SqliteUserRepository(db);
+  const settings = new SqliteUserSettingsRepository(db);
+  const tokens = new ApiTokenService(new SqliteApiTokenRepository(db), users);
+  const clock = { now: NOW };
+  const deletion = new AccountDeletionService(
+    new SqliteAccountRepository(db),
+    users,
+    store,
+    dir,
+    { info: () => {}, error: () => {} },
+    () => clock.now,
+  );
   const app = await buildApp({
     appVersion: 'test',
     authenticator: options.authenticator ?? signedInAs(),
+    tokens,
     scope,
     migrationRunner: runner,
     imageStore: store,
@@ -160,15 +186,35 @@ export async function createTestApi(
     publishQueues: ownerQueues(queue),
     edit,
     watch: { watchlist: new WatchlistService(edit.editor, movies, series, seasons), alerts },
-    settings: {
-      users: new SqliteUserRepository(db),
-      settings: new SqliteUserSettingsRepository(db),
+    account: {
+      exporter: new AccountExporter(
+        {
+          users,
+          settings,
+          profiles,
+          apiTokens: new SqliteApiTokenRepository(db),
+          movies,
+          series,
+          seasons,
+          videogames,
+          books,
+          overrides,
+          unlinked,
+          releaseAlerts: alerts,
+          images: store,
+        },
+        () => NOW,
+      ),
+      deletion,
       profiles,
     },
+    handAddedCatalog: new SqliteHandAddedCatalogRepository(db),
+    settings: { users, settings, profiles },
     site: {
       profiles,
       sources: { movies, series, seasons, videogames, books },
       publicUrl: options.publicUrl ?? null,
+      contactEmail: 'privacy@example.test',
     },
   });
   return {
@@ -184,5 +230,9 @@ export async function createTestApi(
     unlinked,
     cache,
     alerts,
+    dir,
+    deletion,
+    tokens,
+    clock,
   };
 }

@@ -6,6 +6,7 @@ import {
   renderFeed,
   renderHome,
   renderNotFound,
+  renderPrivacy,
 } from '../src/index.js';
 import { HASH_A, NO_PROFILE, book, game, input, movie, season, series } from './support.js';
 
@@ -251,5 +252,18 @@ describe('renderNotFound', () => {
     const html = renderNotFound();
     expect(html).toContain('<meta name="robots" content="noindex">');
     expect(html).not.toContain('@');
+  });
+});
+
+describe('renderPrivacy', () => {
+  it('is an English page that escapes the contact and carries the required TMDB wording', () => {
+    const page = renderPrivacy({ contactEmail: 'a&b@example.com' });
+    expect(page).toContain('<html lang="en" class="dark">');
+    expect(page).toContain('a&amp;b@example.com');
+    expect(page).toContain(
+      'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+    );
+    expect(page).toContain('Served by metrack');
+    expect(page).not.toContain('<script');
   });
 });

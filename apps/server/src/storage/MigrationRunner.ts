@@ -1,15 +1,20 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Migration } from './Migration.js';
 
-/** Applies versioned migrations in order, each inside its own transaction. */
+/**
+ * Applies versioned migrations in order, each inside its own transaction. Every migration not yet recorded
+ * is applied, so one that arrives with a lower version than the latest applied (a gap filled later) still runs.
+ */
 export class MigrationRunner {
   constructor(
     private readonly db: DatabaseSync,
     private readonly migrations: readonly Migration[],
   ) {
     const versions = migrations.map((m) => m.version);
-    if (versions.some((v, i) => v !== i + 1)) {
-      throw new Error('Migration versions must be contiguous and start at 1');
+    if (
+      versions.some((v, i) => !Number.isInteger(v) || v < 1 || (i > 0 && v <= versions[i - 1]!))
+    ) {
+      throw new Error('Migration versions must be positive and strictly increasing');
     }
   }
 
@@ -20,8 +25,14 @@ export class MigrationRunner {
   }
 
   run(): number {
-    const current = this.currentVersion();
-    for (const migration of this.migrations.filter((m) => m.version > current)) {
+    this.currentVersion();
+    const applied = new Set(
+      this.db
+        .prepare('SELECT version FROM schema_migrations')
+        .all()
+        .map((row) => Number(row.version)),
+    );
+    for (const migration of this.migrations.filter((m) => !applied.has(m.version))) {
       const foreignKeys = this.foreignKeysEnabled();
       if (migration.rebuildsTables) this.db.exec('PRAGMA foreign_keys = OFF');
       this.db.exec('BEGIN');

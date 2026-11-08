@@ -1,4 +1,6 @@
 import type {
+  AccountDeletion,
+  AccountStatus,
   AddTitleRequest,
   UserRole,
   ApiToken,
@@ -310,6 +312,18 @@ export class ApiClient {
 
   revokeToken(id: number): Promise<void> {
     return this.request('DELETE', `/tokens/${id}`);
+  }
+
+  accountStatus(): Promise<AccountStatus> {
+    return this.request('GET', '/account');
+  }
+
+  requestAccountDeletion(confirm: string): Promise<AccountDeletion> {
+    return this.request('POST', '/account/deletion', { confirm });
+  }
+
+  cancelAccountDeletion(): Promise<AccountStatus> {
+    return this.request('DELETE', '/account/deletion');
   }
 
   setUserRole(userId: number, role: UserRole): Promise<User> {

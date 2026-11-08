@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import DeletionBanner from './components/DeletionBanner.vue';
 import { useSession } from './composables/useSession';
 import { messages } from './i18n/messages';
 
@@ -27,9 +28,13 @@ async function signOut(): Promise<void> {
       <button type="button" class="small" @click="signOut">{{ messages.login.signOut }}</button>
     </div>
   </header>
+  <DeletionBanner v-if="session.user.value" />
   <main class="page">
     <RouterView />
   </main>
+  <footer class="foot">
+    <a href="/privacy">{{ messages.account.privacy }}</a>
+  </footer>
 </template>
 
 <style scoped>
@@ -74,6 +79,12 @@ nav a.router-link-exact-active {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+}
+
+.foot {
+  text-align: center;
+  padding: 0 16px 32px;
+  font-size: 0.85rem;
 }
 
 .page {

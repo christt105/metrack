@@ -149,6 +149,17 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 - `PUT /api/watchlist/{movies|series}/{id}` and `DELETE /api/watchlist/{movies|series}/{id}`: follow and unfollow (the `follow` field, so a `PATCH` does the same). 204, or 404 for an unknown id.
 - `GET /api/alerts?limit=100`: the alerts already sent as `ReleaseAlert[]`, newest first (`limit` from 1 to 500).
 
+## Account
+
+- `GET /api/account/export`: the ZIP of the signed-in user's data (`application/zip`, `Content-Disposition: attachment`). `data.json` holds `format`, `exportedAt`, `user`, `settings` (without `ntfyTopic`), `publicPage`, `tokens` (`ApiToken[]`, no secrets or hashes), the merged `movies`, `series`, `seasons`, `videogames`, `books`, `seasonOverrides`, `unlinkedTitles`, `releaseAlerts` and `images` (hash, ref, size and the archive path of each); the files are under `images/`. A token may call it.
+- `GET /api/account` (browser session only): `AccountStatus`, `{ deletion: { requestedAt, deleteAt } | null, canDelete }`; `canDelete` is false for the owner.
+- `POST /api/account/deletion` (browser session only; `DeleteAccountRequest`: `{ confirm }`): schedules the deletion 7 days after the first request (asking again keeps the original date) and answers the `AccountDeletion`. `confirm` must be the user's handle (any case) or `delete`, otherwise 400 `confirmation_mismatch`; 403 `owner_cannot_delete` for user 1; a token gets 403 `session_required`.
+- `DELETE /api/account/deletion` (browser session only): cancels a waiting deletion and answers the `AccountStatus`.
+- `GET /api/catalog/unreferenced` (owner or trusted): `UnreferencedCatalogItem[]`, the items added by hand that no user has an entry for, all of them for the owner and only one's own for a trusted user.
+- `DELETE /api/catalog/{movies|series|games|books}/{id}` (owner, or the trusted user who owns the item): deletes one of those items, 204; 404 when there is no such hand-added item (or it is someone else's), 409 `catalog_in_use` while any user has an entry for it.
+
+The privacy page, `GET /privacy`, is outside `/api` and needs no sign-in. The erasure itself is not an endpoint: the server job does it once the 7 days have passed, and the owner schedules or cancels another user's deletion with `metrack users delete <id> [--cancel]`.
+
 ## Not in the API
 
 Importing the Obsidian notes stays a command of the server CLI (`metrack import`), and the export is run by the publisher or by `metrack export`. Both read and write the same database and image store as the server.

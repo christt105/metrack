@@ -52,9 +52,9 @@ export class BackupJob {
   private async copy(): Promise<void> {
     if (!this.copier) return;
     try {
-      const { copied, images, pruned } = this.copier.sync();
+      const { copied, images, pruned, prunedImages } = this.copier.sync();
       this.logger.info(
-        `backup copy: ${copied.length} database(s) and ${images} image(s) copied, ${pruned.length} old database(s) pruned`,
+        `backup copy: ${copied.length} database(s) and ${images} image(s) copied, ${pruned.length} old database(s) and ${prunedImages} unused image(s) pruned`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

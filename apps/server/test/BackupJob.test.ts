@@ -84,7 +84,7 @@ describe('BackupJob', () => {
     const copier = {
       sync: vi.fn(() => {
         if (copyFails) throw new Error('disk not mounted');
-        return { copied: ['n'], images: 2, pruned: [] };
+        return { copied: ['n'], images: 2, pruned: [], prunedImages: 0 };
       }),
     } as unknown as BackupCopier;
     const notifier: Notifier = { notify: vi.fn(async () => true) };

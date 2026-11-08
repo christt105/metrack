@@ -7,6 +7,8 @@ export { renderDetail } from './renderDetail.js';
 export { renderHome } from './renderHome.js';
 export { renderIndex } from './renderIndex.js';
 export { renderNotFound } from './renderNotFound.js';
+export { renderPrivacy } from './renderPrivacy.js';
+export type { PrivacyOptions } from './PrivacyOptions.js';
 export { renderStats } from './renderStats.js';
 export { publishedImageHashes } from './publishedImageHashes.js';
 export { siteAsset } from './siteAssets.js';

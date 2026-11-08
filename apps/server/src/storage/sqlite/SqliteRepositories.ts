@@ -1,3 +1,5 @@
+import type { AccountRepository } from '../repositories/AccountRepository.js';
+import type { HandAddedCatalogRepository } from '../repositories/HandAddedCatalogRepository.js';
 import type { ApiTokenRepository } from '../repositories/ApiTokenRepository.js';
 import type { BookRepository } from '../repositories/BookRepository.js';
 import type { ImageRepository } from '../repositories/ImageRepository.js';
@@ -31,5 +33,7 @@ export interface SqliteRepositories {
   profiles: PublicProfileRepository;
   sessions: SessionRepository;
   apiTokens: ApiTokenRepository;
+  accounts: AccountRepository;
+  handAddedCatalog: HandAddedCatalogRepository;
   transactions: TransactionRunner;
 }

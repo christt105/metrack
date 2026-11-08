@@ -27,6 +27,8 @@ export interface Config {
   ntfyServer?: NtfyServer;
   /** Address the public pages and their feed are reached at; the visitor's own address when unset. */
   publicUrl: string | null;
+  /** Where the privacy page says to write about one's data. */
+  contactEmail: string;
   /** Address of the web app, for the link back from each mirrored note. */
   mirrorWebUrl: string | null;
 }

@@ -24,6 +24,8 @@ export interface ImageRepository {
   addOwner(hash: string, userId: number, createdAt: string): Promise<void>;
   /** The users who own the image, none for provider images. */
   ownerIds(hash: string): Promise<number[]>;
+  /** The images the user owns, oldest first. */
+  ownedBy(userId: number): Promise<StoredImage[]>;
   /** Total size of the images the user owns. */
   usedBytes(userId: number): Promise<number>;
   /** Whether a shared catalog row (not someone's own entry) shows the image as its cover or banner. */

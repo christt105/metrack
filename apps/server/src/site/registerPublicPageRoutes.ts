@@ -7,6 +7,7 @@ import {
   renderDetail,
   renderFeed,
   renderHome,
+  renderPrivacy,
   renderIndex,
   renderStats,
   siteAsset,
@@ -28,12 +29,14 @@ export interface PublicPageDeps {
   images?: ImageStore;
   /** Address the feed links to; the visitor's own address when unset. */
   publicUrl: string | null;
+  /** Where the privacy page says to write about one's data. */
+  contactEmail: string;
 }
 
 const ID = /^[1-9]\d{0,9}$/;
 
 /**
- * The public pages under `/u/<handle>/`: the library home, one page per item, the statistics, the collage, the about
+ * The privacy page at `/privacy` and the public pages under `/u/<handle>/`: the library home, one page per item, the statistics, the collage, the about
  * page, the index the scripts read, an RSS feed of what was finished and the images those pages show, plus the shared
  * theme files under `/u/assets/`. They need no sign-in, so they stay outside `/api`, and a page
  * exists only while its owner has a handle and has switched it on. Every other case answers with the same
@@ -52,6 +55,13 @@ export function registerPublicPageRoutes(app: FastifyInstance, deps: PublicPageD
       void reply.header('X-Robots-Tag', 'noindex');
       return payload;
     });
+
+    site.get('/privacy', async (_request, reply) =>
+      reply
+        .type('text/html; charset=utf-8')
+        .header('Cache-Control', 'public, max-age=300')
+        .send(renderPrivacy({ contactEmail: deps.contactEmail })),
+    );
 
     site.get<{ Params: { '*': string } }>('/u/assets/*', async (request, reply) => {
       const asset = siteAsset(request.params['*']);

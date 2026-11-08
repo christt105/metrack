@@ -39,13 +39,14 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       timeZone: env.ALERTS_TIMEZONE ?? 'Europe/Madrid',
       notifyFromHour: hour(env, 'ALERTS_NOTIFY_FROM_HOUR', 8),
     },
+    contactEmail: env.CONTACT_EMAIL || 'christt105@gmail.com',
     publicUrl: env.PUBLIC_URL?.replace(/\/+$/, '') || null,
     mirrorWebUrl: env.VAULT_MIRROR_WEB_URL || null,
   };
   if (env.BACKUP_COPY_DIR) {
     config.backup.copy = {
       dir: env.BACKUP_COPY_DIR,
-      retention: positiveInteger(env, 'BACKUP_COPY_RETENTION', 365),
+      retention: positiveInteger(env, 'BACKUP_COPY_RETENTION', 14),
     };
   }
   if (env.IGDB_CLIENT_ID && env.IGDB_CLIENT_SECRET) {

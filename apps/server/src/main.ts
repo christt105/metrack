@@ -32,6 +32,9 @@ import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
 import { UserReleaseWatchers } from './alerts/UserReleaseWatchers.js';
 import { WatchlistService } from './alerts/WatchlistService.js';
 import { TmdbReleaseSource } from './providers/tmdb/TmdbReleaseSource.js';
+import { AccountDeletionScheduler } from './account/AccountDeletionScheduler.js';
+import { AccountDeletionService } from './account/AccountDeletionService.js';
+import { AccountExporter } from './account/AccountExporter.js';
 import { createBackupJob } from './backup/createBackupJob.js';
 import { BackupScheduler } from './backup/BackupScheduler.js';
 import { createBackupService } from './backup/createBackupService.js';
@@ -206,6 +209,15 @@ const scheduler = new BackupScheduler(
   logger,
 );
 
+const accountDeletion = new AccountDeletionService(
+  repositories.accounts,
+  repositories.users,
+  imageStore,
+  config.dataDir,
+  logger,
+);
+const accountScheduler = new AccountDeletionScheduler(accountDeletion, logger);
+
 const sessions = new SessionService(repositories.sessions, repositories.users);
 const app = await buildApp({
   appVersion: config.appVersion,
@@ -224,6 +236,12 @@ const app = await buildApp({
   backup: { service: backupService, job: backupJob },
   sync: syncServices,
   syncQueues,
+  account: {
+    exporter: new AccountExporter({ ...repositories, images: imageStore }),
+    deletion: accountDeletion,
+    profiles: repositories.profiles,
+  },
+  handAddedCatalog: repositories.handAddedCatalog,
   settings: {
     users: repositories.users,
     settings: repositories.settings,
@@ -236,6 +254,7 @@ const app = await buildApp({
     profiles: repositories.profiles,
     sources: { movies, series, seasons, videogames, books },
     publicUrl: config.publicUrl,
+    contactEmail: config.contactEmail,
   },
   watch: {
     watchlist: new WatchlistService(edit.editor, movies, series, seasons),
@@ -245,6 +264,7 @@ const app = await buildApp({
 
 const shutdown = async (): Promise<void> => {
   scheduler.stop();
+  accountScheduler.stop();
   releaseScheduler?.stop();
   await app.close();
   await jellystatPool?.end();
@@ -259,6 +279,7 @@ if (config.backup.enabled) {
   scheduler.start();
 }
 releaseScheduler?.start();
+accountScheduler.start();
 if (!releaseScheduler)
   console.log(
     'Release alerts are disabled, they need TMDB_API_KEY, NTFY_URL and ALERTS_ENABLED not set to false',

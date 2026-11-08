@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../src/api/buildApp.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
+import { LATEST_SCHEMA_VERSION } from './support/latestSchemaVersion.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { signedInAs } from './support/signedInAs.js';
 import { OWNER_SCOPE } from './support/ownerScope.js';
@@ -21,7 +22,7 @@ describe('GET /api/health', () => {
     expect(response.json()).toEqual({
       status: 'ok',
       appVersion: 'test',
-      schemaVersion: migrations.length,
+      schemaVersion: LATEST_SCHEMA_VERSION,
     });
   });
 
