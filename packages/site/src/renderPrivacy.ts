@@ -1,6 +1,6 @@
 import { escapeHtml } from '@metrack/export';
 import type { PrivacyOptions } from './PrivacyOptions.js';
-import { renderLayout } from './renderLayout.js';
+import { assetPath } from './sitePaths.js';
 
 const TMDB_LOGO =
   'https://www.themoviedb.org/assets/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg';
@@ -51,5 +51,22 @@ export function renderPrivacy(options: PrivacyOptions): string {
 <li>Some series artwork comes from <a href="https://thetvdb.com/" rel="noopener">TheTVDB</a>. Metadata provided by TheTVDB; please consider adding missing information or subscribing.</li>
 </ul>
 </main>`;
-  return renderLayout({ title: 'Privacy', language: 'en', body });
+  return `<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<title>Privacy</title>
+<link href="${assetPath('theme.css')}" rel="stylesheet">
+</head>
+<body data-theme="dark">
+<div style="max-width: 760px; margin: 0 auto; padding: 20px">
+${body}
+<p><small>Served by metrack</small></p>
+</div>
+</body>
+</html>
+`;
 }

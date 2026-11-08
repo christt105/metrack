@@ -48,7 +48,7 @@ describe('buildLibrary', () => {
       }),
     );
     expect(library.seasons.map((entry) => entry.title)).toEqual(
-      ['Lupin - Temporada 1', 'Dark - Temporada 1', 'Otra', 'Lupin - Temporada 2'].sort(
+      ['Lupin - Temporada 1', 'Dark - Temporada 1', 'Dark - Otra', 'Lupin - Temporada 2'].sort(
         (a, b) =>
           library.seasons.findIndex((e) => e.title === a) -
           library.seasons.findIndex((e) => e.title === b),

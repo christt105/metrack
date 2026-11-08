@@ -10,7 +10,7 @@ describe('privacy page', () => {
     const response = await api.app.inject({ method: 'GET', url: '/privacy' });
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toContain('text/html');
-    expect(response.body).toContain('<html lang="en">');
+    expect(response.body).toContain('<html lang="en" class="dark">');
     expect((await api.app.inject({ method: 'GET', url: '/api/account' })).statusCode).toBe(401);
   });
 

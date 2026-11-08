@@ -113,7 +113,7 @@ describe('exporting an account', () => {
     expect(response.headers['content-disposition']).toContain('metrack-export-user-3-');
     expect(data.format).toBe(1);
     expect(data.user).toEqual({ id: 3, name: 'Nia', email: null, role: 'normal' });
-    expect(data.publicPage).toEqual({ handle: 'nia', enabled: false });
+    expect(data.publicPage).toMatchObject({ handle: 'nia', enabled: false });
     expect(data.movies.map((m: { title: string }) => m.title).sort()).toEqual([
       'Matrix',
       'Nia only',

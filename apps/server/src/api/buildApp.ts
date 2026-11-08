@@ -123,6 +123,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       deps.settings.users,
       deps.settings.settings,
       deps.settings.profiles,
+      deps.imageStore,
     );
   if (deps.account) registerAccountRoutes(app, deps.account);
   if (deps.handAddedCatalog) registerCatalogRoutes(app, deps.handAddedCatalog);

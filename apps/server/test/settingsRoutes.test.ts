@@ -10,6 +10,7 @@ import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository
 import { SqlitePublicProfileRepository } from '../src/storage/sqlite/SqlitePublicProfileRepository.js';
 import { SqliteUserSettingsRepository } from '../src/storage/sqlite/SqliteUserSettingsRepository.js';
 import { NO_SETTINGS } from '../src/users/NO_SETTINGS.js';
+import { EMPTY_PAGE } from './support/EMPTY_PAGE.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
 import { OWNER_ID } from '../src/users/OWNER_ID.js';
 
@@ -53,13 +54,13 @@ describe('settings routes', () => {
     const own = await request(OWNER, 'GET', '/api/settings');
     expect(own.json()).toEqual({
       owner: true,
-      publicPage: { handle: null, enabled: false },
+      publicPage: EMPTY_PAGE,
       settings: { ...NO_SETTINGS, jellyfinUser: 'admin', mirrorDir: '/vault/Media Tracker' },
     });
     const friend = await request(FRIEND, 'GET', '/api/settings');
     expect(friend.json()).toEqual({
       owner: false,
-      publicPage: { handle: null, enabled: false },
+      publicPage: EMPTY_PAGE,
       settings: NO_SETTINGS,
     });
   });

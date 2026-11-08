@@ -286,6 +286,30 @@ describe('users', () => {
       }),
     ).toContain('publicPage: off, handle: -');
   });
+
+  it('set the intro and description of a public page from the CLI and keep them', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
+    await runUsersCommand({ dataDir, add: { name: 'Friend', email: null } });
+    const shown = await runUsersCommand({
+      dataDir,
+      set: {
+        userId: 2,
+        changes: {},
+        handle: 'friend',
+        intro: ' Mi sitio ',
+        description: 'Lo que veo',
+      },
+    });
+    expect(shown).toContain('handle: friend, intro: Mi sitio, description: Lo que veo');
+    const kept = await runUsersCommand({
+      dataDir,
+      set: { userId: 2, changes: {}, publicPage: true },
+    });
+    expect(kept).toContain('publicPage: on, handle: friend, intro: Mi sitio');
+    const cleared = await runUsersCommand({ dataDir, set: { userId: 2, changes: {}, intro: '' } });
+    expect(cleared).toContain('handle: friend, description: Lo que veo');
+    expect(cleared).not.toContain('intro');
+  });
 });
 
 describe('readCookie', () => {

@@ -1,12 +1,16 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
-  SITE_CSS,
   isPublicKind,
   publishedImageHashes,
+  renderAbout,
+  renderCollage,
   renderDetail,
   renderFeed,
   renderHome,
   renderPrivacy,
+  renderIndex,
+  renderStats,
+  siteAsset,
   type Library,
 } from '@metrack/site';
 import { isImageHash } from '../images/imageRef.js';
@@ -32,8 +36,9 @@ export interface PublicPageDeps {
 const ID = /^[1-9]\d{0,9}$/;
 
 /**
- * The privacy page at `/privacy` and the public pages under `/u/<handle>/`: the library home, one page per item, an RSS feed of what was
- * finished and the images those pages show. They need no sign-in, so they stay outside `/api`, and a page
+ * The privacy page at `/privacy` and the public pages under `/u/<handle>/`: the library home, one page per item, the statistics, the collage, the about
+ * page, the index the scripts read, an RSS feed of what was finished and the images those pages show, plus the shared
+ * theme files under `/u/assets/`. They need no sign-in, so they stay outside `/api`, and a page
  * exists only while its owner has a handle and has switched it on. Every other case answers with the same
  * 404, and every answer asks search engines to stay away.
  */
@@ -41,7 +46,8 @@ export function registerPublicPageRoutes(app: FastifyInstance, deps: PublicPageD
   const libraryOf = async (handle: string): Promise<Library | undefined> => {
     const profile = await deps.profiles.findByHandle(handle);
     if (!profile?.enabled) return undefined;
-    return loadLibrary(deps.sources, deps.scope, profile.userId, handle.toLowerCase());
+    const page = await deps.profiles.get(profile.userId);
+    return loadLibrary(deps.sources, deps.scope, profile.userId, handle.toLowerCase(), page);
   };
 
   void app.register(async (site) => {
@@ -50,13 +56,6 @@ export function registerPublicPageRoutes(app: FastifyInstance, deps: PublicPageD
       return payload;
     });
 
-    site.get('/u/assets/site.css', async (_request, reply) =>
-      reply
-        .type('text/css; charset=utf-8')
-        .header('Cache-Control', 'public, max-age=3600')
-        .send(SITE_CSS),
-    );
-
     site.get('/privacy', async (_request, reply) =>
       reply
         .type('text/html; charset=utf-8')
@@ -64,19 +63,42 @@ export function registerPublicPageRoutes(app: FastifyInstance, deps: PublicPageD
         .send(renderPrivacy({ contactEmail: deps.contactEmail })),
     );
 
-    const home = async (
-      request: FastifyRequest<{ Params: { handle: string } }>,
-      reply: FastifyReply,
-    ) => {
-      const library = await libraryOf(request.params.handle);
-      if (!library) return sendPublicNotFound(reply);
+    site.get<{ Params: { '*': string } }>('/u/assets/*', async (request, reply) => {
+      const asset = siteAsset(request.params['*']);
+      if (!asset) return sendPublicNotFound(reply);
       return reply
-        .type('text/html; charset=utf-8')
-        .header('Cache-Control', 'no-cache')
-        .send(renderHome(library));
+        .type(asset.contentType)
+        .header('Cache-Control', 'public, max-age=3600')
+        .send(typeof asset.body === 'string' ? asset.body : Buffer.from(asset.body));
+    });
+
+    const page =
+      (render: (library: Library) => string | null, type = 'text/html; charset=utf-8') =>
+      async (request: FastifyRequest<{ Params: { handle: string } }>, reply: FastifyReply) => {
+        const library = await libraryOf(request.params.handle);
+        const body = library ? render(library) : null;
+        if (body === null) return sendPublicNotFound(reply);
+        return reply.type(type).header('Cache-Control', 'no-cache').send(body);
+      };
+    const pageAt = (
+      path: string,
+      render: (library: Library) => string | null,
+      type?: string,
+    ): void => {
+      site.get<{ Params: { handle: string } }>(`/u/:handle${path}`, page(render, type));
+      if (path !== '') {
+        site.get<{ Params: { handle: string } }>(`/u/:handle${path}/`, page(render, type));
+      }
     };
-    site.get<{ Params: { handle: string } }>('/u/:handle', home);
-    site.get<{ Params: { handle: string } }>('/u/:handle/', home);
+    pageAt('', renderHome);
+    site.get<{ Params: { handle: string } }>('/u/:handle/', page(renderHome));
+    pageAt('/stats', renderStats);
+    pageAt('/collage', renderCollage);
+    pageAt('/about', renderAbout);
+    site.get<{ Params: { handle: string } }>(
+      '/u/:handle/index.json',
+      page(renderIndex, 'application/json; charset=utf-8'),
+    );
 
     site.get<{ Params: { handle: string } }>('/u/:handle/feed.xml', async (request, reply) => {
       const library = await libraryOf(request.params.handle);

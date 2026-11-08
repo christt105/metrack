@@ -40,6 +40,9 @@ export interface UsersCommand {
     /** The public page handle; an empty string clears it. */
     handle?: string;
     publicPage?: boolean;
+    /** The public page intro and description; an empty string clears one. */
+    intro?: string;
+    description?: string;
   };
   /**
    * Schedules the user's account for deletion after the grace period, or with `cancel` withdraws the request.
@@ -70,7 +73,7 @@ export async function runUsersCommand(command: UsersCommand): Promise<string> {
     const accounts = new SqliteAccountRepository(db);
     if (command.add) return `Created ${describe(await users.create(command.add))}`;
     if (command.set) {
-      const { userId, changes, role, handle, publicPage } = command.set;
+      const { userId, changes, role, handle, publicPage, intro, description } = command.set;
       let user = await users.get(userId);
       if (!user) throw new Error(`There is no user ${userId}`);
       if (role !== undefined && !ASSIGNABLE_ROLES.includes(role as UserRole)) {
@@ -91,8 +94,13 @@ export async function runUsersCommand(command: UsersCommand): Promise<string> {
         await users.setRole(userId, role as UserRole);
         user = { ...user, role: role as UserRole };
       }
-      if (handle !== undefined || publicPage !== undefined) {
-        await changePublicPage(profiles, userId, handle, publicPage);
+      if (
+        handle !== undefined ||
+        publicPage !== undefined ||
+        intro !== undefined ||
+        description !== undefined
+      ) {
+        await changePublicPage(profiles, userId, { handle, publicPage, intro, description });
       }
       return `${describe(user)}\n${describeSettings(result.settings)}\n${describePublicPage(await profiles.get(userId))}`;
     }
@@ -148,8 +156,7 @@ async function runExport(
 async function changePublicPage(
   profiles: PublicProfileRepository,
   userId: number,
-  handle: string | undefined,
-  publicPage: boolean | undefined,
+  { handle, publicPage, intro, description }: PublicPageChange,
 ): Promise<void> {
   const current = await profiles.get(userId);
   const wanted = handle === undefined ? current.handle : normalizeHandle(handle) || null;
@@ -157,11 +164,28 @@ async function changePublicPage(
   if (problem) throw new Error(`Invalid handle: ${problem}`);
   const enabled = publicPage ?? current.enabled;
   if (enabled && wanted === null) throw new Error('A public page needs a handle');
-  await profiles.save(userId, { handle: wanted, enabled });
+  await profiles.save(userId, {
+    ...current,
+    handle: wanted,
+    enabled,
+    intro: intro === undefined ? current.intro : intro.trim() || null,
+    description: description === undefined ? current.description : description.trim() || null,
+  });
+}
+
+interface PublicPageChange {
+  handle: string | undefined;
+  publicPage: boolean | undefined;
+  intro: string | undefined;
+  description: string | undefined;
 }
 
 function describePublicPage(page: PublicPage): string {
-  return `  publicPage: ${page.enabled ? 'on' : 'off'}, handle: ${page.handle ?? '-'}`;
+  const texts = [
+    page.intro === null ? '' : `, intro: ${page.intro}`,
+    page.description === null ? '' : `, description: ${page.description}`,
+  ].join('');
+  return `  publicPage: ${page.enabled ? 'on' : 'off'}, handle: ${page.handle ?? '-'}${texts}`;
 }
 
 function describe(user: User): string {
