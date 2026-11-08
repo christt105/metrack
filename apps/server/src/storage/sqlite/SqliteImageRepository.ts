@@ -4,7 +4,8 @@ import { imageRef } from '../../images/imageRef.js';
 import type { StoredImage } from '../../images/StoredImage.js';
 import type { ImageRepository } from '../repositories/ImageRepository.js';
 import { imageFromRow } from '../mapping/imageFromRow.js';
-import { ORPHANS_SQL, catalogShowsSql } from '../mapping/imageSql.js';
+import { catalogShowsSql } from '../mapping/imageSql.js';
+import { ORPHANS_SQL } from './orphansSql.js';
 
 export class SqliteImageRepository implements ImageRepository {
   constructor(private readonly db: DatabaseSync) {}
