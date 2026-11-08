@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
-import { isLinkedImageUrl, type ImageUsage, type User } from '@metrack/domain';
+import {
+  isLinkedImageUrl,
+  type ImageEncodingSite,
+  type ImageUsage,
+  type User,
+} from '@metrack/domain';
 import type { FetchFn } from '../http/FetchFn.js';
 import type { ImageRepository } from '../storage/repositories/ImageRepository.js';
 import type { ImageBlobStore } from './ImageBlobStore.js';
@@ -37,6 +42,7 @@ export class ImageStore {
   private readonly urlGuard: UrlGuard;
   readonly quotaBytes: number;
   readonly maxUploadBytes: number;
+  readonly encodedBy: ImageEncodingSite;
 
   constructor(
     private readonly rows: ImageRepository,
@@ -49,6 +55,7 @@ export class ImageStore {
     this.urlGuard = options.urlGuard ?? new PublicAddressGuard();
     this.quotaBytes = options.quotaBytes ?? DEFAULT_QUOTA_BYTES;
     this.maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+    this.encodedBy = options.encodedBy ?? 'server';
   }
 
   /**
@@ -109,6 +116,7 @@ export class ImageStore {
     return {
       usedBytes: await this.rows.usedBytes(userId),
       quotaBytes: unlimited ? null : this.quotaBytes,
+      imageEncoding: this.encodedBy,
     };
   }
 

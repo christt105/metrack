@@ -113,7 +113,11 @@ describe('provider images', () => {
     const ref = await images.reference(grid);
     expect(ref).toMatch(/^\/api\/images\//);
     expect((await metadataOf(images, ref)).format).toBe('webp');
-    expect(await images.usage(1)).toEqual({ usedBytes: 0, quotaBytes: 200 * 1024 * 1024 });
+    expect(await images.usage(1)).toEqual({
+      usedBytes: 0,
+      quotaBytes: 200 * 1024 * 1024,
+      imageEncoding: 'server',
+    });
   });
 });
 

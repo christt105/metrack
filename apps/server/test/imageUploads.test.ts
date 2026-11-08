@@ -54,7 +54,11 @@ describe('uploading images', () => {
     expect(response.statusCode).toBe(201);
     const uploaded = response.json();
     expect(uploaded).toMatchObject({ mimeType: 'image/webp', width: 40, height: 30 });
-    expect(uploaded.usage).toEqual({ usedBytes: uploaded.byteSize, quotaBytes: 4000 });
+    expect(uploaded.usage).toEqual({
+      usedBytes: uploaded.byteSize,
+      quotaBytes: 4000,
+      imageEncoding: 'server',
+    });
     expect((await trusted.get('/api/images/usage')).json()).toEqual(uploaded.usage);
     expect((await normal.get('/api/images/usage')).json().usedBytes).toBe(0);
   });
@@ -68,7 +72,11 @@ describe('uploading images', () => {
 
   it('gives the owner no quota, however much they upload', async () => {
     const first = (await owner.upload(await noiseImage(128, 128))).json();
-    expect(first.usage).toEqual({ usedBytes: first.byteSize, quotaBytes: null });
+    expect(first.usage).toEqual({
+      usedBytes: first.byteSize,
+      quotaBytes: null,
+      imageEncoding: 'server',
+    });
     expect(first.byteSize).toBeGreaterThan(4000);
     const second = await owner.upload(await noiseImage(129, 129));
     expect(second.statusCode).toBe(201);

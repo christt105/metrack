@@ -40,7 +40,14 @@ describe('loadConfig', () => {
       maxUploadBytes: 5 * 1024 * 1024,
       maxDimension: 1920,
       quality: 82,
+      encodedBy: 'server',
     });
+  });
+
+  it('reads IMAGE_ENCODED_BY and rejects unknown values', () => {
+    expect(loadConfig({ IMAGE_ENCODED_BY: 'client' }).images.encodedBy).toBe('client');
+    expect(loadConfig({ IMAGE_ENCODED_BY: '' }).images.encodedBy).toBe('server');
+    expect(() => loadConfig({ IMAGE_ENCODED_BY: 'cloud' })).toThrow('Invalid IMAGE_ENCODED_BY');
   });
 
   it('defaults backups to daily with 14 kept under the data directory', () => {
