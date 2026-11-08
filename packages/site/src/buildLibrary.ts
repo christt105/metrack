@@ -157,6 +157,7 @@ export function buildLibrary(input: SiteInput): Library {
     .map(seriesEntry);
   return {
     handle: input.handle,
+    profile: input.profile,
     movies: input.movies.filter((movie) => !movie.pendingReview).map(movieEntry),
     series,
     seasons,

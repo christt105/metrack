@@ -114,6 +114,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       deps.settings.users,
       deps.settings.settings,
       deps.settings.profiles,
+      deps.imageStore,
     );
   if (deps.site) {
     registerPublicPageRoutes(app, { ...deps.site, scope: deps.scope, images: deps.imageStore });

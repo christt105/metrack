@@ -29,7 +29,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
        metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
                      [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>]
-                     [--handle <name>] [--public-page on|off] [--data-dir <dir>]
+                     [--handle <name>] [--public-page on|off] [--intro <text>] [--description <text>] [--data-dir <dir>]
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
   With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
@@ -61,7 +61,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   the Jellyfin account synced, the ntfy topic for release alerts and job failures, the Cloudflare Pages project and
   address of their site, and the vault folder their notes are mirrored into. A job runs only for users who set what
   it needs. --handle sets the name their public page is served under (/u/<handle>/; an empty value clears it) and
-  --public-page on|off switches the page; it needs a handle. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
+  --public-page on|off switches the page; it needs a handle. --intro and --description set the title and text of its header (an empty value clears them); the avatar, about text and comments are set in the web app. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
   VAULT_MIRROR_DIR and VAULT_MIRROR_LINK_PREFIX the first time the server starts; after that the stored ones win.
 
   export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
@@ -88,6 +88,8 @@ async function main(argv: string[]): Promise<number> {
       role: { type: 'string' },
       handle: { type: 'string' },
       'public-page': { type: 'string' },
+      intro: { type: 'string' },
+      description: { type: 'string' },
       'publish-base-url': { type: 'string' },
       'mirror-dir': { type: 'string' },
       'mirror-link-prefix': { type: 'string' },
@@ -140,6 +142,8 @@ async function main(argv: string[]): Promise<number> {
       ((changesSettings ||
         values.role !== undefined ||
         values.handle !== undefined ||
+        values.intro !== undefined ||
+        values.description !== undefined ||
         values['public-page'] !== undefined) &&
         !setting) ||
       (values['public-page'] !== undefined && !['on', 'off'].includes(values['public-page'])) ||
@@ -159,6 +163,8 @@ async function main(argv: string[]): Promise<number> {
               changes: settingChanges,
               role: values.role,
               handle: values.handle,
+              intro: values.intro,
+              description: values.description,
               publicPage:
                 values['public-page'] === undefined ? undefined : values['public-page'] === 'on',
             }

@@ -1,0 +1,3 @@
+/** The go-to-top button script of the theme. */
+export const MAIN_JS =
+  '\'use strict\';\n\n;\nwindow.addEventListener(\'load\', () => {\n    const gttButton = document.getElementById("totop");\n    if (!gttButton) return;\n    window.onscroll = () => {\n        if (\n            document.body.scrollTop > 300 ||\n            document.documentElement.scrollTop > 300\n        ) {\n            gttButton.style.visibility = "visible";\n            gttButton.style.opacity = "1";\n        } else {\n            gttButton.style.visibility = "hidden";\n            gttButton.style.opacity = "0";\n        }\n    };\n});\n';

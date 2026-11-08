@@ -1,3 +1,4 @@
+import type { PublicPage } from '@metrack/domain';
 import { buildLibrary, type Library } from '@metrack/site';
 import type { UserScope } from '../users/UserScope.js';
 import type { PublicSiteSources } from './PublicSiteSources.js';
@@ -8,10 +9,18 @@ export function loadLibrary(
   scope: UserScope,
   userId: number,
   handle: string,
+  page: PublicPage,
 ): Promise<Library> {
   return scope.run(userId, async () =>
     buildLibrary({
       handle,
+      profile: {
+        avatar: page.avatar,
+        intro: page.intro,
+        description: page.description,
+        about: page.about,
+        giscus: page.giscus,
+      },
       movies: await sources.movies.list(),
       series: await sources.series.list(),
       seasons: await sources.seasons.list(),

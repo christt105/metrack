@@ -1,5 +1,6 @@
 import type { Book, Movie, Season, Series, Tracking, Videogame } from '@metrack/domain';
 import type { SiteInput } from '../src/SiteInput.js';
+import type { SiteProfile } from '../src/SiteProfile.js';
 
 const tracking: Tracking = {
   status: 'planned',
@@ -117,9 +118,18 @@ export function book(overrides: Partial<Book> & { id: number }): Book {
   };
 }
 
+export const NO_PROFILE: SiteProfile = {
+  avatar: null,
+  intro: null,
+  description: null,
+  about: null,
+  giscus: null,
+};
+
 export function input(overrides: Partial<SiteInput> = {}): SiteInput {
   return {
     handle: 'ana',
+    profile: NO_PROFILE,
     movies: [],
     series: [],
     seasons: [],
