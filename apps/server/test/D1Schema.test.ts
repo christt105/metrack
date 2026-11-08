@@ -46,6 +46,11 @@ describe('D1 schema file', () => {
     expect(actual.indexSql).toEqual(expected.indexSql);
   });
 
+  it('has the same CHECK constraints', () => {
+    expect(actual.checks).toEqual(expected.checks);
+    expect(Object.values(actual.checks).flat()).not.toHaveLength(0);
+  });
+
   it('has no views or triggers', () => {
     expect(actual.other).toEqual(expected.other);
     expect(actual.other).toEqual([]);
