@@ -13,7 +13,7 @@
     "metrack": "node --disable-warning=ExperimentalWarning dist/cli.js"
   },
   "dependencies": {
-    "@fastify/static": "^10.1.9",
+    "@fastify/static": "^10.1.10",
     "@metrack/domain": "0.1.0",
     "@metrack/export": "0.1.0",
     "@metrack/site": "0.1.0",
