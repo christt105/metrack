@@ -7,7 +7,7 @@ import {
   renderHome,
   renderNotFound,
 } from '../src/index.js';
-import { HASH_A, book, game, input, movie, season, series } from './support.js';
+import { HASH_A, NO_PROFILE, book, game, input, movie, season, series } from './support.js';
 
 const library = buildLibrary(
   input({
@@ -67,21 +67,37 @@ describe('renderHome', () => {
     expect(html).toContain('<meta name="robots" content="noindex">');
   });
 
-  it('lists each type with its statuses', () => {
-    expect(html).toContain('Películas (3)');
-    expect(html).toContain('Series (2)');
-    expect(html).toContain('Juegos (1)');
-    expect(html).toContain('Libros (1)');
-    expect(html).toContain('En curso (1)');
-    expect(html).toContain('Pausados, abandonados y sin empezar');
-    expect(html).toContain('No recuerdo cuándo');
+  it('follows the theme: menu, hero banner, profile, filters and the completed years', () => {
+    expect(html).toContain('<div class="navbar" role="navigation">');
+    expect(html).toContain('<div id="random-hero-banner"></div>');
+    expect(html).toContain('class="author-avatar" src="/u/assets/default-avatar.svg"');
+    expect(html).toContain('<h2 class="author-name">@ana</h2>');
+    expect(html).toContain('id="filter-bar"');
+    expect(html).toContain('data-filter-group="platform"');
+    expect(html).toContain('href="/u/ana/?type=movie"');
+    expect(html).toContain('<h3 class="section-title">En curso (2)</h3>');
+    expect(html).toContain('id="completed-section"');
+    expect(html).toContain('<a href="#year-2026" class="year-nav-link">2026</a>');
+    expect(html).toContain('<a href="#year-unknown" class="year-nav-link">?</a>');
+    expect(html).toContain('id="year-unknown"');
+    expect(html).toContain('Ver Pausados y Abandonados (1)');
+    expect(html).toContain('/u/assets/filter.js');
+    expect(html).toContain('/u/assets/banner.js');
+  });
+
+  it('puts the cards data where the filters read it', () => {
+    expect(html).toContain(
+      'data-title="dune &lt;2&gt;" data-year="2026" data-type="movie" data-status="finished" data-rating="7"',
+    );
+    expect(html).toContain('data-platforms="pc"');
+    expect(html).toContain('data-type="season"');
   });
 
   it('escapes titles, links items by id and counts a rewatch as its own card', () => {
     expect(html).toContain('Dune &lt;2&gt;');
     expect(html).not.toContain('Dune <2>');
     expect(html).toContain('href="/u/ana/movie/1"');
-    expect(html.match(/href="\/u\/ana\/movie\/1"/g)?.length).toBe(4);
+    expect(html.match(/<a href="\/u\/ana\/movie\/1"><img/g)?.length).toBe(2);
     expect(html).toContain('/t/p/w342/dune.jpg');
   });
 
@@ -90,8 +106,28 @@ describe('renderHome', () => {
     expect(html).not.toContain('/movie/2"');
   });
 
+  it('shows the profile the user wrote and hides the about link without an about text', () => {
+    const custom = renderHome(
+      buildLibrary(
+        input({
+          profile: {
+            ...NO_PROFILE,
+            intro: 'Mi sitio',
+            description: 'Lo que veo',
+            avatar: `/api/images/${HASH_A}`,
+          },
+        }),
+      ),
+    );
+    expect(custom).toContain('<h2 class="author-name">Mi sitio</h2>');
+    expect(custom).toContain('<p class="author-bio">Lo que veo</p>');
+    expect(custom).toContain(`src="/u/ana/images/${HASH_A}"`);
+    expect(custom).not.toContain('Acerca de');
+    expect(html).not.toContain('Acerca de');
+  });
+
   it('says so when the library is empty', () => {
-    expect(renderHome(buildLibrary(input()))).toContain('Todavía no hay nada.');
+    expect(renderHome(buildLibrary(input()))).toContain('Aún no hay elementos completados.');
   });
 });
 
@@ -100,7 +136,10 @@ describe('renderDetail', () => {
     const html = renderDetail(library, 'movie', 1) as string;
     expect(html).toContain('<strong>obra</strong>');
     expect(html).toContain(`/u/ana/images/${HASH_A}`);
-    expect(html).toContain('7 · Obra Maestra');
+    expect(html).toContain(
+      '<div class="media-rating-badge" style="background: #a855f7; color: white">Obra Maestra</div>',
+    );
+    expect(html).toContain('<div class="page-content">');
     expect(html).toContain('https://www.themoviedb.org/movie/438631');
     expect(html).toContain('<meta name="robots" content="noindex">');
   });

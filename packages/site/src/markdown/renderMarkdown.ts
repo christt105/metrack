@@ -36,7 +36,7 @@ export function renderMarkdown(source: string, context: MarkdownContext): string
       blocks.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
     } else if (HEADING.test(line)) {
       const [, hashes = '#', text = ''] = HEADING.exec(line) ?? [];
-      const level = Math.min(hashes.length + 1, 6);
+      const level = Math.min(hashes.length + (context.headingOffset ?? 1), 6);
       blocks.push(`<h${level}>${inline(text.trim())}</h${level}>`);
       index++;
     } else if (RULE.test(line)) {

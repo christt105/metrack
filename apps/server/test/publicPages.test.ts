@@ -4,6 +4,7 @@ import type { Authenticator } from '../src/auth/Authenticator.js';
 import { emptyMovie, emptySeason, emptySeries } from '../src/media/emptyEntities.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
+import { EMPTY_PAGE } from './support/EMPTY_PAGE.js';
 import { createTestApi, type TestApi } from './support/createTestApi.js';
 import { pathFetch } from './support/pathFetch.js';
 import { solidImage } from './support/sampleImages.js';
@@ -55,10 +56,7 @@ async function addMovie(user: User, fields: Record<string, unknown>): Promise<nu
 
 describe('the public page settings', () => {
   it('start off, without a handle', async () => {
-    expect((await owner.get('/api/settings')).json().publicPage).toEqual({
-      handle: null,
-      enabled: false,
-    });
+    expect((await owner.get('/api/settings')).json().publicPage).toEqual(EMPTY_PAGE);
   });
 
   it('turn on with a handle, stored in lowercase', async () => {
@@ -66,8 +64,9 @@ describe('the public page settings', () => {
       handle: 'Christian',
       enabled: true,
     });
-    expect(response.json()).toEqual({ handle: 'christian', enabled: true });
+    expect(response.json()).toEqual({ ...EMPTY_PAGE, handle: 'christian', enabled: true });
     expect((await owner.get('/api/settings')).json().publicPage).toEqual({
+      ...EMPTY_PAGE,
       handle: 'christian',
       enabled: true,
     });
@@ -84,7 +83,7 @@ describe('the public page settings', () => {
     const response = await owner.patch('/api/settings/public-page', { handle: null });
     expect(response.json().code).toBe('handle_required');
     const off = await owner.patch('/api/settings/public-page', { handle: null, enabled: false });
-    expect(off.json()).toEqual({ handle: null, enabled: false });
+    expect(off.json()).toEqual(EMPTY_PAGE);
   });
 
   it.each(['ab', 'Bad_Name', 'with space', 'admin', 'a'.repeat(31)])(
@@ -108,7 +107,7 @@ describe('the public page settings', () => {
     await publish(OWNER, 'christian');
     await publish(OWNER, 'christian');
     const renamed = await owner.patch('/api/settings/public-page', { handle: 'chris' });
-    expect(renamed.json()).toEqual({ handle: 'chris', enabled: true });
+    expect(renamed.json()).toEqual({ ...EMPTY_PAGE, handle: 'chris', enabled: true });
     expect((await visitor('/u/christian/')).statusCode).toBe(404);
     expect((await visitor('/u/chris/')).statusCode).toBe(200);
   });
@@ -165,11 +164,15 @@ describe('the public routes', () => {
     expect((await visitor('/u/Christian')).statusCode).toBe(200);
   });
 
-  it('serve the stylesheet with noindex', async () => {
-    const response = await visitor('/u/assets/site.css');
-    expect(response.statusCode).toBe(200);
-    expect(response.headers['content-type']).toContain('text/css');
-    expect(response.headers['x-robots-tag']).toBe('noindex');
+  it('serve the theme files with noindex and nothing else under assets', async () => {
+    const css = await visitor('/u/assets/theme.css');
+    expect(css.statusCode).toBe(200);
+    expect(css.headers['content-type']).toContain('text/css');
+    expect(css.headers['x-robots-tag']).toBe('noindex');
+    const font = await visitor('/u/assets/fonts/Roboto/roboto-v30-latin-regular.woff2');
+    expect(font.statusCode).toBe(200);
+    expect(font.rawPayload.byteLength).toBeGreaterThan(10000);
+    expect((await visitor('/u/assets/missing.js')).statusCode).toBe(404);
   });
 
   it('keep every /api route closed', async () => {
@@ -191,12 +194,14 @@ describe('the public routes', () => {
       status: 'completed',
       finishedAt: '2026-03-05',
       rating: 6,
+      cover: TMDB_COVER,
       review: 'Muy **buena**',
     });
     const page = await visitor(`/u/christian/movie/${id}`);
     expect(page.statusCode).toBe(200);
     expect(page.body).toContain('<strong>buena</strong>');
     expect(page.body).toContain('Increíble');
+    expect(page.body).not.toContain('giscus');
     expect((await visitor(`/u/christian/movie/${id + 1}`)).statusCode).toBe(404);
     expect((await visitor(`/u/christian/film/${id}`)).statusCode).toBe(404);
     expect((await visitor('/u/christian/movie/abc')).statusCode).toBe(404);
@@ -242,7 +247,7 @@ describe('the public routes', () => {
   it('never show another user’s items', async () => {
     await publish(OWNER, 'christian');
     await publish(FRIEND, 'friend');
-    const mine = await addMovie(OWNER, { title: 'Mine' });
+    const mine = await addMovie(OWNER, { title: 'Mine', status: 'in_progress' });
     const theirs = await addMovie(FRIEND, {
       title: 'Theirs',
       status: 'completed',
@@ -251,6 +256,9 @@ describe('the public routes', () => {
     expect(mine).not.toBe(theirs);
     const home = await visitor('/u/christian/');
     expect(home.body).toContain('Mine');
+    const index = await visitor('/u/christian/index.json');
+    expect(index.body).toContain('Mine');
+    expect(index.body).not.toContain('Theirs');
     expect(home.body).not.toContain('Theirs');
     const feed = await visitor('/u/christian/feed.xml');
     expect(feed.body).not.toContain('Theirs');
@@ -378,5 +386,160 @@ describe('the public images', () => {
     expect((await visitor(`/u/christian/images/${cover}`)).statusCode).toBe(200);
     await owner.patch('/api/settings/public-page', { enabled: false });
     expect((await visitor(`/u/christian/images/${cover}`)).statusCode).toBe(404);
+  });
+});
+
+describe('the public page profile', () => {
+  const GISCUS = {
+    repo: 'ana/site',
+    repoId: 'R_1',
+    category: 'Announcements',
+    categoryId: 'DIC_1',
+  };
+
+  it('stores the texts, trims them and clears them with null or an empty string', async () => {
+    await publish(OWNER, 'christian');
+    const saved = await owner.patch('/api/settings/public-page', {
+      intro: '  Mi sitio ',
+      description: 'Lo que veo',
+      about: '## Sobre mí',
+    });
+    expect(saved.json()).toMatchObject({
+      intro: 'Mi sitio',
+      description: 'Lo que veo',
+      about: '## Sobre mí',
+      handle: 'christian',
+      enabled: true,
+    });
+    const cleared = await owner.patch('/api/settings/public-page', { intro: '', about: null });
+    expect(cleared.json()).toMatchObject({ intro: null, description: 'Lo que veo', about: null });
+  });
+
+  it('refuse texts that are too long', async () => {
+    const response = await owner.patch('/api/settings/public-page', { intro: 'x'.repeat(101) });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().code).toBe('invalid_public_page');
+  });
+
+  it('show the intro, the description and the default avatar on the home', async () => {
+    await publish(OWNER, 'christian');
+    await owner.patch('/api/settings/public-page', {
+      intro: 'Mi sitio',
+      description: 'Lo que veo',
+    });
+    const home = (await visitor('/u/christian/')).body;
+    expect(home).toContain('<h2 class="author-name">Mi sitio</h2>');
+    expect(home).toContain('<p class="author-bio">Lo que veo</p>');
+    expect(home).toContain('src="/u/assets/default-avatar.svg"');
+    expect((await visitor('/u/assets/default-avatar.svg')).statusCode).toBe(200);
+  });
+
+  it('keeps the about page and its menu entry out until there is a text', async () => {
+    await publish(OWNER, 'christian');
+    expect((await visitor('/u/christian/about/')).statusCode).toBe(404);
+    expect((await visitor('/u/christian/')).body).not.toContain('Acerca de');
+    await owner.patch('/api/settings/public-page', { about: 'Un **texto**' });
+    const about = await visitor('/u/christian/about/');
+    expect(about.statusCode).toBe(200);
+    expect(about.body).toContain('<strong>texto</strong>');
+    expect((await visitor('/u/christian/')).body).toContain('href="/u/christian/about/"');
+    expect((await visitor('/u/nobody/about/')).statusCode).toBe(404);
+  });
+
+  it('serve the stats, the collage and the index only on an enabled page', async () => {
+    await publish(OWNER, 'christian');
+    await addMovie(OWNER, { title: 'Dune', status: 'completed', finishedAt: '2026-03-05' });
+    expect((await visitor('/u/christian/stats/')).body).toContain('Estadísticas');
+    expect((await visitor('/u/christian/collage')).body).toContain('collage-canvas');
+    const index = await visitor('/u/christian/index.json');
+    expect(index.headers['content-type']).toContain('application/json');
+    expect(JSON.parse(index.body)).toHaveLength(1);
+    await owner.patch('/api/settings/public-page', { enabled: false });
+    for (const path of ['stats/', 'collage/', 'index.json']) {
+      expect((await visitor(`/u/christian/${path}`)).statusCode).toBe(404);
+    }
+  });
+
+  it('leaves pending items out of the index', async () => {
+    await publish(OWNER, 'christian');
+    await addMovie(OWNER, { title: 'Visible', status: 'completed', finishedAt: '2026-03-05' });
+    await addMovie(OWNER, {
+      title: 'Secret viewing',
+      status: 'completed',
+      finishedAt: '2026-04-01',
+      pendingReview: true,
+    });
+    const index = (await visitor('/u/christian/index.json')).body;
+    expect(index).toContain('Visible');
+    expect(index).not.toContain('Secret viewing');
+    expect((await visitor('/u/christian/stats/')).body).not.toContain('Secret viewing');
+  });
+
+  it('keep comments off until all four giscus values are set, then use them on item pages', async () => {
+    await publish(OWNER, 'christian');
+    const id = await addMovie(OWNER, {
+      title: 'Dune',
+      status: 'completed',
+      finishedAt: '2026-03-05',
+    });
+    expect((await visitor(`/u/christian/movie/${id}`)).body).not.toContain('giscus');
+    const partial = await owner.patch('/api/settings/public-page', {
+      giscus: { ...GISCUS, categoryId: '' },
+    });
+    expect(partial.statusCode).toBe(400);
+    expect(partial.json().code).toBe('invalid_giscus');
+    const badRepo = await owner.patch('/api/settings/public-page', {
+      giscus: { ...GISCUS, repo: 'not a repo' },
+    });
+    expect(badRepo.json().code).toBe('invalid_giscus');
+    expect(
+      (await owner.patch('/api/settings/public-page', { giscus: GISCUS })).json().giscus,
+    ).toEqual(GISCUS);
+    const page = (await visitor(`/u/christian/movie/${id}`)).body;
+    expect(page).toContain('data-repo="ana/site"');
+    expect((await visitor('/u/christian/')).body).not.toContain('giscus');
+    await owner.patch('/api/settings/public-page', { giscus: null });
+    expect((await visitor(`/u/christian/movie/${id}`)).body).not.toContain('giscus');
+  });
+
+  describe('avatar', () => {
+    const upload = async (userId: number, shade: number) =>
+      api.store.upload(
+        new Uint8Array(await solidImage(30, 30, 'png', { r: shade, g: 40, b: 90 })),
+        userId,
+      );
+
+    it('is served to anyone while it is the avatar, and only then', async () => {
+      await publish(OWNER, 'christian');
+      const image = await upload(OWNER.id, 20);
+      const hash = image.ref.slice('/api/images/'.length);
+      expect((await visitor(`/u/christian/images/${hash}`)).statusCode).toBe(404);
+      const saved = await owner.patch('/api/settings/public-page', { avatar: image.ref });
+      expect(saved.json().avatar).toBe(image.ref);
+      expect((await visitor('/u/christian/')).body).toContain(`src="/u/christian/images/${hash}"`);
+      expect((await visitor(`/u/christian/images/${hash}`)).statusCode).toBe(200);
+      expect((await visitor(`/u/friend/images/${hash}`)).statusCode).toBe(404);
+      await owner.patch('/api/settings/public-page', { avatar: null });
+      expect((await visitor(`/u/christian/images/${hash}`)).statusCode).toBe(404);
+    });
+
+    it('must be an image the user can read', async () => {
+      const theirs = await upload(OWNER.id, 21);
+      for (const avatar of ['https://example.org/a.png', `/api/images/${'a'.repeat(64)}`]) {
+        const response = await friend.patch('/api/settings/public-page', { avatar });
+        expect(response.statusCode).toBe(400);
+        expect(response.json().code).toBe('invalid_avatar');
+      }
+      const stolen = await friend.patch('/api/settings/public-page', { avatar: theirs.ref });
+      expect(stolen.json().code).toBe('invalid_avatar');
+    });
+
+    it('is not shown on a page that is off', async () => {
+      await publish(OWNER, 'christian');
+      const image = await upload(OWNER.id, 22);
+      await owner.patch('/api/settings/public-page', { avatar: image.ref, enabled: false });
+      const hash = image.ref.slice('/api/images/'.length);
+      expect((await visitor(`/u/christian/images/${hash}`)).statusCode).toBe(404);
+    });
   });
 });

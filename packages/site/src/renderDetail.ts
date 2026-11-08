@@ -1,23 +1,30 @@
-import { escapeHtml, statusKey } from '@metrack/export';
+import { escapeHtml } from '@metrack/export';
+import { entryStatus } from './entryStatus.js';
 import { findEntry } from './findEntry.js';
 import { formatDate } from './formatDate.js';
 import { imageSrc } from './imageSrc.js';
-import { KIND_LABELS, STATUS_LABELS } from './labels.js';
+import { STATUS_LABELS, TYPE_LABELS } from './labels.js';
 import type { Library } from './Library.js';
+import { ownerName } from './ownerName.js';
+import { platformIcon } from './platformIcon.js';
 import type { PublicEntry } from './PublicEntry.js';
 import type { PublicKind } from './PublicKind.js';
 import { ratingTheme } from './ratingTheme.js';
 import { renderCard } from './renderCard.js';
+import { renderComments } from './renderComments.js';
 import { renderLayout } from './renderLayout.js';
 import { reviewHtml } from './reviewHtml.js';
+import { homePath } from './sitePaths.js';
+import { themeType } from './themeType.js';
 
-function badges(entry: PublicEntry): string {
-  const key = statusKey(entry.status);
-  const parts = [
-    `<span class="meta-item status-badge type-${entry.kind}">${KIND_LABELS[entry.kind]}</span>`,
-  ];
-  if (entry.finishedAt !== null && key === 'finished') {
-    parts.push(`<span class="meta-item">${escapeHtml(formatDate(entry.finishedAt))}</span>`);
+function meta(entry: PublicEntry): string {
+  const type = themeType(entry.kind);
+  const status = entryStatus(entry);
+  const parts = [`<span class="meta-item status-badge type-${type}">${TYPE_LABELS[type]}</span>`];
+  if (entry.finishedAt !== null) {
+    parts.push(
+      `<span class="meta-item"><span class="icon">📅</span> ${escapeHtml(formatDate(entry.finishedAt))}</span>`,
+    );
   }
   if (entry.developer !== null) {
     parts.push(
@@ -30,50 +37,68 @@ function badges(entry: PublicEntry): string {
     );
   }
   if (entry.kind !== 'series') {
-    parts.push(`<span class="meta-item status-badge ${key}">${STATUS_LABELS[key]}</span>`);
-  }
-  if (entry.rating !== null && key === 'finished') {
-    const theme = ratingTheme(entry.rating);
     parts.push(
-      `<span class="meta-item status-badge" style="background: ${theme.color}">${entry.rating} · ${escapeHtml(theme.label)}</span>`,
+      `<span class="meta-item status-badge ${status}">${STATUS_LABELS[status] ?? status}</span>`,
     );
   }
-  return parts.join('');
+  return `<div class="media-meta">${parts.join('')}</div>`;
 }
 
-function taxonomies(entry: PublicEntry): string {
-  const platforms = entry.platforms.map(
-    (name) => `<span class="platform-badge">${escapeHtml(name)}</span>`,
-  );
-  const tags = entry.tags.map((tag) => `<span class="tag-link">#${escapeHtml(tag)}</span>`);
+function taxonomies(library: Library, entry: PublicEntry): string {
+  const home = homePath(library.handle);
   const external =
     entry.externalUrl === null
       ? ''
-      : `<a class="external-link" href="${escapeHtml(entry.externalUrl)}" rel="noopener noreferrer">${escapeHtml(entry.externalLabel ?? '')}</a>`;
-  return [
-    external === '' ? '' : `<div class="media-external-links">${external}</div>`,
-    platforms.length === 0 ? '' : `<div class="taxonomy-group">${platforms.join('')}</div>`,
-    tags.length === 0 ? '' : `<div class="taxonomy-group">${tags.join('')}</div>`,
+      : `<a href="${escapeHtml(entry.externalUrl)}" target="_blank" rel="noopener noreferrer" class="external-link">${escapeHtml(entry.externalLabel ?? '')}</a>`;
+  const platforms = entry.platforms.map(
+    (name) =>
+      `<a href="${escapeHtml(`${home}?platform=${encodeURIComponent(name.toLowerCase())}`)}" class="platform-badge"><i class="${platformIcon(name)}"></i> ${escapeHtml(name)}</a>`,
+  );
+  const tags = entry.tags.map(
+    (tag) =>
+      `<a href="${escapeHtml(`${home}?tag=${encodeURIComponent(tag.toLowerCase())}`)}" class="tag-link">#${escapeHtml(tag)}</a>`,
+  );
+  const groups = [
+    platforms.length === 0
+      ? ''
+      : `<div class="taxonomy-group platforms-list">${platforms.join('')}</div>`,
+    tags.length === 0 ? '' : `<div class="taxonomy-group tags-list">${tags.join('')}</div>`,
   ].join('');
+  return `<div class="media-external-links">${external}</div><div class="media-taxonomies">${groups}</div>`;
 }
 
 function rewatches(entry: PublicEntry): string {
   if (entry.rewatches.length === 0) return '';
   const items = entry.rewatches.map((date) => `<li>${escapeHtml(formatDate(date))}</li>`).join('');
-  return `<div class="media-rewatches"><strong>Revisionados:</strong><ul>${items}</ul></div>`;
+  return `<div class="media-rewatches"><strong>Rewatches:</strong><ul>${items}</ul></div>`;
+}
+
+function ratingBadge(entry: PublicEntry): string {
+  if (entry.rating === null) return '';
+  const theme = ratingTheme(entry.rating);
+  return `<div class="media-rating-badge" style="background: ${theme.color}; color: white">${escapeHtml(theme.label)}</div>`;
 }
 
 function header(library: Library, entry: PublicEntry): string {
   const banner = imageSrc(entry.banner, library.handle, 'banner');
   const cover = imageSrc(entry.cover, library.handle, 'cover');
-  const rated = entry.rating !== null && statusKey(entry.status) === 'finished';
-  const coverHtml =
+  const rated = entry.rating !== null;
+  const title = escapeHtml(entry.title);
+  const coverImage =
+    cover === null ? '' : `<img src="${escapeHtml(cover)}" alt="${title}">${ratingBadge(entry)}`;
+  const details = `<h1 class="header-title">${title}</h1>${meta(entry)}`;
+  if (banner === null) {
+    const simpleCover =
+      cover === null
+        ? ''
+        : `<div class="media-simple-cover${rated ? ' has-rating' : ''}">${coverImage}</div>`;
+    return `<header class="header media-simple-header">${simpleCover}<div class="media-simple-details">${details}${taxonomies(library, entry)}${rewatches(entry)}</div></header>`;
+  }
+  const bannerCover =
     cover === null
       ? ''
-      : `<div class="media-cover${rated ? ' has-rating' : ''}"><img src="${escapeHtml(cover)}" alt="${escapeHtml(entry.title)}"></div>`;
-  const details = `<div class="media-details"><h1 class="header-title">${escapeHtml(entry.title)}</h1><div class="media-meta">${badges(entry)}</div>${taxonomies(entry)}${rewatches(entry)}</div>`;
-  if (banner === null) return `<header class="media-simple-header">${coverHtml}${details}</header>`;
-  return `<div class="media-header"><div class="banner-container"><img src="${escapeHtml(banner)}" class="media-banner-img" alt=""><div class="banner-gradient-mask"></div></div><div class="media-info-container">${coverHtml}${details}</div></div>`;
+      : `<div class="media-cover${rated ? ' has-rating' : ''}">${coverImage}</div>`;
+  return `<div class="media-header"><div class="banner-container"><img src="${escapeHtml(banner)}" class="media-banner-img" alt="Banner" loading="lazy"><div class="banner-gradient-mask"></div></div><div class="media-info-container">${bannerCover}<div class="media-details">${details}${taxonomies(library, entry)}${rewatches(entry)}</div></div></div>`;
 }
 
 function relations(library: Library, entry: PublicEntry): string {
@@ -83,12 +108,12 @@ function relations(library: Library, entry: PublicEntry): string {
     const cards = seasons
       .map((season) => renderCard(library.handle, season, season.finishedAt))
       .join('');
-    return `<section class="media-relations"><h3 class="media-relations-title">Temporadas</h3><div class="media-grid">${cards}</div></section>`;
+    return `<section class="media-relations"><h3 class="media-relations-title">Temporadas</h3><div class="media-grid media-grid-relations">${cards}</div></section>`;
   }
   if (entry.kind === 'season' && entry.seriesId !== null) {
     const series = findEntry(library, 'series', entry.seriesId);
     if (series) {
-      return `<section class="media-relations"><h3 class="media-relations-title">Serie</h3><div class="media-grid media-grid-single">${renderCard(library.handle, series, null)}</div></section>`;
+      return `<section class="media-relations"><h3 class="media-relations-title">Serie</h3><div class="media-grid-single">${renderCard(library.handle, series, series.finishedAt)}</div></section>`;
     }
   }
   return '';
@@ -98,15 +123,18 @@ function relations(library: Library, entry: PublicEntry): string {
 export function renderDetail(library: Library, kind: PublicKind, id: number): string | null {
   const entry = findEntry(library, kind, id);
   if (!entry) return null;
+  const overview =
+    entry.overview === null || entry.overview.trim() === '' ? null : escapeHtml(entry.overview);
   const synopsis =
-    entry.overview === null || entry.overview.trim() === ''
+    overview === null
       ? ''
-      : `<details class="media-synopsis"><summary><span class="synopsis-label">Sinopsis</span></summary><p class="synopsis-full">${escapeHtml(entry.overview)}</p></details>`;
-  const review = reviewHtml(library, entry);
-  const body = `<main aria-label="Contenido"><article>${header(library, entry)}${synopsis}${review === '' ? '' : `<div class="page-content review">${review}</div>`}${relations(library, entry)}</article></main>`;
+      : `<details class="media-synopsis"><summary><i class="fas fa-chevron-right synopsis-caret" aria-hidden="true"></i> <span class="synopsis-label">Sinopsis</span> <span class="synopsis-preview">${overview}</span></summary><p class="synopsis-full">${overview}</p></details>`;
+  const page = `<div class="wrapper post"><main class="page-content" aria-label="Content"><article>${header(library, entry)}${synopsis}<div class="page-content">${reviewHtml(library, entry)}</div>${relations(library, entry)}</article>${renderComments(library)}</main></div>`;
   return renderLayout({
-    title: `${entry.title} · @${library.handle}`,
-    handle: library.handle,
-    body,
+    library,
+    title: `${entry.title} | ${ownerName(library)}`,
+    description: entry.overview ?? undefined,
+    active: null,
+    page,
   });
 }

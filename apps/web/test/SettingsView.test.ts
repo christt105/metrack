@@ -1,3 +1,4 @@
+import { EMPTY_PAGE } from './EMPTY_PAGE';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import SettingsView from '../src/views/SettingsView.vue';
@@ -34,7 +35,7 @@ function ownerApi() {
   return {
     ownSettings: vi.fn().mockResolvedValue({
       settings: ownerSettings,
-      publicPage: { handle: null, enabled: false },
+      publicPage: EMPTY_PAGE,
       owner: true,
     } satisfies OwnSettings),
     listUsers: vi.fn().mockResolvedValue([
@@ -198,7 +199,7 @@ describe('SettingsView user settings', () => {
       health: vi.fn().mockResolvedValue(health),
       ownSettings: vi.fn().mockResolvedValue({
         settings: { ...noSettings, jellyfinUser: 'haku' },
-        publicPage: { handle: null, enabled: false },
+        publicPage: EMPTY_PAGE,
         owner: false,
       } satisfies OwnSettings),
       listBackups,
@@ -287,7 +288,7 @@ describe('SettingsView images', () => {
       health: vi.fn().mockResolvedValue(health),
       ownSettings: vi.fn().mockResolvedValue({
         settings: noSettings,
-        publicPage: { handle: null, enabled: false },
+        publicPage: EMPTY_PAGE,
         owner: false,
       } satisfies OwnSettings),
       imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: 209_715_200 }),
@@ -301,7 +302,7 @@ describe('SettingsView images', () => {
       health: vi.fn().mockResolvedValue(health),
       ownSettings: vi.fn().mockResolvedValue({
         settings: noSettings,
-        publicPage: { handle: null, enabled: false },
+        publicPage: EMPTY_PAGE,
         owner: false,
       } satisfies OwnSettings),
       imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: null }),
