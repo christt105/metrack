@@ -14,7 +14,7 @@ let users: SqliteUserRepository;
 
 /** Signs each request in as the stored user named by the `x-test-user` header, with their current role. */
 const byHeader: Authenticator = {
-  userFor: async (headers) => users.get(Number(headers['x-test-user'])),
+  userFor: async (headers) => users.get(Number(headers.get('x-test-user'))),
 };
 
 beforeEach(async () => {

@@ -1,31 +1,25 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { jsonResponse } from './jsonResponse.js';
+import { noContent } from './noContent.js';
 import type { ImageUsage, UploadedImage } from '@metrack/domain';
+import { bytesBody } from './bytesBody.js';
 import { ApiError } from './ApiError.js';
 import { requireUser } from './requireUser.js';
 import { isImageHash } from '../images/imageRef.js';
 import type { ImageStore } from '../images/ImageStore.js';
-import './fastifyTypes.js';
 
 const UPLOAD_TYPES = /^(image\/[a-z0-9.+-]+|application\/octet-stream)$/i;
 
-export function registerImageRoutes(app: FastifyInstance, images: ImageStore): void {
-  app.addContentTypeParser(UPLOAD_TYPES, { parseAs: 'buffer' }, (_request, body, done) => {
-    done(null, body);
-  });
-
-  app.post<{ Body: Buffer }>(
+export function registerImageRoutes(routes: ApiRoutes, images: ImageStore): void {
+  routes.post<{ Body: Uint8Array | undefined }>(
     '/api/images',
-    { bodyLimit: images.maxUploadBytes, config: { trustedOnly: true } },
-    async (request, reply) => {
-      if (!Buffer.isBuffer(request.body) || request.body.byteLength === 0) {
+    { bodyLimit: images.maxUploadBytes, rawBodyTypes: UPLOAD_TYPES, config: { trustedOnly: true } },
+    async (request) => {
+      if (!(request.body instanceof Uint8Array) || request.body.byteLength === 0) {
         throw ApiError.badRequest('unsupported_image', 'Send the image file as the request body');
       }
       const user = requireUser(request.user);
-      const image = await images.upload(
-        new Uint8Array(request.body),
-        user.id,
-        user.role === 'owner',
-      );
+      const image = await images.upload(request.body, user.id, user.role === 'owner');
       const uploaded: UploadedImage = {
         ref: image.ref,
         mimeType: image.mimeType,
@@ -34,39 +28,41 @@ export function registerImageRoutes(app: FastifyInstance, images: ImageStore): v
         byteSize: image.byteSize,
         usage: await images.usage(user.id, user.role === 'owner'),
       };
-      return reply.code(201).send(uploaded);
+      return jsonResponse(uploaded, 201);
     },
   );
 
-  app.get('/api/images/usage', async (request): Promise<ImageUsage> => {
+  routes.get('/api/images/usage', async (request): Promise<ImageUsage> => {
     const user = requireUser(request.user);
     return images.usage(user.id, user.role === 'owner');
   });
 
-  app.get<{ Params: { hash: string } }>('/api/images/:hash', async (request, reply) => {
+  routes.get<{ Params: { hash: string } }>('/api/images/:hash', async (request) => {
     const { hash } = request.params;
     const image = isImageHash(hash) ? await images.get(hash) : undefined;
     if (!image || !(await images.canRead(hash, requireUser(request.user)))) {
       throw ApiError.notFound();
     }
-    return reply
-      .header('Content-Type', image.mimeType)
-      .header('Cache-Control', 'private, max-age=31536000, immutable')
-      .send(await images.read(image));
+    return new Response(bytesBody(await images.read(image)), {
+      headers: {
+        'Content-Type': image.mimeType,
+        'Cache-Control': 'private, max-age=31536000, immutable',
+      },
+    });
   });
 
-  app.delete<{ Params: { hash: string } }>(
+  routes.delete<{ Params: { hash: string } }>(
     '/api/images/:hash',
     { config: { ownerOnly: true } },
-    async (request, reply) => {
+    async (request) => {
       const removed =
         isImageHash(request.params.hash) && (await images.delete(request.params.hash));
       if (!removed) throw ApiError.notFound();
-      return reply.code(204).send();
+      return noContent();
     },
   );
 
-  app.post('/api/images/cleanup', { config: { ownerOnly: true } }, async () => ({
+  routes.post('/api/images/cleanup', { config: { ownerOnly: true } }, async () => ({
     removed: await images.cleanOrphans(),
   }));
 }

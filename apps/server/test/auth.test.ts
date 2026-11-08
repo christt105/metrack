@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { readCookie } from '../src/auth/readCookie.js';
 import { SessionCookieAuthenticator } from '../src/auth/SessionCookieAuthenticator.js';
 import { SessionService } from '../src/auth/SessionService.js';
@@ -33,7 +33,7 @@ async function setup(devLogin = true) {
     { info: () => {}, error: () => {} },
     new FakeScheduler(),
   );
-  const app = await buildApp({
+  const app = buildTestApp({
     appVersion: 'test',
     migrationRunner: new MigrationRunner(db, migrations),
     authenticator: new SessionCookieAuthenticator(sessions),

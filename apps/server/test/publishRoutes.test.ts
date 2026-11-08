@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { createImageStore } from '../src/images/createImageStore.js';
 import { PublishQueue } from '../src/publish/PublishQueue.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
@@ -24,7 +24,7 @@ async function setup() {
     { info: () => {}, error: () => {} },
     scheduler,
   );
-  const app = await buildApp({
+  const app = buildTestApp({
     appVersion: 'test',
     authenticator: signedInAs(),
     scope: OWNER_SCOPE,

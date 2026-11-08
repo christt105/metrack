@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { createImageStore } from '../src/images/createImageStore.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
@@ -17,7 +17,7 @@ async function setup() {
     db,
     join(mkdtempSync(join(tmpdir(), 'metrack-routes-')), 'images'),
   );
-  const app = await buildApp({
+  const app = buildTestApp({
     appVersion: 'test',
     authenticator: signedInAs(),
     scope: OWNER_SCOPE,

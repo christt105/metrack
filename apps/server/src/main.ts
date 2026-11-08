@@ -1,5 +1,8 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { serve } from '@hono/node-server';
 import { buildApp } from './api/buildApp.js';
+import { DiskStaticFiles } from './web/DiskStaticFiles.js';
 import { ApiTokenService } from './auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from './auth/SessionCookieAuthenticator.js';
 import { SessionService } from './auth/SessionService.js';
@@ -219,7 +222,7 @@ const accountDeletion = new AccountDeletionService(
 const accountScheduler = new AccountDeletionScheduler(accountDeletion, logger);
 
 const sessions = new SessionService(repositories.sessions, repositories.users);
-const app = await buildApp({
+const app = buildApp({
   appVersion: config.appVersion,
   migrationRunner,
   authenticator: new SessionCookieAuthenticator(sessions),
@@ -227,7 +230,7 @@ const app = await buildApp({
   auth: { sessions, users: repositories.users, devLogin: config.devLogin },
   tokens: new ApiTokenService(repositories.apiTokens, repositories.users),
   logger,
-  webDir: config.webDir,
+  web: existsSync(config.webDir) ? new DiskStaticFiles(config.webDir) : undefined,
   imageStore,
   metadataCache,
   publishQueues,
@@ -266,7 +269,8 @@ const shutdown = async (): Promise<void> => {
   scheduler.stop();
   accountScheduler.stop();
   releaseScheduler?.stop();
-  await app.close();
+  server.close();
+  if ('closeIdleConnections' in server) server.closeIdleConnections();
   await jellystatPool?.end();
   db.close();
   process.exit(0);
@@ -274,7 +278,7 @@ const shutdown = async (): Promise<void> => {
 process.on('SIGTERM', () => void shutdown());
 process.on('SIGINT', () => void shutdown());
 
-await app.listen({ port: config.port, host: config.host });
+const server = serve({ fetch: app.fetch, port: config.port, hostname: config.host });
 if (config.backup.enabled) {
   scheduler.start();
 }

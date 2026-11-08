@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
 import { MEDIA_TYPES, type MediaType, type RefreshResult } from '@metrack/domain';
 import type { MediaEditor } from '../media/MediaEditor.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
@@ -13,11 +13,11 @@ const params = {
 
 /** Forces a provider refresh of one entity. Fields edited by hand are kept. */
 export function registerMetadataRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   cache: MetadataCache,
   editor?: MediaEditor,
 ): void {
-  app.post<{ Params: { type: MediaType; id: number } }>(
+  routes.post<{ Params: { type: MediaType; id: number } }>(
     '/api/metadata/:type/:id/refresh',
     { schema: { params } },
     async (request): Promise<RefreshResult> => {

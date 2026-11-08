@@ -1,5 +1,4 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import type { FastifyRequest } from 'fastify';
 
 export const WEBHOOK_SECRET_HEADER = 'x-webhook-secret';
 export const WEBHOOK_SECRET_QUERY = 'token';
@@ -15,21 +14,11 @@ export class WebhookSecret {
     this.digest = hash(secret);
   }
 
-  matches(request: FastifyRequest): boolean {
-    const presented = fromHeader(request) ?? fromQuery(request);
+  matches(headers: Headers, url: URL): boolean {
+    const presented =
+      headers.get(WEBHOOK_SECRET_HEADER) ?? url.searchParams.get(WEBHOOK_SECRET_QUERY) ?? undefined;
     return presented !== undefined && timingSafeEqual(hash(presented), this.digest);
   }
-}
-
-function fromHeader(request: FastifyRequest): string | undefined {
-  const value = request.headers[WEBHOOK_SECRET_HEADER];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function fromQuery(request: FastifyRequest): string | undefined {
-  const query = request.query as Record<string, unknown> | undefined;
-  const value = query?.[WEBHOOK_SECRET_QUERY];
-  return typeof value === 'string' ? value : undefined;
 }
 
 function hash(value: string): Buffer {

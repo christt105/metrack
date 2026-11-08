@@ -1,10 +1,11 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { jsonResponse } from './jsonResponse.js';
+import type { RouteRequest } from './RouteRequest.js';
 import type { DevLoginRequest } from '@metrack/domain';
 import { readCookie } from '../auth/readCookie.js';
 import { clearedSessionCookie, SESSION_COOKIE, sessionCookie } from '../auth/sessionCookie.js';
 import { ApiError } from './ApiError.js';
 import type { AuthRouteDeps } from './AuthRouteDeps.js';
-import './fastifyTypes.js';
 
 const devLoginBody = {
   type: 'object',
@@ -18,36 +19,36 @@ const devLoginBody = {
  * login on, `GET /api/auth/dev-users` lists who can sign in and `POST /api/auth/dev-login` signs in as
  * any of them; with it off, both routes do not exist.
  */
-export function registerAuthRoutes(app: FastifyInstance, deps: AuthRouteDeps): void {
-  app.get('/api/auth/me', async (request) => request.user);
+export function registerAuthRoutes(routes: ApiRoutes, deps: AuthRouteDeps): void {
+  routes.get('/api/auth/me', async (request) => request.user);
 
-  app.post('/api/auth/logout', { config: { public: true } }, async (request, reply) => {
-    const token = readCookie(request.headers.cookie, SESSION_COOKIE);
+  routes.post('/api/auth/logout', { config: { public: true } }, async (request) => {
+    const token = readCookie(request.headers.get('cookie') ?? undefined, SESSION_COOKIE);
     if (token !== undefined) await deps.sessions.end(token);
-    return reply
-      .header('set-cookie', clearedSessionCookie(isHttps(request)))
-      .code(204)
-      .send();
+    return new Response(null, {
+      status: 204,
+      headers: { 'set-cookie': clearedSessionCookie(isHttps(request)) },
+    });
   });
 
   if (!deps.devLogin) return;
 
-  app.get('/api/auth/dev-users', { config: { public: true } }, async () => deps.users.list());
+  routes.get('/api/auth/dev-users', { config: { public: true } }, async () => deps.users.list());
 
-  app.post<{ Body: DevLoginRequest }>(
+  routes.post<{ Body: DevLoginRequest }>(
     '/api/auth/dev-login',
     { config: { public: true }, schema: { body: devLoginBody } },
-    async (request, reply) => {
+    async (request) => {
       const user = await deps.users.get(request.body.userId);
       if (!user) throw ApiError.notFound('That user does not exist');
       const { token, expiresAt } = await deps.sessions.start(user.id);
-      return reply
-        .header('set-cookie', sessionCookie(token, expiresAt, isHttps(request)))
-        .send(user);
+      const response = jsonResponse(user);
+      response.headers.set('set-cookie', sessionCookie(token, expiresAt, isHttps(request)));
+      return response;
     },
   );
 }
 
-function isHttps(request: FastifyRequest): boolean {
-  return request.protocol === 'https';
+function isHttps(request: RouteRequest): boolean {
+  return request.url.protocol === 'https:';
 }

@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
-import type { FastifyInstance } from 'fastify';
+import type { TestApp } from './support/TestApp.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { User } from '@metrack/domain';
 import type { Authenticator } from '../src/auth/Authenticator.js';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
@@ -18,11 +18,12 @@ const OWNER: User = { id: OWNER_ID, name: 'Owner', email: null, role: 'owner' };
 const FRIEND: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 
 const byHeader: Authenticator = {
-  userFor: async (headers) => [OWNER, FRIEND].find((u) => u.id === Number(headers['x-test-user'])),
+  userFor: async (headers) =>
+    [OWNER, FRIEND].find((u) => u.id === Number(headers.get('x-test-user'))),
 };
 
 let settings: SqliteUserSettingsRepository;
-let app: FastifyInstance;
+let app: TestApp;
 
 beforeEach(async () => {
   const db = new DatabaseSync(':memory:');
@@ -36,7 +37,7 @@ beforeEach(async () => {
     jellyfinUser: 'admin',
     mirrorDir: '/vault/Media Tracker',
   });
-  app = await buildApp({
+  app = buildTestApp({
     appVersion: 'test',
     authenticator: byHeader,
     scope: new AsyncUserScope(),

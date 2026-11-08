@@ -1,4 +1,6 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { jsonResponse } from './jsonResponse.js';
+import { noContent } from './noContent.js';
 import {
   COLLECTIONS,
   MEDIA_SORT_FIELDS,
@@ -35,54 +37,50 @@ const dateBody = {
 
 /** Combined list plus read, create, edit and delete for every entity collection. */
 export function registerMediaRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   editor: MediaEditor,
   catalog: MediaCatalog,
 ): void {
-  app.get<{ Querystring: MediaQuery }>(
+  routes.get<{ Querystring: MediaQuery }>(
     '/api/media',
     { schema: { querystring: listQuery } },
     async (request) => catalog.list(request.query),
   );
 
-  for (const collection of COLLECTIONS) registerCollection(app, editor, collection);
+  for (const collection of COLLECTIONS) registerCollection(routes, editor, collection);
 }
 
-function registerCollection(
-  app: FastifyInstance,
-  editor: MediaEditor,
-  collection: Collection,
-): void {
+function registerCollection(routes: ApiRoutes, editor: MediaEditor, collection: Collection): void {
   const base = `/api/${collection}`;
 
-  app.get<{ Params: { id: number } }>(
+  routes.get<{ Params: { id: number } }>(
     `${base}/:id`,
     { schema: { params: idParams } },
     async (request) => editor.detail(collection, request.params.id),
   );
 
-  app.post<{ Body: Record<string, unknown> }>(
+  routes.post<{ Body: Record<string, unknown> }>(
     base,
     { config: { trustedOnly: true }, schema: { body: createBody(collection) } },
-    async (request, reply) => reply.code(201).send(await editor.create(collection, request.body)),
+    async (request) => jsonResponse(await editor.create(collection, request.body), 201),
   );
 
-  app.patch<{ Params: { id: number }; Body: Record<string, unknown> }>(
+  routes.patch<{ Params: { id: number }; Body: Record<string, unknown> }>(
     `${base}/:id`,
     { schema: { params: idParams, body: patchBody(collection) } },
     async (request) => editor.patch(collection, request.params.id, request.body),
   );
 
-  app.delete<{ Params: { id: number } }>(
+  routes.delete<{ Params: { id: number } }>(
     `${base}/:id`,
     { schema: { params: idParams } },
-    async (request, reply) => {
+    async (request) => {
       await editor.remove(collection, request.params.id);
-      return reply.code(204).send();
+      return noContent();
     },
   );
 
-  app.delete<{ Params: { id: number; field: string } }>(
+  routes.delete<{ Params: { id: number; field: string } }>(
     `${base}/:id/edited/:field`,
     {
       schema: {
@@ -94,16 +92,14 @@ function registerCollection(
 
   if (!editor.kind(collection).trackable) return;
 
-  app.post<{ Params: { id: number }; Body: RewatchRequest }>(
+  routes.post<{ Params: { id: number }; Body: RewatchRequest }>(
     `${base}/:id/rewatches`,
     { schema: { params: idParams, body: dateBody } },
-    async (request, reply) =>
-      reply
-        .code(201)
-        .send(await editor.addRewatch(collection, request.params.id, request.body.date)),
+    async (request) =>
+      jsonResponse(await editor.addRewatch(collection, request.params.id, request.body.date), 201),
   );
 
-  app.delete<{ Params: { id: number; date: string } }>(
+  routes.delete<{ Params: { id: number; date: string } }>(
     `${base}/:id/rewatches/:date`,
     {
       schema: {

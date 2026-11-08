@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { ApiError } from '../src/api/ApiError.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
@@ -11,7 +11,7 @@ async function setup() {
   const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
   runner.run();
   const errors: string[] = [];
-  const app = await buildApp({
+  const app = buildTestApp({
     appVersion: 'test',
     authenticator: signedInAs(),
     scope: OWNER_SCOPE,

@@ -1,4 +1,5 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { noContent } from './noContent.js';
 import type { ReleaseAlertRepository } from '../storage/repositories/ReleaseAlertRepository.js';
 import type { WatchCollection, WatchlistService } from '../alerts/WatchlistService.js';
 
@@ -21,31 +22,31 @@ const alertsQuery = {
  * follow and unfollow, and `GET /api/alerts` lists the alerts already sent, newest first.
  */
 export function registerWatchlistRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   watchlist: WatchlistService,
   alerts: ReleaseAlertRepository,
 ): void {
-  app.get('/api/watchlist', async () => watchlist.list());
+  routes.get('/api/watchlist', async () => watchlist.list());
 
-  app.put<{ Params: { collection: WatchCollection; id: number } }>(
+  routes.put<{ Params: { collection: WatchCollection; id: number } }>(
     '/api/watchlist/:collection/:id',
     { schema: { params } },
-    async (request, reply) => {
+    async (request) => {
       await watchlist.setFollowed(request.params.collection, request.params.id, true);
-      return reply.code(204).send();
+      return noContent();
     },
   );
 
-  app.delete<{ Params: { collection: WatchCollection; id: number } }>(
+  routes.delete<{ Params: { collection: WatchCollection; id: number } }>(
     '/api/watchlist/:collection/:id',
     { schema: { params } },
-    async (request, reply) => {
+    async (request) => {
       await watchlist.setFollowed(request.params.collection, request.params.id, false);
-      return reply.code(204).send();
+      return noContent();
     },
   );
 
-  app.get<{ Querystring: { limit: number } }>(
+  routes.get<{ Querystring: { limit: number } }>(
     '/api/alerts',
     { schema: { querystring: alertsQuery } },
     async (request) => await alerts.list(request.query.limit),
