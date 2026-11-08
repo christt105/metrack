@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runBackupCommand } from '../src/backup/runBackupCommand.js';
 import { loadConfig } from '../src/config/loadConfig.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
+import { LATEST_SCHEMA_VERSION } from './support/latestSchemaVersion.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
 
@@ -38,7 +39,7 @@ describe('runBackupCommand', () => {
       /^restored metrack-\S+; the replaced data was moved to \S+pre-restore-/,
     );
     const restored = openDatabase(join(dir, 'metrack.db'));
-    expect(new MigrationRunner(restored, migrations).currentVersion()).toBe(migrations.length);
+    expect(new MigrationRunner(restored, migrations).currentVersion()).toBe(LATEST_SCHEMA_VERSION);
     restored.close();
   });
 });
