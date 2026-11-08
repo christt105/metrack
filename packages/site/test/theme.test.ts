@@ -5,6 +5,7 @@ import {
   renderAbout,
   renderCollage,
   renderDetail,
+  renderHome,
   renderIndex,
   renderStats,
   siteAsset,
@@ -195,5 +196,53 @@ describe('siteAsset', () => {
     );
     expect(siteAsset('../secret')).toBeUndefined();
     expect(siteAsset('nope.js')).toBeUndefined();
+  });
+});
+
+describe('season titles', () => {
+  const lib = buildLibrary(
+    input({
+      series: [series({ id: 1, title: 'Jujutsu Kaisen' }), series({ id: 2, title: 'Fallout' })],
+      seasons: [
+        season({
+          id: 1,
+          seriesId: 1,
+          number: 3,
+          title: 'Temporada 3: Parte 4',
+          status: 'completed',
+          finishedAt: '2026-05-22',
+        }),
+        season({
+          id: 2,
+          seriesId: 2,
+          number: 2,
+          title: 'Fallout - Temporada 2',
+          status: 'completed',
+          finishedAt: '2026-05-18',
+        }),
+        season({
+          id: 3,
+          seriesId: 2,
+          number: 1,
+          title: null,
+          status: 'completed',
+          finishedAt: '2024-05-18',
+        }),
+      ],
+    }),
+  );
+
+  it('prefixes the series title unless the season names it already, on cards, index and item page', () => {
+    const titles = lib.seasons.map((entry) => entry.title).sort();
+    expect(titles).toEqual([
+      'Fallout - Temporada 1',
+      'Fallout - Temporada 2',
+      'Jujutsu Kaisen - Temporada 3: Parte 4',
+    ]);
+    expect(renderHome(lib)).toContain('Jujutsu Kaisen - Temporada 3: Parte 4');
+    expect(renderIndex(lib)).toContain('Jujutsu Kaisen - Temporada 3: Parte 4');
+    expect(renderDetail(lib, 'season', 1)).toContain(
+      '<title>Jujutsu Kaisen - Temporada 3: Parte 4 |',
+    );
   });
 });
