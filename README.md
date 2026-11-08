@@ -160,6 +160,17 @@ The `publishBaseUrl` setting (optional, user 1 starts from `PUBLISH_BASE_URL`) i
 
 The image does not include Go, so the theme's Hugo modules must be vendored in the site template (`hugo mod vendor`, which writes `_vendor/`); with them vendored the build needs no network. The old MediaTracker site builds this way inside the image. The upload to Cloudflare is not covered by automated tests: the publisher is tested with a fake command runner and the pipeline with a fake publisher. Changes to the site template alone do not trigger a publish, because the fingerprint covers only the exported content.
 
+## Your data and deleting an account
+
+Every user can take their data with them and delete their account. Both are in Settings under "Your data and account"; the privacy page that describes them, in English and open to everyone, is served at `/privacy` (linked from the footer of the web app). Its contact address is `CONTACT_EMAIL` (default `christt105@gmail.com`).
+
+- **Export:** a ZIP with `data.json` (the user, their settings without the ntfy topic, public page, token names and dates but never a secret or its hash, every item merged with the catalog row it references as the app shows it, season overrides, the unlinked inbox and sent alerts) and `images/<hash>.<ext>` with the images the user owns. Only that user's rows are read. From the web it is one download; over the API `GET /api/account/export` (a token may call it); from the server `metrack users export <id> <file.zip>`.
+- **Delete:** the user types their handle or `delete` in Settings (browser session only; an API token is refused). The deletion is scheduled, not immediate: it waits 7 days, during which signing in shows a banner with a button to cancel it. A job (at start and then hourly) erases every account past the 7 days: the user row and everything personal (entries and reviews, season overrides, the unlinked inbox, sent alerts, settings, sessions, tokens, handle, image ownership), the shared catalog rows only that user had, the images the user owned that no other user owns and nothing references, and the user's folder `users/<id>/` of job state. Nothing of anyone else is touched. The owner (user 1) cannot delete their account.
+- **Deleting someone else's account:** only from the command line, never from the web: `metrack users delete <id>` schedules it with the same 7 days of grace, `metrack users delete <id> --cancel` withdraws it, and the user is told through their ntfy topic (when they have one and `NTFY_URL` is set). `metrack users` shows who has a deletion waiting.
+- **Items added by hand** (fan games and other catalog rows without a provider id) are not deleted with their creator: they stay and their owner becomes user 1. When no user has an entry for one any more, the owner or its trusted owner can delete it: `GET /api/catalog/unreferenced`, `DELETE /api/catalog/{movies|series|games|books}/{id}` (409 `catalog_in_use` while any user still has it), or `metrack catalog` and `metrack catalog delete <collection> <id>`.
+- **Backups:** retention is 14 local backups and 14 copies on the second disk, so the data of a deleted account is gone from them about 14 days after the erasure, about 21 days after the request.
+- **Not removed:** the vault folder a user's notes were mirrored into and the Cloudflare Pages project their site was published to live outside metrack's data and are left to the operator.
+
 ## Public pages
 
 Each user can serve a read-only page of their library from the app itself, with no sign-in: `/u/<handle>/` (the lists by type and status), `/u/<handle>/<type>/<id>` (`movie`, `series`, `season`, `videogame` or `book`, by the id the API uses), `/u/<handle>/feed.xml` (RSS 2.0 of finished viewings, newest first, at most 100, with confirmed reviews; the finish date and every rewatch of an item are separate entries, each with the guid `metrack:<handle>:<type>:<id>:<date of the viewing>`, so it does not depend on the domain) and `/u/assets/site.css`. The pages are plain server-rendered HTML in Spanish with the look of the Hugo theme, and need no JavaScript.
@@ -197,7 +208,7 @@ npx tsx tools/parity/compareContent.ts /path/to/MediaTracker/content /tmp/parity
 
 ## Migrations
 
-Migrations are TypeScript modules in `apps/server/src/storage/migrations`, numbered contiguously from 1 and registered in `index.ts`. They run in order at startup, each in its own transaction, and are recorded in `schema_migrations`.
+Migrations are TypeScript modules in `apps/server/src/storage/migrations`, numbered from 1 and registered in `index.ts`; versions only have to increase, so a number can be left free for a branch that has not landed yet. At startup every migration not yet recorded in `schema_migrations` runs, in order and each in its own transaction, even one numbered below the latest already applied.
 
 ## Backups
 
@@ -238,12 +249,12 @@ A test restores a backup over a modified database and image store and checks the
 
 ### Copy to another disk
 
-Backups live next to the database, so a dead disk takes both. Set `BACKUP_COPY_DIR` to a folder on another disk, mounted into the container, and after each successful backup the server copies every backup still missing there: the database of each one as `databases/metrack-<UTC timestamp>.db` (checked with `PRAGMA integrity_check` before it is accepted) and the images into one shared `images/` folder. Images are named by their hash and never change, so each is copied once however many backups hold it, and a copy grows with new images rather than with days. A database is only written after all its images, and every file goes through a temporary name, so an interrupted copy leaves nothing half-written. When running as root, new files take the owner of the folder they land in.
+Backups live next to the database, so a dead disk takes both. Set `BACKUP_COPY_DIR` to a folder on another disk, mounted into the container, and after each successful backup the server copies every backup still missing there: the database of each one as `databases/metrack-<UTC timestamp>.db` (checked with `PRAGMA integrity_check` before it is accepted) and the images into one shared `images/` folder. Images are named by their hash and never change, so each is copied once however many backups hold it, and a copy grows with new images rather than with days. After retention removes old databases, the images that none of the kept databases lists are removed from the copy too (if any kept database cannot be read, no image is removed), so a deleted account's images leave the copy together with the last backup that held them. A database is only written after all its images, and every file goes through a temporary name, so an interrupted copy leaves nothing half-written. When running as root, new files take the owner of the folder they land in.
 
-| Variable                | Default | Meaning                                                                    |
-| ----------------------- | ------- | -------------------------------------------------------------------------- |
-| `BACKUP_COPY_DIR`       | unset   | Folder that receives the copy; unset means no copy                         |
-| `BACKUP_COPY_RETENTION` | `365`   | Number of copied databases to keep; images are never removed from the copy |
+| Variable                | Default | Meaning                                                                                       |
+| ----------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `BACKUP_COPY_DIR`       | unset   | Folder that receives the copy; unset means no copy                                            |
+| `BACKUP_COPY_RETENTION` | `14`    | Number of copied databases to keep; an image stays in the copy while a kept database lists it |
 
 A failed copy does not fail the backup. It is logged, sends one alert per run of failures and one more when a copy succeeds again, and the next backup copies everything still missing, so days missed while the disk was unavailable catch up.
 

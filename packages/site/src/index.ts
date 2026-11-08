@@ -5,6 +5,8 @@ export { FEED_LIMIT, renderFeed } from './renderFeed.js';
 export { renderDetail } from './renderDetail.js';
 export { renderHome } from './renderHome.js';
 export { renderNotFound } from './renderNotFound.js';
+export { renderPrivacy } from './renderPrivacy.js';
+export type { PrivacyOptions } from './PrivacyOptions.js';
 export { publishedImageHashes } from './publishedImageHashes.js';
 export { STYLESHEET_PATH, entryPath, feedPath, homePath, imagePath } from './sitePaths.js';
 export type { Library } from './Library.js';

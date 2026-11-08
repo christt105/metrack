@@ -11,6 +11,7 @@ import { runSyncCommand } from './sync/runSyncCommand.js';
 import { runImport } from './importer/runImport.js';
 import { formatMirrorResult } from './mirror/formatMirrorResult.js';
 import { syncVaultMirror } from './mirror/syncVaultMirror.js';
+import { runCatalogCommand } from './account/runCatalogCommand.js';
 import { runUsersCommand } from './users/runUsersCommand.js';
 import { OWNER_ID } from './users/OWNER_ID.js';
 import { userDataPath } from './users/userDataPath.js';
@@ -30,6 +31,9 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
                      [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>]
                      [--handle <name>] [--public-page on|off] [--data-dir <dir>]
+       metrack users delete <id> [--cancel] [--data-dir <dir>]
+       metrack users export <id> <file.zip> [--data-dir <dir>]
+       metrack catalog [delete <movies|series|games|books> <id>] [--data-dir <dir>]
 
   Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
   With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
@@ -64,6 +68,15 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   --public-page on|off switches the page; it needs a handle. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
   VAULT_MIRROR_DIR and VAULT_MIRROR_LINK_PREFIX the first time the server starts; after that the stored ones win.
 
+  users delete schedules the deletion of a user's account: it goes through the same 7 days of grace as when the user
+  asks for it from the web, signing in cancels it, and --cancel withdraws it. The user is told through the ntfy topic
+  in their settings (NTFY_URL must be set). The server erases the account once the grace period has passed; user 1
+  cannot be deleted. users export writes the ZIP a user can download from Settings (their data as JSON and the
+  images they own) to a file.
+
+  catalog lists the items added by hand that no user has an entry for any more (they stay when their creator's account
+  is deleted, passing to user 1), and catalog delete removes one of them.
+
   export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
   <outDir>, replacing those sections. It reads the database and image store in the data directory.`;
 
@@ -73,6 +86,7 @@ async function main(argv: string[]): Promise<number> {
     allowPositionals: true,
     options: {
       apply: { type: 'boolean', default: false },
+      cancel: { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
       'data-dir': { type: 'string' },
       'images-dir': { type: 'string', multiple: true },
@@ -128,15 +142,37 @@ async function main(argv: string[]): Promise<number> {
     console.log(await runBackupCommand(loadConfig(env), command, target));
     return 0;
   }
+  if (!values.help && command === 'catalog') {
+    const [, action, collection, id] = positionals;
+    const deleting =
+      action === 'delete' && positionals.length === 4 && Number.isInteger(Number(id));
+    if ((action !== undefined && !deleting) || (action === undefined && positionals.length > 1)) {
+      console.error(USAGE);
+      return 2;
+    }
+    const dataDir = values['data-dir'] ?? loadConfig(process.env).dataDir;
+    console.log(
+      await runCatalogCommand({
+        dataDir,
+        delete: deleting ? { collection: collection!, id: Number(id) } : undefined,
+      }),
+    );
+    return 0;
+  }
   if (!values.help && command === 'users') {
-    const [, action, name] = positionals;
+    const [, action, name, file] = positionals;
     const adding = action === 'add' && name !== undefined && positionals.length === 3;
-    const setId = action === 'set' && positionals.length === 3 ? Number(name) : undefined;
-    const setting = setId !== undefined && Number.isInteger(setId) && setId > 0;
+    const targetId = Number(name);
+    const hasTarget = Number.isInteger(targetId) && targetId > 0;
+    const setId = action === 'set' && positionals.length === 3 ? targetId : undefined;
+    const setting = setId !== undefined && hasTarget;
+    const deleting = action === 'delete' && positionals.length === 3 && hasTarget;
+    const exporting = action === 'export' && positionals.length === 4 && hasTarget;
     const changesSettings = Object.keys(settingChanges).length > 0;
     if (
-      (action !== undefined && !adding && !setting) ||
+      (action !== undefined && !adding && !setting && !deleting && !exporting) ||
       (values.email !== undefined && !adding) ||
+      (values.cancel && !deleting) ||
       ((changesSettings ||
         values.role !== undefined ||
         values.handle !== undefined ||
@@ -163,6 +199,9 @@ async function main(argv: string[]): Promise<number> {
                 values['public-page'] === undefined ? undefined : values['public-page'] === 'on',
             }
           : undefined,
+        delete: deleting ? { userId: targetId, cancel: values.cancel } : undefined,
+        exportTo: exporting ? { userId: targetId, file: file! } : undefined,
+        ntfy: loadConfig(process.env).ntfyServer,
       }),
     );
     return 0;

@@ -36,6 +36,9 @@ import { registerPublicPageRoutes } from '../site/registerPublicPageRoutes.js';
 import { sendPublicNotFound } from '../site/sendPublicNotFound.js';
 import type { PublicSiteSources } from '../site/PublicSiteSources.js';
 import { registerSettingsRoutes } from './registerSettingsRoutes.js';
+import { registerAccountRoutes, type AccountRouteDeps } from './registerAccountRoutes.js';
+import { registerCatalogRoutes } from './registerCatalogRoutes.js';
+import type { HandAddedCatalogRepository } from '../storage/repositories/HandAddedCatalogRepository.js';
 import { registerTokenRoutes } from './registerTokenRoutes.js';
 import type { ApiTokenService } from '../auth/ApiTokenService.js';
 import type { WebhookSecret } from './WebhookSecret.js';
@@ -69,6 +72,10 @@ export interface AppDeps {
     settings: UserSettingsRepository;
     profiles: PublicProfileRepository;
   };
+  /** Export and deletion of the signed-in user's own account. */
+  account?: AccountRouteDeps;
+  /** Lets the owner and trusted users delete hand-added catalog items nobody has any more. */
+  handAddedCatalog?: HandAddedCatalogRepository;
   /** Required from the Jellyfin webhook when set. */
   syncWebhookSecret?: WebhookSecret;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
@@ -78,6 +85,8 @@ export interface AppDeps {
     sources: PublicSiteSources;
     /** Address the feeds link to; the visitor's own address when null. */
     publicUrl: string | null;
+    /** Where the privacy page says to write about one's data. */
+    contactEmail: string;
   };
 }
 
@@ -115,6 +124,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       deps.settings.settings,
       deps.settings.profiles,
     );
+  if (deps.account) registerAccountRoutes(app, deps.account);
+  if (deps.handAddedCatalog) registerCatalogRoutes(app, deps.handAddedCatalog);
   if (deps.site) {
     registerPublicPageRoutes(app, { ...deps.site, scope: deps.scope, images: deps.imageStore });
   }

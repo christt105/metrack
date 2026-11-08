@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   ASSIGNABLE_ROLES,
@@ -9,11 +10,16 @@ import {
   type UserRole,
   type UserSettings,
 } from '@metrack/domain';
+import { openAccountTools } from '../account/openAccountTools.js';
+import type { FetchFn } from '../http/FetchFn.js';
+import type { NtfyServer } from '../notify/NtfyServer.js';
 import { MigrationRunner } from '../storage/MigrationRunner.js';
 import { migrations } from '../storage/migrations/index.js';
 import { openDatabase } from '../storage/sqlite/openDatabase.js';
 import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
 import { SqlitePublicProfileRepository } from '../storage/sqlite/SqlitePublicProfileRepository.js';
+import { SqliteAccountRepository } from '../storage/sqlite/SqliteAccountRepository.js';
+import { scheduleOf } from '../account/AccountDeletionSchedule.js';
 import { SqliteUserRepository } from '../storage/sqlite/SqliteUserRepository.js';
 import { SqliteUserSettingsRepository } from '../storage/sqlite/SqliteUserSettingsRepository.js';
 import { NO_SETTINGS } from './NO_SETTINGS.js';
@@ -21,7 +27,7 @@ import { OWNER_ID } from './OWNER_ID.js';
 
 export interface UsersCommand {
   dataDir: string;
-  /** Lists the users when neither this nor `set` is given. */
+  /** Lists the users when none of `add`, `set`, `delete` or `exportTo` is given. */
   add?: { name: string; email: string | null };
   /**
    * Changes some of a user's settings (an empty string clears one) and optionally their role. With no
@@ -35,16 +41,33 @@ export interface UsersCommand {
     handle?: string;
     publicPage?: boolean;
   };
+  /**
+   * Schedules the user's account for deletion after the grace period, or with `cancel` withdraws the request.
+   * The user is told through the ntfy topic in their settings, if they have one and a server is given.
+   */
+  delete?: { userId: number; cancel: boolean };
+  /** Writes the user's export ZIP to a file. */
+  exportTo?: { userId: number; file: string };
+  ntfy?: NtfyServer;
+  /** Replaces the network for the ntfy message, for tests. */
+  fetchFn?: FetchFn;
 }
 
-/** Runs `metrack users` (list), `metrack users add <name> [--email <address>]` and `metrack users set <id> [...]`. */
+/**
+ * Runs `metrack users` (list), `metrack users add <name> [--email <address>]`, `metrack users set <id> [...]`,
+ * `metrack users delete <id> [--cancel]` and `metrack users export <id> <file>`.
+ */
 export async function runUsersCommand(command: UsersCommand): Promise<string> {
+  if (command.delete)
+    return runDelete(command.dataDir, command.delete, command.ntfy, command.fetchFn);
+  if (command.exportTo) return runExport(command.dataDir, command.exportTo);
   const db = openDatabase(join(command.dataDir, 'metrack.db'));
   try {
     new MigrationRunner(db, migrations).run();
     const users = new SqliteUserRepository(db);
     const settings = new SqliteUserSettingsRepository(db);
     const profiles = new SqlitePublicProfileRepository(db);
+    const accounts = new SqliteAccountRepository(db);
     if (command.add) return `Created ${describe(await users.create(command.add))}`;
     if (command.set) {
       const { userId, changes, role, handle, publicPage } = command.set;
@@ -74,9 +97,49 @@ export async function runUsersCommand(command: UsersCommand): Promise<string> {
       return `${describe(user)}\n${describeSettings(result.settings)}\n${describePublicPage(await profiles.get(userId))}`;
     }
     const stored = new Map((await settings.list()).map((entry) => [entry.userId, entry.settings]));
-    return (await users.list())
-      .map((user) => `${describe(user)}  ${enabledJobs(stored.get(user.id) ?? NO_SETTINGS)}`)
-      .join('\n');
+    const lines: string[] = [];
+    for (const user of await users.list()) {
+      const jobs = enabledJobs(stored.get(user.id) ?? NO_SETTINGS);
+      const requestedAt = await accounts.deletionRequestedAt(user.id);
+      const deletion =
+        requestedAt === null ? '' : `  deletion on ${scheduleOf(requestedAt).deleteAt}`;
+      lines.push(`${describe(user)}  ${jobs}${deletion}`);
+    }
+    return lines.join('\n');
+  } finally {
+    db.close();
+  }
+}
+
+async function runDelete(
+  dataDir: string,
+  { userId, cancel }: { userId: number; cancel: boolean },
+  ntfy: NtfyServer | undefined,
+  fetchFn: FetchFn | undefined,
+): Promise<string> {
+  const { db, deletion } = openAccountTools(dataDir, userId, { ntfy, fetchFn });
+  try {
+    if (cancel) {
+      return (await deletion.cancel(userId, true))
+        ? `Cancelled the deletion of user ${userId}`
+        : `User ${userId} has no deletion waiting`;
+    }
+    const scheduled = await deletion.request(userId, true);
+    return `User ${userId} will be deleted on ${scheduled.deleteAt} unless it is cancelled (metrack users delete ${userId} --cancel, or by signing in)`;
+  } finally {
+    db.close();
+  }
+}
+
+async function runExport(
+  dataDir: string,
+  { userId, file }: { userId: number; file: string },
+): Promise<string> {
+  const { db, exporter } = openAccountTools(dataDir, userId);
+  try {
+    const archive = await exporter.build(userId);
+    writeFileSync(file, archive.bytes);
+    return `Wrote the export of user ${userId} to ${file} (${archive.bytes.byteLength} bytes)`;
   } finally {
     db.close();
   }

@@ -24,6 +24,8 @@ describe('loadConfig', () => {
 
   it('reads PUBLIC_URL without trailing slashes, apart from VAULT_MIRROR_WEB_URL', () => {
     expect(loadConfig({}).publicUrl).toBeNull();
+    expect(loadConfig({}).contactEmail).toBe('christt105@gmail.com');
+    expect(loadConfig({ CONTACT_EMAIL: 'me@example.com' }).contactEmail).toBe('me@example.com');
     expect(loadConfig({ PUBLIC_URL: 'https://metrack.example//' }).publicUrl).toBe(
       'https://metrack.example',
     );
@@ -64,11 +66,11 @@ describe('loadConfig', () => {
     expect(loadConfig({ DATA_DIR: '/data', BACKUP_DIR: '' }).backup.dir).toBe('/data/backups');
   });
 
-  it('copies backups only when BACKUP_COPY_DIR is set, keeping 365 databases by default', () => {
+  it('copies backups only when BACKUP_COPY_DIR is set, keeping 14 databases by default', () => {
     expect(loadConfig({}).backup.copy).toBeUndefined();
     expect(loadConfig({ BACKUP_COPY_DIR: '/backup-copy' }).backup.copy).toEqual({
       dir: '/backup-copy',
-      retention: 365,
+      retention: 14,
     });
     expect(
       loadConfig({ BACKUP_COPY_DIR: '/backup-copy', BACKUP_COPY_RETENTION: '30' }).backup.copy

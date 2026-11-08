@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { OwnSettings, SyncPlan } from '@metrack/domain';
+import AccountPanel from '../components/AccountPanel.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import PublicPagePanel from '../components/PublicPagePanel.vue';
 import SettingsList from '../components/SettingsList.vue';
@@ -98,6 +99,7 @@ const backup = () =>
     </div>
     <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
     <TokensPanel />
+    <AccountPanel v-if="own" :handle="own.publicPage.handle" />
     <div class="panel">
       <h2>{{ messages.images.title }}</h2>
       <ErrorNotice :error="imageUsageError" />

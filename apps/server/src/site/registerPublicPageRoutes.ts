@@ -6,6 +6,7 @@ import {
   renderDetail,
   renderFeed,
   renderHome,
+  renderPrivacy,
   type Library,
 } from '@metrack/site';
 import { isImageHash } from '../images/imageRef.js';
@@ -24,12 +25,14 @@ export interface PublicPageDeps {
   images?: ImageStore;
   /** Address the feed links to; the visitor's own address when unset. */
   publicUrl: string | null;
+  /** Where the privacy page says to write about one's data. */
+  contactEmail: string;
 }
 
 const ID = /^[1-9]\d{0,9}$/;
 
 /**
- * The public pages under `/u/<handle>/`: the library home, one page per item, an RSS feed of what was
+ * The privacy page at `/privacy` and the public pages under `/u/<handle>/`: the library home, one page per item, an RSS feed of what was
  * finished and the images those pages show. They need no sign-in, so they stay outside `/api`, and a page
  * exists only while its owner has a handle and has switched it on. Every other case answers with the same
  * 404, and every answer asks search engines to stay away.
@@ -52,6 +55,13 @@ export function registerPublicPageRoutes(app: FastifyInstance, deps: PublicPageD
         .type('text/css; charset=utf-8')
         .header('Cache-Control', 'public, max-age=3600')
         .send(SITE_CSS),
+    );
+
+    site.get('/privacy', async (_request, reply) =>
+      reply
+        .type('text/html; charset=utf-8')
+        .header('Cache-Control', 'public, max-age=300')
+        .send(renderPrivacy({ contactEmail: deps.contactEmail })),
     );
 
     const home = async (

@@ -128,6 +128,11 @@ export class ImageStore {
     return this.rows.isShownByCatalog(hash);
   }
 
+  /** The images the user owns. */
+  ownedBy(userId: number): Promise<StoredImage[]> {
+    return this.rows.ownedBy(userId);
+  }
+
   get(hash: string): Promise<StoredImage | undefined> {
     return this.rows.get(hash);
   }
@@ -163,6 +168,21 @@ export class ImageStore {
     return this.rows.orphans(
       graceMs > 0 ? new Date(this.now().getTime() - graceMs).toISOString() : undefined,
     );
+  }
+
+  /**
+   * Deletes those of the given images that are unused (see `orphans`) and that no user owns, and returns
+   * their hashes. Used after an account is erased, when only the images it owned can have become unused.
+   */
+  async removeUnused(hashes: readonly string[]): Promise<string[]> {
+    if (hashes.length === 0) return [];
+    const unused = new Set(await this.orphans());
+    const removed: string[] = [];
+    for (const hash of hashes) {
+      if (!unused.has(hash) || (await this.rows.ownerIds(hash)).length > 0) continue;
+      if (await this.delete(hash)) removed.push(hash);
+    }
+    return removed;
   }
 
   /** Deletes every orphan older than the grace period (24 hours) and returns their hashes. */

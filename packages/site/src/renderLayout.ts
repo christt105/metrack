@@ -5,12 +5,15 @@ export interface LayoutOptions {
   title: string;
   /** The owner of the pages; without one the layout has no navigation. */
   handle?: string;
+  /** The language of the page; Spanish unless said otherwise. */
+  language?: 'es' | 'en';
   body: string;
 }
 
 /** The shell shared by every public page. It carries no script and always asks search engines to stay away. */
 export function renderLayout(options: LayoutOptions): string {
   const { handle } = options;
+  const english = options.language === 'en';
   const nav =
     handle === undefined
       ? ''
@@ -20,7 +23,7 @@ export function renderLayout(options: LayoutOptions): string {
       ? ''
       : `<link rel="alternate" type="application/rss+xml" title="Acabados" href="${escapeHtml(feedPath(handle))}">`;
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="${english ? 'en' : 'es'}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -35,7 +38,7 @@ ${nav}
 <div class="wrapper">
 ${options.body}
 </div>
-<footer class="footer"><small>Servido por metrack</small></footer>
+<footer class="footer"><small>${english ? 'Served by metrack' : 'Servido por metrack'}</small></footer>
 </body>
 </html>
 `;

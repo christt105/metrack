@@ -21,3 +21,5 @@ export type { ApiTokenRepository } from './ApiTokenRepository.js';
 export type { NewApiToken } from './NewApiToken.js';
 export type { StoredApiToken } from './StoredApiToken.js';
 export type { PublicProfileRepository } from './PublicProfileRepository.js';
+export type { AccountRepository } from './AccountRepository.js';
+export type { HandAddedCatalogRepository } from './HandAddedCatalogRepository.js';

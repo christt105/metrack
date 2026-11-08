@@ -265,6 +265,31 @@ export const messages = {
       handle_required: 'Choose a handle before turning the page on.',
     } as Record<string, string>,
   },
+  account: {
+    title: 'Your data and account',
+    hint: 'Download everything you have in metrack, or delete your account.',
+    export: 'Download my data',
+    exportHint:
+      'A ZIP with all your data as JSON and the images you own. Your API tokens are listed by name and date only.',
+    deleteTitle: 'Delete my account',
+    deleteHint:
+      'Your account, library, reviews, tokens and the images only you own are erased after 7 days. Until then you can cancel by signing in. Items you added by hand to the catalog stay and pass to the owner. Backups rotate out within 14 more days.',
+    ownerHint: 'The owner account cannot be deleted.',
+    confirmLabel: (handle: string | null) =>
+      handle === null
+        ? 'Type "delete" to confirm'
+        : `Type your handle (${handle}) or "delete" to confirm`,
+    delete: 'Delete my account',
+    scheduled: (when: string) => `Your account is scheduled for deletion on ${when}.`,
+    cancel: 'Cancel the deletion',
+    privacy: 'Privacy',
+    errors: {
+      confirmation_mismatch: 'That does not match. Type your handle or the word "delete".',
+      owner_cannot_delete: 'The owner account cannot be deleted.',
+    } as Record<string, string>,
+    banner: (when: string) =>
+      `Your account will be deleted on ${when}. Cancel the deletion to keep it.`,
+  },
   tokens: {
     title: 'API tokens',
     hint: 'Let a program, such as a sync connector or the Obsidian plugin, use your library without your browser session. A token never reaches settings, tokens or owner-only actions.',

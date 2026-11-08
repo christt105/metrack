@@ -15,6 +15,7 @@ import { apiTokensMigration } from './0013-api-tokens.js';
 import { userRolesMigration } from './0014-user-roles.js';
 import { imageOwnersMigration } from './0015-image-owners.js';
 import { publicPagesMigration } from './0016-public-pages.js';
+import { accountDeletionMigration } from './0018-account-deletion.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -33,4 +34,5 @@ export const migrations: readonly Migration[] = [
   userRolesMigration,
   imageOwnersMigration,
   publicPagesMigration,
+  accountDeletionMigration,
 ];
