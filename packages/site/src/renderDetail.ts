@@ -134,7 +134,7 @@ export function renderDetail(library: Library, kind: PublicKind, id: number): st
     library,
     title: `${entry.title} | ${ownerName(library)}`,
     description: entry.overview ?? undefined,
-    active: null,
+    active: 'home',
     page,
   });
 }
