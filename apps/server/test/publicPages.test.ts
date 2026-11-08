@@ -14,7 +14,8 @@ const FRIEND: User = { id: 2, name: 'Friend', email: null, role: 'trusted' };
 const TMDB_COVER = 'https://image.tmdb.org/t/p/original/dune.jpg';
 
 const byHeader: Authenticator = {
-  userFor: async (headers) => [OWNER, FRIEND].find((u) => u.id === Number(headers['x-test-user'])),
+  userFor: async (headers) =>
+    [OWNER, FRIEND].find((u) => u.id === Number(headers.get('x-test-user'))),
 };
 
 let api: TestApi;

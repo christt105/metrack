@@ -1,4 +1,5 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { noContent } from './noContent.js';
 import {
   CATALOG_COLLECTIONS,
   canAddByHand,
@@ -8,7 +9,6 @@ import {
 import type { HandAddedCatalogRepository } from '../storage/repositories/HandAddedCatalogRepository.js';
 import { ApiError } from './ApiError.js';
 import { requireUser } from './requireUser.js';
-import './fastifyTypes.js';
 
 const params = {
   type: 'object',
@@ -26,10 +26,10 @@ const params = {
  * user still has is refused with 409.
  */
 export function registerCatalogRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   catalog: HandAddedCatalogRepository,
 ): void {
-  app.get(
+  routes.get(
     '/api/catalog/unreferenced',
     { config: { trustedOnly: true } },
     async (request): Promise<UnreferencedCatalogItem[]> => {
@@ -38,10 +38,10 @@ export function registerCatalogRoutes(
     },
   );
 
-  app.delete<{ Params: { collection: CatalogCollection; id: number } }>(
+  routes.delete<{ Params: { collection: CatalogCollection; id: number } }>(
     '/api/catalog/:collection/:id',
     { config: { trustedOnly: true }, schema: { params } },
-    async (request, reply) => {
+    async (request) => {
       const user = requireUser(request.user);
       const { collection, id } = request.params;
       const row = await catalog.find(collection, id);
@@ -55,7 +55,7 @@ export function registerCatalogRoutes(
         throw ApiError.conflict('catalog_in_use', 'Some user still has this item');
       }
       await catalog.delete(collection, id);
-      return reply.code(204).send();
+      return noContent();
     },
   );
 }

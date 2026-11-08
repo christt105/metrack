@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { CreatedToken } from '@metrack/domain';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { ApiTokenService } from '../src/auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from '../src/auth/SessionCookieAuthenticator.js';
 import { SessionService } from '../src/auth/SessionService.js';
@@ -38,7 +38,7 @@ async function setup() {
     { info: () => {}, error: () => {} },
     new FakeScheduler(),
   );
-  const app = await buildApp({
+  const app = buildTestApp({
     appVersion: 'test',
     migrationRunner: new MigrationRunner(db, migrations),
     authenticator: new SessionCookieAuthenticator(sessions),

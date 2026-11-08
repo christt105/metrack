@@ -17,7 +17,7 @@ const FRIEND: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 /** Signs each request in as the user named by the `x-test-user` header. */
 const byHeader: Authenticator = {
   userFor: async (headers) => {
-    const id = Number(headers['x-test-user']);
+    const id = Number(headers.get('x-test-user'));
     return [OWNER, FRIEND].find((user) => user.id === id);
   },
 };

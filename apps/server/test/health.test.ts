@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { LATEST_SCHEMA_VERSION } from './support/latestSchemaVersion.js';
 import { migrations } from '../src/storage/migrations/index.js';
@@ -11,7 +11,7 @@ describe('GET /api/health', () => {
   it('returns status and schema version after migrations', async () => {
     const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
     runner.run();
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
@@ -28,7 +28,7 @@ describe('GET /api/health', () => {
 
   it('answers 503 with the same report when degraded', async () => {
     const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
@@ -41,7 +41,7 @@ describe('GET /api/health', () => {
 
   it('returns 404 JSON for unknown API routes', async () => {
     const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,

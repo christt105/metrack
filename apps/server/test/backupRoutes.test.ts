@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import { BackupJob } from '../src/backup/BackupJob.js';
 import { BackupService } from '../src/backup/BackupService.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
@@ -32,7 +32,7 @@ describe('backup routes', () => {
     );
     const logger = { info: vi.fn(), error: vi.fn() };
     const job = new BackupJob(service, 5, { notify: vi.fn(async () => true) }, logger);
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
@@ -57,7 +57,7 @@ describe('backup routes', () => {
     const logger = { info: vi.fn(), error: vi.fn() };
     const job = new BackupJob(service, 5, { notify: vi.fn(async () => true) }, logger);
     const runner = new MigrationRunner(openDatabase(':memory:'), migrations);
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,

@@ -1,4 +1,6 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { jsonResponse } from './jsonResponse.js';
+import { noContent } from './noContent.js';
 import {
   SEARCHABLE_TYPES,
   type AddTitleRequest,
@@ -76,12 +78,12 @@ function providerFor(providers: TitleProviders, type: SearchableType) {
 
 /** Provider search, adding titles, and the inbox of titles that arrived without ids. */
 export function registerTitleRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   providers: TitleProviders,
   unlinked: UnlinkedTitleRepository,
   resolver: UnlinkedResolver,
 ): void {
-  app.get<{ Querystring: { type: SearchableType; q: string; year?: number } }>(
+  routes.get<{ Querystring: { type: SearchableType; q: string; year?: number } }>(
     '/api/search',
     { schema: { querystring: searchQuery } },
     async (request): Promise<{ results: SearchResult[] }> => {
@@ -90,31 +92,36 @@ export function registerTitleRoutes(
     },
   );
 
-  app.post<{ Body: AddTitleRequest }>(
+  routes.post<{ Body: AddTitleRequest }>(
     '/api/titles',
     { schema: { body: addBody } },
-    async (request, reply) => {
+    async (request) => {
       const { type, externalId } = request.body;
       const created: EntityRef = await providerFor(providers, type).add(externalId);
-      return reply.code(201).send(created);
+      return jsonResponse(created, 201);
     },
   );
 
-  app.get('/api/unlinked', async (): Promise<UnlinkedTitle[]> => await unlinked.list());
+  routes.get('/api/unlinked', async (): Promise<UnlinkedTitle[]> => await unlinked.list());
 
-  app.delete<{ Params: { id: number } }>(
+  routes.delete<{ Params: { id: number } }>(
     '/api/unlinked/:id',
     { schema: { params: idParams } },
-    async (request, reply) => {
+    async (request) => {
       if (!(await unlinked.delete(request.params.id))) throw ApiError.notFound();
-      return reply.code(204).send();
+      return noContent();
     },
   );
 
-  app.post<{ Params: { id: number }; Body: ResolveUnlinkedRequest }>(
+  routes.post<{ Params: { id: number }; Body: ResolveUnlinkedRequest }>(
     '/api/unlinked/:id/resolve',
     { schema: { params: idParams, body: resolveBody } },
-    async (request, reply): Promise<ResolveUnlinkedResponse> =>
-      reply.code(201).send(await resolver.resolve(request.params.id, request.body.ids)),
+    async (request) => {
+      const resolved: ResolveUnlinkedResponse = await resolver.resolve(
+        request.params.id,
+        request.body.ids,
+      );
+      return jsonResponse(resolved, 201);
+    },
   );
 }

@@ -1,8 +1,8 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { FastifyInstance } from 'fastify';
-import { buildApp } from '../../src/api/buildApp.js';
+import { buildTestApp } from './buildTestApp.js';
+import type { TestApp } from './TestApp.js';
 import { createEditServices } from '../../src/api/createEditServices.js';
 import type { ImageProvider } from '../../src/artwork/ImageProvider.js';
 import { SteamGridDbImageProvider } from '../../src/artwork/SteamGridDbImageProvider.js';
@@ -63,7 +63,7 @@ import { SqliteUserSettingsRepository } from '../../src/storage/sqlite/SqliteUse
 export const NOW = new Date('2026-03-05T12:00:00Z');
 
 export interface TestApi {
-  app: FastifyInstance;
+  app: TestApp;
   db: DatabaseSync;
   store: ImageStore;
   scheduler: FakeScheduler;
@@ -175,7 +175,7 @@ export async function createTestApi(
     { info: () => {}, error: () => {} },
     () => clock.now,
   );
-  const app = await buildApp({
+  const app = buildTestApp({
     appVersion: 'test',
     authenticator: options.authenticator ?? signedInAs(),
     tokens,

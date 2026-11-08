@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@metrack/domain';
 import { ReleaseWatcher } from '../src/alerts/ReleaseWatcher.js';
 import { UserReleaseWatchers } from '../src/alerts/UserReleaseWatchers.js';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import type { Authenticator } from '../src/auth/Authenticator.js';
 import type { FetchFn } from '../src/http/FetchFn.js';
 import { createImageStore } from '../src/images/createImageStore.js';
@@ -46,7 +46,7 @@ const USERS: User[] = [
 
 /** Signs each request in as the user named by the `x-test-user` header. */
 const byHeader: Authenticator = {
-  userFor: async (headers) => USERS.find((user) => user.id === Number(headers['x-test-user'])),
+  userFor: async (headers) => USERS.find((user) => user.id === Number(headers.get('x-test-user'))),
 };
 
 const created: string[] = [];
@@ -171,7 +171,7 @@ describe('per-user Jellyfin sync', () => {
   }
 
   async function app(sync: UserSyncServices) {
-    return buildApp({
+    return buildTestApp({
       appVersion: 'test',
       authenticator: byHeader,
       scope,

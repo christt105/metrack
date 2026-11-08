@@ -1,4 +1,5 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { noContent } from './noContent.js';
 import type { SeasonOverrideInput } from '@metrack/domain';
 import type { SeasonOverrideRepository } from '../storage/repositories/SeasonOverrideRepository.js';
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
@@ -25,7 +26,7 @@ const body = {
 
 /** Manual season corrections, keyed by the series and the TMDB season number they correct. */
 export function registerSeasonOverrideRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   series: SeriesRepository,
   overrides: SeasonOverrideRepository,
 ): void {
@@ -33,7 +34,7 @@ export function registerSeasonOverrideRoutes(
     if (!(await series.get(id))) throw ApiError.notFound();
   };
 
-  app.get<{ Params: { id: number } }>(
+  routes.get<{ Params: { id: number } }>(
     '/api/series/:id/overrides',
     { schema: { params: { type: 'object', properties: { id: { type: 'integer' } } } } },
     async (request) => {
@@ -42,7 +43,10 @@ export function registerSeasonOverrideRoutes(
     },
   );
 
-  app.put<{ Params: { id: number; tmdbSeasonNumber: number }; Body: Partial<SeasonOverrideInput> }>(
+  routes.put<{
+    Params: { id: number; tmdbSeasonNumber: number };
+    Body: Partial<SeasonOverrideInput>;
+  }>(
     '/api/series/:id/overrides/:tmdbSeasonNumber',
     { schema: { params, body } },
     async (request) => {
@@ -57,15 +61,15 @@ export function registerSeasonOverrideRoutes(
     },
   );
 
-  app.delete<{ Params: { id: number; tmdbSeasonNumber: number } }>(
+  routes.delete<{ Params: { id: number; tmdbSeasonNumber: number } }>(
     '/api/series/:id/overrides/:tmdbSeasonNumber',
     { schema: { params } },
-    async (request, reply) => {
+    async (request) => {
       await requireSeries(request.params.id);
       if (!(await overrides.delete(request.params.id, request.params.tmdbSeasonNumber))) {
         throw ApiError.notFound();
       }
-      return reply.code(204).send();
+      return noContent();
     },
   );
 }

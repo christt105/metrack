@@ -1,9 +1,11 @@
-import type { FastifyError, FastifyInstance } from 'fastify';
+import type { Hono } from 'hono';
 import type { ApiErrorBody } from '@metrack/domain';
 import type { Logger } from '../notify/Logger.js';
 import { HttpError } from '../http/HttpError.js';
 import { redactUrl } from './redactUrl.js';
 import { ApiError } from './ApiError.js';
+import type { ApiEnv } from './ApiEnv.js';
+import { jsonResponse } from './jsonResponse.js';
 import { SharedCatalogError } from '../storage/SharedCatalogError.js';
 import { ImageRejectedError } from '../images/ImageRejectedError.js';
 
@@ -40,13 +42,7 @@ function describe(error: unknown): Failure {
   if (error instanceof TypeError && error.message === 'fetch failed') {
     return { status: 502, body: { error: 'The provider is unreachable', code: 'provider_error' } };
   }
-  const failure = error as FastifyError & { errcode?: number };
-  if (failure.validation) {
-    return {
-      status: 400,
-      body: { error: failure.message, code: 'validation_error', details: failure.validation },
-    };
-  }
+  const failure = error as { code?: string; message: string };
   if (failure.code === 'ERR_SQLITE_ERROR') {
     if (failure.message.includes('UNIQUE constraint failed')) {
       return {
@@ -61,15 +57,6 @@ function describe(error: unknown): Failure {
       };
     }
   }
-  if (failure.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
-    return {
-      status: 413,
-      body: { error: 'The request body is too large', code: 'body_too_large' },
-    };
-  }
-  if (failure.statusCode && failure.statusCode >= 400 && failure.statusCode < 500) {
-    return { status: failure.statusCode, body: { error: failure.message, code: 'bad_request' } };
-  }
   return { status: 500, body: { error: 'Internal server error', code: 'internal_error' } };
 }
 
@@ -77,13 +64,16 @@ function describe(error: unknown): Failure {
  * Answers every failure under `/api` with the same `{ error, code, details? }` body, and logs the
  * failures that are the server's fault.
  */
-export function registerErrorHandler(app: FastifyInstance, logger?: Logger): void {
-  app.setErrorHandler((error, request, reply) => {
+export function registerErrorHandler(app: Hono<ApiEnv>, logger?: Logger): void {
+  app.onError((error, context) => {
     const { status, body } = describe(error);
     if (status >= 500 && logger) {
       const detail = error instanceof Error ? (error.stack ?? error.message) : String(error);
-      logger.error(`${request.method} ${redactUrl(request.url)} failed with ${status}: ${detail}`);
+      const url = new URL(context.req.url);
+      logger.error(
+        `${context.req.method} ${redactUrl(url.pathname + url.search)} failed with ${status}: ${detail}`,
+      );
     }
-    return reply.code(status).send(body);
+    return jsonResponse(body, status);
   });
 }

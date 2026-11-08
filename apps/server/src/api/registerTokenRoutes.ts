@@ -1,4 +1,6 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { jsonResponse } from './jsonResponse.js';
+import { noContent } from './noContent.js';
 import {
   TOKEN_SCOPES,
   type ApiToken,
@@ -7,7 +9,6 @@ import {
 } from '@metrack/domain';
 import type { ApiTokenService } from '../auth/ApiTokenService.js';
 import { ApiError } from './ApiError.js';
-import './fastifyTypes.js';
 
 const params = {
   type: 'object',
@@ -31,30 +32,32 @@ const createBody = {
  * one and answers its secret once, `DELETE /api/tokens/{id}` revokes one. All need the browser
  * session, so a token cannot mint or revoke tokens.
  */
-export function registerTokenRoutes(app: FastifyInstance, tokens: ApiTokenService): void {
+export function registerTokenRoutes(routes: ApiRoutes, tokens: ApiTokenService): void {
   const userId = (user: { id: number } | null): number => user?.id ?? 0;
 
-  app.get('/api/tokens', { config: { sessionOnly: true } }, async (request): Promise<ApiToken[]> =>
-    tokens.list(userId(request.user)),
+  routes.get(
+    '/api/tokens',
+    { config: { sessionOnly: true } },
+    async (request): Promise<ApiToken[]> => tokens.list(userId(request.user)),
   );
 
-  app.post<{ Body: CreateTokenRequest }>(
+  routes.post<{ Body: CreateTokenRequest }>(
     '/api/tokens',
     { config: { sessionOnly: true }, schema: { body: createBody } },
-    async (request, reply): Promise<CreatedToken> => {
-      const created = await tokens.create(userId(request.user), request.body);
-      return reply.code(201).send(created);
+    async (request) => {
+      const created: CreatedToken = await tokens.create(userId(request.user), request.body);
+      return jsonResponse(created, 201);
     },
   );
 
-  app.delete<{ Params: { id: number } }>(
+  routes.delete<{ Params: { id: number } }>(
     '/api/tokens/:id',
     { config: { sessionOnly: true }, schema: { params } },
-    async (request, reply) => {
+    async (request) => {
       if (!(await tokens.revoke(userId(request.user), request.params.id))) {
         throw ApiError.notFound('You have no token with that id');
       }
-      return reply.code(204).send();
+      return noContent();
     },
   );
 }

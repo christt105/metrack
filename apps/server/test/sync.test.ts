@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/api/buildApp.js';
+import { buildTestApp } from './support/buildTestApp.js';
 import type { FetchFn } from '../src/http/FetchFn.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
@@ -528,7 +528,7 @@ describe('SyncService', () => {
   it('serves the report over HTTP and refuses apply without confirmation', async () => {
     const t = setup(lupinLibrary, lupinPlays);
     await seedLupin(t);
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
@@ -577,7 +577,7 @@ describe('SyncService', () => {
       delayMs: 120_000,
       downstream: [ownerQueues(published), undefined],
     });
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
@@ -611,7 +611,7 @@ describe('SyncService', () => {
       async () => [OWNER_ID],
       () => ({ markDirty: () => void (marked += 1) }) as unknown as PublishQueue,
     );
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
@@ -641,7 +641,7 @@ describe('SyncService', () => {
 
   it('answers 501 to a webhook when sync is not configured', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,
@@ -654,7 +654,7 @@ describe('SyncService', () => {
 
   it('answers 501 when sync is not configured', async () => {
     const t = setup(lupinLibrary, lupinPlays);
-    const app = await buildApp({
+    const app = buildTestApp({
       appVersion: 'test',
       authenticator: signedInAs(),
       scope: OWNER_SCOPE,

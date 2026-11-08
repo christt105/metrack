@@ -50,7 +50,7 @@ Then open `http://<host>:8097` and sign in as the owner (see the security model 
 - `packages/domain`: pure domain logic, no HTTP or database.
 - `packages/site`: pure renderer of the public pages (HTML, RSS and the theme's stylesheet, scripts, font and images) from one user's data; no database, no disk, no Node-only APIs.
 - `packages/export`: pure exporter from stored data to the Hugo content tree, and the redirect pages for the old site.
-- `apps/server`: Fastify API, SQLite storage and migrations; also serves the built web app.
+- `apps/server`: Hono API, SQLite storage and migrations; also serves the built web app.
 - `apps/web`: Vue 3 + Vite frontend.
 
 ## Development
@@ -200,7 +200,7 @@ npx tsx tools/parity/compareContent.ts /path/to/MediaTracker/content /tmp/parity
 ## Dependencies
 
 - `node:sqlite` (built into Node 22): avoids a native module and a build toolchain in the image; it is still marked experimental, so it is confined to `apps/server/src/storage` and the image silences its warning.
-- `fastify` and `@fastify/static`: routing, in-process request injection for tests and static file serving with little code.
+- `hono` (MIT, no dependencies of its own) and `@hono/node-server` (MIT): routing on web-standard `Request` and `Response`, so the same app can later run outside Node; the Node adapter, the static files and `node:sqlite` stay in Node-only modules (`main.ts`, `web/`, `storage/`). Tests send requests in-process through `app.request`.
 - `pg`: the only way to read Jellystat, which exposes its history through its own login-protected API and its Postgres database; used for one read-only query.
 - `vue`, `vite`, `@vitejs/plugin-vue`, `vue-tsc`: the frontend.
 - `yaml`: parses note frontmatter (quoted strings, block lists, multi-line values) and quotes values when writing front matter for Hugo, both of which a hand-written implementation would get subtly wrong; zero dependencies of its own.

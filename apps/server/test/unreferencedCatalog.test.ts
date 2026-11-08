@@ -10,7 +10,7 @@ let api: TestApi;
 let users: SqliteUserRepository;
 
 const byHeader: Authenticator = {
-  userFor: async (headers) => users.get(Number(headers['x-test-user'])),
+  userFor: async (headers) => users.get(Number(headers.get('x-test-user'))),
 };
 
 beforeEach(async () => {

@@ -1,4 +1,5 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { jsonResponse } from './jsonResponse.js';
 import type { BackupJob } from '../backup/BackupJob.js';
 import type { BackupService } from '../backup/BackupService.js';
 
@@ -11,14 +12,14 @@ export interface BackupRouteDeps {
  * Registers the manual backup endpoints: list and create. The job logs a failure in full; the client
  * only gets a generic error so filesystem details are not exposed.
  */
-export function registerBackupRoutes(app: FastifyInstance, deps: BackupRouteDeps): void {
-  app.get('/api/backups', { config: { ownerOnly: true } }, async () => deps.service.list());
+export function registerBackupRoutes(routes: ApiRoutes, deps: BackupRouteDeps): void {
+  routes.get('/api/backups', { config: { ownerOnly: true } }, async () => deps.service.list());
 
-  app.post('/api/backups', { config: { ownerOnly: true } }, async (_request, reply) => {
+  routes.post('/api/backups', { config: { ownerOnly: true } }, async () => {
     try {
-      return reply.code(201).send(await deps.job.run());
+      return jsonResponse(await deps.job.run(), 201);
     } catch {
-      return reply.code(500).send({ error: 'Backup failed', code: 'backup_failed' });
+      return jsonResponse({ error: 'Backup failed', code: 'backup_failed' }, 500);
     }
   });
 }

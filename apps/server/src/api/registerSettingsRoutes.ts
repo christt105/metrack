@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
 import {
   ASSIGNABLE_ROLES,
   PUBLIC_PAGE_LIMITS,
@@ -27,7 +27,6 @@ import { NO_SETTINGS } from '../users/NO_SETTINGS.js';
 import { OWNER_ID } from '../users/OWNER_ID.js';
 import { ApiError } from './ApiError.js';
 import { requireUser } from './requireUser.js';
-import './fastifyTypes.js';
 
 const params = {
   type: 'object',
@@ -120,7 +119,7 @@ const patchBody = {
  * public page (handle, on/off, avatar, texts and comments) with `PATCH /api/settings/public-page`.
  */
 export function registerSettingsRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   users: UserRepository,
   settings: UserSettingsRepository,
   profiles: PublicProfileRepository,
@@ -129,7 +128,7 @@ export function registerSettingsRoutes(
   const settingsOf = async (userId: number): Promise<UserSettings> =>
     (await settings.get(userId)) ?? NO_SETTINGS;
 
-  app.get(
+  routes.get(
     '/api/settings',
     { config: { sessionOnly: true } },
     async (request): Promise<OwnSettings> => {
@@ -142,7 +141,7 @@ export function registerSettingsRoutes(
     },
   );
 
-  app.patch<{ Body: PublicPagePatch }>(
+  routes.patch<{ Body: PublicPagePatch }>(
     '/api/settings/public-page',
     { config: { sessionOnly: true }, schema: { body: publicPageBody } },
     async (request): Promise<PublicPage> => {
@@ -200,15 +199,21 @@ export function registerSettingsRoutes(
     },
   );
 
-  app.get('/api/users', { config: { ownerOnly: true } }, async (): Promise<UserWithSettings[]> => {
-    const stored = new Map((await settings.list()).map((entry) => [entry.userId, entry.settings]));
-    return (await users.list()).map((user) => ({
-      user,
-      settings: stored.get(user.id) ?? NO_SETTINGS,
-    }));
-  });
+  routes.get(
+    '/api/users',
+    { config: { ownerOnly: true } },
+    async (): Promise<UserWithSettings[]> => {
+      const stored = new Map(
+        (await settings.list()).map((entry) => [entry.userId, entry.settings]),
+      );
+      return (await users.list()).map((user) => ({
+        user,
+        settings: stored.get(user.id) ?? NO_SETTINGS,
+      }));
+    },
+  );
 
-  app.patch<{ Params: { id: number }; Body: UserSettingsPatch }>(
+  routes.patch<{ Params: { id: number }; Body: UserSettingsPatch }>(
     '/api/users/:id/settings',
     { config: { ownerOnly: true }, schema: { params, body: patchBody } },
     async (request): Promise<UserSettings> => {
@@ -227,7 +232,7 @@ export function registerSettingsRoutes(
     },
   );
 
-  app.put<{ Params: { id: number }; Body: RoleChange }>(
+  routes.put<{ Params: { id: number }; Body: RoleChange }>(
     '/api/users/:id/role',
     { config: { ownerOnly: true }, schema: { params, body: roleBody } },
     async (request): Promise<User> => {

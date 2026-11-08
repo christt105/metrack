@@ -1,9 +1,8 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
 import { COLLECTIONS, IMAGE_KINDS, type ImageChoice, type ImageKind } from '@metrack/domain';
 import type { ArtworkService } from '../artwork/ArtworkService.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
 import { requireUser } from './requireUser.js';
-import './fastifyTypes.js';
 
 const params = {
   type: 'object',
@@ -25,18 +24,18 @@ type ImageParams = { id: number; kind: ImageKind };
 
 /** Candidate listing, choosing and removing covers and banners of every collection. */
 export function registerArtworkRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   artwork: ArtworkService,
   editor: MediaEditor,
 ): void {
   for (const collection of COLLECTIONS) {
     const path = `/api/${collection}/:id/images/:kind`;
 
-    app.get<{ Params: ImageParams }>(path, { schema: { params } }, async (request) =>
+    routes.get<{ Params: ImageParams }>(path, { schema: { params } }, async (request) =>
       artwork.candidates(collection, request.params.id, request.params.kind),
     );
 
-    app.put<{ Params: ImageParams; Body: ImageChoice }>(
+    routes.put<{ Params: ImageParams; Body: ImageChoice }>(
       path,
       { schema: { params, body } },
       async (request) =>
@@ -49,7 +48,7 @@ export function registerArtworkRoutes(
         ),
     );
 
-    app.delete<{ Params: ImageParams }>(path, { schema: { params } }, async (request) =>
+    routes.delete<{ Params: ImageParams }>(path, { schema: { params } }, async (request) =>
       editor.clearImage(collection, request.params.id, request.params.kind),
     );
   }

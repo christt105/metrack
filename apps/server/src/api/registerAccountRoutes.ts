@@ -1,11 +1,11 @@
-import type { FastifyInstance } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
 import type { AccountDeletion, AccountStatus, DeleteAccountRequest } from '@metrack/domain';
 import type { AccountDeletionService } from '../account/AccountDeletionService.js';
 import type { AccountExporter } from '../account/AccountExporter.js';
 import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
+import { bytesBody } from './bytesBody.js';
 import { ApiError } from './ApiError.js';
 import { requireUser } from './requireUser.js';
-import './fastifyTypes.js';
 
 const deleteBody = {
   type: 'object',
@@ -27,23 +27,25 @@ export interface AccountRouteDeps {
  * /api/account/deletion` cancels it. The last three need the browser session, so a token cannot delete an
  * account, and the owner's account cannot be deleted at all.
  */
-export function registerAccountRoutes(app: FastifyInstance, deps: AccountRouteDeps): void {
-  app.get('/api/account/export', async (request, reply) => {
+export function registerAccountRoutes(routes: ApiRoutes, deps: AccountRouteDeps): void {
+  routes.get('/api/account/export', async (request) => {
     const archive = await deps.exporter.build(requireUser(request.user).id);
-    return reply
-      .header('Content-Type', 'application/zip')
-      .header('Content-Disposition', `attachment; filename="${archive.fileName}"`)
-      .header('Cache-Control', 'no-store')
-      .send(archive.bytes);
+    return new Response(bytesBody(archive.bytes), {
+      headers: {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${archive.fileName}"`,
+        'Cache-Control': 'no-store',
+      },
+    });
   });
 
-  app.get(
+  routes.get(
     '/api/account',
     { config: { sessionOnly: true } },
     async (request): Promise<AccountStatus> => deps.deletion.status(requireUser(request.user).id),
   );
 
-  app.post<{ Body: DeleteAccountRequest }>(
+  routes.post<{ Body: DeleteAccountRequest }>(
     '/api/account/deletion',
     { config: { sessionOnly: true }, schema: { body: deleteBody } },
     async (request): Promise<AccountDeletion> => {
@@ -63,7 +65,7 @@ export function registerAccountRoutes(app: FastifyInstance, deps: AccountRouteDe
     },
   );
 
-  app.delete(
+  routes.delete(
     '/api/account/deletion',
     { config: { sessionOnly: true } },
     async (request): Promise<AccountStatus> => {

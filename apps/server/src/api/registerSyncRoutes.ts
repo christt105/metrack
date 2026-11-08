@@ -1,8 +1,10 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { ApiRoutes } from './ApiRoutes.js';
+import { jsonResponse } from './jsonResponse.js';
 import type { SyncService } from '../sync/SyncService.js';
 import type { UserSyncServices } from '../sync/UserSyncServices.js';
 import type { UserQueues } from '../users/UserQueues.js';
 import { ApiError } from './ApiError.js';
+import type { RouteRequest } from './RouteRequest.js';
 import type { WebhookSecret } from './WebhookSecret.js';
 
 const applyBody = {
@@ -20,7 +22,7 @@ const applyBody = {
  * work, but when a webhook secret is set it answers 401 to a request without it. All of them answer 501 when sync is not configured, and the first two also when the user has no account set.
  */
 export function registerSyncRoutes(
-  app: FastifyInstance,
+  routes: ApiRoutes,
   sync: UserSyncServices | undefined,
   queues?: UserQueues,
   webhookSecret?: WebhookSecret,
@@ -34,7 +36,7 @@ export function registerSyncRoutes(
     }
     return sync;
   };
-  const forRequest = async (request: FastifyRequest): Promise<SyncService> => {
+  const forRequest = async (request: RouteRequest): Promise<SyncService> => {
     const service = request.user ? await ready().forUser(request.user.id) : undefined;
     if (!service) {
       throw ApiError.notImplemented('sync_not_configured', 'No Jellyfin user is set for you');
@@ -42,20 +44,21 @@ export function registerSyncRoutes(
     return service;
   };
 
-  app.get('/api/sync/report', async (request) => (await forRequest(request)).report());
+  routes.get('/api/sync/report', async (request) => (await forRequest(request)).report());
 
-  app.post('/api/sync/apply', { schema: { body: applyBody } }, async (request) =>
+  routes.post('/api/sync/apply', { schema: { body: applyBody } }, async (request) =>
     (await forRequest(request)).apply(),
   );
 
-  app.post('/api/sync/webhook', { config: { public: true } }, async (request, reply) => {
-    if (webhookSecret && !webhookSecret.matches(request)) {
-      return reply
-        .code(401)
-        .send({ error: 'Missing or wrong webhook secret', code: 'bad_webhook_secret' });
+  routes.post('/api/sync/webhook', { config: { public: true } }, async (request) => {
+    if (webhookSecret && !webhookSecret.matches(request.headers, request.url)) {
+      return jsonResponse(
+        { error: 'Missing or wrong webhook secret', code: 'bad_webhook_secret' },
+        401,
+      );
     }
     ready();
     const users = (await queues?.markAllDirty()) ?? 0;
-    return reply.code(202).send({ status: 'queued', users });
+    return jsonResponse({ status: 'queued', users }, 202);
   });
 }
