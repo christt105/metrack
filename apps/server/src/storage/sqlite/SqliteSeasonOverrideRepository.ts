@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { UserScope } from '../../users/UserScope.js';
 import type { SeasonOverride } from '@metrack/domain';
 import type { SeasonOverrideRepository } from '../repositories/SeasonOverrideRepository.js';
-import { num, text } from './rowMapping.js';
+import { seasonOverrideFromRow } from '../mapping/seasonOverrideFromRow.js';
 
 export class SqliteSeasonOverrideRepository implements SeasonOverrideRepository {
   constructor(
@@ -33,13 +33,8 @@ export class SqliteSeasonOverrideRepository implements SeasonOverrideRepository 
         'SELECT * FROM season_override WHERE user_id = ? AND series_id = ? ORDER BY tmdb_season_number',
       )
       .all(this.scope.userId(), seriesId)
-      .map((row) => ({
-        seriesId: Number(row.series_id),
-        tmdbSeasonNumber: Number(row.tmdb_season_number),
-        number: num(row.number),
-        title: text(row.title),
-        jellyfinSeasonId: text(row.jellyfin_season_id),
-      }));
+
+      .map(seasonOverrideFromRow);
   }
 
   async delete(seriesId: number, tmdbSeasonNumber: number): Promise<boolean> {

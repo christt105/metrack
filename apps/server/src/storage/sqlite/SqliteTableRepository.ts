@@ -2,23 +2,28 @@ import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
 import type { UserScope } from '../../users/UserScope.js';
 import type { MediaEntityRepository } from '../repositories/MediaEntityRepository.js';
 import { SharedCatalogError } from '../SharedCatalogError.js';
-import type { Row } from './Row.js';
-import type { RowValues } from './RowValues.js';
+import type { MediaTableSpec } from '../mapping/MediaTableSpec.js';
+import type { Row } from '../mapping/Row.js';
+import type { RowValues } from '../mapping/RowValues.js';
+import { findCatalogSql, insertSql, qualifyColumn, selectMedia } from '../mapping/mediaTableSql.js';
+import {
+  assignments,
+  changedColumns,
+  ownedCatalog,
+  parseOverrides,
+  releasedCatalog,
+  splitRow,
+  withoutId,
+} from '../mapping/tableRows.js';
 
 /**
- * Typed CRUD over one media type stored as a shared catalog row (`<table>`) plus one personal entry per user
- * (`<table>_entry`, keyed by `user_id` and `<table>_id`). Every query joins only the entry of the user in
- * scope. Subclasses map the whole entity to and from the joined columns; `entryColumns` says which of them
- * live in the entry, and `catalogKeys` the column sets that identify a catalog row, so adding a title that
- * is already in the catalog reuses its row. Hand edits of catalog fields are kept in the entry's
- * `overrides` and win over the catalog when reading. `relatedDeletes` are trusted statements, run with the
- * user id and the entity id, that remove the user's rows hanging from a deleted entry. In an `ownable` table a
- * catalog row without any key (an item added by hand) belongs to the user who created it (`owner_id`), and
- * stops belonging to anyone once it gets a key, since it is then the shared catalog row of that title.
+ * Typed CRUD over one media type stored as a shared catalog row plus one personal entry per user, as
+ * described by its `MediaTableSpec`. Every query joins only the entry of the user in scope, so adding a title
+ * that is already in the catalog reuses its row. Hand edits of catalog fields are kept in the entry's
+ * `overrides` and win over the catalog when reading.
  */
-export abstract class SqliteTableRepository<
-  T extends { id: number },
-> implements MediaEntityRepository<T> {
+export class SqliteTableRepository<T extends { id: number }> implements MediaEntityRepository<T> {
+  private readonly table: string;
   protected readonly entryTable: string;
   protected readonly key: string;
   private readonly entryColumns: ReadonlySet<string>;
@@ -26,34 +31,24 @@ export abstract class SqliteTableRepository<
   constructor(
     protected readonly db: DatabaseSync,
     protected readonly scope: UserScope,
-    private readonly table: string,
-    entryColumns: readonly string[],
-    private readonly catalogKeys: readonly (readonly string[])[],
-    private readonly relatedDeletes: readonly string[] = [],
-    private readonly ownable = false,
+    private readonly spec: MediaTableSpec<T>,
   ) {
-    this.entryTable = `${table}_entry`;
-    this.key = `${table}_id`;
-    this.entryColumns = new Set(entryColumns);
+    this.table = spec.table;
+    this.entryTable = `${spec.table}_entry`;
+    this.key = `${spec.table}_id`;
+    this.entryColumns = new Set(spec.entryColumns);
   }
 
-  protected abstract toRow(entity: Omit<T, 'id'>): RowValues;
-  protected abstract fromRow(row: Row): T;
-
   async create(input: Omit<T, 'id'>): Promise<T> {
-    const { catalog, entry } = this.split(this.toRow(input));
+    const { catalog, entry } = this.split(this.spec.toRow(input));
     const userId = this.scope.userId();
     const id = this.atomically(() => {
       const catalogId =
         this.findCatalogRow(catalog) ??
-        this.insertCatalogRow(
-          this.ownable && !this.hasKey(catalog) ? { ...catalog, owner_id: userId } : catalog,
-        );
+        this.insertCatalogRow(ownedCatalog(this.spec, catalog, userId));
       const entryColumns = ['user_id', this.key, ...Object.keys(entry)];
       this.db
-        .prepare(
-          `INSERT INTO ${this.entryTable} (${entryColumns.join(', ')}) VALUES (${entryColumns.map(() => '?').join(', ')})`,
-        )
+        .prepare(insertSql(this.entryTable, entryColumns))
         .run(userId, catalogId, ...Object.values(entry));
       return catalogId;
     });
@@ -76,7 +71,7 @@ export abstract class SqliteTableRepository<
       if (field in overrides) nextOverrides[field] = value;
       else rest[field] = value;
     }
-    const next = this.split(this.toRow({ ...withoutId(base), ...rest } as Omit<T, 'id'>));
+    const next = this.split(this.spec.toRow({ ...withoutId(base), ...rest } as Omit<T, 'id'>));
     const changed = changedColumns(row, next.catalog);
     if (changed.length > 0 && this.sharedWithOthers(id)) {
       throw new SharedCatalogError(this.table, changed);
@@ -87,8 +82,8 @@ export abstract class SqliteTableRepository<
 
   async updateCatalog(id: number, patch: Partial<Omit<T, 'id'>>): Promise<T> {
     const { base, overrides } = this.requireStored(id);
-    const before = this.split(this.toRow(withoutId(base) as Omit<T, 'id'>));
-    const after = this.split(this.toRow({ ...withoutId(base), ...patch } as Omit<T, 'id'>));
+    const before = this.split(this.spec.toRow(withoutId(base) as Omit<T, 'id'>));
+    const after = this.split(this.spec.toRow({ ...withoutId(base), ...patch } as Omit<T, 'id'>));
     const personal = changedColumns(before.entry, after.entry);
     if (personal.length > 0) throw new Error(`Not catalog columns: ${personal.join(', ')}`);
     this.write(id, { catalog: after.catalog, entry: before.entry }, overrides);
@@ -97,7 +92,7 @@ export abstract class SqliteTableRepository<
 
   async override(id: number, fields: Partial<Omit<T, 'id'>>): Promise<T> {
     const { base, overrides } = this.requireStored(id);
-    this.write(id, this.split(this.toRow(withoutId(base) as Omit<T, 'id'>)), {
+    this.write(id, this.split(this.spec.toRow(withoutId(base) as Omit<T, 'id'>)), {
       ...overrides,
       ...fields,
     });
@@ -108,7 +103,7 @@ export abstract class SqliteTableRepository<
     const { base, overrides } = this.requireStored(id);
     const next = { ...overrides };
     delete next[field];
-    this.write(id, this.split(this.toRow(withoutId(base) as Omit<T, 'id'>)), next);
+    this.write(id, this.split(this.spec.toRow(withoutId(base) as Omit<T, 'id'>)), next);
     return this.require(id);
   }
 
@@ -125,7 +120,7 @@ export abstract class SqliteTableRepository<
           .run(userId, id).changes,
       );
       if (removed === 0) return false;
-      for (const sql of this.relatedDeletes) this.db.prepare(sql).run(userId, id);
+      for (const sql of this.spec.relatedDeletes) this.db.prepare(sql).run(userId, id);
       const left = this.db
         .prepare(`SELECT 1 FROM ${this.entryTable} WHERE ${this.key} = ? LIMIT 1`)
         .get(id);
@@ -136,7 +131,7 @@ export abstract class SqliteTableRepository<
 
   /** First entity whose column equals the value. The column name must be a trusted constant. */
   protected findOneBy(column: string, value: SQLInputValue): T | undefined {
-    return this.where(`${this.qualify(column)} = ? ORDER BY c.id LIMIT 1`, value)[0];
+    return this.where(`${qualifyColumn(this.spec, column)} = ? ORDER BY c.id LIMIT 1`, value)[0];
   }
 
   /**
@@ -145,23 +140,13 @@ export abstract class SqliteTableRepository<
    */
   protected where(condition: string, ...params: SQLInputValue[]): T[] {
     return this.db
-      .prepare(`${this.select()} WHERE ${condition}`)
+      .prepare(`${selectMedia(this.spec)} WHERE ${condition}`)
       .all(this.scope.userId(), ...params)
       .map((row) => this.merge(row));
   }
 
-  private select(): string {
-    const entry = [...this.entryColumns].map((column) => `e.${column}`).join(', ');
-    return `SELECT c.*, ${entry}, e.overrides AS overrides FROM ${this.table} c
-      JOIN ${this.entryTable} e ON e.${this.key} = c.id AND e.user_id = ?`;
-  }
-
-  private qualify(column: string): string {
-    return `${this.entryColumns.has(column) ? 'e' : 'c'}.${column}`;
-  }
-
   private merge(row: Row): T {
-    return { ...this.fromRow(row), ...parseOverrides(row.overrides) };
+    return { ...this.spec.fromRow(row), ...parseOverrides(row.overrides) };
   }
 
   private find(id: number): T | undefined {
@@ -175,9 +160,11 @@ export abstract class SqliteTableRepository<
   }
 
   private requireStored(id: number): { base: T; overrides: Record<string, unknown>; row: Row } {
-    const row = this.db.prepare(`${this.select()} WHERE c.id = ?`).get(this.scope.userId(), id);
+    const row = this.db
+      .prepare(`${selectMedia(this.spec)} WHERE c.id = ?`)
+      .get(this.scope.userId(), id);
     if (!row) throw new Error(`${this.table} ${id} not found`);
-    return { base: this.fromRow(row), overrides: parseOverrides(row.overrides), row };
+    return { base: this.spec.fromRow(row), overrides: parseOverrides(row.overrides), row };
   }
 
   private sharedWithOthers(id: number): boolean {
@@ -188,20 +175,12 @@ export abstract class SqliteTableRepository<
     );
   }
 
-  private hasKey(catalog: RowValues): boolean {
-    return this.catalogKeys.some((columns) =>
-      columns.every((column) => catalog[column] !== null && catalog[column] !== undefined),
-    );
-  }
-
   private findCatalogRow(catalog: RowValues): number | undefined {
-    for (const columns of this.catalogKeys) {
+    for (const columns of this.spec.catalogKeys) {
       const values = columns.map((column) => catalog[column]);
       if (values.some((value) => value === null || value === undefined)) continue;
       const row = this.db
-        .prepare(
-          `SELECT id FROM ${this.table} WHERE ${columns.map((column) => `${column} = ?`).join(' AND ')}`,
-        )
+        .prepare(findCatalogSql(this.spec, columns))
         .get(...(values as SQLInputValue[]));
       if (row) return Number(row.id);
     }
@@ -209,11 +188,8 @@ export abstract class SqliteTableRepository<
   }
 
   private insertCatalogRow(catalog: RowValues): number {
-    const columns = Object.keys(catalog);
     const result = this.db
-      .prepare(
-        `INSERT INTO ${this.table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
-      )
+      .prepare(insertSql(this.table, Object.keys(catalog)))
       .run(...Object.values(catalog));
     return Number(result.lastInsertRowid);
   }
@@ -224,10 +200,7 @@ export abstract class SqliteTableRepository<
     overrides: Record<string, unknown>,
   ): void {
     const userId = this.scope.userId();
-    const catalog =
-      this.ownable && this.hasKey(values.catalog)
-        ? { ...values.catalog, owner_id: null }
-        : values.catalog;
+    const catalog = releasedCatalog(this.spec, values.catalog);
     this.atomically(() => {
       this.db
         .prepare(`UPDATE ${this.table} SET ${assignments(catalog)} WHERE id = ?`)
@@ -242,12 +215,7 @@ export abstract class SqliteTableRepository<
   }
 
   private split(values: RowValues): { catalog: RowValues; entry: RowValues } {
-    const catalog: RowValues = {};
-    const entry: RowValues = {};
-    for (const [column, value] of Object.entries(values)) {
-      (this.entryColumns.has(column) ? entry : catalog)[column] = value;
-    }
-    return { catalog, entry };
+    return splitRow(this.entryColumns, values);
   }
 
   protected atomically<R>(work: () => R): R {
@@ -263,26 +231,4 @@ export abstract class SqliteTableRepository<
       throw error;
     }
   }
-}
-
-function changedColumns(before: Row, after: RowValues): string[] {
-  return Object.keys(after).filter(
-    (column) => (after[column] ?? null) !== (before[column] ?? null),
-  );
-}
-
-function assignments(values: RowValues): string {
-  return Object.keys(values)
-    .map((column) => `${column} = ?`)
-    .join(', ');
-}
-
-function withoutId<T extends { id: number }>(entity: T): Omit<T, 'id'> {
-  const rest: Partial<T> = { ...entity };
-  delete rest.id;
-  return rest as Omit<T, 'id'>;
-}
-
-function parseOverrides(value: unknown): Record<string, unknown> {
-  return JSON.parse(String(value)) as Record<string, unknown>;
 }
