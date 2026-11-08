@@ -61,18 +61,18 @@ describe('BackupCopier', () => {
     addImage('b.jpg', 'B');
     const first = backupAt('2026-11-01T03:00:00.000Z');
 
-    expect(copier().sync()).toEqual({ copied: [first], images: 2, pruned: [] });
+    expect(copier().sync()).toEqual({ copied: [first], images: 2, pruned: [], prunedImages: 0 });
     expect(readdirSync(join(copyDir, 'databases'))).toEqual([`${first}.db`]);
     expect(readdirSync(join(copyDir, 'images')).sort()).toEqual(['a.jpg', 'b.jpg']);
     const copy = new DatabaseSync(join(copyDir, 'databases', `${first}.db`), { readOnly: true });
     expect(copy.prepare('SELECT body FROM note').all()).toEqual([{ body: 'first' }]);
     copy.close();
 
-    expect(copier().sync()).toEqual({ copied: [], images: 0, pruned: [] });
+    expect(copier().sync()).toEqual({ copied: [], images: 0, pruned: [], prunedImages: 0 });
 
     addImage('c.jpg', 'C');
     const second = backupAt('2026-11-02T03:00:00.000Z');
-    expect(copier().sync()).toEqual({ copied: [second], images: 1, pruned: [] });
+    expect(copier().sync()).toEqual({ copied: [second], images: 1, pruned: [], prunedImages: 0 });
     expect(copier().list()).toEqual([second, first]);
   });
 
@@ -129,5 +129,33 @@ describe('BackupCopier', () => {
     expect(() => copier().retrieve(name)).toThrow('already exists locally');
     expect(() => copier().retrieve('../etc')).toThrow('Unknown copied backup');
     expect(existsSync(join(dir, 'backups', `.partial-${name}`))).toBe(false);
+  });
+
+  it('removes images from the copy once no retained copied database lists them', () => {
+    db.exec('CREATE TABLE image (hash TEXT, extension TEXT)');
+    db.exec("INSERT INTO image VALUES ('h1', 'webp'), ('h2', 'webp')");
+    addImage('h1.webp', '1');
+    addImage('h2.webp', '2');
+    backupAt('2026-11-01T03:00:00.000Z');
+    expect(copier(2).sync().prunedImages).toBe(0);
+
+    db.exec("DELETE FROM image WHERE hash = 'h2'");
+    rmSync(join(dir, 'images', 'h2.webp'));
+    backupAt('2026-11-02T03:00:00.000Z');
+    expect(copier(2).sync().prunedImages).toBe(0);
+    expect(existsSync(join(copyDir, 'images', 'h2.webp'))).toBe(true);
+
+    backupAt('2026-11-03T03:00:00.000Z');
+    const result = copier(2).sync();
+    expect(result.prunedImages).toBe(1);
+    expect(existsSync(join(copyDir, 'images', 'h2.webp'))).toBe(false);
+    expect(readFileSync(join(copyDir, 'images', 'h1.webp'), 'utf8')).toBe('1');
+  });
+
+  it('keeps every image when a retained database cannot say which images it lists', () => {
+    addImage('a.jpg', 'A');
+    backupAt('2026-11-01T03:00:00.000Z');
+    expect(copier().sync().prunedImages).toBe(0);
+    expect(existsSync(join(copyDir, 'images', 'a.jpg'))).toBe(true);
   });
 });

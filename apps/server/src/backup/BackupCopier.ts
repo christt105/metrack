@@ -1,5 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { ensureOwnedDir } from '../files/ensureOwnedDir.js';
 import { matchParentOwner } from '../files/matchParentOwner.js';
 import { checkIntegrity } from '../storage/checkIntegrity.js';
@@ -15,8 +16,10 @@ const DATABASE_PATTERN = /^(metrack-\d{8}T\d{9}Z)\.db$/;
 /**
  * Keeps a copy of the backups in another folder, usually on another disk: one database file per
  * backup and a single shared image folder. Images are stored by hash and never change, so each
- * one is copied once however many backups hold it. A database is only written after all of its
- * images, so every copied database has its images next to it.
+ * one is copied once however many backups hold it, and removed again once no copied database lists it,
+ * so an image deleted from the store (for example with a deleted account) leaves the copy together with
+ * the last database that held it. A database is only written after all of its images, so every copied
+ * database has its images next to it.
  */
 export class BackupCopier {
   constructor(
@@ -27,7 +30,7 @@ export class BackupCopier {
 
   /** Copies every local backup missing from the copy, oldest first, then applies retention. */
   sync(): BackupCopyResult {
-    const result: BackupCopyResult = { copied: [], images: 0, pruned: [] };
+    const result: BackupCopyResult = { copied: [], images: 0, pruned: [], prunedImages: 0 };
     const known = new Set(this.list());
     ensureOwnedDir(join(this.config.dir, DATABASES_DIR));
     for (const { name } of this.service.list().reverse()) {
@@ -37,6 +40,7 @@ export class BackupCopier {
       result.copied.push(name);
     }
     result.pruned = this.prune();
+    result.prunedImages = this.pruneImages();
     return result;
   }
 
@@ -112,12 +116,49 @@ export class BackupCopier {
     }
   }
 
+  /**
+   * Removes the images no retained copied database lists. If any of those databases cannot be read the
+   * images are all kept.
+   */
+  private pruneImages(): number {
+    const dir = join(this.config.dir, IMAGES_DIR);
+    if (!existsSync(dir)) return 0;
+    const keep = new Set<string>();
+    for (const name of this.list()) {
+      const files = listedImages(join(this.config.dir, DATABASES_DIR, `${name}.db`));
+      if (files === undefined) return 0;
+      for (const file of files) keep.add(file);
+    }
+    let removed = 0;
+    for (const file of readdirSync(dir)) {
+      if (file.startsWith('.') || keep.has(file)) continue;
+      rmSync(join(dir, file), { force: true });
+      removed += 1;
+    }
+    return removed;
+  }
+
   private prune(): string[] {
     const removed = this.list().slice(Math.max(this.config.retention, 1));
     for (const name of removed) {
       rmSync(join(this.config.dir, DATABASES_DIR, `${name}.db`), { force: true });
     }
     return removed;
+  }
+}
+
+function listedImages(databasePath: string): string[] | undefined {
+  let db: DatabaseSync | undefined;
+  try {
+    db = new DatabaseSync(databasePath, { readOnly: true });
+    return db
+      .prepare('SELECT hash, extension FROM image')
+      .all()
+      .map((row) => `${String(row.hash)}.${String(row.extension)}`);
+  } catch {
+    return undefined;
+  } finally {
+    db?.close();
   }
 }
 

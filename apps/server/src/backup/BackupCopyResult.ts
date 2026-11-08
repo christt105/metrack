@@ -5,4 +5,6 @@ export interface BackupCopyResult {
   images: number;
   /** Copied databases removed by retention. */
   pruned: string[];
+  /** Images removed from the copy because no retained database lists them any more. */
+  prunedImages: number;
 }
