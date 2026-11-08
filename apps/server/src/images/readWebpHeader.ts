@@ -1,7 +1,4 @@
-export interface WebpHeader {
-  width: number;
-  height: number;
-}
+import type { WebpHeader } from './WebpHeader.js';
 
 const ascii = (bytes: Uint8Array, start: number, length: number): string =>
   String.fromCharCode(...bytes.subarray(start, start + length));

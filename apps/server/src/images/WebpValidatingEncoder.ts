@@ -1,13 +1,7 @@
 import type { ImageEncoder } from './ImageEncoder.js';
 import { ImageRejectedError } from './ImageRejectedError.js';
 import { readWebpHeader } from './readWebpHeader.js';
-
-export interface WebpValidationLimits {
-  /** Longest side in pixels an accepted image may have. */
-  maxDimension: number;
-  /** Largest accepted file. */
-  maxBytes: number;
-}
+import type { WebpValidationLimits } from './WebpValidationLimits.js';
 
 /**
  * Accepts only real WebP files within the limits and returns them unchanged: the browser already recoded the

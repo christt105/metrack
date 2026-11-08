@@ -1,7 +1,4 @@
-export interface PixelSize {
-  width: number;
-  height: number;
-}
+import type { PixelSize } from './PixelSize';
 
 /** Scales a size down, keeping its proportions, so its longest side is at most `maxSide`; never scales up. */
 export function fitWithin(width: number, height: number, maxSide: number): PixelSize {
