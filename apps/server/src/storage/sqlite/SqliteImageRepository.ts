@@ -4,14 +4,7 @@ import { imageRef } from '../../images/imageRef.js';
 import type { StoredImage } from '../../images/StoredImage.js';
 import type { ImageRepository } from '../repositories/ImageRepository.js';
 import { imageFromRow } from '../mapping/imageFromRow.js';
-
-const REVIEW_TABLES = [
-  'movie_entry',
-  'series_entry',
-  'season_entry',
-  'videogame_entry',
-  'book_entry',
-];
+import { ORPHANS_SQL, catalogShowsSql } from '../mapping/imageSql.js';
 
 export class SqliteImageRepository implements ImageRepository {
   constructor(private readonly db: DatabaseSync) {}
@@ -92,34 +85,8 @@ export class SqliteImageRepository implements ImageRepository {
   }
 
   async orphans(createdBefore?: string): Promise<string[]> {
-    const referenced = IMAGE_COLUMNS.flatMap(({ table, column }) => [
-      `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
-      `SELECT json_extract(overrides, '$.${column}') AS ref FROM ${table}_entry
-       WHERE json_extract(overrides, '$.${column}') IS NOT NULL`,
-    ]).join(' UNION ');
-    const embedded = REVIEW_TABLES.map(
-      (table) =>
-        `EXISTS (SELECT 1 FROM ${table} WHERE instr(review, '${imageRef('')}' || image.hash) > 0)`,
-    ).join(' OR ');
     return this.db
-      .prepare(
-        `WITH referenced (ref) AS (${referenced})
-         SELECT hash FROM image
-         WHERE '${imageRef('')}' || hash NOT IN (SELECT ref FROM referenced)
-           AND (source_url IS NULL OR source_url NOT IN (SELECT ref FROM referenced))
-           AND NOT EXISTS (
-             SELECT 1 FROM image_source
-             WHERE image_source.hash = image.hash AND url IN (SELECT ref FROM referenced)
-           )
-           AND NOT (${embedded})
-           AND (? IS NULL OR (
-             image.created_at < ?
-             AND NOT EXISTS (
-               SELECT 1 FROM image_owner WHERE image_owner.hash = image.hash AND image_owner.created_at >= ?
-             )
-           ))
-         ORDER BY hash`,
-      )
+      .prepare(ORPHANS_SQL)
       .all(createdBefore ?? null, createdBefore ?? null, createdBefore ?? null)
       .map((row) => String(row.hash));
   }
@@ -164,16 +131,7 @@ export class SqliteImageRepository implements ImageRepository {
   async isShownByCatalog(hash: string): Promise<boolean> {
     const ref = imageRef(hash);
     return IMAGE_COLUMNS.some(
-      ({ table, column }) =>
-        this.db
-          .prepare(`SELECT 1 FROM ${table} WHERE ${column} = ? AND ${ownerFilter(table)} LIMIT 1`)
-          .get(ref) !== undefined,
+      ({ table, column }) => this.db.prepare(catalogShowsSql(table, column)).get(ref) !== undefined,
     );
   }
-}
-
-function ownerFilter(table: string): string {
-  return table === 'season'
-    ? 'series_id IN (SELECT id FROM series WHERE owner_id IS NULL)'
-    : 'owner_id IS NULL';
 }
