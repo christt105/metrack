@@ -1,6 +1,3 @@
-import { IMAGE_COLUMNS } from '../../images/imageColumns.js';
-import { imageRef } from '../../images/imageRef.js';
-
 export const REVIEW_TABLES = [
   'movie_entry',
   'series_entry',
