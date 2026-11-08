@@ -77,6 +77,16 @@ describe('renderIndex', () => {
     banner: string | null;
   }[];
 
+  it('orders the items by finish date, newest first, undated last', () => {
+    expect(items.map((item) => item.title)).toEqual([
+      'Celeste',
+      'Alien',
+      'Lupin - Temporada 1',
+      'Dune',
+      'Lupin',
+    ]);
+  });
+
   it('lists the shown entries with the theme type names and never a pending one', () => {
     expect(items.map((item) => item.title).sort()).toEqual([
       'Alien',
@@ -243,6 +253,28 @@ describe('season titles', () => {
     expect(renderIndex(lib)).toContain('Jujutsu Kaisen - Temporada 3: Parte 4');
     expect(renderDetail(lib, 'season', 1)).toContain(
       '<title>Jujutsu Kaisen - Temporada 3: Parte 4 |',
+    );
+  });
+});
+
+describe('vendored assets', () => {
+  it('serves Font Awesome and html2canvas itself and loads the metrack stylesheet last', () => {
+    for (const html of [renderHome(library), renderCollage(library)]) {
+      expect(html).not.toMatch(/cdnjs|unpkg/);
+      expect(html).toContain('/u/assets/fontawesome.css');
+      expect(html.lastIndexOf('/u/assets/metrack.css')).toBeGreaterThan(
+        html.lastIndexOf('/u/assets/theme.css'),
+      );
+    }
+    expect(renderCollage(library)).toContain('/u/assets/html2canvas-pro.js');
+    expect(siteAsset('fonts/fontawesome/fa-solid-900.woff2')?.contentType).toBe('font/woff2');
+    expect(siteAsset('fonts/fontawesome/fa-brands-400.woff2')?.contentType).toBe('font/woff2');
+    expect(siteAsset('html2canvas-pro.js')?.contentType).toContain('javascript');
+  });
+
+  it('links the footer name to the repository', () => {
+    expect(renderHome(library)).toContain(
+      '<a href="https://github.com/christt105/metrack" target="_blank" rel="noopener noreferrer">metrack</a>',
     );
   });
 });

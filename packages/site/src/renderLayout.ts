@@ -22,13 +22,17 @@ export interface LayoutOptions {
   headExtra?: string;
 }
 
-const FONT_AWESOME = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-
 /** The shell shared by every public page, after the Hugo theme: dark by default, always asking search engines to stay away. */
 export function renderLayout(options: LayoutOptions): string {
   const { library } = options;
   const description = options.description ?? library.profile.description;
-  const styles = ['theme.css', 'code-highlight.css', ...(options.styles ?? [])]
+  const styles = [
+    'theme.css',
+    'fontawesome.css',
+    'code-highlight.css',
+    ...(options.styles ?? []),
+    'metrack.css',
+  ]
     .map((name) => `<link href="${assetPath(name)}" rel="stylesheet">`)
     .join('\n');
   const scripts = ['main.js', ...(options.scripts ?? [])]
@@ -48,7 +52,6 @@ ${styles}
 <link rel="icon" type="image/png" sizes="16x16" href="${assetPath('favicon-16x16.png')}">
 <meta name="theme-color" content="#434648">
 <meta name="color-scheme" content="light dark">
-<link rel="stylesheet" href="${FONT_AWESOME}">
 ${options.headExtra ?? ''}</head>
 <body data-theme="dark" class="notransition" data-index="${escapeHtml(indexPath(library.handle))}">
 <script src="${assetPath('theme.js')}"></script>
