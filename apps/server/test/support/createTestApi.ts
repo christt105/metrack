@@ -79,6 +79,8 @@ export interface TestApiOptions {
   authenticator?: Authenticator;
   /** Defaults to the real encoder and quota, with `testUrlGuard`. */
   images?: ImageStoreOptions;
+  /** The configured `PUBLIC_URL`; defaults to none. */
+  publicUrl?: string;
 }
 
 export async function createTestApi(
@@ -163,7 +165,11 @@ export async function createTestApi(
       settings: new SqliteUserSettingsRepository(db),
       profiles,
     },
-    site: { profiles, sources: { movies, series, seasons, videogames, books }, baseUrl: null },
+    site: {
+      profiles,
+      sources: { movies, series, seasons, videogames, books },
+      publicUrl: options.publicUrl ?? null,
+    },
   });
   return {
     app,

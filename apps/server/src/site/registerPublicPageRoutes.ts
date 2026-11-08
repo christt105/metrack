@@ -23,7 +23,7 @@ export interface PublicPageDeps {
   scope: UserScope;
   images?: ImageStore;
   /** Address the feed links to; the visitor's own address when unset. */
-  baseUrl: string | null;
+  publicUrl: string | null;
 }
 
 const ID = /^[1-9]\d{0,9}$/;
@@ -74,7 +74,7 @@ export function registerPublicPageRoutes(app: FastifyInstance, deps: PublicPageD
       return reply
         .type('application/rss+xml; charset=utf-8')
         .header('Cache-Control', 'no-cache')
-        .send(renderFeed(library, siteOrigin(request, deps.baseUrl)));
+        .send(renderFeed(library, siteOrigin(request, deps.publicUrl)));
     });
 
     site.get<{ Params: { handle: string; type: string; id: string } }>(

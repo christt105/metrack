@@ -1,5 +1,6 @@
-import { escapeHtml, statusKey } from '@metrack/export';
+import { escapeHtml } from '@metrack/export';
 import { allEntries } from './allEntries.js';
+import { finishedViewings } from './finishedViewings.js';
 import { imageSrc } from './imageSrc.js';
 import type { Library } from './Library.js';
 import type { PublicEntry } from './PublicEntry.js';
@@ -46,22 +47,18 @@ function item(library: Library, entry: PublicEntry, date: string, origin: string
 }
 
 /**
- * An RSS 2.0 feed of the finished items, newest first. Only the finish date counts, not rewatches. An
- * item's guid is made of its address in the library and that date, so it stays the same however the
- * site is reached.
+ * An RSS 2.0 feed of the finished viewings, newest first: the finish date of each item and every
+ * rewatch are separate entries. A viewing's guid is made of the item's address in the library and
+ * its date, so it stays the same however the site is reached.
  */
 export function renderFeed(library: Library, origin: string): string {
-  const finished = allEntries(library)
-    .filter((entry) => statusKey(entry.status) === 'finished' && entry.finishedAt !== null)
-    .sort(
-      (a, b) =>
-        (b.finishedAt as string).localeCompare(a.finishedAt as string) ||
-        a.kind.localeCompare(b.kind) ||
-        b.id - a.id,
-    )
+  const viewings = finishedViewings(allEntries(library))
+    .filter((viewing) => viewing.date !== null)
     .slice(0, FEED_LIMIT);
   const home = `${origin}${homePath(library.handle)}`;
-  const items = finished.map((entry) => item(library, entry, entry.finishedAt as string, origin));
+  const items = viewings.map((viewing) =>
+    item(library, viewing.entry, viewing.date as string, origin),
+  );
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
 <channel>

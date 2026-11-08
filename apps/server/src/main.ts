@@ -235,7 +235,7 @@ const app = await buildApp({
   site: {
     profiles: repositories.profiles,
     sources: { movies, series, seasons, videogames, books },
-    baseUrl: config.mirrorWebUrl,
+    publicUrl: config.publicUrl,
   },
   watch: {
     watchlist: new WatchlistService(edit.editor, movies, series, seasons),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FEED_LIMIT,
   buildLibrary,
   renderDetail,
   renderFeed,
@@ -129,7 +130,12 @@ describe('renderFeed', () => {
 
   it('lists finished items newest first with absolute links', () => {
     const titles = [...feed.matchAll(/<item>\s*<title>(.*?)<\/title>/g)].map((match) => match[1]);
-    expect(titles).toEqual(['Dune &lt;2&gt;', 'Lupin - Temporada 1', 'Neuromante']);
+    expect(titles).toEqual([
+      'Dune &lt;2&gt;',
+      'Dune &lt;2&gt;',
+      'Lupin - Temporada 1',
+      'Neuromante',
+    ]);
     expect(feed).toContain('<link>https://example.org/u/ana/movie/1</link>');
   });
 
@@ -138,6 +144,57 @@ describe('renderFeed', () => {
     expect(renderFeed(library, 'https://other.example')).toContain(
       '<guid isPermaLink="false">metrack:ana:movie:1:2026-03-05</guid>',
     );
+  });
+
+  it('gives the finish date and each rewatch their own item and guid', () => {
+    const rewatched = buildLibrary(
+      input({
+        movies: [
+          movie({
+            id: 1,
+            title: 'Dune',
+            status: 'completed',
+            finishedAt: '2026-03-05',
+            rewatches: ['2026-06-01', '2026-09-10'],
+          }),
+          movie({ id: 2, title: 'Alien', status: 'completed', finishedAt: '2026-07-01' }),
+        ],
+      }),
+    );
+    const out = renderFeed(rewatched, 'https://example.org');
+    const guids = [...out.matchAll(/<guid[^>]*>(.*?)<\/guid>/g)].map((match) => match[1]);
+    expect(guids).toEqual([
+      'metrack:ana:movie:1:2026-09-10',
+      'metrack:ana:movie:2:2026-07-01',
+      'metrack:ana:movie:1:2026-06-01',
+      'metrack:ana:movie:1:2026-03-05',
+    ]);
+    expect(out).toContain('<pubDate>Thu, 10 Sep 2026 00:00:00 +0000</pubDate>');
+    expect(out).toContain('<pubDate>Mon, 01 Jun 2026 00:00:00 +0000</pubDate>');
+    expect(out).toContain('<pubDate>Thu, 05 Mar 2026 00:00:00 +0000</pubDate>');
+  });
+
+  it('keeps only the newest FEED_LIMIT viewings', () => {
+    const many = buildLibrary(
+      input({
+        movies: [
+          movie({
+            id: 1,
+            title: 'Loop',
+            status: 'completed',
+            finishedAt: '2020-01-01',
+            rewatches: Array.from({ length: FEED_LIMIT + 20 }, (_, i) => {
+              const day = new Date(Date.UTC(2021, 0, 1 + i));
+              return day.toISOString().slice(0, 10);
+            }),
+          }),
+        ],
+      }),
+    );
+    const out = renderFeed(many, 'https://example.org');
+    expect(out.match(/<item>/g)).toHaveLength(FEED_LIMIT);
+    expect(out).not.toContain(':2020-01-01<');
+    expect(out).toContain(':2021-04-30<');
   });
 
   it('includes the confirmed review and leaves out pending items and unfinished ones', () => {

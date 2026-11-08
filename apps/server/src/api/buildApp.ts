@@ -77,7 +77,7 @@ export interface AppDeps {
     profiles: PublicProfileRepository;
     sources: PublicSiteSources;
     /** Address the feeds link to; the visitor's own address when null. */
-    baseUrl: string | null;
+    publicUrl: string | null;
   };
 }
 

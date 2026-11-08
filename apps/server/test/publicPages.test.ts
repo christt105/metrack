@@ -297,6 +297,28 @@ describe('the public routes', () => {
     expect(response.body).toContain('Reseña confirmada');
     expect(response.body).toContain('/t/p/w342/dune.jpg');
   });
+
+  it('links the feed to PUBLIC_URL when configured, whatever the visitor used', async () => {
+    await api.app.close();
+    api = await createTestApi(pathFetch({}).fetch, {
+      scope,
+      authenticator: byHeader,
+      publicUrl: 'https://public.example/',
+    });
+    await publish(OWNER, 'christian');
+    const id = await addMovie(OWNER, {
+      title: 'Recent',
+      status: 'completed',
+      finishedAt: '2026-05-01',
+    });
+    const response = await api.app.inject({
+      method: 'GET',
+      url: '/u/christian/feed.xml',
+      headers: { host: 'metrack.example', 'x-forwarded-proto': 'https' },
+    });
+    expect(response.body).toContain(`<link>https://public.example/u/christian/movie/${id}</link>`);
+    expect(response.body).not.toContain('metrack.example');
+  });
 });
 
 describe('the public images', () => {

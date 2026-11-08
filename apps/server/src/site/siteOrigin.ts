@@ -4,7 +4,7 @@ function first(value: string | string[] | undefined): string | undefined {
   return (Array.isArray(value) ? value[0] : value)?.split(',')[0]?.trim() || undefined;
 }
 
-/** The address the feed links to: the configured one, or else the address the visitor used. */
+/** The address the feed links to: `PUBLIC_URL`, or else the address the visitor used. */
 export function siteOrigin(request: FastifyRequest, configured: string | null): string {
   if (configured) return configured.replace(/\/+$/, '');
   const protocol = first(request.headers['x-forwarded-proto']) ?? request.protocol;
