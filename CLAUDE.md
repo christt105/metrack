@@ -25,5 +25,6 @@ Self-hosted media tracker. TypeScript monorepo (npm workspaces), single Docker c
 - No comments that narrate changes or reasoning; JSDoc only where genuinely needed.
 - Markdown paragraphs are single lines, no hard wrapping.
 - A schema change is a new numbered migration, never an edit to an applied one. Versions only need to increase (a number may be left free for another branch); every unrecorded migration runs at start.
+- While the home server and Cloudflare D1 coexist, every schema change is a TypeScript migration plus a new SQL migration in `apps/server/d1/migrations` (`0001_schema.sql` is schema 18); `apps/server/test/D1Schema.test.ts` compares both and fails when they diverge.
 - Account deletion never has an immediate path: it is scheduled (`user.deletion_requested_at`), waits `ACCOUNT_DELETION_GRACE_DAYS` and is erased by the job; the routes that schedule it are `sessionOnly`, and user 1 is never deleted.
 - Port 8097 by default; never 8080, 8090, 8094, 8098, 8053 or 8010.
