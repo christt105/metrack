@@ -257,6 +257,35 @@ describe('users', () => {
       runUsersCommand({ dataDir, set: { userId: 2, changes: { ntfyTopic: 'two words' } } }),
     ).rejects.toThrow('Invalid settings: ntfyTopic');
   });
+
+  it('get a public page handle from the CLI, and keep it when job settings change', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
+    await runUsersCommand({ dataDir, add: { name: 'Friend', email: null } });
+    const shown = await runUsersCommand({
+      dataDir,
+      set: { userId: 2, changes: {}, handle: 'Friend', publicPage: true },
+    });
+    expect(shown).toContain('publicPage: on, handle: friend');
+    await runUsersCommand({ dataDir, set: { userId: 2, changes: { ntfyTopic: 't' } } });
+    expect(await runUsersCommand({ dataDir, set: { userId: 2, changes: {} } })).toContain(
+      'publicPage: on, handle: friend',
+    );
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 1, changes: {}, handle: 'friend' } }),
+    ).rejects.toThrow('taken');
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 1, changes: {}, handle: 'admin' } }),
+    ).rejects.toThrow('Invalid handle');
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 1, changes: {}, publicPage: true } }),
+    ).rejects.toThrow('needs a handle');
+    expect(
+      await runUsersCommand({
+        dataDir,
+        set: { userId: 2, changes: {}, handle: '', publicPage: false },
+      }),
+    ).toContain('publicPage: off, handle: -');
+  });
 });
 
 describe('readCookie', () => {

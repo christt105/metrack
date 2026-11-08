@@ -48,6 +48,7 @@ Then open `http://<host>:8097` and sign in as the owner (see the security model 
 ## Layout
 
 - `packages/domain`: pure domain logic, no HTTP or database.
+- `packages/site`: pure renderer of the public pages (HTML, RSS and the stylesheet) from one user's data; no database, no disk, no Node-only APIs.
 - `packages/export`: pure exporter from stored data to the Hugo content tree, and the redirect pages for the old site.
 - `apps/server`: Fastify API, SQLite storage and migrations; also serves the built web app.
 - `apps/web`: Vue 3 + Vite frontend.
@@ -158,6 +159,14 @@ Publishing stays off, with a log line naming what is missing, unless all of thes
 The `publishBaseUrl` setting (optional, user 1 starts from `PUBLISH_BASE_URL`) is the public address of the site, passed to Hugo as `--baseURL`. Set it to the address the site is served from (for example `https://my-site.pages.dev/`): without it the template's `baseURL` applies, and a relative one makes the RSS feeds emit relative links and cover URLs that feed readers cannot resolve.
 
 The image does not include Go, so the theme's Hugo modules must be vendored in the site template (`hugo mod vendor`, which writes `_vendor/`); with them vendored the build needs no network. The old MediaTracker site builds this way inside the image. The upload to Cloudflare is not covered by automated tests: the publisher is tested with a fake command runner and the pipeline with a fake publisher. Changes to the site template alone do not trigger a publish, because the fingerprint covers only the exported content.
+
+## Public pages
+
+Each user can serve a read-only page of their library from the app itself, with no sign-in: `/u/<handle>/` (the lists by type and status), `/u/<handle>/<type>/<id>` (`movie`, `series`, `season`, `videogame` or `book`, by the id the API uses), `/u/<handle>/feed.xml` (RSS 2.0 of finished viewings, newest first, at most 100, with confirmed reviews; the finish date and every rewatch of an item are separate entries, each with the guid `metrack:<handle>:<type>:<id>:<date of the viewing>`, so it does not depend on the domain) and `/u/assets/site.css`. The pages are plain server-rendered HTML in Spanish with the look of the Hugo theme, and need no JavaScript.
+
+A page is off until its owner picks a handle (lowercase letters, digits and `-`, 3 to 30 characters, not a reserved word, unique whatever the case, changeable) and switches it on, in the web Settings or with `metrack users set <id> --handle <name> --public-page on`. Over the API: `GET /api/settings` includes `publicPage` and `PATCH /api/settings/public-page` takes `{ "handle": "...", "enabled": true }` (400 `invalid_handle` or `handle_required`, 409 `handle_taken`). A missing user, a user without that handle and a page that is off all answer the same 404.
+
+The pages show what the Hugo export publishes (ratings on the 1 to 7 scale, confirmed reviews, the five status keys) except that items pending review never appear: not on the home, not on their own page, not in the feed, and a series whose seasons are all pending is left out too. Every response carries `X-Robots-Tag: noindex` and every page `<meta name="robots" content="noindex">`. Linked provider images (TMDB, IGDB, Steam) load from the provider at the size the card needs. Stored images load from `/u/<handle>/images/<hash>`, only for hashes that the user's published pages reference (covers, banners and images embedded in shown reviews), so `/api/images/<hash>` stays private. Feed links use `PUBLIC_URL` (for example `https://metrack.example.org`, trailing slash ignored) as the site address when set, and otherwise the address the visitor used (`X-Forwarded-Proto` and `X-Forwarded-Host` are honoured).
 
 ## Redirecting the old site
 

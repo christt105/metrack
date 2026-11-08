@@ -33,6 +33,8 @@ import type {
   UserSettingsPatch,
   UserWithSettings,
   OwnSettings,
+  PublicPage,
+  PublicPagePatch,
   WatchlistEntry,
   ImageUsage,
   UploadedImage,
@@ -284,6 +286,10 @@ export class ApiClient {
 
   ownSettings(): Promise<OwnSettings> {
     return this.request('GET', '/settings');
+  }
+
+  updatePublicPage(patch: PublicPagePatch): Promise<PublicPage> {
+    return this.request('PATCH', '/settings/public-page', patch);
   }
 
   listUsers(): Promise<UserWithSettings[]> {

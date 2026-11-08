@@ -11,6 +11,7 @@ import { migrations } from '../src/storage/migrations/index.js';
 import { SqliteApiTokenRepository } from '../src/storage/sqlite/SqliteApiTokenRepository.js';
 import { SqliteSessionRepository } from '../src/storage/sqlite/SqliteSessionRepository.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
+import { SqlitePublicProfileRepository } from '../src/storage/sqlite/SqlitePublicProfileRepository.js';
 import { SqliteUserSettingsRepository } from '../src/storage/sqlite/SqliteUserSettingsRepository.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
@@ -45,7 +46,11 @@ async function setup() {
     auth: { sessions, users, devLogin: true },
     tokens,
     publishQueues: ownerQueues(queue),
-    settings: { users, settings: new SqliteUserSettingsRepository(db) },
+    settings: {
+      users,
+      settings: new SqliteUserSettingsRepository(db),
+      profiles: new SqlitePublicProfileRepository(db),
+    },
   });
   const cookieFor = async (userId: number): Promise<string> => {
     const response = await app.inject({

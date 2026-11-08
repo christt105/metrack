@@ -39,6 +39,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
       timeZone: env.ALERTS_TIMEZONE ?? 'Europe/Madrid',
       notifyFromHour: hour(env, 'ALERTS_NOTIFY_FROM_HOUR', 8),
     },
+    publicUrl: env.PUBLIC_URL?.replace(/\/+$/, '') || null,
     mirrorWebUrl: env.VAULT_MIRROR_WEB_URL || null,
   };
   if (env.BACKUP_COPY_DIR) {

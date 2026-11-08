@@ -22,6 +22,16 @@ describe('loadConfig', () => {
     ).toBe('fr');
   });
 
+  it('reads PUBLIC_URL without trailing slashes, apart from VAULT_MIRROR_WEB_URL', () => {
+    expect(loadConfig({}).publicUrl).toBeNull();
+    expect(loadConfig({ PUBLIC_URL: 'https://metrack.example//' }).publicUrl).toBe(
+      'https://metrack.example',
+    );
+    const config = loadConfig({ VAULT_MIRROR_WEB_URL: 'http://lan:8100' });
+    expect(config.publicUrl).toBeNull();
+    expect(config.mirrorWebUrl).toBe('http://lan:8100');
+  });
+
   it('defaults image limits to 5 MB uploads, 1920 px, 200 MB quota and quality 82', () => {
     expect(loadConfig({}).images).toEqual({
       quotaBytes: 200 * 1024 * 1024,

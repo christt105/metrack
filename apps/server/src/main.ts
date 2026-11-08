@@ -224,10 +224,19 @@ const app = await buildApp({
   backup: { service: backupService, job: backupJob },
   sync: syncServices,
   syncQueues,
-  settings: { users: repositories.users, settings: repositories.settings },
+  settings: {
+    users: repositories.users,
+    settings: repositories.settings,
+    profiles: repositories.profiles,
+  },
   syncWebhookSecret: syncConfig?.webhookSecret
     ? new WebhookSecret(syncConfig.webhookSecret)
     : undefined,
+  site: {
+    profiles: repositories.profiles,
+    sources: { movies, series, seasons, videogames, books },
+    publicUrl: config.publicUrl,
+  },
   watch: {
     watchlist: new WatchlistService(edit.editor, movies, series, seasons),
     alerts: releaseAlerts,

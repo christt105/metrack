@@ -31,6 +31,10 @@ import type { AuthRouteDeps } from './AuthRouteDeps.js';
 import type { UserScope } from '../users/UserScope.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
+import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
+import { registerPublicPageRoutes } from '../site/registerPublicPageRoutes.js';
+import { sendPublicNotFound } from '../site/sendPublicNotFound.js';
+import type { PublicSiteSources } from '../site/PublicSiteSources.js';
 import { registerSettingsRoutes } from './registerSettingsRoutes.js';
 import { registerTokenRoutes } from './registerTokenRoutes.js';
 import type { ApiTokenService } from '../auth/ApiTokenService.js';
@@ -60,10 +64,21 @@ export interface AppDeps {
   sync?: UserSyncServices;
   syncQueues?: UserQueues;
   /** Shows each user their settings and lets the owner change everyone's. */
-  settings?: { users: UserRepository; settings: UserSettingsRepository };
+  settings?: {
+    users: UserRepository;
+    settings: UserSettingsRepository;
+    profiles: PublicProfileRepository;
+  };
   /** Required from the Jellyfin webhook when set. */
   syncWebhookSecret?: WebhookSecret;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
+  /** Serves each user's public page under `/u/<handle>/` while they have it on. */
+  site?: {
+    profiles: PublicProfileRepository;
+    sources: PublicSiteSources;
+    /** Address the feeds link to; the visitor's own address when null. */
+    publicUrl: string | null;
+  };
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -93,7 +108,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   }
   if (deps.watch) registerWatchlistRoutes(app, deps.watch.watchlist, deps.watch.alerts);
   registerSyncRoutes(app, deps.sync, deps.syncQueues, deps.syncWebhookSecret);
-  if (deps.settings) registerSettingsRoutes(app, deps.settings.users, deps.settings.settings);
+  if (deps.settings)
+    registerSettingsRoutes(
+      app,
+      deps.settings.users,
+      deps.settings.settings,
+      deps.settings.profiles,
+    );
+  if (deps.site) {
+    registerPublicPageRoutes(app, { ...deps.site, scope: deps.scope, images: deps.imageStore });
+  }
   if (deps.backup) registerBackupRoutes(app, deps.backup);
   if (deps.publishQueues) registerPublishRoutes(app, deps.publishQueues);
   if (deps.mirrorQueues) registerMirrorHook(app, deps.mirrorQueues);
@@ -102,6 +126,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const serveWeb = webDir !== undefined && existsSync(webDir);
   if (serveWeb) await app.register(fastifyStatic, { root: webDir });
   app.setNotFoundHandler((request, reply) => {
+    if (request.url === '/u' || request.url.startsWith('/u/')) return sendPublicNotFound(reply);
     if (serveWeb && request.method === 'GET' && !request.url.startsWith('/api/')) {
       return reply.sendFile('index.html');
     }

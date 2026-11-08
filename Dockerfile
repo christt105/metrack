@@ -3,6 +3,7 @@ WORKDIR /repo
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/domain/package.json packages/domain/
 COPY packages/export/package.json packages/export/
+COPY packages/site/package.json packages/site/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 RUN npm ci
@@ -45,6 +46,8 @@ COPY --from=build /repo/packages/domain/package.json ./packages/domain/package.j
 COPY --from=build /repo/packages/domain/dist ./packages/domain/dist
 COPY --from=build /repo/packages/export/package.json ./packages/export/package.json
 COPY --from=build /repo/packages/export/dist ./packages/export/dist
+COPY --from=build /repo/packages/site/package.json ./packages/site/package.json
+COPY --from=build /repo/packages/site/dist ./packages/site/dist
 COPY --from=build /repo/apps/server/package.json ./apps/server/package.json
 COPY --from=build /repo/apps/server/dist ./apps/server/dist
 COPY --from=build /repo/apps/web/dist ./web

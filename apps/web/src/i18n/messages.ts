@@ -248,6 +248,23 @@ export const messages = {
       mirrorLinkPrefix: 'Folder path in the vault',
     } satisfies Record<keyof UserSettings, string>,
   },
+  publicPage: {
+    title: 'Public page',
+    hint: 'Share your library, finished items and confirmed reviews at a public address that needs no sign-in. Items waiting for review never appear. Search engines are asked to stay away.',
+    handle: 'Handle',
+    handleHint: 'Lowercase letters, digits and "-", 3 to 30 characters.',
+    enabled: 'Turn the page on',
+    save: 'Save',
+    saved: 'Saved.',
+    open: 'Open the page',
+    feed: 'RSS feed',
+    errors: {
+      invalid_handle:
+        'That handle is not valid. Use lowercase letters, digits and "-", 3 to 30 characters, and not a reserved word.',
+      handle_taken: 'Another user already has that handle.',
+      handle_required: 'Choose a handle before turning the page on.',
+    } as Record<string, string>,
+  },
   tokens: {
     title: 'API tokens',
     hint: 'Let a program, such as a sync connector or the Obsidian plugin, use your library without your browser session. A token never reaches settings, tokens or owner-only actions.',

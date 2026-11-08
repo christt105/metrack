@@ -1,4 +1,6 @@
 export { buildExport } from './buildExport.js';
+export { escapeHtml } from './escapeHtml.js';
+export { statusKey } from './statusKey.js';
 export { legacyImageName } from './legacyImageName.js';
 export type { ExportedFile } from './ExportedFile.js';
 export type { ExportedImageFile } from './ExportedImageFile.js';
