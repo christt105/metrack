@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import type { ImageEncodingSite } from '@metrack/domain';
 import type { Config } from './Config.js';
 
 const MB = 1024 * 1024;
@@ -31,6 +32,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     images: {
       quotaBytes: positiveInteger(env, 'IMAGE_QUOTA_MB', 200) * MB,
       maxUploadBytes: positiveInteger(env, 'IMAGE_UPLOAD_MAX_MB', 5) * MB,
+      encodedBy: imageEncodingSite(env),
       maxDimension: positiveInteger(env, 'IMAGE_MAX_DIMENSION', 1920),
       quality: Math.min(positiveInteger(env, 'IMAGE_WEBP_QUALITY', 82), 100),
     },
@@ -57,6 +59,13 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     if (env.NTFY_TOPIC) config.ntfy = { ...config.ntfyServer, topic: env.NTFY_TOPIC };
   }
   return config;
+}
+
+function imageEncodingSite(env: Record<string, string | undefined>): ImageEncodingSite {
+  const raw = env.IMAGE_ENCODED_BY;
+  if (raw === undefined || raw === '') return 'server';
+  if (raw !== 'server' && raw !== 'client') throw new Error(`Invalid IMAGE_ENCODED_BY: ${raw}`);
+  return raw;
 }
 
 function positiveInteger(

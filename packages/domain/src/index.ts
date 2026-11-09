@@ -117,6 +117,7 @@ export { canUseOwnArtwork } from './canUseOwnArtwork.js';
 export { isLinkedImageUrl } from './images/isLinkedImageUrl.js';
 export { sizedImageUrl } from './images/sizedImageUrl.js';
 export type { ImageDisplay } from './images/ImageDisplay.js';
+export type { ImageEncodingSite } from './api/ImageEncodingSite.js';
 export type { ImageUsage } from './api/ImageUsage.js';
 export type { UploadedImage } from './api/UploadedImage.js';
 export { ACCOUNT_DELETION_GRACE_DAYS } from './api/ACCOUNT_DELETION_GRACE_DAYS.js';

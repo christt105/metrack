@@ -1,3 +1,4 @@
+import type { ImageEncodingSite } from '@metrack/domain';
 import type { ImageEncoder } from './ImageEncoder.js';
 import type { UrlGuard } from './UrlGuard.js';
 
@@ -9,4 +10,6 @@ export interface ImageStoreOptions {
   quotaBytes?: number;
   /** Largest file a user may upload or copy, before re-encoding. */
   maxUploadBytes?: number;
+  /** Who encodes uploads, reported to the web; `server` by default. */
+  encodedBy?: ImageEncodingSite;
 }

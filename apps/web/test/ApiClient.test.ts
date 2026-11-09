@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ApiClient } from '../src/api/ApiClient';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 
@@ -59,5 +59,49 @@ describe('ApiClient', () => {
       throw new Error('offline');
     }) as unknown as typeof fetch);
     await expect(broken.health()).rejects.toMatchObject({ code: 'network_error', status: 0 });
+  });
+
+  describe('uploadImage', () => {
+    function uploader(encoding: 'server' | 'client' | 'fails') {
+      const calls: { url: string; init?: RequestInit }[] = [];
+      const fetchFn = (async (url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+        if (url === '/api/images/usage') {
+          if (encoding === 'fails') return new Response('{}', { status: 500 });
+          return new Response(
+            JSON.stringify({ usedBytes: 0, quotaBytes: null, imageEncoding: encoding }),
+          );
+        }
+        return new Response('{"ref":"/api/images/abc"}', { status: 201 });
+      }) as unknown as typeof fetch;
+      const recoded = new Blob(['webp'], { type: 'image/webp' });
+      const recode = vi.fn().mockResolvedValue(recoded);
+      return { calls, recode, recoded, client: new ApiClient(fetchFn, undefined, recode) };
+    }
+    const file = new Blob(['jpeg'], { type: 'image/jpeg' });
+
+    it('sends the file as it is when the server encodes', async () => {
+      const { calls, client, recode } = uploader('server');
+      await client.uploadImage(file);
+      expect(recode).not.toHaveBeenCalled();
+      expect(calls.at(-1)?.init?.body).toBe(file);
+    });
+
+    it('recodes first when the client encodes, and asks the mode only once', async () => {
+      const { calls, client, recode, recoded } = uploader('client');
+      await client.uploadImage(file);
+      await client.uploadImage(file);
+      expect(recode).toHaveBeenCalledWith(file);
+      expect(calls.at(-1)?.init?.body).toBe(recoded);
+      expect(calls.filter((call) => call.url === '/api/images/usage')).toHaveLength(1);
+    });
+
+    it('uploads the file as it is when the mode cannot be read, and asks again next time', async () => {
+      const { calls, client, recode } = uploader('fails');
+      await client.uploadImage(file);
+      await client.uploadImage(file);
+      expect(recode).not.toHaveBeenCalled();
+      expect(calls.filter((call) => call.url === '/api/images/usage')).toHaveLength(2);
+    });
   });
 });

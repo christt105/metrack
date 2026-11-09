@@ -38,6 +38,7 @@ import type {
   PublicPage,
   PublicPagePatch,
   WatchlistEntry,
+  ImageEncodingSite,
   ImageUsage,
   UploadedImage,
 } from '@metrack/domain';
@@ -45,6 +46,7 @@ import type { BackupInfo } from './BackupInfo';
 import { ApiRequestError } from './ApiRequestError';
 import { buildQueryString } from './buildQueryString';
 import type { EntityOf } from './EntityOf';
+import { recodeToWebp } from '../logic/recodeToWebp';
 
 type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDetail<EntityOf[C]>;
 
@@ -56,7 +58,10 @@ export class ApiClient {
   constructor(
     private readonly fetchFn: typeof fetch = (...args) => fetch(...args),
     private readonly onUnauthenticated: () => void = () => {},
+    private readonly recode: (file: Blob) => Promise<Blob> = recodeToWebp,
   ) {}
+
+  private encodedBy: Promise<ImageEncodingSite> | undefined;
 
   private async request<T>(
     method: string,
@@ -237,9 +242,23 @@ export class ApiClient {
     return this.request('DELETE', `/${collection}/${id}/images/${kind}`);
   }
 
-  /** Uploads an image file; the server stores it as WebP and counts it for the user's quota. */
-  uploadImage(file: Blob): Promise<UploadedImage> {
-    return this.request('POST', '/images', file);
+  /**
+   * Uploads an image file and counts it for the user's quota. The server stores it as WebP; when it reports
+   * that images are encoded by the client, the file is recoded to WebP in the browser first.
+   */
+  async uploadImage(file: Blob): Promise<UploadedImage> {
+    const body = (await this.imageEncodedBy()) === 'client' ? await this.recode(file) : file;
+    return this.request('POST', '/images', body);
+  }
+
+  private async imageEncodedBy(): Promise<ImageEncodingSite> {
+    this.encodedBy ??= this.imageUsage().then((usage) => usage.imageEncoding);
+    try {
+      return await this.encodedBy;
+    } catch {
+      this.encodedBy = undefined;
+      return 'server';
+    }
   }
 
   imageUsage(): Promise<ImageUsage> {
