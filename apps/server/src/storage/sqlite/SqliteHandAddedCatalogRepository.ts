@@ -1,24 +1,21 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { CatalogCollection, UnreferencedCatalogItem } from '@metrack/domain';
+import { HAND_ADDED_TABLES, unreferencedSql } from '../mapping/handAddedSql.js';
 import type { HandAddedCatalogRepository } from '../repositories/HandAddedCatalogRepository.js';
-
-const TABLES: Record<CatalogCollection, string> = {
-  movies: 'movie',
-  series: 'series',
-  games: 'videogame',
-  books: 'book',
-};
 
 export class SqliteHandAddedCatalogRepository implements HandAddedCatalogRepository {
   constructor(private readonly db: DatabaseSync) {}
 
   async listUnreferenced(ownerId?: number): Promise<UnreferencedCatalogItem[]> {
     const items: UnreferencedCatalogItem[] = [];
-    for (const [collection, table] of Object.entries(TABLES) as [CatalogCollection, string][]) {
+    for (const [collection, table] of Object.entries(HAND_ADDED_TABLES) as [
+      CatalogCollection,
+      string,
+    ][]) {
       const rows = this.db
         .prepare(
           `SELECT id, title, owner_id FROM ${table}
-           WHERE owner_id IS NOT NULL AND (? IS NULL OR owner_id = ?) AND ${unreferenced(table)}
+           WHERE owner_id IS NOT NULL AND (? IS NULL OR owner_id = ?) AND ${unreferencedSql(table)}
            ORDER BY id`,
         )
         .all(ownerId ?? null, ownerId ?? null);
@@ -38,10 +35,10 @@ export class SqliteHandAddedCatalogRepository implements HandAddedCatalogReposit
     collection: CatalogCollection,
     id: number,
   ): Promise<{ ownerId: number; referenced: boolean } | undefined> {
-    const table = TABLES[collection];
+    const table = HAND_ADDED_TABLES[collection];
     const row = this.db
       .prepare(
-        `SELECT owner_id, NOT (${unreferenced(table)}) AS referenced FROM ${table}
+        `SELECT owner_id, NOT (${unreferencedSql(table)}) AS referenced FROM ${table}
          WHERE id = ? AND owner_id IS NOT NULL`,
       )
       .get(id);
@@ -51,14 +48,6 @@ export class SqliteHandAddedCatalogRepository implements HandAddedCatalogReposit
   }
 
   async delete(collection: CatalogCollection, id: number): Promise<void> {
-    this.db.prepare(`DELETE FROM ${TABLES[collection]} WHERE id = ?`).run(id);
+    this.db.prepare(`DELETE FROM ${HAND_ADDED_TABLES[collection]} WHERE id = ?`).run(id);
   }
-}
-
-function unreferenced(table: string): string {
-  const own = `NOT EXISTS (SELECT 1 FROM ${table}_entry WHERE ${table}_id = ${table}.id)`;
-  if (table !== 'series') return own;
-  return `${own} AND NOT EXISTS (
-    SELECT 1 FROM season_entry WHERE season_id IN (SELECT id FROM season WHERE series_id = series.id)
-  )`;
 }

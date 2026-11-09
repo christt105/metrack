@@ -18,7 +18,7 @@ import { createUserPublishQueues } from '../src/publish/createUserPublishQueues.
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { createSqliteRepositories } from '../src/storage/sqlite/createSqliteRepositories.js';
-import type { SqliteRepositories } from '../src/storage/sqlite/SqliteRepositories.js';
+import type { Repositories } from '../src/storage/repositories/Repositories.js';
 import { createUserSyncQueues } from '../src/sync/createUserSyncQueues.js';
 import type { LibrarySource } from '../src/sync/LibrarySource.js';
 import type { PlaybackSource } from '../src/sync/PlaybackSource.js';
@@ -63,7 +63,7 @@ function tempDir(): string {
 let db: DatabaseSync;
 let dataDir: string;
 let scope: AsyncUserScope;
-let repos: SqliteRepositories;
+let repos: Repositories;
 let timer: FakeScheduler;
 let logs: string[];
 let jobs: UserJobContext;

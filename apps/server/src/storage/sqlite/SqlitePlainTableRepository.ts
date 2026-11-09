@@ -1,28 +1,26 @@
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
 import type { UserScope } from '../../users/UserScope.js';
 import type { EntityRepository } from '../repositories/EntityRepository.js';
-import type { Row } from './Row.js';
-import type { RowValues } from './RowValues.js';
+import type { PlainTableSpec } from '../mapping/PlainTableSpec.js';
 
 /**
  * Typed CRUD over one SQLite table of personal rows: every query only sees the rows of the user in scope,
- * and new rows belong to that user. Subclasses map between entities and rows; `update` merges a patch over
+ * and new rows belong to that user. Its `PlainTableSpec` maps between entities and rows; `update` merges a patch over
  * the stored entity and rewrites the mapped columns.
  */
-export abstract class SqlitePlainTableRepository<
-  T extends { id: number },
-> implements EntityRepository<T> {
+export class SqlitePlainTableRepository<T extends { id: number }> implements EntityRepository<T> {
+  private readonly table: string;
+
   constructor(
     protected readonly db: DatabaseSync,
     protected readonly scope: UserScope,
-    private readonly table: string,
-  ) {}
-
-  protected abstract toRow(entity: Omit<T, 'id'>): RowValues;
-  protected abstract fromRow(row: Row): T;
+    private readonly spec: PlainTableSpec<T>,
+  ) {
+    this.table = spec.table;
+  }
 
   async create(input: Omit<T, 'id'>): Promise<T> {
-    const values = { user_id: this.scope.userId(), ...this.toRow(input) };
+    const values = { user_id: this.scope.userId(), ...this.spec.toRow(input) };
     const columns = Object.keys(values);
     const result = this.db
       .prepare(
@@ -44,7 +42,7 @@ export abstract class SqlitePlainTableRepository<
     const current = Object.fromEntries(
       Object.entries(this.require(id)).filter(([key]) => key !== 'id'),
     );
-    const values = this.toRow({ ...current, ...patch } as Omit<T, 'id'>);
+    const values = this.spec.toRow({ ...current, ...patch } as Omit<T, 'id'>);
     const assignments = Object.keys(values).map((column) => `${column} = ?`);
     this.db
       .prepare(`UPDATE ${this.table} SET ${assignments.join(', ')} WHERE id = ? AND user_id = ?`)
@@ -72,7 +70,7 @@ export abstract class SqlitePlainTableRepository<
     return this.db
       .prepare(`SELECT * FROM ${this.table} WHERE user_id = ? AND ${condition}`)
       .all(this.scope.userId(), ...params)
-      .map((row) => this.fromRow(row));
+      .map((row) => this.spec.fromRow(row));
   }
 
   private find(id: number): T | undefined {

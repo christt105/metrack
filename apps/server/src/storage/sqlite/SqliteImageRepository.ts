@@ -3,29 +3,23 @@ import { IMAGE_COLUMNS } from '../../images/imageColumns.js';
 import { imageRef } from '../../images/imageRef.js';
 import type { StoredImage } from '../../images/StoredImage.js';
 import type { ImageRepository } from '../repositories/ImageRepository.js';
-import type { Row } from './Row.js';
-
-const REVIEW_TABLES = [
-  'movie_entry',
-  'series_entry',
-  'season_entry',
-  'videogame_entry',
-  'book_entry',
-];
+import { imageFromRow } from '../mapping/imageFromRow.js';
+import { catalogShowsSql } from '../mapping/imageSql.js';
+import { ORPHANS_SQL } from './orphansSql.js';
 
 export class SqliteImageRepository implements ImageRepository {
   constructor(private readonly db: DatabaseSync) {}
 
   async get(hash: string): Promise<StoredImage | undefined> {
     const row = this.db.prepare('SELECT * FROM image WHERE hash = ?').get(hash);
-    return row ? toImage(row) : undefined;
+    return row ? imageFromRow(row) : undefined;
   }
 
   async list(): Promise<StoredImage[]> {
     return this.db
       .prepare('SELECT * FROM image ORDER BY created_at, hash')
       .all()
-      .map((row) => toImage(row));
+      .map((row) => imageFromRow(row));
   }
 
   async insert(image: StoredImage): Promise<void> {
@@ -72,7 +66,7 @@ export class SqliteImageRepository implements ImageRepository {
          LIMIT 1`,
       )
       .get(url, url, url);
-    return row ? toImage(row) : undefined;
+    return row ? imageFromRow(row) : undefined;
   }
 
   async delete(hash: string): Promise<void> {
@@ -92,34 +86,8 @@ export class SqliteImageRepository implements ImageRepository {
   }
 
   async orphans(createdBefore?: string): Promise<string[]> {
-    const referenced = IMAGE_COLUMNS.flatMap(({ table, column }) => [
-      `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
-      `SELECT json_extract(overrides, '$.${column}') AS ref FROM ${table}_entry
-       WHERE json_extract(overrides, '$.${column}') IS NOT NULL`,
-    ]).join(' UNION ');
-    const embedded = REVIEW_TABLES.map(
-      (table) =>
-        `EXISTS (SELECT 1 FROM ${table} WHERE instr(review, '${imageRef('')}' || image.hash) > 0)`,
-    ).join(' OR ');
     return this.db
-      .prepare(
-        `WITH referenced (ref) AS (${referenced})
-         SELECT hash FROM image
-         WHERE '${imageRef('')}' || hash NOT IN (SELECT ref FROM referenced)
-           AND (source_url IS NULL OR source_url NOT IN (SELECT ref FROM referenced))
-           AND NOT EXISTS (
-             SELECT 1 FROM image_source
-             WHERE image_source.hash = image.hash AND url IN (SELECT ref FROM referenced)
-           )
-           AND NOT (${embedded})
-           AND (? IS NULL OR (
-             image.created_at < ?
-             AND NOT EXISTS (
-               SELECT 1 FROM image_owner WHERE image_owner.hash = image.hash AND image_owner.created_at >= ?
-             )
-           ))
-         ORDER BY hash`,
-      )
+      .prepare(ORPHANS_SQL)
       .all(createdBefore ?? null, createdBefore ?? null, createdBefore ?? null)
       .map((row) => String(row.hash));
   }
@@ -147,7 +115,7 @@ export class SqliteImageRepository implements ImageRepository {
          WHERE image_owner.user_id = ? ORDER BY image.created_at, image.hash`,
       )
       .all(userId)
-      .map((row) => toImage(row));
+      .map((row) => imageFromRow(row));
   }
 
   async usedBytes(userId: number): Promise<number> {
@@ -164,31 +132,7 @@ export class SqliteImageRepository implements ImageRepository {
   async isShownByCatalog(hash: string): Promise<boolean> {
     const ref = imageRef(hash);
     return IMAGE_COLUMNS.some(
-      ({ table, column }) =>
-        this.db
-          .prepare(`SELECT 1 FROM ${table} WHERE ${column} = ? AND ${ownerFilter(table)} LIMIT 1`)
-          .get(ref) !== undefined,
+      ({ table, column }) => this.db.prepare(catalogShowsSql(table, column)).get(ref) !== undefined,
     );
   }
-}
-
-function ownerFilter(table: string): string {
-  return table === 'season'
-    ? 'series_id IN (SELECT id FROM series WHERE owner_id IS NULL)'
-    : 'owner_id IS NULL';
-}
-
-function toImage(row: Row): StoredImage {
-  const hash = String(row.hash);
-  return {
-    hash,
-    ref: imageRef(hash),
-    extension: String(row.extension),
-    mimeType: String(row.mime_type),
-    width: Number(row.width),
-    height: Number(row.height),
-    byteSize: Number(row.byte_size),
-    sourceUrl: row.source_url === null ? null : String(row.source_url),
-    createdAt: String(row.created_at),
-  };
 }

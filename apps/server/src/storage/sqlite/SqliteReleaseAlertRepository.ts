@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { UserScope } from '../../users/UserScope.js';
-import type { AlertKey, AlertKind, AlertSubjectType, ReleaseAlert } from '@metrack/domain';
+import type { AlertKey, AlertSubjectType, ReleaseAlert } from '@metrack/domain';
+import { alertFromRow, alertKeyFromRow } from '../mapping/alertFromRow.js';
 import type { NewReleaseAlert } from '../repositories/NewReleaseAlert.js';
 import type { ReleaseAlertRepository } from '../repositories/ReleaseAlertRepository.js';
 
@@ -34,11 +35,7 @@ export class SqliteReleaseAlertRepository implements ReleaseAlertRepository {
         'SELECT subject_type, subject_id, kind FROM release_alert WHERE user_id = ? AND subject_type = ? AND subject_id = ?',
       )
       .all(this.scope.userId(), subjectType, subjectId)
-      .map((row) => ({
-        subjectType: row.subject_type as AlertSubjectType,
-        subjectId: Number(row.subject_id),
-        kind: row.kind as AlertKind,
-      }));
+      .map(alertKeyFromRow);
   }
 
   async list(limit = 100): Promise<ReleaseAlert[]> {
@@ -47,14 +44,6 @@ export class SqliteReleaseAlertRepository implements ReleaseAlertRepository {
         'SELECT * FROM release_alert WHERE user_id = ? ORDER BY sent_at DESC, id DESC LIMIT ?',
       )
       .all(this.scope.userId(), limit)
-      .map((row) => ({
-        id: Number(row.id),
-        subjectType: row.subject_type as AlertSubjectType,
-        subjectId: Number(row.subject_id),
-        kind: row.kind as AlertKind,
-        title: String(row.title),
-        message: String(row.message),
-        sentAt: String(row.sent_at),
-      }));
+      .map(alertFromRow);
   }
 }

@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { sessionFromRow } from '../mapping/sessionFromRow.js';
 import type { SessionRepository } from '../repositories/SessionRepository.js';
 import type { StoredSession } from '../repositories/StoredSession.js';
 
@@ -14,12 +15,7 @@ export class SqliteSessionRepository implements SessionRepository {
   async get(id: string): Promise<StoredSession | undefined> {
     const row = this.db.prepare('SELECT * FROM session WHERE id = ?').get(id);
     if (!row) return undefined;
-    return {
-      id: String(row.id),
-      userId: Number(row.user_id),
-      createdAt: String(row.created_at),
-      expiresAt: String(row.expires_at),
-    };
+    return sessionFromRow(row);
   }
 
   async delete(id: string): Promise<void> {

@@ -7,7 +7,7 @@ import { SqliteBookRepository } from './SqliteBookRepository.js';
 import { SqliteImageRepository } from './SqliteImageRepository.js';
 import { SqliteMetadataStateRepository } from './SqliteMetadataStateRepository.js';
 import { SqliteMovieRepository } from './SqliteMovieRepository.js';
-import type { SqliteRepositories } from './SqliteRepositories.js';
+import type { Repositories } from '../repositories/Repositories.js';
 import { SqlitePublicProfileRepository } from './SqlitePublicProfileRepository.js';
 import { SqliteReleaseAlertRepository } from './SqliteReleaseAlertRepository.js';
 import { SqliteSeasonOverrideRepository } from './SqliteSeasonOverrideRepository.js';
@@ -21,7 +21,7 @@ import { SqliteUserSettingsRepository } from './SqliteUserSettingsRepository.js'
 import { SqliteVideogameRepository } from './SqliteVideogameRepository.js';
 
 /** Every repository over one SQLite connection. Personal data is read and written as the user in scope. */
-export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): SqliteRepositories {
+export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): Repositories {
   return {
     movies: new SqliteMovieRepository(db, scope),
     series: new SqliteSeriesRepository(db, scope),
