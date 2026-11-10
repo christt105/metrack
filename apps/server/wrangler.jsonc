@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "metrack-test",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "metrack-test",
+      "database_id": "d2d4db87-3592-4ca1-9c56-3f105e6d99c2",
+      "migrations_dir": "d1/migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "metrack-test-images" }],
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/u/*", "/privacy"],
+  },
+  "vars": {
+    "APP_VERSION": "cloud-test",
+    "TMDB_LANGUAGE": "es-ES",
+  },
+}

@@ -304,6 +304,3 @@ CREATE INDEX videogame_banner ON videogame (banner);
 CREATE INDEX videogame_cover ON videogame (cover);
 CREATE INDEX videogame_entry_catalog ON videogame_entry (videogame_id);
 CREATE INDEX videogame_owner ON videogame (owner_id) WHERE owner_id IS NOT NULL;
-
-INSERT INTO user (id, name, email, created_at, role)
-VALUES (1, 'Owner', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 'owner');

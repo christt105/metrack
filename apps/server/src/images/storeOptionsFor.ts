@@ -16,5 +16,6 @@ export function storeOptionsFor(limits: ImageLimits): ImageStoreOptions {
     quotaBytes: limits.quotaBytes,
     maxUploadBytes: limits.maxUploadBytes,
     encodedBy: limits.encodedBy,
+    maxDimension: limits.maxDimension,
   };
 }

@@ -25,7 +25,7 @@ import type { MetadataCache } from '../metadata/MetadataCache.js';
 import { registerBackupRoutes, type BackupRouteDeps } from './registerBackupRoutes.js';
 import type { UserSyncServices } from '../sync/UserSyncServices.js';
 import type { UserQueues } from '../users/UserQueues.js';
-import type { MigrationRunner } from '../storage/MigrationRunner.js';
+import type { SchemaVersionSource } from '../storage/SchemaVersionSource.js';
 import type { Logger } from '../notify/Logger.js';
 import type { Authenticator } from '../auth/Authenticator.js';
 import type { AuthRouteDeps } from './AuthRouteDeps.js';
@@ -46,7 +46,7 @@ import type { WebhookSecret } from './WebhookSecret.js';
 
 export interface AppDeps {
   appVersion: string;
-  migrationRunner: MigrationRunner;
+  migrationRunner: SchemaVersionSource;
   /** Tells who signed in; every `/api` route that is not public needs a user. */
   authenticator: Authenticator;
   /** Binds each request to its user. */
@@ -109,7 +109,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   if (deps.tokens) registerTokenRoutes(routes, deps.tokens);
 
   routes.get('/api/health', { config: { public: true } }, async () => {
-    const report = createHealthReport(deps.appVersion, deps.migrationRunner.currentVersion());
+    const report = createHealthReport(deps.appVersion, await deps.migrationRunner.currentVersion());
     return jsonResponse(report, report.status === 'ok' ? 200 : 503);
   });
 

@@ -56,21 +56,15 @@ describe('D1 schema file', () => {
     expect(actual.other).toEqual([]);
   });
 
-  it('seeds only the owner user', () => {
-    const users = fromSql().prepare('SELECT id, name, email, role FROM user').all();
-    expect(users.map((u) => ({ ...u }))).toEqual([
-      { id: 1, name: 'Owner', email: null, role: 'owner' },
-    ]);
-    expect(fromSql().prepare('SELECT COUNT(*) AS n FROM user_setting').get()).toEqual({ n: 0 });
-  });
-
-  it('seeds the same rows as the TypeScript migrations', () => {
-    const rows = (db: DatabaseSync) =>
-      db
-        .prepare('SELECT id, name, email, role, handle, deletion_requested_at FROM user')
-        .all()
-        .map((u) => ({ ...u }));
-    expect(rows(fromSql())).toEqual(rows(fromMigrations()));
+  it('holds no data', () => {
+    const tables = fromSql()
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((row) => String(row.name));
+    const db = fromSql();
+    for (const name of tables) {
+      expect(db.prepare(`SELECT COUNT(*) AS n FROM "${name}"`).get(), name).toEqual({ n: 0 });
+    }
   });
 
   it('passes the foreign key check', () => {

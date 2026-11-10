@@ -18,7 +18,9 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "dev:server": "npm run dev -w @metrack/server",
-    "dev:web": "npm run dev -w @metrack/web"
+    "dev:web": "npm run dev -w @metrack/web",
+    "worker:dev": "npm run build -w @metrack/domain && npm run build -w @metrack/export && npm run build -w @metrack/site && npm run build -w @metrack/web && npm run worker:dev -w @metrack/server",
+    "worker:deploy": "npm run build -w @metrack/domain && npm run build -w @metrack/export && npm run build -w @metrack/site && npm run build -w @metrack/web && npm run worker:deploy -w @metrack/server"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

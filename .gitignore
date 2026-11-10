@@ -6,3 +6,7 @@ data/
 .env
 *.tsbuildinfo
 .claude/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example

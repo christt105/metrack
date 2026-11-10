@@ -1,19 +1,22 @@
 import { fitWithin } from './fitWithin';
 
-export const RECODE_MAX_SIDE = 1920;
+export const DEFAULT_RECODE_MAX_SIDE = 1920;
 export const RECODE_QUALITY = 0.82;
 
 const WEBP = 'image/webp';
 
 /**
  * Decodes an image in the browser and encodes it again as WebP at quality 0.82 with its longest side at most
- * 1920 px. Drops metadata and applies the EXIF orientation. Throws when the file cannot be decoded or the
+ * `maxSide` px (1920 by default). Drops metadata and applies the EXIF orientation. Throws when the file cannot be decoded or the
  * browser cannot encode WebP.
  */
-export async function recodeToWebp(file: Blob): Promise<Blob> {
+export async function recodeToWebp(
+  file: Blob,
+  maxSide: number = DEFAULT_RECODE_MAX_SIDE,
+): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   try {
-    const { width, height } = fitWithin(bitmap.width, bitmap.height, RECODE_MAX_SIDE);
+    const { width, height } = fitWithin(bitmap.width, bitmap.height, maxSide);
     const blob = await encode(bitmap, width, height);
     if (blob.type !== WEBP) throw new Error('This browser cannot encode WebP images');
     return blob;
