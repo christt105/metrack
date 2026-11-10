@@ -45,12 +45,8 @@ import type { BackupInfo } from './BackupInfo';
 import { ApiRequestError } from './ApiRequestError';
 import { buildQueryString } from './buildQueryString';
 import type { EntityOf } from './EntityOf';
+import type { ImageSettings } from './ImageSettings';
 import { DEFAULT_RECODE_MAX_SIDE, recodeToWebp } from '../logic/recodeToWebp';
-
-interface ImageSettings {
-  imageEncoding: ImageUsage['imageEncoding'];
-  maxDimension: number;
-}
 
 type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDetail<EntityOf[C]>;
 
