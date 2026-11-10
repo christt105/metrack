@@ -1,0 +1,9 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit real values.
+# On Cloudflare these are Worker secrets: `wrangler secret put <NAME>`.
+TMDB_API_KEY=
+IGDB_CLIENT_ID=
+IGDB_CLIENT_SECRET=
+STEAMGRIDDB_TOKEN=
+# Local only: lets anyone sign in as any user without a password (the web app has no other sign-in yet).
+# Never set it on a deployed Worker.
+# DEV_LOGIN=true

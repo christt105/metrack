@@ -10,7 +10,9 @@
     "test": "vitest run",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "metrack": "node --disable-warning=ExperimentalWarning dist/cli.js"
+    "metrack": "node --disable-warning=ExperimentalWarning dist/cli.js",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.6",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
-    "miniflare": "^4.20260730.0"
+    "miniflare": "^4.20260730.0",
+    "wrangler": "^4.160.0"
   }
 }
