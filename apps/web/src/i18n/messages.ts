@@ -23,7 +23,10 @@ export const messages = {
     title: 'Sign in',
     devHint:
       'Development sign-in: pick who you are. Anyone who can open this page can do the same.',
-    noMethod: 'This server has no way to sign in set up yet.',
+    tokenTitle: 'Sign in with an access token',
+    tokenHint: 'Paste a personal API token with write access.',
+    tokenLabel: 'Access token',
+    tokenSubmit: 'Sign in',
     signOut: 'Sign out',
   },
   common: {

@@ -56,6 +56,7 @@ export { ASSIGNABLE_ROLES } from './api/ASSIGNABLE_ROLES.js';
 export type { RoleChange } from './api/RoleChange.js';
 export { canAddByHand } from './canAddByHand.js';
 export type { DevLoginRequest } from './api/DevLoginRequest.js';
+export type { TokenLoginRequest } from './api/TokenLoginRequest.js';
 export type { UserSettings } from './api/UserSettings.js';
 export type { UserSettingsPatch } from './api/UserSettingsPatch.js';
 export type { OwnSettings } from './api/OwnSettings.js';

@@ -1,6 +1,7 @@
 import type { ExecutionContext, Hono } from 'hono';
 import type { ApiEnv } from '../api/ApiEnv.js';
 import { createWorkerApp } from './createWorkerApp.js';
+import { serveAsset } from './serveAsset.js';
 import type { WorkerEnv } from './WorkerEnv.js';
 
 /** The Worker's `fetch`, which builds the app once per isolate and reuses it while the bindings stay the same. */
@@ -11,6 +12,7 @@ export function createWorkerHandler(): {
   let builtFor: WorkerEnv | undefined;
   return {
     fetch(request, env, context) {
+      if (new URL(request.url).pathname.startsWith('/assets/')) return serveAsset(request, env);
       if (!app || builtFor !== env) {
         app = createWorkerApp(env);
         builtFor = env;

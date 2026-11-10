@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { Miniflare } from 'miniflare';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { hashSecret } from '../src/auth/hashSecret.js';
+import { createWorkerHandler } from '../src/worker/createWorkerHandler.js';
 import { createWorkerApp } from '../src/worker/createWorkerApp.js';
 import type { WorkerEnv } from '../src/worker/WorkerEnv.js';
 import { WorkerUrlGuard } from '../src/worker/WorkerUrlGuard.js';
@@ -39,6 +40,61 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await miniflare.dispose();
+});
+
+describe('Worker assets and image limits', () => {
+  const asset = (answer: Response) => {
+    const requested: string[] = [];
+    const env = {
+      ASSETS: {
+        fetch: async (request: Request) => {
+          requested.push(new URL(request.url).pathname);
+          return answer;
+        },
+      },
+    } as unknown as WorkerEnv;
+    return { env, requested };
+  };
+  const context = {} as never;
+
+  it('serves a hit under /assets as it is', async () => {
+    const { env, requested } = asset(
+      new Response('console.log(1)', { headers: { 'content-type': 'text/javascript' } }),
+    );
+    const response = await createWorkerHandler().fetch(
+      new Request('http://localhost/assets/app.js'),
+      env,
+      context,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('console.log(1)');
+    expect(requested).toEqual(['/assets/app.js']);
+  });
+
+  it('answers a missing asset with an uncached JSON 404, never index.html', async () => {
+    const { env } = asset(
+      new Response('<!doctype html>', { headers: { 'content-type': 'text/html; charset=utf-8' } }),
+    );
+    const response = await createWorkerHandler().fetch(
+      new Request('http://localhost/assets/old.js'),
+      env,
+      context,
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('content-type')).toBe('application/json');
+    expect(await response.json()).toEqual({ error: 'Not found', code: 'not_found' });
+  });
+
+  it('reports the configured image dimension limit', async () => {
+    const limited = createWorkerApp({
+      DB: (await miniflare.getD1Database('DB')) as never,
+      IMAGES: (await miniflare.getR2Bucket('IMAGES')) as never,
+      IMAGE_MAX_DIMENSION: '1234',
+    } as unknown as WorkerEnv);
+    const usage = await limited.request('http://localhost/api/images/usage', { headers: auth });
+    expect(await usage.json()).toMatchObject({ maxDimension: 1234 });
+  });
 });
 
 const auth = { authorization: `Bearer ${SECRET}` };

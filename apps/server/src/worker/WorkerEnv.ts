@@ -1,3 +1,4 @@
+import type { Fetcher } from './Fetcher.js';
 import type { R2Bucket } from '../images/R2Bucket.js';
 import type { D1Database } from '../storage/d1/D1Database.js';
 
@@ -5,5 +6,6 @@ import type { D1Database } from '../storage/d1/D1Database.js';
 export interface WorkerEnv {
   DB: D1Database;
   IMAGES: R2Bucket;
+  ASSETS?: Fetcher;
   [name: string]: unknown;
 }
