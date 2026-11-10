@@ -17,6 +17,7 @@ import { imageOwnersMigration } from './0015-image-owners.js';
 import { publicPagesMigration } from './0016-public-pages.js';
 import { publicPageProfileMigration } from './0017-public-page-profile.js';
 import { accountDeletionMigration } from './0018-account-deletion.js';
+import { queryIndexesMigration } from './0019-query-indexes.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -37,4 +38,5 @@ export const migrations: readonly Migration[] = [
   publicPagesMigration,
   publicPageProfileMigration,
   accountDeletionMigration,
+  queryIndexesMigration,
 ];

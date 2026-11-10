@@ -152,9 +152,54 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.images.isShownByCatalog(hash);
   await owner.images.delete(hash);
 
+  const second = await owner.series.create({ ...emptySeries(), tmdbId: 9, title: 'T' });
+  const secondSeason = await owner.seasons.create({ ...emptySeason(), seriesId: second.id });
+  await owner.seasons.update(secondSeason.id, { rating: 3 });
+  await owner.seasons.updateCatalog(secondSeason.id, { title: 'X' });
+  await owner.seasons.override(secondSeason.id, { title: 'Y' });
+  await owner.seasons.overriddenFields(secondSeason.id);
+  await owner.seasons.clearOverride(secondSeason.id, 'title');
+  await owner.metadataStates.markFetched('series', second.id, 'now');
+  await owner.metadataStates.markFetched('series', second.id, 'now', 'hash');
+  await owner.metadataStates.get('series', second.id);
+  await owner.series.get(second.id);
+  await owner.series.update(second.id, { note: 'n' });
+  await owner.series.updateCatalog(second.id, { title: 'U' });
+  await owner.series.override(second.id, { title: 'V' });
+  await owner.series.overriddenFields(second.id);
+  await owner.series.clearOverride(second.id, 'title');
+  await owner.overrides.set({
+    seriesId: second.id,
+    tmdbSeasonNumber: 1,
+    number: 1,
+    title: null,
+    jellyfinSeasonId: null,
+  });
+  await owner.videogames.get(game.id);
+  await owner.videogames.update(game.id, { rating: 4 });
+  await owner.videogames.updateCatalog(game.id, { title: 'U' });
+  await owner.videogames.override(game.id, { title: 'V' });
+  await owner.videogames.overriddenFields(game.id);
+  await owner.videogames.clearOverride(game.id, 'title');
+  await owner.books.get(book.id);
+  await owner.books.update(book.id, { rating: 4 });
+  await owner.books.updateCatalog(book.id, { title: 'U' });
+  await owner.books.override(book.id, { title: 'V' });
+  await owner.books.overriddenFields(book.id);
+  await owner.books.clearOverride(book.id, 'title');
+  await owner.metadataStates.markFetched('videogame', game.id, 'now');
+  await owner.metadataStates.get('videogame', game.id);
+  await owner.metadataStates.markFetched('book', book.id, 'now');
+  await owner.metadataStates.get('book', book.id);
+  await owner.seasons.delete(secondSeason.id);
+  const handBook = await owner.books.create({ ...emptyBook(), title: 'HandBook' });
+  await owner.handAddedCatalog.delete('books', handBook.id);
+  await owner.books.delete(book.id);
+  await owner.series.delete(second.id);
+
   await owner.handAddedCatalog.listUnreferenced(1);
   await owner.handAddedCatalog.find('movies', handMovie.id);
-  await owner.handAddedCatalog.delete('books', book.id);
+
   await owner.videogames.delete(game.id);
   await owner.series.delete(series.id);
   await owner.movies.delete(movie.id);
@@ -207,16 +252,6 @@ const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
     why: 'scheduled jobs over every user',
   },
   {
-    sql: /^SELECT id FROM user WHERE deletion_requested_at IS NOT NULL/,
-    scan: /^SCAN user/,
-    why: 'scheduled account deletion',
-  },
-  {
-    sql: /^DELETE FROM session WHERE expires_at <= \?$/,
-    scan: /^SCAN session/,
-    why: 'scheduled session cleanup',
-  },
-  {
     sql: /^SELECT \* FROM image ORDER BY created_at, hash$/,
     scan: /^SCAN image/,
     why: 'image maintenance',
@@ -227,9 +262,9 @@ const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
     why: 'image maintenance',
   },
   {
-    sql: /^(UPDATE|SELECT|DELETE)\b.*\b(cover|banner)\b/,
-    scan: /^SCAN (movie|series|season|videogame|book)(_entry)?$/,
-    why: 'image deletion, orphan detection and the shown-by-catalog guard read every catalog row',
+    sql: /^(UPDATE|SELECT) .*json_extract\(overrides, '\$\.(cover|banner)'\)/,
+    scan: /^SCAN \w+_entry$/,
+    why: 'image deletion and orphan detection read the cover and banner overrides, which live in a JSON column no index covers',
   },
   {
     sql: /^SELECT review FROM \w+_entry WHERE instr/,
@@ -244,22 +279,7 @@ const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
   {
     sql: /^SELECT id, title, owner_id FROM \w+ WHERE owner_id IS NOT NULL/,
     scan: /^SCAN \w+/,
-    why: 'admin list of hand-added items; no owner_id index',
-  },
-  {
-    sql: /^UPDATE (movie|series|videogame|book) SET owner_id = \? WHERE owner_id = \?$/,
-    scan: /^SCAN (movie|series|videogame|book)/,
-    why: 'account erase reassigns hand-added items; no owner_id index',
-  },
-  {
-    sql: /^DELETE FROM series WHERE/,
-    scan: /^SCAN season_override/,
-    why: 'the cascade into season_override has no series_id index',
-  },
-  {
-    sql: /^DELETE FROM user WHERE id = \?$/,
-    scan: /^SCAN (movie|series|videogame|book)$/,
-    why: 'the owner_id cascade has no index on the catalog tables',
+    why: 'admin list of hand-added items; the optional owner filter keeps the planner from the owner_id index',
   },
 ];
 
