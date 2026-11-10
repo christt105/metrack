@@ -12,4 +12,6 @@ export interface ImageStoreOptions {
   maxUploadBytes?: number;
   /** Who encodes uploads, reported to the web; `server` by default. */
   encodedBy?: ImageEncodingSite;
+  /** Longest side, in pixels, a stored image may have; reported to the web so it recodes to the same size. */
+  maxDimension?: number;
 }

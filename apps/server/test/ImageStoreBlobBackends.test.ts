@@ -56,6 +56,7 @@ describe.each(backends)('ImageStore with a validating encoder on %s', (_name, op
       usedBytes: bytes.length,
       quotaBytes: 2000,
       imageEncoding: 'client',
+      maxDimension: 1920,
     });
     expect(await images.usage(2)).toMatchObject({ usedBytes: 0 });
   });
