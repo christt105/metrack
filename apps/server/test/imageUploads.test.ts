@@ -58,6 +58,7 @@ describe('uploading images', () => {
       usedBytes: uploaded.byteSize,
       quotaBytes: 4000,
       imageEncoding: 'server',
+      maxDimension: 1920,
     });
     expect((await trusted.get('/api/images/usage')).json()).toEqual(uploaded.usage);
     expect((await normal.get('/api/images/usage')).json().usedBytes).toBe(0);
@@ -76,6 +77,7 @@ describe('uploading images', () => {
       usedBytes: first.byteSize,
       quotaBytes: null,
       imageEncoding: 'server',
+      maxDimension: 1920,
     });
     expect(first.byteSize).toBeGreaterThan(4000);
     const second = await owner.upload(await noiseImage(129, 129));

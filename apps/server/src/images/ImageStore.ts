@@ -11,6 +11,7 @@ import type { ImageRepository } from '../storage/repositories/ImageRepository.js
 import type { ImageBlobStore } from './ImageBlobStore.js';
 import type { ImageEncoder } from './ImageEncoder.js';
 import { ImageRejectedError } from './ImageRejectedError.js';
+import { OversizeImageError } from './OversizeImageError.js';
 import { imageRef } from './imageRef.js';
 import type { ImageStoreOptions } from './ImageStoreOptions.js';
 import { PublicAddressGuard } from './PublicAddressGuard.js';
@@ -23,6 +24,7 @@ import type { UrlGuard } from './UrlGuard.js';
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 export const DEFAULT_QUOTA_BYTES = 200 * 1024 * 1024;
 export const DEFAULT_MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+export const DEFAULT_MAX_DIMENSION = 1920;
 export const ORPHAN_GRACE_MS = 24 * 60 * 60 * 1000;
 
 const MAX_REDIRECTS = 3;
@@ -43,6 +45,7 @@ export class ImageStore {
   readonly quotaBytes: number;
   readonly maxUploadBytes: number;
   readonly encodedBy: ImageEncodingSite;
+  readonly maxDimension: number;
 
   constructor(
     private readonly rows: ImageRepository,
@@ -56,18 +59,20 @@ export class ImageStore {
     this.quotaBytes = options.quotaBytes ?? DEFAULT_QUOTA_BYTES;
     this.maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
     this.encodedBy = options.encodedBy ?? 'server';
+    this.maxDimension = options.maxDimension ?? DEFAULT_MAX_DIMENSION;
   }
 
   /**
    * What a cover or banner column keeps for a provider image: the URL itself when the provider is linked
-   * (after archiving the original), otherwise the reference of a WebP copy.
+   * (after archiving the original), otherwise the reference of a WebP copy. When the client encodes images
+   * and the copy cannot be stored as it is, the URL itself, shown as a link.
    */
   async reference(url: string): Promise<string> {
     if (isLinkedImageUrl(url)) {
       await this.archive(url);
       return url;
     }
-    return (await this.download(url)).ref;
+    return this.downloadOrLink(url);
   }
 
   /** Stores a provider image as WebP unless this exact URL was already stored. */
@@ -97,6 +102,24 @@ export class ImageStore {
     return this.addOwned(await this.encoder.encode(bytes), url, userId, unlimited);
   }
 
+  /**
+   * Like `copyForUser`, but when the client encodes images and the fetched image cannot be stored as it is
+   * (not WebP, too big or too large), returns the URL itself, to be shown as a link. Addresses that are not
+   * allowed and content that is not an image are still refused.
+   */
+  async copyOrLinkForUser(url: string, userId: number, unlimited = false): Promise<string> {
+    let bytes: Uint8Array;
+    try {
+      bytes = await this.fetchGuarded(url);
+    } catch (error) {
+      if (this.isOversizeImage(error)) return url;
+      throw error;
+    }
+    const encoded = await this.encodeOrNull(bytes);
+    if (encoded === null) return url;
+    return (await this.addOwned(encoded, url, userId, unlimited)).ref;
+  }
+
   /** Copies an existing local file into the store, optionally recording the URL it stands for. */
   async importFile(path: string, sourceUrl: string | null = null): Promise<StoredImage> {
     if ((await stat(path)).size > MAX_IMAGE_BYTES) throw tooLarge(MAX_IMAGE_BYTES);
@@ -117,6 +140,7 @@ export class ImageStore {
       usedBytes: await this.rows.usedBytes(userId),
       quotaBytes: unlimited ? null : this.quotaBytes,
       imageEncoding: this.encodedBy,
+      maxDimension: this.maxDimension,
     };
   }
 
@@ -210,6 +234,38 @@ export class ImageStore {
     return this.rows.findBySourceUrl(url);
   }
 
+  private async downloadOrLink(url: string): Promise<string> {
+    const known = await this.findBySourceUrl(url);
+    if (known && (await this.hasFile(known))) return known.ref;
+    let bytes: Uint8Array;
+    try {
+      bytes = await this.fetchLimited(url, MAX_IMAGE_BYTES);
+    } catch (error) {
+      if (this.isOversizeImage(error)) return url;
+      throw error;
+    }
+    const encoded = await this.encodeOrNull(bytes);
+    if (encoded === null) return url;
+    return (await this.add(encoded, url)).ref;
+  }
+
+  /** Encodes the bytes; `null` when the client encodes images and these are a real image that cannot be stored as they are. */
+  private async encodeOrNull(bytes: Uint8Array): Promise<Uint8Array | null> {
+    try {
+      return await this.encoder.encode(bytes);
+    } catch (error) {
+      if (this.encodedBy === 'client' && error instanceof ImageRejectedError) {
+        if (error.code === 'image_too_large') return null;
+        if (error.code === 'unsupported_image' && isImage(bytes)) return null;
+      }
+      throw error;
+    }
+  }
+
+  private isOversizeImage(error: unknown): boolean {
+    return this.encodedBy === 'client' && error instanceof OversizeImageError;
+  }
+
   private async addOwned(
     bytes: Uint8Array,
     sourceUrl: string | null,
@@ -296,12 +352,13 @@ export class ImageStore {
   ): Promise<Uint8Array> {
     if (!response.ok) throw new Error(`Image download failed (${response.status}) for ${url}`);
     const declared = Number(response.headers.get('content-length') ?? 0);
+    const isImageType = (response.headers.get('content-type') ?? '').startsWith('image/');
     if (declared > maxBytes) {
       await response.body?.cancel();
-      throw tooLarge(maxBytes);
+      throw tooLarge(maxBytes, isImageType);
     }
     const bytes = await readBodyWithLimit(response, maxBytes);
-    if (bytes === null) throw tooLarge(maxBytes);
+    if (bytes === null) throw tooLarge(maxBytes, isImageType);
     return bytes;
   }
 
@@ -321,9 +378,18 @@ function megabytes(bytes: number): number {
   return Math.round(bytes / (1024 * 1024));
 }
 
-function tooLarge(maxBytes: number): ImageRejectedError {
-  return new ImageRejectedError(
-    'image_too_large',
-    `Image too large: the limit is ${megabytes(maxBytes)} MB`,
-  );
+function tooLarge(maxBytes: number, declaredImage = false): ImageRejectedError {
+  const message = `Image too large: the limit is ${megabytes(maxBytes)} MB`;
+  return declaredImage
+    ? new OversizeImageError(message)
+    : new ImageRejectedError('image_too_large', message);
+}
+
+function isImage(bytes: Uint8Array): boolean {
+  try {
+    readImageSize(bytes);
+    return true;
+  } catch {
+    return false;
+  }
 }
