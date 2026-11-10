@@ -4,6 +4,9 @@ import type { D1Database } from '../../src/storage/d1/D1Database.js';
 import { D1Harness } from './D1Harness.js';
 import type { StorageBackend } from './StorageBackend.js';
 
+const OWNER = `INSERT INTO user (id, name, email, created_at, role)
+VALUES (1, 'Owner', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 'owner')`;
+
 const SCHEMA = readFileSync(new URL('../../d1/migrations/0001_schema.sql', import.meta.url), 'utf8')
   .split(/;\s*\n/)
   .map((sql) => sql.trim())
@@ -37,12 +40,12 @@ export function createD1Backend(): StorageBackend {
           .all()
       ).results.map((row) => String(row.name));
       if (tables.length === 0) {
-        await db.batch(SCHEMA.map((sql) => db.prepare(sql)));
+        await db.batch([...SCHEMA, OWNER].map((sql) => db.prepare(sql)));
       } else {
         await db.batch([
           db.prepare('PRAGMA defer_foreign_keys = true'),
           ...tables.map((name) => db.prepare(`DELETE FROM "${name}"`)),
-          ...SCHEMA.filter((sql) => sql.startsWith('INSERT')).map((sql) => db.prepare(sql)),
+          db.prepare(OWNER),
         ]);
       }
       return new D1Harness(db);

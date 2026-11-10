@@ -12,11 +12,9 @@ import type { ImageBlobStore } from './ImageBlobStore.js';
 import type { ImageEncoder } from './ImageEncoder.js';
 import { ImageRejectedError } from './ImageRejectedError.js';
 import { imageRef } from './imageRef.js';
-import type { ImageStoreOptions } from './ImageStoreOptions.js';
-import { PublicAddressGuard } from './PublicAddressGuard.js';
+import type { ImageStoreSetup } from './ImageStoreSetup.js';
 import { readBodyWithLimit } from './readBodyWithLimit.js';
 import { readImageSize } from './readImageSize.js';
-import { SharpImageEncoder } from './SharpImageEncoder.js';
 import type { StoredImage } from './StoredImage.js';
 import type { UrlGuard } from './UrlGuard.js';
 
@@ -49,10 +47,10 @@ export class ImageStore {
     private readonly blobs: ImageBlobStore,
     private readonly fetchFn: FetchFn = fetch,
     private readonly now: () => Date = () => new Date(),
-    options: ImageStoreOptions = {},
+    options: ImageStoreSetup,
   ) {
-    this.encoder = options.encoder ?? new SharpImageEncoder();
-    this.urlGuard = options.urlGuard ?? new PublicAddressGuard();
+    this.encoder = options.encoder;
+    this.urlGuard = options.urlGuard;
     this.quotaBytes = options.quotaBytes ?? DEFAULT_QUOTA_BYTES;
     this.maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
     this.encodedBy = options.encodedBy ?? 'server';

@@ -287,6 +287,3 @@ CREATE INDEX session_user ON session (user_id);
 CREATE INDEX unlinked_title_user ON unlinked_title (user_id);
 CREATE UNIQUE INDEX user_handle ON user (handle COLLATE NOCASE) WHERE handle IS NOT NULL;
 CREATE INDEX videogame_entry_catalog ON videogame_entry (videogame_id);
-
-INSERT INTO user (id, name, email, created_at, role)
-VALUES (1, 'Owner', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 'owner');

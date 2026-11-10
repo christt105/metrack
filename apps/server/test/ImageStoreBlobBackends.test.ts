@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DiskImageBlobStore } from '../src/images/DiskImageBlobStore.js';
 import type { ImageBlobStore } from '../src/images/ImageBlobStore.js';
+import { PublicAddressGuard } from '../src/images/PublicAddressGuard.js';
 import { ImageStore } from '../src/images/ImageStore.js';
 import { R2ImageBlobStore } from '../src/images/R2ImageBlobStore.js';
 import { WebpValidatingEncoder } from '../src/images/WebpValidatingEncoder.js';
@@ -31,6 +32,7 @@ describe.each(backends)('ImageStore with a validating encoder on %s', (_name, op
   const store = () =>
     new ImageStore(new SqliteImageRepository(openTestDatabase()), open(), fetch, undefined, {
       encoder: new WebpValidatingEncoder({ maxDimension: 1920, maxBytes: 5 * 1024 * 1024 }),
+      urlGuard: new PublicAddressGuard(),
       quotaBytes: 2000,
       encodedBy: 'client',
     });
@@ -72,6 +74,7 @@ describe.each(backends)('ImageStore with a validating encoder on %s', (_name, op
       undefined,
       {
         encoder: new WebpValidatingEncoder({ maxDimension: 1920, maxBytes: 5 * 1024 * 1024 }),
+        urlGuard: new PublicAddressGuard(),
         quotaBytes: 10,
       },
     );
