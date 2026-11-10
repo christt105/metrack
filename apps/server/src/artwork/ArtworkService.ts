@@ -78,8 +78,8 @@ export class ArtworkService {
       }
       ref = url;
     } else {
-      ref = await this.fetching(
-        async () => (await this.images.copyForUser(url, user.id, user.role === 'owner')).ref,
+      ref = await this.fetching(() =>
+        this.images.copyOrLinkForUser(url, user.id, user.role === 'owner'),
       );
     }
     return this.editor.setImage(collection, id, kind, ref);

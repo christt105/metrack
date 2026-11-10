@@ -69,7 +69,12 @@ describe('ApiClient', () => {
         if (url === '/api/images/usage') {
           if (encoding === 'fails') return new Response('{}', { status: 500 });
           return new Response(
-            JSON.stringify({ usedBytes: 0, quotaBytes: null, imageEncoding: encoding }),
+            JSON.stringify({
+              usedBytes: 0,
+              quotaBytes: null,
+              imageEncoding: encoding,
+              maxDimension: 1280,
+            }),
           );
         }
         return new Response('{"ref":"/api/images/abc"}', { status: 201 });
@@ -91,7 +96,7 @@ describe('ApiClient', () => {
       const { calls, client, recode, recoded } = uploader('client');
       await client.uploadImage(file);
       await client.uploadImage(file);
-      expect(recode).toHaveBeenCalledWith(file);
+      expect(recode).toHaveBeenCalledWith(file, 1280);
       expect(calls.at(-1)?.init?.body).toBe(recoded);
       expect(calls.filter((call) => call.url === '/api/images/usage')).toHaveLength(1);
     });

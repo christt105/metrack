@@ -117,6 +117,7 @@ describe('provider images', () => {
       usedBytes: 0,
       quotaBytes: 200 * 1024 * 1024,
       imageEncoding: 'server',
+      maxDimension: 1920,
     });
   });
 });
