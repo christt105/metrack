@@ -45,7 +45,7 @@ beforeEach(async () => {
   states = new SqliteMetadataStateRepository(db, OWNER_SCOPE);
   const net = fakeFetch({
     [COVER_URL]: await solidImage(600, 900),
-    [LINKED_URL]: await solidImage(500, 750, 'jpeg'),
+    'https://image.tmdb.org/t/p/w780/poster.jpg': await solidImage(500, 750, 'jpeg'),
   });
   images = createImageStore(
     db,

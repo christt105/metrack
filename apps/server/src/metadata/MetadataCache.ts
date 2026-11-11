@@ -75,7 +75,7 @@ export class MetadataCache {
     ] as const) {
       if (url) {
         try {
-          patch[field] = await this.images.reference(url);
+          patch[field] = await this.images.reference(url, field);
         } catch {
           imageFailed = true;
           delete patch[field];

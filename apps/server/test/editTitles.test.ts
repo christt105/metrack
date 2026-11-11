@@ -6,6 +6,7 @@ import { png } from './support/sampleImages.js';
 
 const TMDB = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/original';
+const W780 = 'https://image.tmdb.org/t/p/w780';
 
 let api: TestApi;
 
@@ -50,9 +51,9 @@ beforeEach(async () => {
           { season_number: 2, name: 'Part 2', episode_count: 5 },
         ],
       },
-      [`${IMG}/p.jpg`]: png(500, 750, 1),
-      [`${IMG}/lupin.jpg`]: png(500, 750, 2),
-      [`${IMG}/s1.jpg`]: png(500, 750, 3),
+      [`${W780}/p.jpg`]: png(500, 750, 1),
+      [`${W780}/lupin.jpg`]: png(500, 750, 2),
+      [`${W780}/s1.jpg`]: png(500, 750, 3),
     }).fetch,
   );
 });

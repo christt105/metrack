@@ -169,8 +169,8 @@ describe('IgdbGameProvider', () => {
     const { fetchFn } = igdbFetch({
       games: [hades],
       files: {
-        'https://images.igdb.com/igdb/image/upload/t_cover_big/co1.jpg': png(264, 374, 3),
-        'https://images.igdb.com/igdb/image/upload/t_screenshot_huge/sc1.jpg': png(1280, 720, 4),
+        'https://images.igdb.com/igdb/image/upload/t_720p/co1.jpg': png(264, 374, 3),
+        'https://images.igdb.com/igdb/image/upload/t_1080p/sc1.jpg': png(1280, 720, 4),
       },
     });
     const t = setup(fetchFn, false);

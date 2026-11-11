@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import {
   isLinkedImageUrl,
+  sizedImageUrl,
+  type ImageDisplay,
   type ImageEncodingSite,
   type ImageUsage,
   type User,
@@ -27,6 +29,8 @@ export const ORPHAN_GRACE_MS = 24 * 60 * 60 * 1000;
 
 const MAX_REDIRECTS = 3;
 
+type ArchivedDisplay = Exclude<ImageDisplay, 'thumb'>;
+
 /**
  * Image store. Files are named by the SHA-256 of their content, so identical
  * images are stored once. Entities point at the copy through `imageRef`. An image keeps the
@@ -34,7 +38,7 @@ const MAX_REDIRECTS = 3;
  * as an extra source so `findBySourceUrl` resolves it too.
  *
  * Covers and banners from TMDB, Steam and IGDB are linked: entities keep the provider URL and the store only
- * keeps the original bytes as an archive. Everything else is re-encoded to WebP before it is stored. Images
+ * keeps a display-sized copy as an archive. Everything else is re-encoded to WebP before it is stored. Images
  * no provider gave (uploads, URLs of any site) belong to the users who added them and count for their quota.
  */
 export class ImageStore {
@@ -65,9 +69,9 @@ export class ImageStore {
    * (after archiving the original), otherwise the reference of a WebP copy. When the client encodes images
    * and the copy cannot be stored as it is, the URL itself, shown as a link.
    */
-  async reference(url: string): Promise<string> {
+  async reference(url: string, display: ArchivedDisplay = 'cover'): Promise<string> {
     if (isLinkedImageUrl(url)) {
-      await this.archive(url);
+      await this.archive(url, display);
       return url;
     }
     return this.downloadOrLink(url);
@@ -81,11 +85,14 @@ export class ImageStore {
     return this.add(await this.encoder.encode(bytes), url);
   }
 
-  /** Keeps the original bytes of a linked provider image, so it can be served again if the provider drops it. */
-  async archive(url: string): Promise<StoredImage> {
+  /**
+   * Keeps a copy of a linked provider image at the largest size the app displays for it (`display`), so it can
+   * be served again if the provider drops it. The copy is recorded under `url`, the address entities link to.
+   */
+  async archive(url: string, display: ArchivedDisplay = 'cover'): Promise<StoredImage> {
     const known = await this.findBySourceUrl(url);
     if (known && (await this.hasFile(known))) return known;
-    return this.add(await this.fetchLimited(url, MAX_IMAGE_BYTES), url);
+    return this.add(await this.fetchLimited(sizedImageUrl(url, display), MAX_IMAGE_BYTES), url);
   }
 
   /** Stores a file a user uploaded, as WebP, and counts it for their quota unless they have none. */
