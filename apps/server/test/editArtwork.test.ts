@@ -7,6 +7,8 @@ import { emptyMovie } from '../src/media/emptyEntities.js';
 
 const TMDB = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/original';
+const W780 = 'https://image.tmdb.org/t/p/w780';
+const W1280 = 'https://image.tmdb.org/t/p/w1280';
 const GRID = 'https://cdn2.steamgriddb.com/grid/a.png';
 
 let api: TestApi;
@@ -36,9 +38,9 @@ beforeEach(async () => {
           },
         ],
       },
-      [`${IMG}/a.jpg`]: png(1000, 1500, 1),
-      [`${IMG}/b.jpg`]: png(1920, 1080, 2),
-      [`${IMG}/s2.jpg`]: png(500, 750, 3),
+      [`${W780}/a.jpg`]: png(1000, 1500, 1),
+      [`${W1280}/b.jpg`]: png(1920, 1080, 2),
+      [`${W780}/s2.jpg`]: png(500, 750, 3),
       [GRID]: await solidImage(600, 900),
     }).fetch,
   );

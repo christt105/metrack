@@ -64,7 +64,7 @@ export class ArtworkService {
     const fromProvider = this.providers.some((p) => p.supports(subject.type, kind) && p.owns(url));
     let ref: string;
     if (fromProvider) {
-      ref = await this.fetching(() => this.images.reference(url));
+      ref = await this.fetching(() => this.images.reference(url, kind));
     } else if (!canUseOwnArtwork(user.role)) {
       throw new ApiError(
         403,

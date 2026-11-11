@@ -81,11 +81,11 @@ export class IgdbGameProvider implements TitleProvider {
       null;
     const steam = steamAppId ? steamArtwork(steamAppId) : null;
     const cover =
-      (await this.download(steam?.cover)) ??
-      (await this.download(igdbImageUrl(game.cover?.url, 'cover_big')));
+      (await this.download(steam?.cover, 'cover')) ??
+      (await this.download(igdbImageUrl(game.cover?.url, 'cover_big'), 'cover'));
     const banner =
-      (await this.download(steam?.banner)) ??
-      (await this.download(igdbImageUrl(game.screenshots?.[0]?.url, 'screenshot_huge')));
+      (await this.download(steam?.banner, 'banner')) ??
+      (await this.download(igdbImageUrl(game.screenshots?.[0]?.url, 'screenshot_huge'), 'banner'));
 
     const created = await this.games.create({
       ...emptyVideogame(),
@@ -110,10 +110,13 @@ export class IgdbGameProvider implements TitleProvider {
     return this.steamGridDb.gameIdForSteamApp(steamAppId).catch(() => null);
   }
 
-  private async download(url: string | null | undefined): Promise<string | null> {
+  private async download(
+    url: string | null | undefined,
+    display: 'cover' | 'banner',
+  ): Promise<string | null> {
     if (!url) return null;
     try {
-      return await this.images.reference(url);
+      return await this.images.reference(url, display);
     } catch {
       return null;
     }

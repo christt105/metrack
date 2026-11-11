@@ -98,9 +98,11 @@ describe('re-encoding', () => {
 });
 
 describe('provider images', () => {
-  it('links TMDB images and keeps their original bytes as an archive', async () => {
+  it('links TMDB images and keeps a display-sized copy as an archive', async () => {
     const original = png(500, 750);
-    const images = store(fakeFetch({ [TMDB]: original }).fetch);
+    const images = store(
+      fakeFetch({ ['https://image.tmdb.org/t/p/w780/poster.jpg']: original }).fetch,
+    );
     expect(await images.reference(TMDB)).toBe(TMDB);
     const [archived] = await images.list();
     expect(archived).toMatchObject({ sourceUrl: TMDB, mimeType: 'image/png' });
@@ -207,7 +209,9 @@ describe('ownership and quota', () => {
 
 describe('orphans', () => {
   it('keeps images a review embeds and archives of linked covers', async () => {
-    const images = store(fakeFetch({ [TMDB]: png(5, 5) }).fetch);
+    const images = store(
+      fakeFetch({ ['https://image.tmdb.org/t/p/w780/poster.jpg']: png(5, 5) }).fetch,
+    );
     const embedded = await images.upload(await solidImage(8, 8), 1);
     const unused = await images.upload(await solidImage(9, 9), 1);
     await images.reference(TMDB);
