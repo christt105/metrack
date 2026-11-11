@@ -103,7 +103,10 @@ describe('Worker app over D1 and R2', () => {
   it('reports the schema version from the applied migrations table', async () => {
     const response = await app.request('http://localhost/api/health');
     expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({ schemaVersion: 0 });
+    expect(await response.json()).toMatchObject({
+      schemaVersion: 0,
+      features: { backups: false },
+    });
   });
 
   it('signs in with a personal API token and lists the seeded titles', async () => {

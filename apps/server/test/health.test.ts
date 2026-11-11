@@ -23,6 +23,7 @@ describe('GET /api/health', () => {
       status: 'ok',
       appVersion: 'test',
       schemaVersion: LATEST_SCHEMA_VERSION,
+      features: { backups: false },
     });
   });
 
@@ -36,7 +37,25 @@ describe('GET /api/health', () => {
     });
     const response = await app.inject({ method: 'GET', url: '/api/health' });
     expect(response.statusCode).toBe(503);
-    expect(response.json()).toEqual({ status: 'degraded', appVersion: 'test', schemaVersion: 0 });
+    expect(response.json()).toEqual({
+      status: 'degraded',
+      appVersion: 'test',
+      schemaVersion: 0,
+      features: { backups: false },
+    });
+  });
+
+  it('reports no backups feature when backups are not wired', async () => {
+    const runner = new MigrationRunner(new DatabaseSync(':memory:'), migrations);
+    runner.run();
+    const app = buildTestApp({
+      appVersion: 'test',
+      authenticator: signedInAs(),
+      scope: OWNER_SCOPE,
+      migrationRunner: runner,
+    });
+    const response = await app.inject({ method: 'GET', url: '/api/health' });
+    expect(response.json().features).toEqual({ backups: false });
   });
 
   it('returns 404 JSON for unknown API routes', async () => {

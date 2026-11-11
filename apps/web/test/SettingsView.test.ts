@@ -7,7 +7,8 @@ import type { BackupInfo } from '../src/api/BackupInfo';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { mountWithApi } from './mountWithApi';
 
-const health = { status: 'ok', appVersion: 'dev', schemaVersion: 3 };
+const health = { status: 'ok', appVersion: 'dev', schemaVersion: 3, features: { backups: true } };
+const cloudHealth = { ...health, features: { backups: false } };
 const existing: BackupInfo = {
   name: 'metrack-20261001T000000000Z',
   createdAt: '2026-10-01T00:00:00.000Z',
@@ -57,6 +58,18 @@ describe('SettingsView backups', () => {
     await flushPromises();
     expect(wrapper.text()).toContain(existing.name);
     expect(wrapper.text()).toContain('2.0 MB');
+  });
+
+  it('hides the section and skips the request when the server has no backups', async () => {
+    const listBackups = vi.fn();
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(cloudHealth),
+      ...ownerApi(),
+      listBackups,
+    });
+    await flushPromises();
+    expect(listBackups).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain('Back up now');
   });
 
   it('shows an empty state', async () => {

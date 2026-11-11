@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { OwnSettings, SyncPlan } from '@metrack/domain';
+import type { HealthReport, OwnSettings, SyncPlan } from '@metrack/domain';
 import AccountPanel from '../components/AccountPanel.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import PublicPagePanel from '../components/PublicPagePanel.vue';
@@ -13,7 +13,9 @@ import { messages } from '../i18n/messages';
 import { countSyncChanges } from '../logic/countSyncChanges';
 
 const api = useApi();
-const { data: health, error: healthError } = useLoader(() => api.health());
+let healthRequest: Promise<HealthReport> | undefined;
+const loadHealth = (): Promise<HealthReport> => (healthRequest ??= api.health());
+const { data: health, error: healthError } = useLoader(loadHealth);
 let ownRequest: Promise<OwnSettings> | undefined;
 const loadOwn = (): Promise<OwnSettings> => (ownRequest ??= api.ownSettings());
 const { data: own, error: ownError, reload: reloadOwn } = useLoader(loadOwn);
@@ -24,7 +26,9 @@ const {
   data: backups,
   error: backupsError,
   reload: reloadBackups,
-} = useLoader(() => ownerOnly(() => api.listBackups()));
+} = useLoader(() =>
+  ownerOnly(async () => ((await loadHealth()).features.backups ? api.listBackups() : null)),
+);
 const { data: imageUsage, error: imageUsageError } = useLoader(() => api.imageUsage());
 const { data: users, error: usersError } = useLoader(() => ownerOnly(() => api.listUsers()));
 const refreshOwn = async (): Promise<void> => {
@@ -127,7 +131,7 @@ const backup = () =>
         {{ messages.settings.cleanup }}
       </button>
     </div>
-    <div v-if="owner" class="panel">
+    <div v-if="owner && health?.features.backups" class="panel">
       <h2>{{ messages.settings.backups }}</h2>
       <ErrorNotice :error="backupsError" />
       <p v-if="backups && backups.length === 0" class="muted">

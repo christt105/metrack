@@ -47,7 +47,12 @@ describe('ApiClient', () => {
   });
 
   it('returns a degraded health report answered with 503', async () => {
-    const report = { status: 'degraded', appVersion: 'dev', schemaVersion: 0 };
+    const report = {
+      status: 'degraded',
+      appVersion: 'dev',
+      schemaVersion: 0,
+      features: { backups: false },
+    };
     const { client } = recorder(new Response(JSON.stringify(report), { status: 503 }));
     expect(await client.health()).toEqual(report);
   });
