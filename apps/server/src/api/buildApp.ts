@@ -7,6 +7,9 @@ import { registerErrorHandler } from './registerErrorHandler.js';
 import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
 import { registerMediaRoutes } from './registerMediaRoutes.js';
+import { bumpContentVersionOnWrite } from './bumpContentVersionOnWrite.js';
+import type { ContentVersions } from '../site/ContentVersions.js';
+import type { PublicRenderCache } from '../site/PublicRenderCache.js';
 import { onSuccessfulApiWrite } from './onSuccessfulApiWrite.js';
 import { jsonResponse } from './jsonResponse.js';
 import { ApiRoutes } from './ApiRoutes.js';
@@ -89,7 +92,11 @@ export interface AppDeps {
     publicUrl: string | null;
     /** Where the privacy page says to write about one's data. */
     contactEmail: string;
+    /** Stores rendered pages; every page is rendered per request when unset. */
+    renderCache?: PublicRenderCache;
   };
+  /** Bumped after each successful write so stored renders go stale; needed whenever `site.renderCache` is set. */
+  contentVersions?: ContentVersions;
 }
 
 export function buildApp(deps: AppDeps): Hono<ApiEnv> {
@@ -97,6 +104,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   const routes = new ApiRoutes(app);
   registerErrorHandler(app, deps.logger);
   registerAuthGuard(app, routes, deps.authenticator, deps.scope, deps.tokens);
+  if (deps.contentVersions) bumpContentVersionOnWrite(app, deps.contentVersions, deps.logger);
   if (deps.publishQueues) {
     const queues = deps.publishQueues;
     onSuccessfulApiWrite(app, () => queues.markAllDirty(), deps.logger);

@@ -11,6 +11,7 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "metrack": "node --disable-warning=ExperimentalWarning dist/cli.js",
+    "measure:reads": "tsx scripts/measureReads.ts",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy"
   },

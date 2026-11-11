@@ -10,6 +10,11 @@ const schemaSql = readFileSync(
   'utf8',
 );
 
+const renderCacheSql = readFileSync(
+  new URL('../d1/migrations/0002_public_render_cache.sql', import.meta.url),
+  'utf8',
+);
+
 function fromMigrations(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   new MigrationRunner(db, migrations).run();
@@ -69,5 +74,29 @@ describe('D1 schema file', () => {
 
   it('passes the foreign key check', () => {
     expect(fromSql().prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+  });
+});
+
+describe('D1 render cache migration', () => {
+  it('adds only the content version and the public_render table to the home schema', () => {
+    const before = describeSchema(fromSql(), []);
+    const db = fromSql();
+    db.exec(renderCacheSql);
+    const after = describeSchema(db, []);
+    expect(Object.keys(after.tables)).toEqual(
+      [...Object.keys(before.tables), 'public_render'].sort(),
+    );
+    const { user: beforeUser, ...otherBefore } = before.tables;
+    const { user: afterUser, public_render: cache, ...otherAfter } = after.tables;
+    expect(otherAfter).toEqual(otherBefore);
+    expect(afterUser).toHaveLength((beforeUser ?? []).length + 1);
+    expect(afterUser).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'content_version', notnull: 1, dflt_value: '0' }),
+      ]),
+    );
+    expect(cache).toHaveLength(6);
+    expect(after.indexes).toEqual(expect.objectContaining(before.indexes));
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 });
