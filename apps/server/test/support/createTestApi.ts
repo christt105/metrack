@@ -187,6 +187,7 @@ export async function createTestApi(
     edit,
     watch: { watchlist: new WatchlistService(edit.editor, movies, series, seasons), alerts },
     account: {
+      serverZip: true,
       exporter: new AccountExporter(
         {
           users,

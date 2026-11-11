@@ -178,6 +178,25 @@ describe('exporting an account', () => {
     const response = await api.app.inject({ method: 'GET', url: '/api/account/export' });
     expect(response.statusCode).toBe(401);
   });
+
+  it("answers the same data as JSON for the browser to pack, only the caller's own", async () => {
+    const zipped = (await exportOf(ned)).data;
+    const response = await ned.get('/api/account/export/data');
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('application/json');
+    const data = response.json();
+    expect({ ...data, exportedAt: null }).toEqual({ ...zipped, exportedAt: null });
+    expect(data.user.id).toBe(4);
+    expect(JSON.stringify(data)).not.toContain('Nia only');
+    for (const image of data.images) {
+      expect(image.file).toBe(`images/${image.hash}.webp`);
+    }
+  });
+
+  it('refuses the data without a sign-in', async () => {
+    const response = await api.app.inject({ method: 'GET', url: '/api/account/export/data' });
+    expect(response.statusCode).toBe(401);
+  });
 });
 
 describe('asking for the deletion', () => {

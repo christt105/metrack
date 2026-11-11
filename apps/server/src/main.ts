@@ -241,6 +241,7 @@ const app = buildApp({
   syncQueues,
   account: {
     exporter: new AccountExporter({ ...repositories, images: imageStore }),
+    serverZip: true,
     deletion: accountDeletion,
     profiles: repositories.profiles,
   },

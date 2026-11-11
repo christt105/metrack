@@ -171,9 +171,11 @@ describe('Worker app over D1 and R2', () => {
     expect(page.status).toBe(200);
     expect(await page.text()).toContain('Sample Movie');
     expect((await app.request('http://localhost/u/test/feed.xml')).status).toBe(200);
+    const data = await app.request('http://localhost/api/account/export/data', { headers: auth });
+    expect(data.status).toBe(200);
+    expect(await data.json()).toMatchObject({ format: 1, user: { id: 1 } });
     const archive = await app.request('http://localhost/api/account/export', { headers: auth });
-    expect(archive.headers.get('content-type')).toBe('application/zip');
-    expect((await archive.arrayBuffer()).byteLength).toBeGreaterThan(100);
+    expect(archive.status).toBe(404);
   });
 
   it('has no provider for movies without a TMDB key, and no sync or backup routes', async () => {

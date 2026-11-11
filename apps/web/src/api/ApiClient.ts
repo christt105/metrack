@@ -41,6 +41,7 @@ import type {
   ImageUsage,
   UploadedImage,
 } from '@metrack/domain';
+import type { AccountExportData } from './AccountExportData';
 import type { BackupInfo } from './BackupInfo';
 import { ApiRequestError } from './ApiRequestError';
 import { buildQueryString } from './buildQueryString';
@@ -343,6 +344,25 @@ export class ApiClient {
 
   accountStatus(): Promise<AccountStatus> {
     return this.request('GET', '/account');
+  }
+
+  accountExportData(): Promise<AccountExportData> {
+    return this.request('GET', '/account/export/data');
+  }
+
+  async imageBytes(hash: string): Promise<Uint8Array> {
+    let response: Response;
+    try {
+      response = await this.fetchFn(`/api/images/${hash}`);
+    } catch (cause) {
+      throw new ApiRequestError(
+        cause instanceof Error ? cause.message : 'Network error',
+        0,
+        'network_error',
+      );
+    }
+    if (!response.ok) throw await this.toError(response);
+    return new Uint8Array(await response.arrayBuffer());
   }
 
   requestAccountDeletion(confirm: string): Promise<AccountDeletion> {

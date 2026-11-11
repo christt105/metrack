@@ -292,7 +292,12 @@ export const messages = {
     hint: 'Download everything you have in metrack, or delete your account.',
     export: 'Download my data',
     exportHint:
-      'A ZIP with all your data as JSON and the images you own. Your API tokens are listed by name and date only.',
+      'A ZIP with all your data as JSON and the images you own, built in your browser. Your API tokens are listed by name and date only.',
+    exporting: (done: number, total: number) =>
+      total === 0 ? 'Collecting your data...' : `Fetching images: ${done} of ${total}`,
+    exportDone: 'Your export is ready and downloading.',
+    exportMissing: (count: number) =>
+      `${count} ${count === 1 ? 'image' : 'images'} could not be fetched and ${count === 1 ? 'is' : 'are'} left out of the ZIP; data.json marks ${count === 1 ? 'it' : 'them'} with file: null.`,
     deleteTitle: 'Delete my account',
     deleteHint:
       'Your account, library, reviews, tokens and the images only you own are erased after 7 days. Until then you can cancel by signing in. Items you added by hand to the catalog stay and pass to the owner. Backups rotate out within 14 more days.',
