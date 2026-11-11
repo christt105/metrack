@@ -93,18 +93,21 @@ export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps
     const handle = context.req.param('handle') ?? '';
     const found = await renders.lookup(handle, cacheKey);
     if (!found?.enabled) return publicNotFound();
-    const etag =
-      found.version === null ? undefined : renderEtag(found.userId, found.version, cacheKey);
-    if (etag !== undefined && matchesEtag(context.req.header('if-none-match') ?? null, etag)) {
-      return notModified(etag, 'no-cache');
-    }
+    const tagOf = (renderedAt: number | null): string | undefined =>
+      found.version === null || renderedAt === null
+        ? undefined
+        : renderEtag(found.userId, found.version, renderedAt, cacheKey);
     if (found.cached) {
+      const etag = tagOf(found.cached.renderedAt);
+      if (etag !== undefined && matchesEtag(context.req.header('if-none-match') ?? null, etag)) {
+        return notModified(etag, 'no-cache');
+      }
       return publicResponse(found.cached.body, found.cached.contentType, 'no-cache', 200, etag);
     }
     const body = render(await libraryOf(found.userId, handle));
     if (body === null) return publicNotFound();
-    await keep(found, cacheKey, contentType, body);
-    return publicResponse(body, contentType, 'no-cache', 200, etag);
+    const renderedAt = await keep(found, cacheKey, contentType, body);
+    return publicResponse(body, contentType, 'no-cache', 200, tagOf(renderedAt));
   };
 
   const keep = async (
@@ -112,12 +115,12 @@ export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps
     cacheKey: string,
     contentType: string,
     body: string,
-  ): Promise<void> => {
-    if (found.version === null || body.length > MAX_STORED_CHARS) return;
+  ): Promise<number | null> => {
+    if (found.version === null || body.length > MAX_STORED_CHARS) return null;
     try {
-      await renders.store(found.userId, cacheKey, found.version, contentType, body);
+      return await renders.store(found.userId, cacheKey, found.version, contentType, body);
     } catch {
-      return;
+      return null;
     }
   };
 

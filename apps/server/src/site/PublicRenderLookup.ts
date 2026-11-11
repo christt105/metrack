@@ -5,6 +5,6 @@ export interface PublicRenderLookup {
   enabled: boolean;
   /** The user's content version; null when the cache is off, which also means no ETag. */
   version: number | null;
-  /** The stored body when it was rendered at the current version. */
-  cached: { contentType: string; body: string } | null;
+  /** The stored body when it was rendered at the current version and has not expired; `renderedAt` is in epoch seconds. */
+  cached: { contentType: string; body: string; renderedAt: number } | null;
 }

@@ -11,5 +11,7 @@ export class UncachedPublicRenders implements PublicRenderCache {
     return profile ? { ...profile, version: null, cached: null } : undefined;
   }
 
-  async store(): Promise<void> {}
+  async store(): Promise<null> {
+    return null;
+  }
 }

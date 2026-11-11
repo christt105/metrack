@@ -23,6 +23,9 @@ let miniflare: Miniflare;
 let app: ReturnType<typeof createWorkerApp>;
 let DB: Awaited<ReturnType<Miniflare['getD1Database']>>;
 let reads: string[];
+const START = Date.parse('2026-06-01T12:00:00Z');
+let clock = START;
+const RENDERED_AT = START / 1000;
 
 beforeAll(async () => {
   miniflare = new Miniflare({
@@ -46,7 +49,10 @@ beforeAll(async () => {
     },
     batch: (list: never[]) => DB.batch(list),
   };
-  app = createWorkerApp({ DB: spy, IMAGES, IMAGE_ENCODED_BY: 'server' } as unknown as WorkerEnv);
+  app = createWorkerApp(
+    { DB: spy, IMAGES, IMAGE_ENCODED_BY: 'server' } as unknown as WorkerEnv,
+    () => new Date(clock),
+  );
 });
 
 afterAll(async () => {
@@ -55,6 +61,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   reads = [];
+  clock = START;
   await DB.batch(
     [
       'DELETE FROM public_render',
@@ -142,7 +149,7 @@ describe('a public page', () => {
   it('answers 304 to a matching If-None-Match, with a strong ETag of user, version and page', async () => {
     const first = await get('/u/test/');
     const etag = first.headers.get('etag');
-    expect(etag).toBe(renderEtag(1, 0, 'home'));
+    expect(etag).toBe(renderEtag(1, 0, RENDERED_AT, 'home'));
     expect(etag).not.toMatch(/^W\//);
     const again = await get('/u/test/', { 'if-none-match': etag ?? '' });
     expect(again.status).toBe(304);
@@ -152,10 +159,26 @@ describe('a public page', () => {
     expect((await get('/u/test/', { 'if-none-match': '*' })).status).toBe(304);
   });
 
-  it('answers 304 straight from a stored render and also on a miss', async () => {
-    const etag = renderEtag(1, 0, 'index.json');
-    expect((await get('/u/test/index.json', { 'if-none-match': etag })).status).toBe(304);
-    expect(await stored()).toBe(0);
+  it('does not answer 304 for a page that is not stored yet', async () => {
+    const etag = renderEtag(1, 0, RENDERED_AT, 'index.json');
+    expect((await get('/u/test/index.json', { 'if-none-match': etag })).status).toBe(200);
+    expect(await stored()).toBe(1);
+  });
+
+  it('expires a stored render after a day: it is rendered again with a new ETag', async () => {
+    const first = await get('/u/test/');
+    const etag = first.headers.get('etag') ?? '';
+    clock = START + 23 * 3_600_000;
+    expect((await get('/u/test/', { 'if-none-match': etag })).status).toBe(304);
+    await DB.prepare("UPDATE movie SET title = 'Changed behind the cache' WHERE id = 1").run();
+    clock = START + 24 * 3_600_000;
+    const expired = await get('/u/test/', { 'if-none-match': etag });
+    expect(expired.status).toBe(200);
+    expect(expired.headers.get('etag')).toBe(renderEtag(1, 0, RENDERED_AT + 86_400, 'home'));
+    expect(expired.headers.get('etag')).not.toBe(etag);
+    expect(await expired.text()).toContain('Changed behind the cache');
+    const again = await get('/u/test/', { 'if-none-match': expired.headers.get('etag') ?? '' });
+    expect(again.status).toBe(304);
   });
 
   it('is rebuilt after a write, with a new ETag and the new content', async () => {
@@ -165,7 +188,7 @@ describe('a public page', () => {
       'if-none-match': first.headers.get('etag') ?? '',
     });
     expect(stale.status).toBe(200);
-    expect(stale.headers.get('etag')).toBe(renderEtag(1, 1, 'movie/1'));
+    expect(stale.headers.get('etag')).toBe(renderEtag(1, 1, RENDERED_AT, 'movie/1'));
     expect(await stale.text()).toContain('Rewritten after the first visit');
   });
 

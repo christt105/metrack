@@ -7,12 +7,12 @@ import type { PublicRenderLookup } from './PublicRenderLookup.js';
 export interface PublicRenderCache {
   /** The user a handle belongs to with the stored body for `cacheKey`, or undefined for an unknown handle. */
   lookup(handle: string, cacheKey: string): Promise<PublicRenderLookup | undefined>;
-  /** Keeps a body rendered at `version`, replacing the one of an older version. */
+  /** Keeps a body rendered at `version`, replacing the previous one. Answers when it was rendered (epoch seconds). */
   store(
     userId: number,
     cacheKey: string,
     version: number,
     contentType: string,
     body: string,
-  ): Promise<void>;
+  ): Promise<number | null>;
 }

@@ -95,7 +95,7 @@ describe('D1 render cache migration', () => {
         expect.objectContaining({ name: 'content_version', notnull: 1, dflt_value: '0' }),
       ]),
     );
-    expect(cache).toHaveLength(5);
+    expect(cache).toHaveLength(6);
     expect(after.indexes).toEqual(expect.objectContaining(before.indexes));
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });

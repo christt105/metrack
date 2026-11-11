@@ -43,7 +43,7 @@ const fetchFn: typeof fetch = (input, init) => fetch(input, init);
  * Jellyfin and Jellystat sync, the vault mirror, Hugo publishing, backups, release alerts and the erasing of
  * deleted accounts.
  */
-export function createWorkerApp(env: WorkerEnv): Hono<ApiEnv> {
+export function createWorkerApp(env: WorkerEnv, now: () => Date = () => new Date()): Hono<ApiEnv> {
   const config = loadConfig({ ...stringsOf(env), IMAGE_ENCODED_BY: 'client' });
   const logger = { info: console.log, error: console.error };
   const scope = new AsyncUserScope();
@@ -148,7 +148,7 @@ export function createWorkerApp(env: WorkerEnv): Hono<ApiEnv> {
       sources: { movies, series, seasons, videogames, books },
       publicUrl: config.publicUrl,
       contactEmail: config.contactEmail,
-      renderCache: new D1PublicRenderCache(env.DB),
+      renderCache: new D1PublicRenderCache(env.DB, now),
     },
     contentVersions: new D1ContentVersions(env.DB),
     watch: {
