@@ -38,8 +38,8 @@ const fetchFn: typeof fetch = (input, init) => fetch(input, init);
 /**
  * The same Hono app as the home server, over D1 and R2. Images are always recoded by the browser
  * (`IMAGE_ENCODED_BY=client`). Everything that needs Node, the disk, a timer or a service at home is left out:
- * Jellyfin and Jellystat sync, the vault mirror, Hugo publishing, backups, release alerts and the erasing of
- * deleted accounts.
+ * Jellyfin and Jellystat sync, the vault mirror, Hugo publishing, backups, release alerts, the account export ZIP (the browser
+ * builds it from `/api/account/export/data`) and the erasing of deleted accounts.
  */
 export function createWorkerApp(env: WorkerEnv): Hono<ApiEnv> {
   const config = loadConfig({ ...stringsOf(env), IMAGE_ENCODED_BY: 'client' });
@@ -125,7 +125,12 @@ export function createWorkerApp(env: WorkerEnv): Hono<ApiEnv> {
     metadataCache,
     edit,
     account: {
-      exporter: new AccountExporter({ ...repositories, images: imageStore }),
+      exporter: new AccountExporter(
+        { ...repositories, images: imageStore },
+        () => new Date(),
+        false,
+      ),
+      serverZip: false,
       deletion: new AccountDeletionService(
         repositories.accounts,
         repositories.users,

@@ -6,6 +6,9 @@ import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
 import { useSession } from '../composables/useSession';
 import { messages } from '../i18n/messages';
+import type { ExportProgress } from '../logic/ExportProgress';
+import { buildAccountExport } from '../logic/buildAccountExport';
+import { saveBlob } from '../logic/saveBlob';
 import ErrorNotice from './ErrorNotice.vue';
 
 const props = defineProps<{ handle: string | null }>();
@@ -16,6 +19,9 @@ const { data: status, error: loadError, reload } = useLoader(() => api.accountSt
 const confirm = ref('');
 const busy = ref(false);
 const error = ref<unknown>(null);
+const exporting = ref<ExportProgress | null>(null);
+const exportError = ref<unknown>(null);
+const exported = ref<string[] | null>(null);
 
 const deletion = computed(() => session.deletion.value ?? status.value?.deletion ?? null);
 const when = computed(() => (deletion.value ? deletion.value.deleteAt.slice(0, 10) : ''));
@@ -38,6 +44,23 @@ async function act(action: () => Promise<AccountStatus | void>): Promise<void> {
   }
 }
 
+async function exportData(): Promise<void> {
+  exporting.value = { done: 0, total: 0 };
+  exportError.value = null;
+  exported.value = null;
+  try {
+    const result = await buildAccountExport(api, (progress) => {
+      exporting.value = progress;
+    });
+    saveBlob(result.blob, result.fileName);
+    exported.value = result.missing;
+  } catch (cause) {
+    exportError.value = cause;
+  } finally {
+    exporting.value = null;
+  }
+}
+
 const requestDeletion = () =>
   act(async () => {
     session.setDeletion(await api.requestAccountDeletion(confirm.value));
@@ -55,10 +78,25 @@ const cancelDeletion = () =>
     <h2>{{ messages.account.title }}</h2>
     <p class="muted">{{ messages.account.hint }}</p>
     <p>
-      <a href="/api/account/export" download data-test="export">
+      <button type="button" data-test="export" :disabled="exporting !== null" @click="exportData">
         {{ messages.account.export }}
-      </a>
+      </button>
     </p>
+    <p v-if="exporting" class="muted" role="status" data-test="export-progress">
+      {{ messages.account.exporting(exporting.done, exporting.total) }}
+    </p>
+    <p v-else-if="exported" class="muted" role="status" data-test="export-done">
+      {{ messages.account.exportDone }}
+    </p>
+    <p
+      v-if="exported && exported.length > 0"
+      class="notice error"
+      role="alert"
+      data-test="export-missing"
+    >
+      {{ messages.account.exportMissing(exported.length) }}
+    </p>
+    <ErrorNotice :error="exportError" />
     <p class="muted">{{ messages.account.exportHint }}</p>
     <h3>{{ messages.account.deleteTitle }}</h3>
     <ErrorNotice :error="loadError" />

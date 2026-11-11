@@ -15,16 +15,62 @@ const scheduled: AccountDeletion = {
 };
 
 describe('AccountPanel', () => {
-  it('offers the export as a download link', async () => {
+  it('builds the export in the browser and saves it', async () => {
+    const accountExportData = vi.fn().mockResolvedValue({
+      exportedAt: '2026-03-05T12:00:00.000Z',
+      user: { id: 3 },
+      images: [
+        { hash: 'a', file: 'images/a.webp' },
+        { hash: 'b', file: 'images/b.webp' },
+      ],
+    });
+    const imageBytes = vi.fn(async (hash: string) => {
+      if (hash === 'b') throw new Error('gone');
+      return new Uint8Array([1, 2, 3]);
+    });
+    const createObjectURL = vi.fn(() => 'blob:export');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }));
+    const clicked: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      clicked.push(this.download);
+    });
     const { wrapper } = await mountWithApi(
       AccountPanel,
-      { accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }) },
+      {
+        accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
+        accountExportData,
+        imageBytes,
+      },
       { handle: null },
     );
     await flushPromises();
-    const link = wrapper.find('[data-test="export"]');
-    expect(link.attributes('href')).toBe('/api/account/export');
-    expect(link.attributes('download')).toBeDefined();
+
+    await wrapper.find('[data-test="export"]').trigger('click');
+    await vi.waitFor(() => expect(wrapper.find('[data-test="export-done"]').exists()).toBe(true));
+
+    expect(clicked).toEqual(['metrack-export-user-3-2026-03-05.zip']);
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-test="export-missing"]').text()).toContain('1 image could not');
+    click.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows the error when the data cannot be fetched', async () => {
+    const { wrapper } = await mountWithApi(
+      AccountPanel,
+      {
+        accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
+        accountExportData: vi.fn().mockRejectedValue(new ApiRequestError('Boom', 500, '')),
+      },
+      { handle: null },
+    );
+    await flushPromises();
+    await wrapper.find('[data-test="export"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Boom');
+    expect(wrapper.find('[data-test="export"]').attributes('disabled')).toBeUndefined();
   });
 
   it('asks for the typed confirmation and schedules the deletion', async () => {
@@ -64,7 +110,7 @@ describe('AccountPanel', () => {
     );
     await flushPromises();
     expect(wrapper.text()).toContain('scheduled for deletion on 2026-11-15');
-    await wrapper.find('button').trigger('click');
+    await wrapper.find('button:not([data-test="export"])').trigger('click');
     await flushPromises();
     expect(cancelAccountDeletion).toHaveBeenCalled();
     expect(wrapper.find('form').exists()).toBe(true);
