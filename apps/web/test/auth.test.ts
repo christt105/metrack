@@ -97,7 +97,7 @@ describe('LoginView', () => {
       '/watchlist',
     );
     const buttons = wrapper.findAll('button');
-    expect(buttons.map((b) => b.text())).toEqual(['Owner', 'Friend friend@example.com']);
+    expect(buttons.map((b) => b.text())).toEqual(['Owner', 'Friend friend@example.com', 'Sign in']);
     await buttons[1]?.trigger('click');
     await flushPromises();
     expect(devLogin).toHaveBeenCalledWith(2);
@@ -105,10 +105,35 @@ describe('LoginView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/watchlist');
   });
 
-  it('says there is no way to sign in when dev login is off', async () => {
+  it('offers only the token form when dev login is off', async () => {
     const { wrapper } = await mountLogin({ devUsers: async () => null });
-    expect(wrapper.text()).toContain('no way to sign in');
-    expect(wrapper.findAll('button')).toHaveLength(0);
+    expect(wrapper.text()).toContain('Sign in with an access token');
+    expect(wrapper.findAll('button').map((b) => b.text())).toEqual(['Sign in']);
+  });
+
+  it('signs in with an access token and goes on to the next page', async () => {
+    const tokenLogin = vi.fn(async () => FRIEND);
+    const { wrapper, router, session } = await mountLogin(
+      { devUsers: async () => null, tokenLogin },
+      '/watchlist',
+    );
+    await wrapper.find('input').setValue('  mt_secret ');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(tokenLogin).toHaveBeenCalledWith('mt_secret');
+    expect(session.user.value).toEqual(FRIEND);
+    expect(router.currentRoute.value.fullPath).toBe('/watchlist');
+  });
+
+  it('shows the error of a refused token', async () => {
+    const tokenLogin = vi.fn(async () => {
+      throw new Error('Unknown or expired token');
+    });
+    const { wrapper } = await mountLogin({ devUsers: async () => null, tokenLogin });
+    await wrapper.find('input').setValue('mt_bad');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Unknown or expired token');
   });
 });
 

@@ -13,9 +13,10 @@ The private editing API served by `apps/server` under `/api`. Every route needs 
 
 ## Sessions
 
-A session is an `HttpOnly`, `SameSite=Lax` cookie named `metrack_session` that lasts 30 days (`Secure` when served over HTTPS). The server stores only the SHA-256 of its token. Public routes: `GET /api/health`, `POST /api/sync/webhook`, `POST /api/auth/logout` and the dev login routes.
+A session is an `HttpOnly`, `SameSite=Lax` cookie named `metrack_session` that lasts 30 days (`Secure` when served over HTTPS). The server stores only the SHA-256 of its token. Public routes: `GET /api/health`, `POST /api/sync/webhook`, `POST /api/auth/logout`, `POST /api/auth/token-login` and the dev login routes.
 
 - `GET /api/auth/me`: the signed-in `User` (`{ id, name, email }`).
+- `POST /api/auth/token-login` (`TokenLoginRequest`, `{ "token": "mt_..." }`, answers the `User` and sets the session cookie): exchanges a personal API token for a normal session of the token's user, with the same cookie, flags and 30-day lifetime as any other session. Only a `write` token may do it: a `read` token answers 403 `read_only_token`. An unknown, malformed, revoked or expired token answers 401 `bad_token`. The route is public and judges only the body, never an `Authorization` header, and the secret is looked up by its SHA-256 like everywhere else and never logged. It is always available (home server and Worker), has no rate limit, and is what the web login screen's "Sign in with an access token" form calls.
 - `POST /api/auth/logout`: ends the session and clears the cookie, 204 (also without a session).
 - Everything else answers for the signed-in user only. An id that belongs to someone else is a 404, as if it did not exist. Titles are a shared catalog plus a personal entry: adding a title that another user already has reuses the same id, and changing a catalog field that is not a hand edit (an external id, a season number) of a title someone else also has answers 409 `catalog_shared` with the fields in `details.fields`.
 - Only user 1, the owner, may call the instance-wide routes: `GET` and `POST /api/backups`, `POST /api/images/cleanup` and `DELETE /api/images/:hash`. Others get 403 `owner_only`. Sync and publishing act on the signed-in user, with the Jellyfin account and Pages project in their settings.

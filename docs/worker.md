@@ -2,7 +2,7 @@
 
 `apps/server/src/worker` builds the same Hono app as the home server over D1 (`createD1Repositories`) and R2 (`R2ImageBlobStore`), with `IMAGE_ENCODED_BY=client` forced (a Worker cannot run sharp: the browser recodes images to WebP and the Worker only validates them). The web app is served as Static Assets of the same Worker, so the session cookie is same-origin and there is no CORS. `apps/server/wrangler.jsonc` describes the Worker `metrack-test`, its D1 database `metrack-test`, its R2 bucket `metrack-test-images` and its assets. Nothing in it is scheduled: there are no cron triggers.
 
-API routes, `/u/*` (public pages) and `/privacy` run the Worker first. Every other path is answered by the assets, falling back to `index.html` for the web app's routes.
+API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker first. `/assets/*` is answered from the assets binding, with a JSON 404 (`Cache-Control: no-store`) for a missing file instead of `index.html`. Every other path is answered by the assets, falling back to `index.html` for the web app's routes.
 
 ## Run it locally
 
@@ -20,7 +20,7 @@ cd ../..
 npm run worker:dev                                       # builds the libraries and the web app, then wrangler dev
 ```
 
-Then call the API with `curl -H "Authorization: Bearer <token>" http://localhost:8787/api/media`. The web app needs a session cookie, and the only way to get one today is `DEV_LOGIN=true` in `.dev.vars` (local only).
+Then call the API with `curl -H "Authorization: Bearer <token>" http://localhost:8787/api/media`. The web app needs a session cookie: open it, paste the token in "Sign in with an access token" on the login screen (`POST /api/auth/token-login`, `write` tokens only) and you get a normal session. `DEV_LOGIN=true` in `.dev.vars` also works locally, but must never be enabled on a public Worker.
 
 ## Test data
 

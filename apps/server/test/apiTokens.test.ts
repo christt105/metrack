@@ -229,4 +229,67 @@ describe('personal API tokens', () => {
     expect((await call('GET', '/api/auth/me', secret)).statusCode).toBe(401);
     expect(db.prepare('SELECT COUNT(*) AS n FROM api_token').get()).toEqual({ n: 0 });
   });
+
+  describe('token sign-in', () => {
+    const login = (app: Awaited<ReturnType<typeof setup>>['app'], token: string) =>
+      app.inject({ method: 'POST', url: '/api/auth/token-login', payload: { token } });
+
+    it('exchanges a write token for a regular session of its user', async () => {
+      const { app, createToken } = await setup();
+      const { secret } = await createToken(2, 'write');
+      const response = await login(app, secret);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ id: 2, name: 'Friend' });
+      const setCookie = String(response.headers['set-cookie']);
+      expect(setCookie).toMatch(
+        /^metrack_session=[^;]+; Expires=.+; Path=\/; HttpOnly; SameSite=Lax$/,
+      );
+      expect(response.body).not.toContain(secret);
+      const me = await app.inject({
+        method: 'GET',
+        url: '/api/auth/me',
+        headers: { cookie: setCookie.split(';')[0] ?? '' },
+      });
+      expect(me.json()).toMatchObject({ id: 2 });
+    });
+
+    it('refuses a read token', async () => {
+      const { app, createToken } = await setup();
+      const { secret } = await createToken(1, 'read');
+      const response = await login(app, secret);
+      expect(response.statusCode).toBe(403);
+      expect(response.json().code).toBe('read_only_token');
+      expect(response.headers['set-cookie']).toBeUndefined();
+    });
+
+    it('refuses a revoked, expired or unknown token with the same answer', async () => {
+      const { app, clock, cookieFor, createToken } = await setup();
+      const revoked = await createToken(1, 'write');
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/tokens/${revoked.token.id}`,
+        headers: { cookie: await cookieFor(1) },
+      });
+      const expiring = await createToken(1, 'write', 30);
+      clock.advance(31 * DAY_MS);
+      for (const secret of [revoked.secret, expiring.secret, 'mt_unknown', 'nonsense', '']) {
+        const response = await login(app, secret);
+        expect(response.statusCode, secret).toBe(401);
+        expect(response.json().code).toBe('bad_token');
+        expect(response.headers['set-cookie']).toBeUndefined();
+      }
+    });
+
+    it('does not turn a Bearer token into a session', async () => {
+      const { app, createToken } = await setup();
+      const { secret } = await createToken(1, 'write');
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/auth/token-login',
+        headers: { authorization: `Bearer ${secret}` },
+        payload: { token: 'mt_unknown' },
+      });
+      expect(response.statusCode).toBe(401);
+    });
+  });
 });

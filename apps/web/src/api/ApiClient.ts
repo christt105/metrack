@@ -137,6 +137,10 @@ export class ApiClient {
     return this.request('POST', '/auth/dev-login', { userId });
   }
 
+  tokenLogin(token: string): Promise<User> {
+    return this.request('POST', '/auth/token-login', { token });
+  }
+
   logout(): Promise<void> {
     return this.request('POST', '/auth/logout');
   }

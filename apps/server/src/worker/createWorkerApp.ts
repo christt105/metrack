@@ -60,6 +60,7 @@ export function createWorkerApp(env: WorkerEnv): Hono<ApiEnv> {
       }),
       urlGuard: new WorkerUrlGuard(),
       quotaBytes: config.images.quotaBytes,
+      maxDimension: config.images.maxDimension,
       maxUploadBytes: config.images.maxUploadBytes,
       encodedBy: 'client',
     },

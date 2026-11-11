@@ -16,12 +16,27 @@ const router = useRouter();
 const { data: users, error, loading } = useLoader(() => api.devUsers());
 const busy = ref(false);
 const signInError = ref<unknown>(null);
+const accessToken = ref('');
 
 async function signIn(user: User): Promise<void> {
   busy.value = true;
   signInError.value = null;
   try {
     session.signedIn(await api.devLogin(user.id));
+    await router.replace(safeNext(route.query.next));
+  } catch (cause) {
+    signInError.value = cause;
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function signInWithToken(): Promise<void> {
+  busy.value = true;
+  signInError.value = null;
+  try {
+    session.signedIn(await api.tokenLogin(accessToken.value.trim()));
+    accessToken.value = '';
     await router.replace(safeNext(route.query.next));
   } catch (cause) {
     signInError.value = cause;
@@ -37,7 +52,6 @@ async function signIn(user: User): Promise<void> {
     <ErrorNotice :error="error" />
     <ErrorNotice :error="signInError" />
     <p v-if="loading && users === null" class="muted">{{ messages.common.loading }}</p>
-    <p v-else-if="!error && users === null" class="muted">{{ messages.login.noMethod }}</p>
     <template v-else-if="users">
       <p class="muted">{{ messages.login.devHint }}</p>
       <ul>
@@ -49,6 +63,23 @@ async function signIn(user: User): Promise<void> {
         </li>
       </ul>
     </template>
+    <form class="token" @submit.prevent="signInWithToken">
+      <h2>{{ messages.login.tokenTitle }}</h2>
+      <p class="muted">{{ messages.login.tokenHint }}</p>
+      <label>
+        {{ messages.login.tokenLabel }}
+        <input
+          v-model="accessToken"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          required
+        />
+      </label>
+      <button type="submit" :disabled="busy || accessToken.trim() === ''">
+        {{ messages.login.tokenSubmit }}
+      </button>
+    </form>
   </section>
 </template>
 
@@ -65,11 +96,22 @@ ul {
   list-style: none;
 }
 
-button {
+ul button {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   width: 100%;
   text-align: left;
+}
+
+.token {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.token label {
+  display: grid;
+  gap: 4px;
 }
 </style>

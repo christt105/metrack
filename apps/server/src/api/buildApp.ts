@@ -105,7 +105,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
     const queues = deps.mirrorQueues;
     onSuccessfulApiWrite(app, () => queues.markAllDirty(), deps.logger);
   }
-  if (deps.auth) registerAuthRoutes(routes, deps.auth);
+  if (deps.auth) registerAuthRoutes(routes, deps.auth, deps.tokens);
   if (deps.tokens) registerTokenRoutes(routes, deps.tokens);
 
   routes.get('/api/health', { config: { public: true } }, async () => {
