@@ -6,6 +6,7 @@ export function publicResponse(
   contentType: string,
   cacheControl?: string,
   status = 200,
+  etag?: string,
 ): Response {
   const bytes = typeof body === 'string' ? new TextEncoder().encode(body) : body;
   const headers = new Headers({
@@ -14,5 +15,6 @@ export function publicResponse(
     'X-Robots-Tag': 'noindex',
   });
   if (cacheControl !== undefined) headers.set('Cache-Control', cacheControl);
+  if (etag !== undefined) headers.set('ETag', etag);
   return new Response(bytesBody(bytes), { status, headers });
 }

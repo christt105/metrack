@@ -358,6 +358,8 @@ describe('the public images', () => {
     expect(image.statusCode).toBe(200);
     expect(image.headers['content-type']).toBe('image/webp');
     expect(image.headers['x-robots-tag']).toBe('noindex');
+    expect(image.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    expect(home.headers['etag']).toBeUndefined();
     expect((await visitor(`/u/christian/images/${embeddedHash}`)).statusCode).toBe(200);
     expect((await visitor(`/api/images/${cover}`)).statusCode).toBe(401);
   });

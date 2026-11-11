@@ -20,6 +20,8 @@ import { IgdbClient } from '../providers/igdb/IgdbClient.js';
 import { OpenLibraryClient } from '../providers/openlibrary/OpenLibraryClient.js';
 import { SteamGridDbClient } from '../providers/steamgriddb/SteamGridDbClient.js';
 import { TmdbClient } from '../providers/tmdb/TmdbClient.js';
+import { D1ContentVersions } from '../storage/d1/D1ContentVersions.js';
+import { D1PublicRenderCache } from '../storage/d1/D1PublicRenderCache.js';
 import { createD1Repositories } from '../storage/d1/createD1Repositories.js';
 import { IgdbGameProvider } from '../titles/IgdbGameProvider.js';
 import { OpenLibraryBookProvider } from '../titles/OpenLibraryBookProvider.js';
@@ -146,7 +148,9 @@ export function createWorkerApp(env: WorkerEnv): Hono<ApiEnv> {
       sources: { movies, series, seasons, videogames, books },
       publicUrl: config.publicUrl,
       contactEmail: config.contactEmail,
+      renderCache: new D1PublicRenderCache(env.DB),
     },
+    contentVersions: new D1ContentVersions(env.DB),
     watch: {
       watchlist: new WatchlistService(edit.editor, movies, series, seasons),
       alerts: repositories.releaseAlerts,
