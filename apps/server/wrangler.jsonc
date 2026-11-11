@@ -24,4 +24,24 @@
     "APP_VERSION": "cloud-test",
     "TMDB_LANGUAGE": "es-ES",
   },
+  "env": {
+    "production": {
+      "name": "metrack",
+      "workers_dev": false,
+      "preview_urls": false,
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "metrack",
+          "database_id": "d971de13-00af-4f93-9ecf-0d5559d42d1f",
+          "migrations_dir": "d1/migrations",
+        },
+      ],
+      "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "metrack-images" }],
+      "vars": {
+        "APP_VERSION": "unreleased",
+        "TMDB_LANGUAGE": "es-ES",
+      },
+    },
+  },
 }

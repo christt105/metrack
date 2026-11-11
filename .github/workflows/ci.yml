@@ -93,3 +93,91 @@ jobs:
             echo "$TAGS" | sed 's/^/docker pull /'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy Worker
+    if: github.ref_type == 'tag'
+    needs: check
+    runs-on: ubuntu-latest
+    environment: cloudflare
+    concurrency:
+      group: deploy-worker
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      METRACK_URL: ${{ vars.METRACK_URL }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag points at main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag ${TAG} is not on main; releases are only cut from main."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build libraries and web app
+        run: |
+          npm run build -w @metrack/domain
+          npm run build -w @metrack/export
+          npm run build -w @metrack/site
+          npm run build -w @metrack/web
+
+      - name: Record rollback points
+        working-directory: apps/server
+        run: |
+          bookmark=$(npx wrangler d1 time-travel info metrack --env production --json | jq -er '.bookmark')
+          version=$(npx wrangler versions deployments list --env production --json | jq -r '(last // {versions: []}) | .versions | (max_by(.percentage) // {}) | .version_id // "none"')
+          {
+            echo "### Rollback points (before this deploy of ${TAG})"
+            echo
+            echo "Database bookmark: \`${bookmark}\`"
+            echo "Previous Worker version: \`${version}\`"
+            echo
+            echo "Restore the code:"
+            echo '```'
+            echo "npx wrangler rollback ${version} --env production"
+            echo '```'
+            echo "Restore the data (overwrites everything written since, 7 days of history on the free plan):"
+            echo '```'
+            echo "npx wrangler d1 time-travel restore metrack --bookmark ${bookmark} --env production"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply D1 migrations
+        working-directory: apps/server
+        run: npx wrangler d1 migrations apply metrack --remote --env production
+
+      - name: Deploy the Worker
+        working-directory: apps/server
+        run: npx wrangler deploy --env production --var "APP_VERSION:${TAG}"
+
+      - name: Health check
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            status=$(curl -sS -o health.json -D headers.txt -w '%{http_code}' "${METRACK_URL}/api/health" || true)
+            if [ "$status" = "200" ] && [ "$(jq -r '.appVersion' health.json)" = "$TAG" ]; then
+              echo "Healthy: ${TAG} is live."
+              exit 0
+            fi
+            if grep -qi '^cf-mitigated:' headers.txt || { [ "$status" = "403" ] && grep -q 'error code: 10' health.json; }; then
+              echo "::error::Cloudflare blocked the health check (HTTP ${status}); the zone's bot protection blocked the runner. The deploy itself went through; check ${METRACK_URL}/api/health by hand."
+              exit 1
+            fi
+            echo "Attempt ${attempt}: HTTP ${status}, retrying in 10 s"
+            sleep 10
+          done
+          echo "::error::${METRACK_URL}/api/health did not report ${TAG} with HTTP 200. Roll back with the commands in the job summary."
+          exit 1
