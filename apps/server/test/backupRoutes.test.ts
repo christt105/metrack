@@ -40,6 +40,8 @@ describe('backup routes', () => {
       backup: { service, job },
     });
 
+    const health = await app.inject({ method: 'GET', url: '/api/health' });
+    expect(health.json().features).toEqual({ backups: true });
     const created = await app.inject({ method: 'POST', url: '/api/backups' });
     expect(created.statusCode).toBe(201);
     const listed = await app.inject({ method: 'GET', url: '/api/backups' });

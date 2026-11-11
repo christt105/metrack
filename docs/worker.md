@@ -46,12 +46,11 @@ Provider keys are Worker secrets read from the environment bindings; without one
 
 ## What the cloud does not do yet
 
-- Sign in: only personal API tokens (`Authorization: Bearer`) work on a deployed Worker. The web app has no sign-in there until Google login exists.
+- Sign in: only personal API tokens work on a deployed Worker, either as `Authorization: Bearer` or through the web token sign-in form (`POST /api/auth/token-login`). Google login is pending.
 - Jellyfin and Jellystat sync (`/api/sync/*` answer 501), the Jellyfin webhook included.
 - The vault mirror and Hugo/Cloudflare Pages publishing (`/api/publish` does not exist).
-- Backups (`/api/backups` does not exist) and the archive of images.
+- Backups (`/api/backups` does not exist; `GET /api/health` reports `features.backups: false`, so Settings hides the section) and the archive of images.
 - Release alerts and ntfy notifications: there is no timer.
 - Erasing deleted accounts: a deletion can be scheduled, but nothing runs the job that carries it out after the grace period.
 - Server-side image recoding: uploads must already be WebP.
 - Caching with the Cache API (a no-op on `workers.dev`).
-- Indexes beyond those in `0001_schema.sql`.

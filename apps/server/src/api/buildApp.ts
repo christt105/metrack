@@ -109,7 +109,13 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   if (deps.tokens) registerTokenRoutes(routes, deps.tokens);
 
   routes.get('/api/health', { config: { public: true } }, async () => {
-    const report = createHealthReport(deps.appVersion, await deps.migrationRunner.currentVersion());
+    const report = createHealthReport(
+      deps.appVersion,
+      await deps.migrationRunner.currentVersion(),
+      {
+        backups: deps.backup !== undefined,
+      },
+    );
     return jsonResponse(report, report.status === 'ok' ? 200 : 503);
   });
 

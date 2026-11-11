@@ -130,7 +130,7 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 ## Publishing and health
 
 - `POST /api/publish`: queues a publish of the signed-in user's site and answers 202 `{ "status": "queued", "failures": n }`; 501 `publish_not_configured` when they have no Cloudflare Pages project set.
-- `GET /api/health`: `HealthReport`. Answers 200 when `status` is `ok` and 503 with the same body when it is `degraded`, so the container health check fails.
+- `GET /api/health`: `HealthReport`. Answers 200 when `status` is `ok` and 503 with the same body when it is `degraded`, so the container health check fails. `features` lists optional capabilities of this deployment (`backups`: the `/api/backups` routes exist); the web hides the matching UI when a flag is false.
 
 ## Backups
 
