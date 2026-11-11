@@ -67,7 +67,7 @@ npm run build
 
 The HTTP API used by the private editing interface is documented in [docs/api.md](docs/api.md); its types live in `@metrack/domain`.
 
-The Cloudflare Workers build (D1, R2, Static Assets) is described in [docs/worker.md](docs/worker.md).
+The Cloudflare Workers build (D1, R2, Static Assets) is described in [docs/worker.md](docs/worker.md), including the tag-driven production deploy.
 
 Run the API with `npm run dev:server` (port 8097, data in `./data`) and the web app with `npm run dev:web`, which proxies `/api` to the API.
 

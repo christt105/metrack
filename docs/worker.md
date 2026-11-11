@@ -1,6 +1,6 @@
 # metrack on Cloudflare Workers
 
-`apps/server/src/worker` builds the same Hono app as the home server over D1 (`createD1Repositories`) and R2 (`R2ImageBlobStore`), with `IMAGE_ENCODED_BY=client` forced (a Worker cannot run sharp: the browser recodes images to WebP and the Worker only validates them). The web app is served as Static Assets of the same Worker, so the session cookie is same-origin and there is no CORS. `apps/server/wrangler.jsonc` describes the Worker `metrack-test`, its D1 database `metrack-test`, its R2 bucket `metrack-test-images` and its assets. Nothing in it is scheduled: there are no cron triggers.
+`apps/server/src/worker` builds the same Hono app as the home server over D1 (`createD1Repositories`) and R2 (`R2ImageBlobStore`), with `IMAGE_ENCODED_BY=client` forced (a Worker cannot run sharp: the browser recodes images to WebP and the Worker only validates them). The web app is served as Static Assets of the same Worker, so the session cookie is same-origin and there is no CORS. `apps/server/wrangler.jsonc` describes (at the top level) the Worker `metrack-test`, its D1 database `metrack-test`, its R2 bucket `metrack-test-images` and its assets. Nothing in it is scheduled: there are no cron triggers.
 
 API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker first. `/assets/*` is answered from the assets binding, with a JSON 404 (`Cache-Control: no-store`) for a missing file instead of `index.html`. Every other path is answered by the assets, falling back to `index.html` for the web app's routes.
 
@@ -70,6 +70,48 @@ npm run worker:deploy
 ```
 
 Provider keys are Worker secrets read from the environment bindings; without one, search for that type answers 501 `provider_not_configured` (books come from Open Library and need none). Never set `DEV_LOGIN` on a deployed Worker.
+
+## Production deploy
+
+`apps/server/wrangler.jsonc` has an `env.production` section: the Worker `metrack`, the D1 database `metrack`, the R2 bucket `metrack-images`, the same binding names as the test Worker (`DB`, `IMAGES`, `ASSETS`), `workers_dev` and `preview_urls` off, and `TMDB_LANGUAGE`. It has no `routes`: the custom domain is attached to the Worker in the dashboard and a deploy without `routes` keeps it. Bindings and `vars` are not inherited by an environment, so they are repeated there; the top level stays the test Worker. Check the result without touching Cloudflare with `npx wrangler deploy --dry-run --env production --outdir /tmp/out`.
+
+A tag `vX.Y.Z` on main runs the `deploy` job of `.github/workflows/ci.yml` after `check` passes and the owner approves the `cloudflare` environment:
+
+1. Records the D1 Time Travel bookmark and the Worker version currently live in the job summary, with the exact rollback commands.
+2. `wrangler d1 migrations apply metrack --remote --env production`. In CI wrangler skips the confirmation prompt and applies.
+3. `wrangler deploy --env production --var APP_VERSION:<tag>`.
+4. Calls `<METRACK_URL>/api/health` up to six times and fails unless it answers 200 with `appVersion` equal to the tag. If Cloudflare blocks the request (`cf-mitigated` header, or a 403 with an `error code: 10xx` body) the job says so: the zone's bot protection blocked the runner, but the deploy already went through.
+
+The job never exports the database or uploads data as an artifact.
+
+### One-time setup in Cloudflare
+
+```sh
+cd apps/server
+npx wrangler login
+npx wrangler d1 create metrack               # put the printed database_id in env.production
+npx wrangler r2 bucket create metrack-images
+npx wrangler d1 migrations apply metrack --remote --env production
+npx wrangler deploy --env production
+npx wrangler secret put TMDB_API_KEY --env production   # likewise IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAMGRIDDB_TOKEN
+```
+
+Provider keys are Worker secrets set by hand, never by CI. Then attach the custom domain (for example `metrack.example.org`) to the Worker in the dashboard (Workers & Pages, the Worker, Settings, Domains & Routes). Add a Configuration Rule for that host only that turns off Email Obfuscation, Automatic HTTPS Rewrites and Rocket Loader, so the HTML keeps its `ETag`.
+
+### GitHub setup
+
+- Environment `cloudflare` with a required reviewer and a deployment tag rule `v*`.
+- Secret `CLOUDFLARE_API_TOKEN` (in that environment).
+- Variables `CLOUDFLARE_ACCOUNT_ID` and `METRACK_URL` (the public address of the Worker, without a trailing slash).
+
+### API token
+
+Create an account-owned or user API token with Account permissions Workers Scripts: Edit and D1: Edit, and no zone permissions. D1 Edit applies to every D1 database of the account, not only `metrack`.
+
+### Rolling back
+
+- Code: `npx wrangler rollback <version-id> --env production`, with the version id from the deploy's job summary (or `npx wrangler versions list --env production`).
+- Data: `npx wrangler d1 time-travel restore metrack --bookmark <bookmark> --env production`, with the bookmark from the job summary. It overwrites everything written since the bookmark and cancels in-flight queries, and the history is kept for 7 days on the free plan. Migrations should therefore be additive, so that the previous code keeps working on the new schema and only a code rollback is needed.
 
 ## What the cloud does not do yet
 
