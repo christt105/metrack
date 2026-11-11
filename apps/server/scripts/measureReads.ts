@@ -25,7 +25,10 @@ const DEFAULT_PROFILE: Record<string, number> = {
   'public feed.xml': 10,
   'public image': 600,
   'owner GET /api/media': 30,
+  'owner GET media status': 5,
+  'owner GET media recent': 5,
   'owner GET title detail': 40,
+  'owner GET series detail': 10,
   'owner GET /api/account': 5,
   'owner GET /api/settings': 10,
   'owner PATCH title': 15,
@@ -34,6 +37,7 @@ const DEFAULT_PROFILE: Record<string, number> = {
 interface Counters {
   read: number;
   written: number;
+  queries: number;
 }
 
 class MeteredStatement implements D1PreparedStatement {
@@ -66,6 +70,7 @@ class MeteredStatement implements D1PreparedStatement {
 
   count(result: D1Result): D1Result {
     const meta = result.meta as unknown as { rows_read?: number; rows_written?: number };
+    this.meter.queries += 1;
     this.meter.read += meta.rows_read ?? 0;
     this.meter.written += meta.rows_written ?? 0;
     return result;
@@ -103,6 +108,7 @@ interface Probe {
 }
 
 interface Sample {
+  queries: number;
   read: number;
   written: number;
   ms: number;
@@ -146,7 +152,7 @@ async function main(): Promise<void> {
       await raw.batch(seed.slice(i, i + 50).map((sql) => raw.prepare(sql)));
     }
 
-    const meter: Counters = { read: 0, written: 0 };
+    const meter: Counters = { read: 0, written: 0, queries: 0 };
     const app = createWorkerApp({
       DB: meterOf(raw, meter),
       IMAGES,
@@ -185,7 +191,20 @@ async function main(): Promise<void> {
       { name: 'public feed.xml', method: 'GET', path: '/u/bulk/feed.xml', owner: false },
       { name: 'public image', method: 'GET', path: `/u/bulk/images/${hash}`, owner: false },
       { name: 'owner GET /api/media', method: 'GET', path: '/api/media', owner: true },
+      {
+        name: 'owner GET media status',
+        method: 'GET',
+        path: '/api/media?status=in_progress',
+        owner: true,
+      },
+      {
+        name: 'owner GET media recent',
+        method: 'GET',
+        path: '/api/media?sort=recent',
+        owner: true,
+      },
       { name: 'owner GET title detail', method: 'GET', path: '/api/movies/1001', owner: true },
+      { name: 'owner GET series detail', method: 'GET', path: '/api/series/1000', owner: true },
       {
         name: 'owner GET /api/account',
         method: 'GET',
@@ -212,6 +231,7 @@ async function main(): Promise<void> {
     const sample = async (probe: Probe, revalidate?: string | null): Promise<Sample> => {
       meter.read = 0;
       meter.written = 0;
+      meter.queries = 0;
       const headers: Record<string, string> = probe.session
         ? { cookie: `metrack_session=${SECRET}` }
         : probe.owner
@@ -227,6 +247,7 @@ async function main(): Promise<void> {
       });
       await response.arrayBuffer();
       return {
+        queries: meter.queries,
         read: meter.read,
         written: meter.written,
         ms: performance.now() - started,
@@ -253,13 +274,14 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      `${'route'.padEnd(26)} ${pad('cold r/w', 12)} ${pad('ms', 6)} | ${pad('warm r/w', 12)} ${pad('ms', 6)} | ${pad('304 r/w', 10)} ${pad('ms', 6)}  status`,
+      `${'route'.padEnd(26)} ${pad('cold q', 5)} ${pad('cold r/w', 12)} ${pad('ms', 6)} | ${pad('warm q', 6)} ${pad('warm r/w', 12)} ${pad('ms', 6)} | ${pad('304 q', 5)} ${pad('304 r/w', 10)} ${pad('ms', 6)}  status`,
     );
     for (const [name, { cold, warm, revalidated }] of results) {
       const cell = (s?: Sample): string => (s ? `${s.read}/${s.written}` : '-');
+      const count = (s?: Sample): string => (s ? String(s.queries) : '-');
       const ms = (s?: Sample): string => (s ? s.ms.toFixed(1) : '-');
       console.log(
-        `${name.padEnd(26)} ${pad(cell(cold), 12)} ${pad(ms(cold), 6)} | ${pad(cell(warm), 12)} ${pad(ms(warm), 6)} | ${pad(cell(revalidated), 10)} ${pad(ms(revalidated), 6)}  ${cold.status}/${warm.status}${revalidated ? `/${revalidated.status}` : ''}`,
+        `${name.padEnd(26)} ${pad(count(cold), 5)} ${pad(cell(cold), 12)} ${pad(ms(cold), 6)} | ${pad(count(warm), 6)} ${pad(cell(warm), 12)} ${pad(ms(warm), 6)} | ${pad(count(revalidated), 5)} ${pad(cell(revalidated), 10)} ${pad(ms(revalidated), 6)}  ${cold.status}/${warm.status}${revalidated ? `/${revalidated.status}` : ''}`,
       );
     }
 

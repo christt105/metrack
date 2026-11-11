@@ -204,10 +204,13 @@ export class MediaEditor {
 
   async describe(collection: Collection, entity: MediaEntity): Promise<MediaDetail<MediaEntity>> {
     const kind = this.kinds[collection];
-    const state = await this.states.get(kind.type, entity.id);
+    const [state, extra] = await Promise.all([
+      this.states.get(kind.type, entity.id),
+      kind.extend?.(entity),
+    ]);
     return {
       ...entity,
-      ...((await kind.extend?.(entity)) ?? {}),
+      ...(extra ?? {}),
       editedFields: state.editedFields,
       fetchedAt: state.fetchedAt,
     };

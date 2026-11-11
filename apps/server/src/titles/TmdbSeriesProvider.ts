@@ -7,9 +7,12 @@ import { clean, emptyToNull, imageUrl } from '../providers/tmdb/mapTitle.js';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import type { SeasonRepository } from '../storage/repositories/SeasonRepository.js';
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
+import { mapConcurrent } from './mapConcurrent.js';
 import { parseNumericId } from './parseExternalId.js';
 import type { TitleProvider } from './TitleProvider.js';
 import { TMDB_POSTER_PREVIEW, yearFrom } from './tmdbPreview.js';
+
+const COVER_DOWNLOADS = 4;
 
 export class TmdbSeriesProvider implements TitleProvider {
   readonly type = 'series';
@@ -55,8 +58,19 @@ export class TmdbSeriesProvider implements TitleProvider {
       tmdbId,
       title: details.name ?? `TMDB ${tmdbId}`,
     });
-    for (const season of details.seasons ?? []) {
-      if (season.season_number < 1) continue;
+    const wanted = (details.seasons ?? []).filter((season) => season.season_number >= 1);
+    const urls = [
+      ...new Set(wanted.map((season) => imageUrl(season.poster_path)).filter((u) => u !== null)),
+    ];
+    const covers = new Map(
+      await mapConcurrent(
+        urls,
+        COVER_DOWNLOADS,
+        async (url) => [url, await this.download(url)] as const,
+      ),
+    );
+    for (const season of wanted) {
+      const poster = imageUrl(season.poster_path);
       await this.seasons.create({
         ...emptySeason(),
         seriesId: series.id,
@@ -66,7 +80,7 @@ export class TmdbSeriesProvider implements TitleProvider {
         overview: clean(season.overview),
         firstAirDate: emptyToNull(season.air_date ?? undefined),
         episodeCount: season.episode_count ?? null,
-        cover: await this.download(imageUrl(season.poster_path)),
+        cover: poster ? (covers.get(poster) ?? null) : null,
       });
     }
     await this.cache.refresh('series', series.id, true);

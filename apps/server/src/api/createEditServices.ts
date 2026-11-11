@@ -12,7 +12,7 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
   const editor = new MediaEditor(kinds, deps.states, deps.images, deps.now);
   return {
     editor,
-    catalog: new MediaCatalog(kinds, (seriesId) => sources.seasons.listBySeries(seriesId)),
+    catalog: new MediaCatalog(kinds),
     artwork: new ArtworkService(editor, sources.series, deps.imageProviders, deps.images),
     titleProviders: deps.titleProviders,
     resolver: new UnlinkedResolver(deps.unlinked, editor, deps.titleProviders, deps.cache),

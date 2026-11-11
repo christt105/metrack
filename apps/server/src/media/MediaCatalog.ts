@@ -6,13 +6,17 @@ import {
   type MediaSortField,
   type MediaSummary,
   type Season,
+  type Series,
   type Tracking,
 } from '@metrack/domain';
 import type { Activity } from './Activity.js';
 import { activityOf } from './activityOf.js';
+import { buildSummaryContext } from './buildSummaryContext.js';
+import type { MediaEntity } from './MediaEntity.js';
 import { fieldsOf } from './fieldsOf.js';
 import type { MediaKind } from './MediaKind.js';
 import { normalizeText } from './normalizeText.js';
+import type { SummaryContext } from './SummaryContext.js';
 
 const DEFAULT_LIMIT = 50;
 
@@ -33,24 +37,32 @@ function compare(
  * finished or rewatched (newest first unless `order=asc`); a series takes these from its seasons.
  */
 export class MediaCatalog {
-  constructor(
-    private readonly kinds: Record<Collection, MediaKind>,
-    private readonly seasonsOf: (seriesId: number) => Promise<Season[]>,
-  ) {}
+  constructor(private readonly kinds: Record<Collection, MediaKind>) {}
 
   async list(query: MediaQuery): Promise<MediaPage> {
     const needle = query.q ? normalizeText(query.q.trim()) : '';
+    const loaded = new Map<Collection, Promise<MediaEntity[]>>();
+    const load = (collection: Collection): Promise<MediaEntity[]> => {
+      let entities = loaded.get(collection);
+      if (!entities) {
+        entities = this.kinds[collection].repository.list();
+        loaded.set(collection, entities);
+      }
+      return entities;
+    };
+    const context = await this.contextFor(query, load);
     const matches: MediaSummary[] = [];
     const activity = new Map<MediaSummary, Activity>();
     for (const collection of COLLECTIONS) {
       const kind = this.kinds[collection];
       if (query.type && query.type !== kind.type) continue;
-      for (const entity of await kind.repository.list()) {
-        const summary = await kind.summarize(entity);
-        if (query.status && !(await this.hasStatus(summary, query.status))) continue;
+      for (const entity of await load(collection)) {
+        const summary = kind.summarize(entity, context);
+        if (query.status && !this.hasStatus(summary, query.status, context)) continue;
         if (needle && !this.matchesText(summary, entity, needle)) continue;
         matches.push(summary);
-        if (query.sort === 'recent') activity.set(summary, await this.activityOf(summary, entity));
+        if (query.sort === 'recent')
+          activity.set(summary, this.activityOf(summary, entity, context));
       }
     }
 
@@ -89,14 +101,28 @@ export class MediaCatalog {
     };
   }
 
-  private async activityOf(summary: MediaSummary, entity: { id: number }): Promise<Activity> {
-    if (summary.type === 'series') return activityOf(await this.seasonsOf(summary.id));
+  private async contextFor(
+    query: MediaQuery,
+    load: (collection: Collection) => Promise<MediaEntity[]>,
+  ): Promise<SummaryContext> {
+    const needed = !query.type || query.type === 'series' || query.type === 'season';
+    if (!needed) return buildSummaryContext([], []);
+    const [series, seasons] = await Promise.all([load('series'), load('seasons')]);
+    return buildSummaryContext(series as Series[], seasons as Season[]);
+  }
+
+  private activityOf(
+    summary: MediaSummary,
+    entity: { id: number },
+    context: SummaryContext,
+  ): Activity {
+    if (summary.type === 'series') return activityOf(context.seasonsOf(summary.id));
     return activityOf([fieldsOf(entity) as Partial<Tracking>]);
   }
 
-  private async hasStatus(summary: MediaSummary, status: string): Promise<boolean> {
+  private hasStatus(summary: MediaSummary, status: string, context: SummaryContext): boolean {
     if (summary.type === 'series') {
-      return (await this.seasonsOf(summary.id)).some((season) => season.status === status);
+      return context.seasonsOf(summary.id).some((season) => season.status === status);
     }
     return summary.status === status;
   }
