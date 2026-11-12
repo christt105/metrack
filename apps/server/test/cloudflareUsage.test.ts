@@ -28,7 +28,7 @@ function sample(used: Partial<Record<UsageMetricKey, number>>): UsageSample {
       ],
     };
   }
-  return { readings, unavailable: [], unknownR2Actions: [] };
+  return { readings, unknownR2Actions: [] };
 }
 
 function harness(initial?: string) {
@@ -77,6 +77,7 @@ describe('loadCloudflareUsageConfig', () => {
 
   it('uses the free-plan defaults and honours overrides', () => {
     expect(config.limits.workerRequests).toBe(100_000);
+    expect(config.limits.d1Storage).toBe(500 * 1024 ** 2);
     expect(config.limits.r2Storage).toBe(10 * 1024 ** 3);
     expect([config.warnPercent, config.criticalPercent]).toEqual([70, 90]);
     const custom = loadCloudflareUsageConfig({
@@ -113,22 +114,16 @@ describe('CloudflareUsageClient', () => {
       { sum: { requests: 2 }, dimensions: { actionType: 'Mystery', bucketName: 'other' } },
     ],
     s: [{ max: { payloadSize: 2048 }, dimensions: { bucketName: 'imgs' } }],
+    ds: [
+      { max: { databaseSizeBytes: 100 }, dimensions: { databaseId: 'a' } },
+      { max: { databaseSizeBytes: 300 }, dimensions: { databaseId: 'a' } },
+      { max: { databaseSizeBytes: 50 }, dimensions: { databaseId: 'b' } },
+    ],
   };
   const now = () => new Date('2026-11-12T10:00:00Z');
 
   it('aggregates every metric, with a bearer token and the UTC periods in the query', async () => {
-    const fetchFn = vi
-      .fn()
-      .mockResolvedValueOnce(graphqlResponse(account))
-      .mockResolvedValueOnce(
-        graphqlResponse({
-          ds: [
-            { max: { databaseSizeBytes: 100 }, dimensions: { databaseId: 'a' } },
-            { max: { databaseSizeBytes: 300 }, dimensions: { databaseId: 'a' } },
-            { max: { databaseSizeBytes: 50 }, dimensions: { databaseId: 'b' } },
-          ],
-        }),
-      );
+    const fetchFn = vi.fn().mockResolvedValueOnce(graphqlResponse(account));
     const result = await new CloudflareUsageClient(
       'tok',
       'abc123',
@@ -148,7 +143,11 @@ describe('CloudflareUsageClient', () => {
     expect(result.readings.r2ClassA?.used).toBe(6);
     expect(result.readings.r2ClassB?.used).toBe(6);
     expect(result.readings.r2Storage?.used).toBe(2048);
-    expect(result.readings.d1Storage?.used).toBe(350);
+    expect(result.readings.d1Storage?.used).toBe(300);
+    expect(result.readings.d1Storage?.consumers).toEqual([
+      { name: 'a', value: 300 },
+      { name: 'b', value: 50 },
+    ]);
     expect(result.unknownR2Actions).toEqual(['Mystery']);
     const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://api.cloudflare.com/client/v4/graphql');
@@ -157,21 +156,8 @@ describe('CloudflareUsageClient', () => {
     expect(query).toContain('accountTag:"abc123"');
     expect(query).toContain('date_geq:"2026-11-12"');
     expect(query).toContain('date_geq:"2026-11-01"');
-  });
-
-  it('reports D1 storage as unavailable when only that query fails', async () => {
-    const fetchFn = vi
-      .fn()
-      .mockResolvedValueOnce(graphqlResponse(account))
-      .mockResolvedValueOnce(graphqlResponse({}, 200, [{ message: 'unknown field' }]));
-    const result = await new CloudflareUsageClient(
-      'tok',
-      'abc123',
-      fetchFn as unknown as typeof fetch,
-      now,
-    ).read();
-    expect(result.unavailable).toEqual(['d1Storage']);
-    expect(result.readings.workerRequests?.used).toBe(15);
+    expect(query).toContain('d1StorageAdaptiveGroups');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -283,6 +269,20 @@ describe('CloudflareUsageMonitor', () => {
     await monitor.tick();
     expect(h.notify).toHaveBeenCalledTimes(1);
     h.clock.now = new Date('2026-12-01T00:01:00Z');
+    await monitor.tick();
+    expect(h.notify).toHaveBeenCalledTimes(2);
+  });
+
+  it('alerts on a persistent storage size once a month, not every day', async () => {
+    const h = harness();
+    const monitor = h.build();
+    h.read.mockResolvedValue(sample({ d1Storage: 430 * 1024 ** 2 }));
+    await monitor.tick();
+    expect(h.notify.mock.calls[0]?.[0]).toBe('Cloudflare usage 86%: Largest D1 database');
+    h.clock.now = new Date('2026-11-13T10:00:00Z');
+    await monitor.tick();
+    expect(h.notify).toHaveBeenCalledTimes(1);
+    h.clock.now = new Date('2026-12-01T10:00:00Z');
     await monitor.tick();
     expect(h.notify).toHaveBeenCalledTimes(2);
   });

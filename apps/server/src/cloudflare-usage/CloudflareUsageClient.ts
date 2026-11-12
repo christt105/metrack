@@ -30,32 +30,18 @@ export class CloudflareUsageClient {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  /** Throws a CloudflareUsageError when the main query fails; D1 storage alone may be unavailable. */
+  /** Throws a CloudflareUsageError when the query fails. */
   async read(): Promise<UsageSample> {
     const day = utcDay(this.now());
     const month = utcMonthStart(this.now());
-    const main = await this.query(`{ viewer { accounts(filter:{accountTag:"${this.accountId}"}) {
+    const account = await this.query(`{ viewer { accounts(filter:{accountTag:"${this.accountId}"}) {
       w: workersInvocationsAdaptive(limit:100, filter:{date_geq:"${day}"}) { sum { requests } dimensions { scriptName } }
       d: d1AnalyticsAdaptiveGroups(limit:100, filter:{date_geq:"${day}"}) { sum { rowsRead rowsWritten } dimensions { databaseId } }
       r: r2OperationsAdaptiveGroups(limit:1000, filter:{date_geq:"${month}"}) { sum { requests } dimensions { actionType bucketName } }
       s: r2StorageAdaptiveGroups(limit:100, filter:{date_geq:"${day}"}) { max { payloadSize } dimensions { bucketName } }
+      ds: d1StorageAdaptiveGroups(limit:100, filter:{date_geq:"${day}"}) { max { databaseSizeBytes } dimensions { databaseId } }
     } } }`);
-    const sample = this.aggregate(main);
-    try {
-      const storage = await this
-        .query(`{ viewer { accounts(filter:{accountTag:"${this.accountId}"}) {
-        ds: d1StorageAdaptiveGroups(limit:100, filter:{date_geq:"${day}"}) { max { databaseSizeBytes } dimensions { databaseId } }
-      } } }`);
-      const totals = new Map<string, number>();
-      for (const g of storage.ds ?? []) {
-        const id = g.dimensions?.databaseId ?? 'unknown';
-        totals.set(id, Math.max(totals.get(id) ?? 0, g.max?.databaseSizeBytes ?? 0));
-      }
-      sample.readings.d1Storage = toReading(totals);
-    } catch {
-      sample.unavailable.push('d1Storage');
-    }
-    return sample;
+    return this.aggregate(account);
   }
 
   private aggregate(account: Account): UsageSample {
@@ -86,8 +72,16 @@ export class CloudflareUsageClient {
       const name = g.dimensions?.bucketName ?? 'unknown';
       buckets.set(name, Math.max(buckets.get(name) ?? 0, g.max?.payloadSize ?? 0));
     }
+    const databases = new Map<string, number>();
+    for (const g of account.ds ?? []) {
+      const id = (g.dimensions?.databaseId ?? 'unknown').slice(0, 8);
+      databases.set(id, Math.max(databases.get(id) ?? 0, g.max?.databaseSizeBytes ?? 0));
+    }
+    const d1Storage = toReading(databases);
+    d1Storage.used = d1Storage.consumers[0]?.value ?? 0;
     return {
       readings: {
+        d1Storage,
         workerRequests: toReading(workers),
         d1RowsRead: toReading(rowsRead),
         d1RowsWritten: toReading(rowsWritten),
@@ -95,7 +89,6 @@ export class CloudflareUsageClient {
         r2ClassB: toReading(classB),
         r2Storage: toReading(buckets),
       },
-      unavailable: [],
       unknownR2Actions: [...unknown],
     };
   }

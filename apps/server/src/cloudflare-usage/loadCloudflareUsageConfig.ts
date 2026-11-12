@@ -7,7 +7,7 @@ const LIMIT_ENV: Record<UsageMetricKey, { env: string; fallback: number }> = {
   workerRequests: { env: 'CLOUDFLARE_LIMIT_WORKER_REQUESTS', fallback: 100_000 },
   d1RowsRead: { env: 'CLOUDFLARE_LIMIT_D1_ROWS_READ', fallback: 5_000_000 },
   d1RowsWritten: { env: 'CLOUDFLARE_LIMIT_D1_ROWS_WRITTEN', fallback: 100_000 },
-  d1Storage: { env: 'CLOUDFLARE_LIMIT_D1_STORAGE_BYTES', fallback: 5 * GB },
+  d1Storage: { env: 'CLOUDFLARE_LIMIT_D1_DATABASE_BYTES', fallback: 500 * 1024 ** 2 },
   r2ClassA: { env: 'CLOUDFLARE_LIMIT_R2_CLASS_A', fallback: 1_000_000 },
   r2ClassB: { env: 'CLOUDFLARE_LIMIT_R2_CLASS_B', fallback: 10_000_000 },
   r2Storage: { env: 'CLOUDFLARE_LIMIT_R2_STORAGE_BYTES', fallback: 10 * GB },

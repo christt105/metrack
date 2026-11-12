@@ -44,9 +44,6 @@ export class CloudflareUsageMonitor {
       this.reportedActions.add(action);
       this.logger.info(`cloudflare usage: unknown R2 action ${action}, counted as Class A`);
     }
-    for (const key of sample.unavailable) {
-      this.logger.error(`cloudflare usage: ${key} is unavailable`);
-    }
     this.prune();
     for (const definition of usageMetricDefinitions) {
       const reading = sample.readings[definition.key];

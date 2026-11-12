@@ -4,6 +4,5 @@ import type { UsageReading } from './UsageReading.js';
 /** What one check read from Cloudflare. Metrics that could not be read are listed apart. */
 export interface UsageSample {
   readings: Partial<Record<UsageMetricKey, UsageReading>>;
-  unavailable: UsageMetricKey[];
   unknownR2Actions: string[];
 }
