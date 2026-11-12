@@ -41,6 +41,7 @@ import { AccountExporter } from './account/AccountExporter.js';
 import { createBackupJob } from './backup/createBackupJob.js';
 import { BackupScheduler } from './backup/BackupScheduler.js';
 import { createBackupService } from './backup/createBackupService.js';
+import { createCloudflareUsageScheduler } from './cloudflare-usage/createCloudflareUsageScheduler.js';
 import { createNotifier } from './notify/createNotifier.js';
 import { MigrationRunner } from './storage/MigrationRunner.js';
 import { migrations } from './storage/migrations/index.js';
@@ -220,6 +221,12 @@ const accountDeletion = new AccountDeletionService(
   logger,
 );
 const accountScheduler = new AccountDeletionScheduler(accountDeletion, logger);
+const cloudflareUsageScheduler = createCloudflareUsageScheduler(
+  process.env,
+  config.ntfy,
+  config.dataDir,
+  logger,
+);
 
 const sessions = new SessionService(repositories.sessions, repositories.users);
 const app = buildApp({
@@ -269,6 +276,7 @@ const app = buildApp({
 const shutdown = async (): Promise<void> => {
   scheduler.stop();
   accountScheduler.stop();
+  cloudflareUsageScheduler?.stop();
   releaseScheduler?.stop();
   server.close();
   if ('closeIdleConnections' in server) server.closeIdleConnections();
@@ -285,6 +293,7 @@ if (config.backup.enabled) {
 }
 releaseScheduler?.start();
 accountScheduler.start();
+cloudflareUsageScheduler?.start();
 if (!releaseScheduler)
   console.log(
     'Release alerts are disabled, they need TMDB_API_KEY, NTFY_URL and ALERTS_ENABLED not set to false',

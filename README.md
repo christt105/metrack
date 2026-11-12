@@ -320,6 +320,22 @@ How often a title is asked about depends on how close its release is: every 30 m
 | `ALERTS_TIMEZONE`         | `Europe/Madrid` | Time zone that decides what "today" and "tomorrow" mean      |
 | `ALERTS_NOTIFY_FROM_HOUR` | `8`             | Local hour (0 to 23) before which nothing is checked or sent |
 
+### Cloudflare usage alerts
+
+The home server (never the Worker) checks the Cloudflare account usage every 15 minutes, the first time at startup, and sends an ntfy alert to the instance topic (`NTFY_URL` and `NTFY_TOPIC`) when a free-plan quota gets close to its limit. It watches Worker requests, D1 rows read and written and D1 storage, and R2 Class A and Class B operations and storage. Requests and D1 rows count per UTC day, R2 operations per UTC month, storage is the current size. Each metric is announced once per threshold and period: at `CLOUDFLARE_USAGE_WARN_PERCENT` with normal priority and at `CLOUDFLARE_USAGE_CRITICAL_PERCENT` with urgent priority (a jump straight over the critical one sends only that alert). The alert lists the three biggest consumers. If three checks in a row fail, one alert per UTC day says so. What was already announced is kept in `$DATA_DIR/cloudflare-usage-state.json`, so a restart does not repeat alerts.
+
+The token needs only the `Account Analytics: Read` permission on the account. The numbers are account-wide: other Workers, D1 databases and R2 buckets in the same account count too. R2 operations that are free (deletes, aborting multipart uploads) are not counted, and an operation Cloudflare adds later counts as Class A until it is classified.
+
+| Variable                                                             | Default               | Meaning                                               |
+| -------------------------------------------------------------------- | --------------------- | ----------------------------------------------------- |
+| `CLOUDFLARE_USAGE_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`                    | unset                 | Both are needed, and also `NTFY_URL` and `NTFY_TOPIC` |
+| `CLOUDFLARE_USAGE_WARN_PERCENT`, `CLOUDFLARE_USAGE_CRITICAL_PERCENT` | `70`, `90`            | Thresholds                                            |
+| `CLOUDFLARE_LIMIT_WORKER_REQUESTS`                                   | `100000`              | Worker requests per day                               |
+| `CLOUDFLARE_LIMIT_D1_ROWS_READ`, `CLOUDFLARE_LIMIT_D1_ROWS_WRITTEN`  | `5000000`, `100000`   | D1 rows per day                                       |
+| `CLOUDFLARE_LIMIT_D1_STORAGE_BYTES`                                  | 5 GB                  | D1 storage, all databases                             |
+| `CLOUDFLARE_LIMIT_R2_CLASS_A`, `CLOUDFLARE_LIMIT_R2_CLASS_B`         | `1000000`, `10000000` | R2 operations per month                               |
+| `CLOUDFLARE_LIMIT_R2_STORAGE_BYTES`                                  | 10 GB                 | R2 storage, all buckets                               |
+
 Limitations:
 
 - TMDB watch providers are JustWatch data, have no date and can lag by hours or days, so `available_es` can arrive later than the real availability.

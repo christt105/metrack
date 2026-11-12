@@ -7,6 +7,7 @@ const PRIORITIES: Record<NonNullable<NotifyOptions['priority']>, number> = {
   low: 2,
   default: 3,
   high: 4,
+  urgent: 5,
 };
 
 /**
