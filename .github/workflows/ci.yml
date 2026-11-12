@@ -165,6 +165,7 @@ jobs:
         run: npx wrangler deploy --env production --var "APP_VERSION:${TAG}"
 
       - name: Health check
+        working-directory: apps/server
         run: |
           for attempt in 1 2 3 4 5 6; do
             status=$(curl -sS -o health.json -D headers.txt -w '%{http_code}' "${METRACK_URL}/api/health" || true)
@@ -173,7 +174,13 @@ jobs:
               exit 0
             fi
             if grep -qi '^cf-mitigated:' headers.txt || { [ "$status" = "403" ] && grep -q 'error code: 10' health.json; }; then
-              echo "::error::Cloudflare blocked the health check (HTTP ${status}); the zone's bot protection blocked the runner. The deploy itself went through; check ${METRACK_URL}/api/health by hand."
+              active=$(npx wrangler deployments status --env production --json | jq -r 'if (.versions | length) == 1 then .versions[0].version_id else "split" end')
+              live=$(npx wrangler versions view "$active" --env production --json | jq -r '[.resources.bindings[]? | select(.name == "APP_VERSION") | .text] | first // ""')
+              if [ "$live" = "$TAG" ]; then
+                echo "::warning::Cloudflare's bot protection challenged the runner (HTTP ${status}), so ${METRACK_URL}/api/health was not reached. Version ${active} with APP_VERSION ${TAG} serves all traffic; open the health URL in a browser to confirm."
+                exit 0
+              fi
+              echo "::error::Cloudflare challenged the health check (HTTP ${status}) and the active version (${active}) reports APP_VERSION '${live}', not ${TAG}. Roll back with the commands in the job summary."
               exit 1
             fi
             echo "Attempt ${attempt}: HTTP ${status}, retrying in 10 s"
