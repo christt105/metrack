@@ -112,6 +112,7 @@ describe('CloudflareUsageClient', () => {
       { sum: { requests: 6 }, dimensions: { actionType: 'GetObject', bucketName: 'imgs' } },
       { sum: { requests: 9 }, dimensions: { actionType: 'DeleteObject', bucketName: 'imgs' } },
       { sum: { requests: 2 }, dimensions: { actionType: 'Mystery', bucketName: 'other' } },
+      { sum: { requests: 3 }, dimensions: { actionType: 'ListBuckets', bucketName: '' } },
     ],
     s: [{ max: { payloadSize: 2048 }, dimensions: { bucketName: 'imgs' } }],
     ds: [
@@ -140,7 +141,14 @@ describe('CloudflareUsageClient', () => {
     expect(result.readings.d1RowsRead?.used).toBe(150);
     expect(result.readings.d1RowsRead?.consumers[0]).toEqual({ name: '12345678', value: 100 });
     expect(result.readings.d1RowsWritten?.used).toBe(8);
-    expect(result.readings.r2ClassA?.used).toBe(6);
+    expect(result.readings.r2ClassA).toEqual({
+      used: 9,
+      consumers: [
+        { name: 'imgs', value: 4 },
+        { name: 'account', value: 3 },
+        { name: 'other', value: 2 },
+      ],
+    });
     expect(result.readings.r2ClassB?.used).toBe(6);
     expect(result.readings.r2Storage?.used).toBe(2048);
     expect(result.readings.d1Storage?.used).toBe(300);
@@ -279,6 +287,8 @@ describe('CloudflareUsageMonitor', () => {
     h.read.mockResolvedValue(sample({ d1Storage: 430 * 1024 ** 2 }));
     await monitor.tick();
     expect(h.notify.mock.calls[0]?.[0]).toBe('Cloudflare usage 86%: Largest D1 database');
+    expect(h.notify.mock.calls[0]?.[1]).toContain('- big: 258.00 MB\n');
+    expect(h.notify.mock.calls[0]?.[1]).toMatch(/\n- small: [\d.]+ MB$/);
     h.clock.now = new Date('2026-11-13T10:00:00Z');
     await monitor.tick();
     expect(h.notify).toHaveBeenCalledTimes(1);

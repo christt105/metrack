@@ -6,4 +6,6 @@ export interface UsageMetricDefinition {
   label: string;
   period: 'day' | 'month';
   unit: 'count' | 'bytes';
+  /** Whether each consumer's share of the total is shown; false when the reading is a maximum, not a sum. */
+  showShares: boolean;
 }

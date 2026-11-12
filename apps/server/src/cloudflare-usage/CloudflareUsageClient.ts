@@ -64,7 +64,7 @@ export class CloudflareUsageClient {
       const kind = classifyR2Action(action);
       if (kind === 'free') continue;
       if (kind === 'unknown') unknown.add(action);
-      const bucket = g.dimensions?.bucketName ?? 'unknown';
+      const bucket = g.dimensions?.bucketName || 'account';
       addConsumer(kind === 'B' ? classB : classA, bucket, g.sum?.requests ?? 0);
     }
     const buckets = new Map<string, number>();

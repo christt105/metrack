@@ -96,8 +96,13 @@ export class CloudflareUsageMonitor {
     if (top.length > 0) {
       lines.push('Top consumers:');
       for (const c of top) {
+        const value = formatUsageValue(c.value, unit);
+        if (!definition.showShares) {
+          lines.push(`- ${c.name}: ${value}`);
+          continue;
+        }
         const share = reading.used > 0 ? ((c.value / reading.used) * 100).toFixed(0) : '0';
-        lines.push(`- ${c.name}: ${formatUsageValue(c.value, unit)} (${share}%)`);
+        lines.push(`- ${c.name}: ${value} (${share}%)`);
       }
     }
     return lines.join('\n');
