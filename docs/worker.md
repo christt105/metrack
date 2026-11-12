@@ -80,7 +80,7 @@ A tag `vX.Y.Z` on main runs the `deploy` job of `.github/workflows/ci.yml` after
 1. Records the D1 Time Travel bookmark and the Worker version currently live in the job summary, with the exact rollback commands.
 2. `wrangler d1 migrations apply metrack --remote --env production`. In CI wrangler skips the confirmation prompt and applies.
 3. `wrangler deploy --env production --var APP_VERSION:<tag>`.
-4. Calls `<METRACK_URL>/api/health` up to six times and fails unless it answers 200 with `appVersion` equal to the tag. If Cloudflare blocks the request (`cf-mitigated` header, or a 403 with an `error code: 10xx` body) the job says so: the zone's bot protection blocked the runner, but the deploy already went through.
+4. Calls `<METRACK_URL>/api/health` up to six times and fails unless it answers 200 with `appVersion` equal to the tag. Bot Fight Mode on the zone challenges requests from datacenter IPs such as GitHub's runners (it cannot be skipped per host on the free plan), so when the response carries `cf-mitigated` or is a 403 with an `error code: 10xx` body the job asks the Cloudflare API instead: it passes with a warning when a single version serves all traffic with `APP_VERSION` equal to the tag, and fails otherwise. Open the health URL in a browser after such a deploy.
 
 The job never exports the database or uploads data as an artifact.
 
