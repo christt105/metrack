@@ -139,7 +139,7 @@ jobs:
         working-directory: apps/server
         run: |
           bookmark=$(npx wrangler d1 time-travel info metrack --env production --json | jq -er '.bookmark')
-          version=$(npx wrangler versions deployments list --env production --json | jq -r '(last // {versions: []}) | .versions | (max_by(.percentage) // {}) | .version_id // "none"')
+          version=$(npx wrangler deployments status --env production --json | jq -r '(.versions // []) | (max_by(.percentage) // {}) | .version_id // "none"')
           {
             echo "### Rollback points (before this deploy of ${TAG})"
             echo
