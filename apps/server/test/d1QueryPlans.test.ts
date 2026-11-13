@@ -93,6 +93,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
     jellyfinSeasonId: null,
   });
   await owner.overrides.listBySeries(series.id);
+  await owner.overrides.list();
   await owner.overrides.delete(series.id, 1);
 
   const game = await owner.videogames.create({ ...emptyBookLike(), igdbId: 4 });

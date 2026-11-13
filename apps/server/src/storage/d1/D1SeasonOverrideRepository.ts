@@ -36,6 +36,15 @@ export class D1SeasonOverrideRepository implements SeasonOverrideRepository {
     return rows.map(seasonOverrideFromRow);
   }
 
+  async list(): Promise<SeasonOverride[]> {
+    const rows = await queryAll(
+      this.db,
+      'SELECT * FROM season_override WHERE user_id = ? ORDER BY series_id, tmdb_season_number',
+      this.scope.userId(),
+    );
+    return rows.map(seasonOverrideFromRow);
+  }
+
   async delete(seriesId: number, tmdbSeasonNumber: number): Promise<boolean> {
     const meta = await execute(
       this.db,

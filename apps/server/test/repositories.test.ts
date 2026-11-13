@@ -275,6 +275,7 @@ describe.each(backends)('$name repositories', (backend) => {
           jellyfinSeasonId: 'jf-s4',
         },
       ]);
+      expect(await overrides.list()).toEqual(await overrides.listBySeries(lupin.id));
 
       const tmdb: SeasonSource[] = (await seasons.listBySeries(lupin.id)).map((s) => ({
         number: s.tmdbSeasonNumber ?? s.number,

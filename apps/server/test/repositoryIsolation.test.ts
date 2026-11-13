@@ -123,6 +123,8 @@ describe.each(backends)('$name: users cannot reach each other', (backend) => {
       jellyfinSeasonId: null,
     });
     expect(await bob.overrides.listBySeries(series.id)).toEqual([]);
+    expect(await bob.overrides.list()).toEqual([]);
+    expect(await alice.overrides.list()).toHaveLength(1);
     expect(await bob.overrides.delete(series.id, 1)).toBe(false);
 
     expect(await alice.series.delete(series.id)).toBe(true);
