@@ -20,6 +20,7 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/u/*", "/privacy", "/assets/*"],
   },
+  "triggers": { "crons": ["0 * * * *"] },
   "vars": {
     "APP_VERSION": "cloud-test",
     "TMDB_LANGUAGE": "es-ES",
