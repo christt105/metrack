@@ -4,6 +4,7 @@ import { CloudClient } from '../src/connector/CloudClient.js';
 import { CloudError } from '../src/connector/CloudError.js';
 import { UserSync } from '../src/connector/UserSync.js';
 import { describeUserSync } from '../src/connector/describeUserSync.js';
+import { emptySeason, emptySeries } from '../src/media/emptyEntities.js';
 import type { SyncSources } from '../src/sync/SyncSources.js';
 import { connectorHarness } from './support/connectorHarness.js';
 
@@ -159,5 +160,88 @@ describe('UserSync against the home API', () => {
       status: 403,
     });
     expect((await sync.run(FRIEND, true)).result).toMatchObject({ moviesCreated: 1 });
+  });
+
+  it('syncs a series other users have too without changing the shared catalog', async () => {
+    const harness = await connectorHarness();
+    const { scope, repositories } = harness;
+    const seed = async (userId: number) =>
+      scope.run(userId, async () => {
+        const series = await repositories.series.create({
+          ...emptySeries(),
+          tmdbId: 209867,
+          title: 'Frieren',
+        });
+        await repositories.seasons.create({
+          ...emptySeason(),
+          seriesId: series.id,
+          number: 1,
+          title: 'Temporada 1',
+          episodeCount: 28,
+        });
+        return series.id;
+      });
+    const seriesId = await seed(1);
+    expect(await seed(2)).toBe(seriesId);
+    const episodes = ['f1', 'f2'].map((jellyfinId, i) => ({
+      jellyfinId,
+      number: i + 1,
+      airDate: '2023-09-29',
+      runtimeSeconds: 1500,
+      available: true,
+    }));
+    const frieren: SyncSources = {
+      library: {
+        load: async () => ({
+          movies: [],
+          series: [
+            {
+              jellyfinId: 'jf-frieren',
+              title: 'Frieren',
+              year: 2023,
+              tmdbId: 209867,
+              tvdbId: 424536,
+              seasons: [{ jellyfinId: 'jf-s1', number: 1, title: 'Season 1', episodes }],
+            },
+          ],
+        }),
+      },
+      playback: {
+        listPlays: async () => [
+          { itemId: 'f1', playedAt: '2026-01-02T20:00:00Z', watchedSeconds: 1500 },
+        ],
+      },
+    };
+    const { secret } = await harness.createToken(1, 'connector');
+    const cloud = new CloudClient(BASE, secret, ((input: string, init?: RequestInit) =>
+      harness.app.request(input, init)) as unknown as typeof fetch);
+    const sync = new UserSync(cloud, () => frieren, 'Europe/Madrid', {
+      info: () => {},
+      error: () => {},
+    });
+
+    const first = await sync.run(FRIEND, true);
+    expect(first.result).toMatchObject({ seriesUpdated: 1, seasonsUpdated: 1 });
+    const friendView = await scope.run(2, async () => ({
+      series: await repositories.series.get(seriesId),
+      seasons: await repositories.seasons.list(),
+    }));
+    expect(friendView.series).toMatchObject({ jellyfinId: 'jf-frieren', tvdbId: null });
+    expect(friendView.seasons[0]).toMatchObject({
+      jellyfinId: 'jf-s1',
+      status: 'in_progress',
+      episodeCount: 2,
+      title: 'Temporada 1',
+    });
+    const ownerView = await scope.run(1, async () => ({
+      series: await repositories.series.get(seriesId),
+      seasons: await repositories.seasons.list(),
+    }));
+    expect(ownerView.series).toMatchObject({ jellyfinId: null, tvdbId: null });
+    expect(ownerView.seasons[0]).toMatchObject({ status: 'planned', episodeCount: 28 });
+
+    const second = await sync.run(FRIEND, true);
+    expect(second.plan.series).toEqual([]);
+    expect(second.result).toBeUndefined();
   });
 });

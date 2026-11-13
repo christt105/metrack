@@ -80,5 +80,5 @@ export async function connectorHarness() {
     contentVersion,
     plan: { ...EMPTY_PLAN, ...plan },
   });
-  return { db, app, repositories, versions, cookieFor, createToken, call, syncBody };
+  return { db, app, scope, repositories, versions, cookieFor, createToken, call, syncBody };
 }
