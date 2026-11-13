@@ -59,7 +59,7 @@ A stored render also expires after 24 hours (`RENDER_MAX_AGE_SECONDS`, `rendered
 
 Release alerts are not run by the Worker: they stay on the home server (`ReleaseWatcher`).
 
-Limits per invocation on the Workers Free plan: 10 ms CPU, 50 subrequests to external hosts and 1000 to Cloudflare services (every D1 statement counts, so does each R2 call). Erasing one account per tick keeps an invocation far from them.
+Limits per invocation on the Workers Free plan: 10 ms CPU, 50 subrequests to external hosts and 1000 to Cloudflare services (every D1 statement counts, so does each R2 call). Measured on the test Worker: a tick that finds nothing to erase took 4 to 14 ms of CPU (most of it starting the isolate), erasing an empty account 10 ms, and erasing an account with 61 followed series and one owned image 13 ms and about 1 s of wall time, with no external subrequests; every invocation ended `ok`. Erasing reads every image row to find orphans (`ImageStore.removeUnused`), so its cost grows with the images stored for all users.
 
 Trigger a tick locally (no Cloudflare account involved):
 
