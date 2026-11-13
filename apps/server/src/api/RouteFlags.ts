@@ -8,4 +8,6 @@ export interface RouteFlags {
   sessionOnly?: boolean;
   /** Adds items by hand: owner and trusted users only (`canAddByHand`). */
   trustedOnly?: boolean;
+  /** Part of the home connector API: only API tokens reach it, and a `connector` token reaches nothing else. */
+  connector?: boolean;
 }

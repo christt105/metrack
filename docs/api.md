@@ -29,6 +29,7 @@ A session is an `HttpOnly`, `SameSite=Lax` cookie named `metrack_session` that l
 Programs (a sync connector, the Obsidian plugin) call the API on a user's behalf with a token in `Authorization: Bearer <secret>` instead of the session cookie. A request with an `Authorization` header is judged by its token alone: an unknown, malformed, revoked or expired one answers 401 `bad_token` even next to a valid cookie. The server stores only the SHA-256 of each secret, which starts with `mt_`.
 
 - Scopes (`TokenScope`, `TOKEN_SCOPES`): `read` may only `GET`, anything else answers 403 `read_only_token`; `write` may also change the user's library.
+- `connector` (only the owner can create one, else 403 `owner_only`) is accepted on `/api/connector/*` and nowhere else: any other route answers 403 `connector_token_only`. See [connector.md](connector.md).
 - A token never reaches the owner-only routes (even the owner's own token), the settings or token routes: they answer 403 `session_required`.
 - Last use is recorded at most once a minute. Deleting a user deletes their tokens.
 
@@ -138,10 +139,20 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 - `GET /api/backups`: the stored backups, newest first, as `{ name, createdAt, sizeBytes, hasImages }[]`.
 - `POST /api/backups`: takes a backup now, prunes to the retention count and answers 201 with the new backup. A failure answers 500 `backup_failed` with a generic message; the details are only in the server log.
 
+## Home connector
+
+The routes the home connector syncs through (see [connector.md](connector.md)). Only API tokens reach them (a browser session answers 403 `token_required`). A `connector` token acts on every user with a Jellyfin account in their settings; a personal `write` token only on its own user (403 `connector_other_user` for another one), and a `read` token cannot post. A user with no Jellyfin account set answers 404.
+
+- `GET /api/connector/users`: the users the token may act on, `[{ id, name, jellyfinUser }]`.
+- `GET /api/connector/users/{id}/sync-state`: `{ contentVersion, state }`, where `state` is the `SyncState` (movies, series, seasons, overrides, unlinked) and `contentVersion` the user's content version at that moment.
+- `POST /api/connector/users/{id}/sync` with `{ contentVersion, plan }` (`ConnectorSyncRequest`): 409 `content_changed` when the content version moved since it was read; 400 `plan_foreign_id` when the plan names a movie, series or season that is not the user's; otherwise it writes the plan with the same applier as `POST /api/sync/apply` (tracking fields and external ids only, never notes, reviews, ratings or images), bumps the user's content version and answers `{ result: SyncApplyResult, created: EntityRef[] }`. On the home server the writes share one SQLite transaction. On D1, which has no interactive transactions, they run one after another, so a failure halfway leaves what was written and the next plan, computed from the new state, finishes the job.
+- `POST /api/connector/users/{id}/refresh/{type}/{titleId}` (`type` is `movie` or `series`): fetches the provider metadata of one title, 501 `no_metadata_source` when none is configured.
+
 ## Jellyfin sync
 
 - `GET /api/sync/report`: the `SyncPlan` a sync would apply: `movies` (`MovieChange`), `series` (`SeriesChange` with its `seasons`), `unlinked`, `warnings`, `ignoredPlays` and `unmatchedTitles`. Reads Jellyfin and Jellystat and the database; writes nothing.
 - `POST /api/sync/apply` with `{ "confirm": true }`: recomputes the plan on the server (a client-supplied plan is never trusted), writes it in one transaction and answers `{ plan, result: SyncApplyResult }`. A body without `confirm: true` is a 400.
+- On the Cloudflare Worker none of these three exist: nothing there can read Jellyfin, and the home connector syncs through `/api/connector`.
 - `POST /api/sync/webhook`: the target of the Jellyfin Webhook plugin. The body is ignored. Queues a sync for every user with a Jellyfin account after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet and answers 202 `{ status: "queued", users }` (how many were queued); 501 when sync is not configured. When `SYNC_WEBHOOK_SECRET` is set, the request must carry it in the `X-Webhook-Secret` header or the `token` query parameter, or it answers 401 `bad_webhook_secret`.
 - Report and apply act on the signed-in user with the Jellyfin account in their settings. Both answer 501 `sync_not_configured` unless the Jellyfin and Jellystat variables are set (see the README) and the user has a Jellyfin account set.
 

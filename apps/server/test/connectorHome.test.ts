@@ -1,0 +1,158 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { CloudClient } from '../src/connector/CloudClient.js';
+import { ConnectorQueue } from '../src/connector/ConnectorQueue.js';
+import { ConnectorStateStore } from '../src/connector/ConnectorStateStore.js';
+import { FullPass } from '../src/connector/FullPass.js';
+import { WebhookSecret } from '../src/api/WebhookSecret.js';
+import { createConnectorApp } from '../src/connector/createConnectorApp.js';
+import { findConnectorUser } from '../src/connector/findConnectorUser.js';
+import { loadConnectorConfig } from '../src/connector/loadConnectorConfig.js';
+import { FakeScheduler } from './support/FakeScheduler.js';
+import { RecordingNotifier } from './support/RecordingNotifier.js';
+
+const logger = { info: () => {}, error: () => {} };
+
+function pass(users: () => Promise<Response>) {
+  const dir = mkdtempSync(join(tmpdir(), 'connector-'));
+  const store = new ConnectorStateStore(dir);
+  const queueScheduler = new FakeScheduler();
+  const scheduler = new FakeScheduler();
+  const notifier = new RecordingNotifier();
+  const queue = new ConnectorQueue(async () => 'ok', store, notifier, logger, queueScheduler, {
+    debounceMs: 1000,
+  });
+  const cloud = new CloudClient('http://cloud.test', 'token', (async () =>
+    users()) as unknown as typeof fetch);
+  const fullPass = new FullPass(cloud, queue, store, notifier, logger, scheduler, 6 * 3_600_000);
+  return { fullPass, queueScheduler, scheduler, notifier, store };
+}
+
+describe('FullPass', () => {
+  it('queues every user with a Jellyfin account, remembers them and runs again after the interval', async () => {
+    const { fullPass, queueScheduler, scheduler, store } = pass(async () =>
+      Response.json([
+        { id: 1, name: 'a', jellyfinUser: 'a' },
+        { id: 2, name: 'b', jellyfinUser: 'b' },
+      ]),
+    );
+    await fullPass.run();
+    expect(queueScheduler.pending()).toBe(2);
+    expect(store.read().users).toEqual([1, 2]);
+    expect(fullPass.knownUsers()).toEqual([1, 2]);
+    expect(scheduler.delays).toEqual([6 * 3_600_000]);
+  });
+
+  it('retries after 1, 5, 15 and 60 minutes when the cloud is unreachable and tells the notifier after three', async () => {
+    const { fullPass, scheduler, notifier } = pass(async () => {
+      throw new TypeError('fetch failed');
+    });
+    await fullPass.run();
+    for (let i = 0; i < 4; i += 1) await scheduler.fire();
+    expect(scheduler.delays).toEqual([60_000, 300_000, 900_000, 3_600_000, 3_600_000]);
+    expect(notifier.sent).toHaveLength(1);
+  });
+});
+
+describe('connector webhook', () => {
+  const app = (queued: number[] = []) =>
+    createConnectorApp({
+      secret: new WebhookSecret('a-long-enough-secret'),
+      onWebhook: async () => (queued.push(1), 2),
+    });
+
+  it('answers 401 without the secret and queues nothing', async () => {
+    const queued: number[] = [];
+    const response = await app(queued).request('/webhook', { method: 'POST' });
+    expect(response.status).toBe(401);
+    expect(queued).toEqual([]);
+  });
+
+  it('answers 202 with the secret in the header or the token parameter', async () => {
+    const queued: number[] = [];
+    const viaHeader = await app(queued).request('/webhook', {
+      method: 'POST',
+      headers: { 'x-webhook-secret': 'a-long-enough-secret' },
+    });
+    expect(viaHeader.status).toBe(202);
+    expect(await viaHeader.json()).toEqual({ status: 'queued', users: 2 });
+    const viaQuery = await app(queued).request('/webhook?token=a-long-enough-secret', {
+      method: 'POST',
+    });
+    expect(viaQuery.status).toBe(202);
+    expect(queued).toHaveLength(2);
+  });
+
+  it('answers the health check', async () => {
+    expect((await app().request('/api/health')).status).toBe(200);
+  });
+});
+
+describe('findConnectorUser', () => {
+  const users = [
+    { id: 1, name: 'Christian', jellyfinUser: 'haku' },
+    { id: 2, name: 'Ana', jellyfinUser: 'mama' },
+  ];
+
+  it('matches by id, name or Jellyfin account, ignoring case', () => {
+    expect(findConnectorUser(users, '2')?.id).toBe(2);
+    expect(findConnectorUser(users, 'christian')?.id).toBe(1);
+    expect(findConnectorUser(users, 'MAMA')?.id).toBe(2);
+    expect(findConnectorUser(users, 'nobody')).toBeUndefined();
+  });
+});
+
+describe('loadConnectorConfig', () => {
+  const env = {
+    METRACK_URL: 'https://metrack.example.com/',
+    METRACK_CONNECTOR_TOKEN: 'mt_x',
+    JELLYFIN_URL: 'http://jf',
+    JELLYFIN_TOKEN: 't',
+    JELLYSTAT_DB_HOST: 'db',
+    JELLYSTAT_DB_PASSWORD: 'p',
+  };
+
+  it('lists what is missing', () => {
+    expect(loadConnectorConfig({}, '/data').missing).toEqual([
+      'METRACK_URL',
+      'METRACK_CONNECTOR_TOKEN',
+      'JELLYFIN_URL',
+      'JELLYFIN_TOKEN',
+      'JELLYSTAT_DB_HOST',
+      'JELLYSTAT_DB_PASSWORD',
+    ]);
+  });
+
+  it('reads the address without a trailing slash, the data dir and the pass interval', () => {
+    const { config } = loadConnectorConfig({ ...env, CONNECTOR_PASS_HOURS: '2' }, '/data');
+    expect(config).toMatchObject({
+      cloudUrl: 'https://metrack.example.com',
+      token: 'mt_x',
+      dataDir: '/data',
+      passIntervalMs: 7_200_000,
+    });
+    expect(
+      loadConnectorConfig({ ...env, CONNECTOR_DATA_DIR: '/own' }, '/data').config?.dataDir,
+    ).toBe('/own');
+    expect(loadConnectorConfig(env, '/data').config?.passIntervalMs).toBe(6 * 3_600_000);
+  });
+
+  it('refuses a bad address or interval', () => {
+    expect(() => loadConnectorConfig({ ...env, METRACK_URL: 'nope' }, '/d')).toThrow('METRACK_URL');
+    expect(() => loadConnectorConfig({ ...env, CONNECTOR_PASS_HOURS: '0' }, '/d')).toThrow(
+      'CONNECTOR_PASS_HOURS',
+    );
+  });
+});
+
+describe('ConnectorStateStore', () => {
+  it('reads empty when there is no file or it is unreadable, and round-trips what it writes', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'connector-'));
+    const store = new ConnectorStateStore(dir);
+    expect(store.read()).toEqual({ users: [], pending: {} });
+    store.write({ users: [1], pending: { '1': { dueAt: 5, failures: 2 } } });
+    expect(store.read()).toEqual({ users: [1], pending: { '1': { dueAt: 5, failures: 2 } } });
+  });
+});

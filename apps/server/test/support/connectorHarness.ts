@@ -1,0 +1,84 @@
+import type { CreatedToken, ConnectorSyncRequest, SyncPlan, TokenScope } from '@metrack/domain';
+import { ApiTokenService } from '../../src/auth/ApiTokenService.js';
+import { SessionCookieAuthenticator } from '../../src/auth/SessionCookieAuthenticator.js';
+import { SessionService } from '../../src/auth/SessionService.js';
+import { MemoryContentVersions } from '../../src/site/MemoryContentVersions.js';
+import { ConnectorService } from '../../src/sync/ConnectorService.js';
+import { SyncApplier } from '../../src/sync/SyncApplier.js';
+import { createSqliteRepositories } from '../../src/storage/sqlite/createSqliteRepositories.js';
+import { NO_SETTINGS } from '../../src/users/NO_SETTINGS.js';
+import { AsyncUserScope } from '../../src/users/AsyncUserScope.js';
+import { buildTestApp } from './buildTestApp.js';
+import { openTestDatabase } from './openTestDatabase.js';
+
+export const EMPTY_PLAN: SyncPlan = {
+  movies: [],
+  series: [],
+  unlinked: [],
+  warnings: [],
+  ignoredPlays: 0,
+  unmatchedTitles: [],
+};
+
+/** Owner (user 1, Jellyfin account "owner-jf"), a friend (2, "friend-jf") and a user with no Jellyfin account (3). */
+export async function connectorHarness() {
+  const db = openTestDatabase();
+  const scope = new AsyncUserScope();
+  const repositories = createSqliteRepositories(db, scope);
+  await repositories.users.create({ name: 'Friend', email: null });
+  await repositories.users.create({ name: 'Nojelly', email: null });
+  await repositories.settings.save(1, { ...NO_SETTINGS, jellyfinUser: 'owner-jf' });
+  await repositories.settings.save(2, { ...NO_SETTINGS, jellyfinUser: 'friend-jf' });
+  const sessions = new SessionService(repositories.sessions, repositories.users);
+  const tokens = new ApiTokenService(repositories.apiTokens, repositories.users);
+  const versions = new MemoryContentVersions();
+  const targets = {
+    movies: repositories.movies,
+    series: repositories.series,
+    seasons: repositories.seasons,
+    overrides: repositories.overrides,
+    unlinked: repositories.unlinked,
+  };
+  const app = buildTestApp({
+    appVersion: 'test',
+    migrationRunner: { currentVersion: async () => 1 },
+    authenticator: new SessionCookieAuthenticator(sessions),
+    scope,
+    auth: { sessions, users: repositories.users, devLogin: true },
+    tokens,
+    contentVersions: versions,
+    connector: new ConnectorService({
+      users: repositories.users,
+      settings: repositories.settings,
+      targets,
+      applier: new SyncApplier(repositories.transactions, targets),
+      versions,
+      scope,
+    }),
+  });
+  const cookieFor = async (userId: number): Promise<string> => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/dev-login',
+      payload: { userId },
+    });
+    return String(response.headers['set-cookie']).split(';')[0] ?? '';
+  };
+  const createToken = async (userId: number, scope: TokenScope): Promise<CreatedToken> => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/tokens',
+      headers: { cookie: await cookieFor(userId) },
+      payload: { name: scope, scope, expiresInDays: null },
+    });
+    if (response.statusCode !== 201) throw new Error(`Token not created: ${response.body}`);
+    return response.json<CreatedToken>();
+  };
+  const call = (method: 'GET' | 'POST', url: string, secret: string, payload?: unknown) =>
+    app.inject({ method, url, headers: { authorization: `Bearer ${secret}` }, payload });
+  const syncBody = (contentVersion: number, plan: Partial<SyncPlan>): ConnectorSyncRequest => ({
+    contentVersion,
+    plan: { ...EMPTY_PLAN, ...plan },
+  });
+  return { db, app, repositories, versions, cookieFor, createToken, call, syncBody };
+}

@@ -10,6 +10,10 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 
+  static forbidden(code: string, message: string): ApiError {
+    return new ApiError(403, code, message);
+  }
+
   static notFound(what = 'Not found'): ApiError {
     return new ApiError(404, 'not_found', what);
   }

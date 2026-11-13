@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import type { User } from '@metrack/domain';
+import type { TokenScope, User } from '@metrack/domain';
 import type { ApiEnv } from './ApiEnv.js';
 import type { RouteShape } from './RouteShape.js';
 
@@ -13,6 +13,8 @@ type Part<S extends RouteShape, K extends keyof RouteShape, Otherwise> = S exten
 export interface RouteRequest<S extends RouteShape = RouteShape> {
   /** Who made the request; set by the auth guard on every route that is not public. */
   user: User | null;
+  /** The scope of the API token the request signed in with; null for a browser session. */
+  tokenScope: TokenScope | null;
   params: Part<S, 'Params', Record<string, string>>;
   query: Part<S, 'Querystring', Record<string, string | string[]>>;
   body: Part<S, 'Body', unknown>;

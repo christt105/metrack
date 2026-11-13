@@ -9,6 +9,7 @@ import { WorkerUrlGuard } from '../src/worker/WorkerUrlGuard.js';
 import { solidImage } from './support/sampleImages.js';
 
 const SECRET = 'mt_test-secret-for-the-worker';
+const CONNECTOR_SECRET = 'mt_test-connector-secret';
 
 function statements(file: string): string[] {
   return readFileSync(new URL(file, import.meta.url), 'utf8')
@@ -32,8 +33,11 @@ beforeAll(async () => {
   const seed = [
     ...statements('../d1/migrations/0001_schema.sql'),
     ...statements('../d1/migrations/0002_public_render_cache.sql'),
+    ...statements('../d1/migrations/0003_connector_token_scope.sql'),
     ...statements('../d1/seed/test-data.sql'),
     `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'test', '${hashSecret(SECRET)}', 'write', '2026-01-01T00:00:00.000Z')`,
+    `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'connector', '${hashSecret(CONNECTOR_SECRET)}', 'connector', '2026-01-01T00:00:00.000Z')`,
+    `UPDATE user_setting SET jellyfin_user = 'owner-jf' WHERE user_id = 1`,
   ];
   await DB.batch(seed.map((sql) => DB.prepare(sql)));
   app = createWorkerApp({ DB, IMAGES, IMAGE_ENCODED_BY: 'server' } as unknown as WorkerEnv);
@@ -219,5 +223,61 @@ describe('WorkerUrlGuard', () => {
     'http://intranet/a.png',
   ])('refuses %s', async (url) => {
     await expect(guard.check(new URL(url))).rejects.toMatchObject({ code: 'url_not_allowed' });
+  });
+});
+
+describe('Worker connector routes over D1', () => {
+  const connector = { authorization: `Bearer ${CONNECTOR_SECRET}` };
+  const read = async (path: string) =>
+    (await app.request(`http://localhost/api/connector${path}`, { headers: connector })).json();
+
+  it('applies a plan without interactive transactions and bumps the content version', async () => {
+    expect(await read('/users')).toEqual([
+      { id: 1, name: expect.any(String), jellyfinUser: 'owner-jf' },
+    ]);
+    const before = (await read('/users/1/sync-state')) as {
+      contentVersion: number;
+      state: { movies: unknown[] };
+    };
+    const plan = {
+      movies: [
+        {
+          action: 'create',
+          movieId: null,
+          jellyfinId: 'jf-connector',
+          tmdbId: 603,
+          title: 'Connector Movie',
+          year: 1999,
+          startedAt: '2026-01-01',
+          finishedAt: '2026-01-01',
+          rewatches: [],
+          missingRating: true,
+        },
+      ],
+      series: [],
+      unlinked: [],
+    };
+    const post = (contentVersion: number) =>
+      app.request('http://localhost/api/connector/users/1/sync', {
+        method: 'POST',
+        headers: { ...connector, 'content-type': 'application/json' },
+        body: JSON.stringify({ contentVersion, plan }),
+      });
+    const stale = await post(before.contentVersion + 5);
+    expect(stale.status).toBe(409);
+    const applied = await post(before.contentVersion);
+    expect(applied.status).toBe(200);
+    expect(await applied.json()).toMatchObject({ result: { moviesCreated: 1 } });
+    const after = (await read('/users/1/sync-state')) as {
+      contentVersion: number;
+      state: { movies: unknown[] };
+    };
+    expect(after.contentVersion).toBeGreaterThan(before.contentVersion);
+    expect(after.state.movies).toHaveLength(before.state.movies.length + 1);
+  });
+
+  it('refuses the connector token outside /api/connector', async () => {
+    const response = await app.request('http://localhost/api/media', { headers: connector });
+    expect(response.status).toBe(403);
   });
 });

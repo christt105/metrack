@@ -52,6 +52,9 @@ import { TmdbMovieProvider } from './titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from './titles/TmdbSeriesProvider.js';
 import { createSyncService } from './sync/createSyncService.js';
 import { loadSyncConfig } from './sync/loadSyncConfig.js';
+import { MemoryContentVersions } from './site/MemoryContentVersions.js';
+import { ConnectorService } from './sync/ConnectorService.js';
+import { SyncApplier } from './sync/SyncApplier.js';
 import { WebhookSecret } from './api/WebhookSecret.js';
 import { openDatabase } from './storage/sqlite/openDatabase.js';
 import { createSqliteRepositories } from './storage/sqlite/createSqliteRepositories.js';
@@ -228,6 +231,24 @@ const cloudflareUsageScheduler = createCloudflareUsageScheduler(
   logger,
 );
 
+const contentVersions = new MemoryContentVersions();
+const connector = new ConnectorService({
+  users: repositories.users,
+  settings: repositories.settings,
+  targets: { movies, series, seasons, overrides, unlinked },
+  applier: new SyncApplier(repositories.transactions, {
+    movies,
+    series,
+    seasons,
+    overrides,
+    unlinked,
+  }),
+  versions: contentVersions,
+  scope,
+  metadata: metadataCache,
+  editor: edit.editor,
+});
+
 const sessions = new SessionService(repositories.sessions, repositories.users);
 const app = buildApp({
   appVersion: config.appVersion,
@@ -246,6 +267,8 @@ const app = buildApp({
   backup: { service: backupService, job: backupJob },
   sync: syncServices,
   syncQueues,
+  connector,
+  contentVersions,
   account: {
     exporter: new AccountExporter({ ...repositories, images: imageStore }),
     serverZip: true,

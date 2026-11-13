@@ -213,6 +213,8 @@ export const messages = {
     sync: 'Jellyfin viewings',
     syncHint:
       'Compares what was played in Jellyfin with your tracking. Checking never writes anything.',
+    syncByConnector:
+      'Viewings are synced by the home connector, which reads Jellyfin and sends the changes here. There is no report on this page.',
     syncCheck: 'Check viewings',
     syncApply: 'Apply changes',
     syncConfirm: 'Write these changes to your tracking?',
@@ -341,10 +343,11 @@ export const messages = {
     created: 'Copy the token now: it is not shown again.',
     copy: 'Copy',
     copied: 'Copied.',
-    scopeLabels: { read: 'Read only', write: 'Read and write' } satisfies Record<
-      TokenScope,
-      string
-    >,
+    scopeLabels: {
+      read: 'Read only',
+      write: 'Read and write',
+      connector: 'Home connector (only /api/connector, every user with Jellyfin)',
+    } satisfies Record<TokenScope, string>,
     lifetimeLabel: (days: number | null) => (days === null ? 'Never' : `In ${days} days`),
     details: (scope: string, created: string, expires: string | null, used: string | null) =>
       [

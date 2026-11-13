@@ -7,8 +7,13 @@ import type { BackupInfo } from '../src/api/BackupInfo';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { mountWithApi } from './mountWithApi';
 
-const health = { status: 'ok', appVersion: 'dev', schemaVersion: 3, features: { backups: true } };
-const cloudHealth = { ...health, features: { backups: false } };
+const health = {
+  status: 'ok',
+  appVersion: 'dev',
+  schemaVersion: 3,
+  features: { backups: true, sync: true },
+};
+const cloudHealth = { ...health, features: { backups: false, sync: false } };
 const existing: BackupInfo = {
   name: 'metrack-20261001T000000000Z',
   createdAt: '2026-10-01T00:00:00.000Z',
@@ -146,6 +151,16 @@ describe('SettingsView Jellyfin sync', () => {
     ...ownerApi(),
     listBackups: vi.fn().mockResolvedValue([]),
   };
+
+  it('says the home connector syncs, with no report, when the server cannot read Jellyfin', async () => {
+    const { wrapper } = await mountWithApi(SettingsView, {
+      ...base,
+      health: vi.fn().mockResolvedValue(cloudHealth),
+    });
+    await flushPromises();
+    expect(wrapper.text()).toContain('synced by the home connector');
+    expect(wrapper.text()).not.toContain('Check viewings');
+  });
 
   it('checks without writing and shows the counts', async () => {
     const applySync = vi.fn();

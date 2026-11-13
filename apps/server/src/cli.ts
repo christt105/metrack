@@ -12,6 +12,12 @@ import { runImport } from './importer/runImport.js';
 import { formatMirrorResult } from './mirror/formatMirrorResult.js';
 import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 import { runCatalogCommand } from './account/runCatalogCommand.js';
+import { loadConnectorConfig } from './connector/loadConnectorConfig.js';
+import { runConnector } from './connector/runConnector.js';
+import { runConnectorCommand } from './connector/runConnectorCommand.js';
+import { openJellystatPool } from './sync/jellystat/openJellystatPool.js';
+import { createSyncSources } from './sync/createSyncSources.js';
+import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { runUsersCommand } from './users/runUsersCommand.js';
 import { OWNER_ID } from './users/OWNER_ID.js';
 import { userDataPath } from './users/userDataPath.js';
@@ -25,6 +31,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack copies [--data-dir <dir>]
        metrack retrieve <backupName> [--data-dir <dir>]
        metrack sync [--apply] [--verbose] [--user <id>] [--data-dir <dir>]
+       metrack connector [report|sync --user <id|name|jellyfinUser>] [--verbose] [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
@@ -44,6 +51,11 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   JELLYFIN_TOKEN, JELLYSTAT_DB_HOST and JELLYSTAT_DB_PASSWORD) of the Jellyfin account in a user's settings with that
   user's tracking (--user, default 1). Without --apply it only prints the plan and the database is opened read-only.
   With --apply it writes the plan.
+
+  connector is the home connector (docs/connector.md): it reads Jellyfin and Jellystat like sync, but reads each user's tracking
+  from the cloud (METRACK_URL, METRACK_CONNECTOR_TOKEN) and sends only the changes. Alone it runs the long-lived service
+  (webhook, queue, periodic pass); connector report prints one user's plan and writes nothing; connector sync computes and
+  applies it once and exits. --user takes an id, a name or a Jellyfin account.
 
   redirect writes 404.html and index.html for the old GitHub Pages site. Every old address is sent to the same
   path on --origin (the old site was served under --old-base, default /MediaTracker). Nothing else is touched.
@@ -123,6 +135,58 @@ async function main(argv: string[]): Promise<number> {
       ] as const
     ).filter(([, value]) => value !== undefined),
   ) as Partial<Record<keyof UserSettings, string>>;
+  if (!values.help && command === 'connector') {
+    const reporting = target === 'report';
+    const syncing = target === 'sync';
+    if (
+      (target !== undefined && !reporting && !syncing) ||
+      positionals.length > 2 ||
+      ((reporting || syncing) && values.user === undefined) ||
+      (target === undefined && values.user !== undefined)
+    ) {
+      console.error(USAGE);
+      return 2;
+    }
+    const appConfig = loadConfig(process.env);
+    const { config, missing } = loadConnectorConfig(
+      { ...process.env, CONNECTOR_DATA_DIR: values['data-dir'] ?? process.env.CONNECTOR_DATA_DIR },
+      appConfig.dataDir,
+    );
+    if (!config) {
+      console.error(`The connector is not configured, missing: ${missing.join(', ')}`);
+      return 2;
+    }
+    const tmdb = appConfig.tmdbApiKey
+      ? new TmdbClient(fetch, { apiKey: appConfig.tmdbApiKey, language: appConfig.tmdbLanguage })
+      : undefined;
+    const logger = { info: console.log, error: console.error };
+    const pool = openJellystatPool(config.sync.jellystat, logger);
+    const sources = (jellyfinUser: string) =>
+      createSyncSources(config.sync, jellyfinUser, pool, tmdb);
+    if (target === undefined) {
+      const stop = runConnector(config, appConfig, sources, logger);
+      const shutdown = (): void => {
+        stop();
+        void pool.end().finally(() => process.exit(0));
+      };
+      process.on('SIGTERM', shutdown);
+      process.on('SIGINT', shutdown);
+      return new Promise<number>(() => undefined);
+    }
+    try {
+      console.log(
+        await runConnectorCommand(
+          config,
+          sources,
+          { user: values.user!, apply: syncing, verbose: values.verbose },
+          logger,
+        ),
+      );
+    } finally {
+      await pool.end();
+    }
+    return 0;
+  }
   const userId = values.user === undefined ? OWNER_ID : Number(values.user);
   if (!Number.isInteger(userId) || userId < 1) {
     console.error(USAGE);

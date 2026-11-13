@@ -51,7 +51,7 @@ describe('ApiClient', () => {
       status: 'degraded',
       appVersion: 'dev',
       schemaVersion: 0,
-      features: { backups: false },
+      features: { backups: false, sync: false },
     };
     const { client } = recorder(new Response(JSON.stringify(report), { status: 503 }));
     expect(await client.health()).toEqual(report);
