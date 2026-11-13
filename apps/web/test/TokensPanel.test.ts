@@ -14,6 +14,24 @@ const connector: ApiToken = {
 };
 
 describe('TokensPanel', () => {
+  const scopes = (wrapper: {
+    find(selector: string): { findAll(selector: string): { element: unknown }[] };
+  }) =>
+    wrapper
+      .find('select[name="scope"]')
+      .findAll('option')
+      .map((option) => (option.element as HTMLOptionElement).value);
+
+  it('offers the connector scope only to the owner', async () => {
+    const listTokens = vi.fn().mockResolvedValue([]);
+    const user = await mountWithApi(TokensPanel, { listTokens });
+    await flushPromises();
+    expect(scopes(user.wrapper)).toEqual(['read', 'write']);
+    const owner = await mountWithApi(TokensPanel, { listTokens }, { connector: true });
+    await flushPromises();
+    expect(scopes(owner.wrapper)).toEqual(['read', 'write', 'connector']);
+  });
+
   it('lists tokens with their access, dates and last use', async () => {
     const { wrapper } = await mountWithApi(TokensPanel, {
       listTokens: vi.fn().mockResolvedValue([connector]),

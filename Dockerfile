@@ -51,8 +51,10 @@ COPY --from=build /repo/packages/site/dist ./packages/site/dist
 COPY --from=build /repo/apps/server/package.json ./apps/server/package.json
 COPY --from=build /repo/apps/server/dist ./apps/server/dist
 COPY --from=build /repo/apps/web/dist ./web
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 VOLUME /data
 EXPOSE 8097
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD node -e "fetch('http://localhost:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "--disable-warning=ExperimentalWarning", "apps/server/dist/main.js"]

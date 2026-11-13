@@ -4,4 +4,6 @@
  */
 export interface ContentVersions {
   bump(userId: number): Promise<void>;
+  /** The counter as it is now. */
+  current(userId: number): Promise<number>;
 }

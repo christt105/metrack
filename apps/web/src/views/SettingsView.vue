@@ -108,7 +108,7 @@ const backup = () =>
       @saved="refreshOwn"
     />
     <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
-    <TokensPanel />
+    <TokensPanel :connector="owner" />
     <AccountPanel v-if="own" :handle="own.publicPage.handle" />
     <div class="panel">
       <h2>{{ messages.images.title }}</h2>
@@ -158,24 +158,29 @@ const backup = () =>
     </div>
     <div v-if="own?.settings.jellyfinUser" class="panel">
       <h2>{{ messages.settings.sync }}</h2>
-      <p class="muted">{{ messages.settings.syncHint }}</p>
-      <ul v-if="plan" class="sync">
-        <li>{{ messages.settings.syncMovies(plan.movies.length) }}</li>
-        <li>
-          {{ messages.settings.syncSeasons(plan.series.flatMap((s) => s.seasons).length) }}
-        </li>
-        <li>{{ messages.settings.syncUnlinked(plan.unlinked.length) }}</li>
-        <li>{{ messages.settings.syncWarnings(plan.warnings.length) }}</li>
-        <li class="muted">
-          {{ messages.settings.syncUnmatched(plan.ignoredPlays, plan.unmatchedTitles.length) }}
-        </li>
-      </ul>
-      <button type="button" :disabled="busy" @click="checkSync">
-        {{ messages.settings.syncCheck }}
-      </button>
-      <button v-if="syncChanges > 0" type="button" :disabled="busy" @click="applySync">
-        {{ messages.settings.syncApply }}
-      </button>
+      <p v-if="health?.features.sync === false" class="muted">
+        {{ messages.settings.syncByConnector }}
+      </p>
+      <template v-else>
+        <p class="muted">{{ messages.settings.syncHint }}</p>
+        <ul v-if="plan" class="sync">
+          <li>{{ messages.settings.syncMovies(plan.movies.length) }}</li>
+          <li>
+            {{ messages.settings.syncSeasons(plan.series.flatMap((s) => s.seasons).length) }}
+          </li>
+          <li>{{ messages.settings.syncUnlinked(plan.unlinked.length) }}</li>
+          <li>{{ messages.settings.syncWarnings(plan.warnings.length) }}</li>
+          <li class="muted">
+            {{ messages.settings.syncUnmatched(plan.ignoredPlays, plan.unmatchedTitles.length) }}
+          </li>
+        </ul>
+        <button type="button" :disabled="busy" @click="checkSync">
+          {{ messages.settings.syncCheck }}
+        </button>
+        <button v-if="syncChanges > 0" type="button" :disabled="busy" @click="applySync">
+          {{ messages.settings.syncApply }}
+        </button>
+      </template>
     </div>
     <div v-if="owner" class="panel">
       <h2>{{ messages.settings.users }}</h2>

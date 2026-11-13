@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import {
   TOKEN_LIFETIMES_DAYS,
   TOKEN_NAME_MAX,
@@ -12,6 +12,10 @@ import { useLoader } from '../composables/useLoader';
 import { messages } from '../i18n/messages';
 import ErrorNotice from './ErrorNotice.vue';
 
+const props = defineProps<{ connector?: boolean }>();
+const scopes = computed(() =>
+  TOKEN_SCOPES.filter((scope) => scope !== 'connector' || props.connector === true),
+);
 const api = useApi();
 const { data: tokens, error: loadError, reload } = useLoader(() => api.listTokens());
 const draft = reactive<CreateTokenRequest>({ name: '', scope: 'read', expiresInDays: 90 });
@@ -94,7 +98,7 @@ async function copy(): Promise<void> {
       <label>
         <span class="muted">{{ messages.tokens.scope }}</span>
         <select v-model="draft.scope" name="scope">
-          <option v-for="scope in TOKEN_SCOPES" :key="scope" :value="scope">
+          <option v-for="scope in scopes" :key="scope" :value="scope">
             {{ messages.tokens.scopeLabels[scope] }}
           </option>
         </select>

@@ -37,6 +37,15 @@ export class SqliteSeasonOverrideRepository implements SeasonOverrideRepository 
       .map(seasonOverrideFromRow);
   }
 
+  async list(): Promise<SeasonOverride[]> {
+    return this.db
+      .prepare(
+        'SELECT * FROM season_override WHERE user_id = ? ORDER BY series_id, tmdb_season_number',
+      )
+      .all(this.scope.userId())
+      .map(seasonOverrideFromRow);
+  }
+
   async delete(seriesId: number, tmdbSeasonNumber: number): Promise<boolean> {
     return (
       Number(

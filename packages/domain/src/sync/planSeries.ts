@@ -102,8 +102,7 @@ export function planSeries(
     const needsLink =
       existing !== undefined &&
       (existing.jellyfinId === null ||
-        (existing.tvdbId === null && item.tvdbId !== null) ||
-        (existing.tmdbId === null && item.tmdbId !== null));
+        (existing.tmdbId === null && (item.tmdbId !== null || item.tvdbId !== null)));
     if (seasons.length === 0 && !needsLink) continue;
     plan.changes.push({
       seriesId: existing?.id ?? null,

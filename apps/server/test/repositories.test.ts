@@ -124,6 +124,25 @@ describe.each(backends)('$name repositories', (backend) => {
       expect(await repo.delete(created.id)).toBe(false);
     });
 
+    it('reads many ids at once, past the bound parameter limit, leaving out unknown ones', async () => {
+      const ids: number[] = [];
+      for (let i = 0; i < 95; i += 1) {
+        ids.push((await repos.movies.create({ ...movie, tmdbId: 1000 + i, title: `M${i}` })).id);
+      }
+      const found = await repos.movies.getMany([999_999, ...[...ids].reverse()]);
+      expect(found.map((entry) => entry.id)).toEqual(ids);
+      expect(await repos.movies.getMany([])).toEqual([]);
+    }, 60_000);
+
+    it('lists the titles with a TMDB id that were never fetched', async () => {
+      const fetched = await repos.movies.create({ ...movie, tmdbId: 1 });
+      const unfetched = await repos.movies.create({ ...movie, tmdbId: 2, title: 'New' });
+      await repos.movies.create({ ...movie, tmdbId: null, title: 'Hand' });
+      await repos.metadataStates.markFetched('movie', fetched.id, '2026-11-13T00:00:00Z');
+      expect(await repos.metadataStates.unfetched('movie')).toEqual([unfetched.id]);
+      expect(await repos.metadataStates.unfetched('series')).toEqual([]);
+    });
+
     it('rejects a duplicate tmdb_id and an out of range rating', async () => {
       const repo = repos.movies;
       await repo.create(movie);
@@ -275,6 +294,7 @@ describe.each(backends)('$name repositories', (backend) => {
           jellyfinSeasonId: 'jf-s4',
         },
       ]);
+      expect(await overrides.list()).toEqual(await overrides.listBySeries(lupin.id));
 
       const tmdb: SeasonSource[] = (await seasons.listBySeries(lupin.id)).map((s) => ({
         number: s.tmdbSeasonNumber ?? s.number,

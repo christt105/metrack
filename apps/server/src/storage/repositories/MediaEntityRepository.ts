@@ -9,6 +9,8 @@ import type { EntityRepository } from './EntityRepository.js';
  * nobody has it.
  */
 export interface MediaEntityRepository<T extends { id: number }> extends EntityRepository<T> {
+  /** The user's entities among these ids, ordered by id; ids the user does not have are left out. */
+  getMany(ids: readonly number[]): Promise<T[]>;
   override(id: number, fields: Partial<Omit<T, 'id'>>): Promise<T>;
   /** Drops a hand edit so the catalog value shows again. */
   clearOverride(id: number, field: string): Promise<T>;

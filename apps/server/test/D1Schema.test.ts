@@ -21,9 +21,15 @@ function fromMigrations(): DatabaseSync {
   return db;
 }
 
+const connectorScopeSql = readFileSync(
+  new URL('../d1/migrations/0003_connector_token_scope.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
+  db.exec(connectorScopeSql);
   return db;
 }
 

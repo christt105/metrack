@@ -8,6 +8,7 @@ import {
   type CreateTokenRequest,
 } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
+import { OWNER_ID } from '../users/OWNER_ID.js';
 import type { ApiTokenRepository } from '../storage/repositories/ApiTokenRepository.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import { hashSecret } from './hashSecret.js';
@@ -45,6 +46,9 @@ export class ApiTokenService {
     }
     if (!TOKEN_LIFETIMES_DAYS.includes(request.expiresInDays)) {
       throw ApiError.badRequest('invalid_token_lifetime', 'Pick one of the offered lifetimes');
+    }
+    if (request.scope === 'connector' && userId !== OWNER_ID) {
+      throw ApiError.forbidden('owner_only', 'Only the owner can create a connector token');
     }
     const now = this.now();
     const secret = `${TOKEN_PREFIX}${randomBytes(32).toString('base64url')}`;

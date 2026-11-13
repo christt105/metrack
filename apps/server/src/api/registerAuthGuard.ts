@@ -19,7 +19,8 @@ const READ_METHODS = new Set(['GET', 'HEAD']);
  *
  * A request with an `Authorization` header signs in with a personal API token instead of the session cookie.
  * Tokens never reach `ownerOnly` or `sessionOnly` routes, and a `read` token only reads. Routes flagged
- * `trustedOnly` answer 403 to normal users, however they sign in.
+ * `trustedOnly` answer 403 to normal users, however they sign in. A `connector` token is accepted only on routes
+ * flagged `connector`, which in turn accept only tokens.
  */
 export function registerAuthGuard(
   app: Hono<ApiEnv>,
@@ -30,6 +31,7 @@ export function registerAuthGuard(
 ): void {
   app.use('*', async (context, next) => {
     context.set('user', null);
+    context.set('tokenScope', null);
     const matched = [...context.req.matchedRoutes]
       .reverse()
       .find((entry) => entry.method !== 'ALL');
@@ -51,11 +53,24 @@ export function registerAuthGuard(
           403,
         );
       }
+      if (signIn.scope === 'connector' && !flags.connector) {
+        return jsonResponse(
+          { error: 'A connector token only works on /api/connector', code: 'connector_token_only' },
+          403,
+        );
+      }
       if (signIn.scope === 'read' && !READ_METHODS.has(method)) {
         return jsonResponse({ error: 'This token can only read', code: 'read_only_token' }, 403);
       }
       user = signIn.user;
+      context.set('tokenScope', signIn.scope);
     } else {
+      if (flags.connector) {
+        return jsonResponse(
+          { error: 'The connector API needs an API token', code: 'token_required' },
+          403,
+        );
+      }
       user = await authenticator.userFor(headers);
       if (!user) return jsonResponse({ error: 'Sign in first', code: 'unauthenticated' }, 401);
       if (flags.ownerOnly && user.id !== OWNER_ID) {

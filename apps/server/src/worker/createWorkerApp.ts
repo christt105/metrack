@@ -9,6 +9,9 @@ import { SessionCookieAuthenticator } from '../auth/SessionCookieAuthenticator.j
 import { SessionService } from '../auth/SessionService.js';
 import { D1ContentVersions } from '../storage/d1/D1ContentVersions.js';
 import { D1PublicRenderCache } from '../storage/d1/D1PublicRenderCache.js';
+import { SequentialTransactionRunner } from '../storage/SequentialTransactionRunner.js';
+import { ConnectorService } from '../sync/ConnectorService.js';
+import { SyncApplier } from '../sync/SyncApplier.js';
 import { secureRandomBytes } from '../users/secureRandomBytes.js';
 import { createWorkerServices } from './createWorkerServices.js';
 import { D1SchemaVersion } from './D1SchemaVersion.js';
@@ -18,7 +21,7 @@ import type { WorkerServices } from './WorkerServices.js';
 /**
  * The same Hono app as the home server, over D1 and R2. Images are always recoded by the browser
  * (`IMAGE_ENCODED_BY=client`). Everything that needs Node, the disk, a timer or a service at home is left out:
- * Jellyfin and Jellystat sync, the vault mirror, Hugo publishing, backups, and the account export ZIP (the browser
+ * reading Jellyfin and Jellystat (the home connector does it and writes through `/api/connector`), the vault mirror, Hugo publishing, backups, and the account export ZIP (the browser
  * builds it from `/api/account/export/data`) and release alerts. The erasing of deleted accounts is not a route: it runs
  * from the Worker's `scheduled` handler, over the same services.
  */
@@ -29,6 +32,14 @@ export function createWorkerApp(
 ): Hono<ApiEnv> {
   const { config, logger, scope, repositories, imageStore, metadataCache, edit } = services;
   const { movies, series, seasons, videogames, books } = repositories;
+  const contentVersions = new D1ContentVersions(env.DB);
+  const targets = {
+    movies,
+    series,
+    seasons,
+    overrides: repositories.overrides,
+    unlinked: repositories.unlinked,
+  };
   const sessions = new SessionService(repositories.sessions, repositories.users);
   return buildApp({
     appVersion: config.appVersion,
@@ -65,7 +76,18 @@ export function createWorkerApp(
       contactEmail: config.contactEmail,
       renderCache: new D1PublicRenderCache(env.DB, now),
     },
-    contentVersions: new D1ContentVersions(env.DB),
+    contentVersions,
+    connector: new ConnectorService({
+      users: repositories.users,
+      settings: repositories.settings,
+      targets,
+      applier: new SyncApplier(new SequentialTransactionRunner(), targets),
+      versions: contentVersions,
+      scope,
+      states: repositories.metadataStates,
+      metadata: metadataCache,
+      editor: edit.editor,
+    }),
     watch: {
       watchlist: new WatchlistService(edit.editor, movies, series, seasons),
       alerts: repositories.releaseAlerts,

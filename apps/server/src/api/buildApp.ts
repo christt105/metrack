@@ -46,6 +46,8 @@ import type { HandAddedCatalogRepository } from '../storage/repositories/HandAdd
 import { registerTokenRoutes } from './registerTokenRoutes.js';
 import type { ApiTokenService } from '../auth/ApiTokenService.js';
 import type { WebhookSecret } from './WebhookSecret.js';
+import { registerConnectorRoutes } from './registerConnectorRoutes.js';
+import type { ConnectorService } from '../sync/ConnectorService.js';
 
 export interface AppDeps {
   appVersion: string;
@@ -83,6 +85,8 @@ export interface AppDeps {
   account?: AccountRouteDeps;
   /** Lets the owner and trusted users delete hand-added catalog items nobody has any more. */
   handAddedCatalog?: HandAddedCatalogRepository;
+  /** The routes the home connector syncs through, `/api/connector`. */
+  connector?: ConnectorService;
   /** Required from the Jellyfin webhook when set. */
   syncWebhookSecret?: WebhookSecret;
   watch?: { watchlist: WatchlistService; alerts: ReleaseAlertRepository };
@@ -124,6 +128,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       await deps.migrationRunner.currentVersion(),
       {
         backups: deps.backup !== undefined,
+        sync: deps.sync !== undefined,
       },
     );
     return jsonResponse(report, report.status === 'ok' ? 200 : 503);
@@ -141,6 +146,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   }
   if (deps.watch) registerWatchlistRoutes(routes, deps.watch.watchlist, deps.watch.alerts);
   registerSyncRoutes(routes, deps.sync, deps.syncQueues, deps.syncWebhookSecret);
+  if (deps.connector) registerConnectorRoutes(routes, deps.connector);
   if (deps.settings)
     registerSettingsRoutes(
       routes,

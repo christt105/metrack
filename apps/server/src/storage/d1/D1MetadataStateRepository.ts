@@ -1,9 +1,10 @@
 import type { MediaType } from '@metrack/domain';
 import type { MetadataState } from '../../metadata/MetadataState.js';
 import type { UserScope } from '../../users/UserScope.js';
+import type { CatalogType } from '../repositories/CatalogType.js';
 import type { MetadataStateRepository } from '../repositories/MetadataStateRepository.js';
 import type { D1Database } from './D1Database.js';
-import { execute, queryFirst } from './d1Query.js';
+import { execute, queryAll, queryFirst } from './d1Query.js';
 
 const TABLES: Record<MediaType, string> = {
   movie: 'movie',
@@ -33,6 +34,16 @@ export class D1MetadataStateRepository implements MetadataStateRepository {
       metadataHash: row.metadata_hash === null ? null : String(row.metadata_hash),
       editedFields: Object.keys(JSON.parse(String(row.overrides)) as Record<string, unknown>),
     };
+  }
+
+  async unfetched(type: CatalogType): Promise<number[]> {
+    const rows = await queryAll(
+      this.db,
+      `SELECT c.id FROM ${type} c JOIN ${type}_entry e ON e.${type}_id = c.id AND e.user_id = ?
+         WHERE c.fetched_at IS NULL AND c.tmdb_id IS NOT NULL ORDER BY c.id`,
+      this.scope.userId(),
+    );
+    return rows.map((row) => Number(row.id));
   }
 
   async markFetched(

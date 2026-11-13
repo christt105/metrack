@@ -370,6 +370,35 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
     expect(run([play('l1', '2026-10-24')], applied).series).toEqual([]);
   });
 
+  it('does not relink a series that has a TMDB id only to add its TheTVDB id', () => {
+    const applied: SyncState = {
+      ...stored,
+      series: stored.series.map((s) => ({ ...s, jellyfinId: 's-lupin', tvdbId: null })),
+      seasons: stored.seasons.map((s) =>
+        s.id === 72
+          ? {
+              ...s,
+              number: 4,
+              jellyfinId: 'sn4',
+              episodeCount: 3,
+              status: 'in_progress' as const,
+              startedAt: '2026-10-24',
+            }
+          : s,
+      ),
+    };
+    expect(run([play('l1', '2026-10-24')], applied).series).toEqual([]);
+    const unlinked = {
+      ...applied,
+      series: applied.series.map((s) => ({ ...s, jellyfinId: null })),
+    };
+    expect(run([play('l1', '2026-10-24')], unlinked).series[0]).toMatchObject({
+      seriesId: 7,
+      tvdbId: 375921,
+      seasons: [],
+    });
+  });
+
   it('refuses to renumber onto a number already in use', () => {
     const clash: SyncState = {
       ...stored,

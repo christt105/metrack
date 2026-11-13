@@ -110,6 +110,7 @@ export class ApiRoutes {
         : queryOf(url);
       const request: RouteRequest = {
         user: context.get('user') ?? null,
+        tokenScope: context.get('tokenScope') ?? null,
         params: params as Record<string, string>,
         query: query as Record<string, string>,
         body: checkedBody,
