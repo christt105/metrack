@@ -1,6 +1,6 @@
 # metrack on Cloudflare Workers
 
-`apps/server/src/worker` builds the same Hono app as the home server over D1 (`createD1Repositories`) and R2 (`R2ImageBlobStore`), with `IMAGE_ENCODED_BY=client` forced (a Worker cannot run sharp: the browser recodes images to WebP and the Worker only validates them). The web app is served as Static Assets of the same Worker, so the session cookie is same-origin and there is no CORS. `apps/server/wrangler.jsonc` describes (at the top level) the Worker `metrack-test`, its D1 database `metrack-test`, its R2 bucket `metrack-test-images` and its assets. Nothing in it is scheduled: there are no cron triggers.
+`apps/server/src/worker` builds the same Hono app as the home server over D1 (`createD1Repositories`) and R2 (`R2ImageBlobStore`), with `IMAGE_ENCODED_BY=client` forced (a Worker cannot run sharp: the browser recodes images to WebP and the Worker only validates them). The web app is served as Static Assets of the same Worker, so the session cookie is same-origin and there is no CORS. `apps/server/wrangler.jsonc` describes (at the top level) the Worker `metrack-test`, its D1 database `metrack-test`, its R2 bucket `metrack-test-images` and its assets. Its one cron trigger, `0 * * * *` (hourly), erases deleted accounts (see Scheduled tick).
 
 API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker first. `/assets/*` is answered from the assets binding, with a JSON 404 (`Cache-Control: no-store`) for a missing file instead of `index.html`. Every other path is answered by the assets, falling back to `index.html` for the web app's routes.
 
@@ -49,9 +49,27 @@ Public pages (`/u/<handle>/`, stats, collage, about, `index.json`, `feed.xml`, o
 - `/u/<handle>/images/<hash>` checks the hash against a stored list of the images the page publishes (key `published-images`) instead of loading the library, and is served `public, max-age=31536000, immutable` because the hash names the content.
 - Old rows are overwritten in place when their page is next visited and deleted with the user, so there is no cleanup job.
 
-The home server does not need it: it has no row or CPU budget, so `buildApp` is given neither a `renderCache` nor `contentVersions` there and renders on every request (no `ETag`). The `user.content_version` column and `public_render` table exist only in the D1 migration; the TypeScript migrations and the home schema are unchanged, and `D1Schema.test.ts` checks that `0002` adds exactly those two things on top of the schema that matches them. Because the version is only bumped by requests, anything that writes a user's data outside a request must call `ContentVersions.bump` too (Jellyfin sync, imports, the erasing job); none of those runs on the Worker today, and if the cache is ever enabled at home, they must be wired to it.
+The home server does not need it: it has no row or CPU budget, so `buildApp` is given neither a `renderCache` nor `contentVersions` there and renders on every request (no `ETag`). The `user.content_version` column and `public_render` table exist only in the D1 migration; the TypeScript migrations and the home schema are unchanged, and `D1Schema.test.ts` checks that `0002` adds exactly those two things on top of the schema that matches them. Because the version is only bumped by requests, anything that writes a user's data outside a request must call `ContentVersions.bump` too (Jellyfin sync, imports); none of those runs on the Worker today (the scheduled erasing deletes the user and its `public_render` rows, so it needs no bump), and if the cache is ever enabled at home, they must be wired to it.
 
 A stored render also expires after 24 hours (`RENDER_MAX_AGE_SECONDS`, `rendered_at` in epoch seconds), so changes the version cannot see, such as edits to shared catalog rows made through another user's request (a metadata refresh) or the footer year, show up within a day. The ETag also carries `rendered_at` (`"<userId>.<version>.<renderedAt>.<key>"`), so a page re-rendered after expiry gets a new ETag, and an expired or missing row never answers 304.
+
+## Scheduled tick
+
+`wrangler.jsonc` declares one cron trigger, `0 * * * *` (hourly), at the top level. Wrangler inherits `triggers` into `env.production` (`unstable_readConfig` for `--env production` reports the same single cron), so the production Worker has exactly that one cron too; do not repeat it there. The Worker's `scheduled` handler (`createWorkerHandler`) builds the same services as `fetch` once per isolate (`createWorkerServices`; the Hono app is only built by a request) and runs `ScheduledTick`, which erases at most one due account per tick (D1 rows, then its unused R2 images; there is no data directory to clean). That is a capacity of 24 accounts a day; the rest wait for the next tick. One line per tick, `scheduled tick <time>: erased=N`, is visible with `wrangler tail`. A failing account is logged and the handler never rejects.
+
+Release alerts are not run by the Worker: they stay on the home server (`ReleaseWatcher`).
+
+Limits per invocation on the Workers Free plan: 10 ms CPU, 50 subrequests to external hosts and 1000 to Cloudflare services (every D1 statement counts, so does each R2 call). Measured on the test Worker: a tick that finds nothing to erase took 4 to 14 ms of CPU (most of it starting the isolate), erasing an empty account 10 ms, and erasing an account with 61 followed series and one owned image 13 ms and about 1 s of wall time, with no external subrequests; every invocation ended `ok`. Erasing reads every image row to find orphans (`ImageStore.removeUnused`), so its cost grows with the images stored for all users.
+
+Trigger a tick locally (no Cloudflare account involved):
+
+```sh
+cd apps/server
+npx wrangler dev --test-scheduled
+curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+*+*+*+*"
+```
+
+`/__scheduled?cron=...` is the older route of `--test-scheduled`; the Worker's assets would answer it with `index.html` (it is not in `run_worker_first`), so use `/cdn-cgi/handler/scheduled`. The tick line shows in the `wrangler dev` output.
 
 ## Deploy
 

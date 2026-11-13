@@ -13,14 +13,14 @@ import { lastDueRequest, scheduleOf } from './AccountDeletionSchedule.js';
 /**
  * Schedules, cancels and carries out account deletions. A request waits out the grace period; `eraseDue`
  * then deletes each account that has passed it, together with the images only that account owned that
- * nothing uses and the account's folder in the data directory. The owner's account is never deleted.
+ * nothing uses and the account's folder in the data directory, when there is one. The owner's account is never deleted.
  */
 export class AccountDeletionService {
   constructor(
     private readonly accounts: AccountRepository,
     private readonly users: UserRepository,
     private readonly images: ImageStore,
-    private readonly dataDir: string,
+    private readonly dataDir: string | null,
     private readonly logger: Logger,
     private readonly now: () => Date = () => new Date(),
     private readonly notifierFor?: (userId: number) => Notifier,
@@ -64,10 +64,11 @@ export class AccountDeletionService {
     return cancelled;
   }
 
-  /** Erases every account whose grace period has passed and answers their ids. A failure is logged and does not stop the rest. */
-  async eraseDue(): Promise<number[]> {
+  /** Erases the accounts whose grace period has passed, at most `limit` of them, and answers their ids. A failure is logged and does not stop the rest. */
+  async eraseDue(limit = Infinity): Promise<number[]> {
     const erased: number[] = [];
-    for (const userId of await this.accounts.dueForDeletion(lastDueRequest(this.now()))) {
+    const due = await this.accounts.dueForDeletion(lastDueRequest(this.now()));
+    for (const userId of due.slice(0, limit)) {
       try {
         await this.erase(userId);
         erased.push(userId);
@@ -83,7 +84,9 @@ export class AccountDeletionService {
   private async erase(userId: number): Promise<void> {
     const owned = await this.accounts.erase(userId);
     const removed = await this.images.removeUnused(owned);
-    await rm(join(this.dataDir, 'users', String(userId)), { recursive: true, force: true });
+    if (this.dataDir !== null) {
+      await rm(join(this.dataDir, 'users', String(userId)), { recursive: true, force: true });
+    }
     this.logger.info(
       `deleted account ${userId} (${owned.length} images owned, ${removed.length} removed)`,
     );
