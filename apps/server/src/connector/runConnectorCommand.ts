@@ -40,6 +40,6 @@ export async function runConnectorCommand(
     outcome.result ? '(applied)' : '(nothing to apply)',
   );
   return outcome.result
-    ? `${applied}\n\nApplied: ${JSON.stringify(outcome.result)}\nRefreshed ${outcome.created - outcome.refreshFailures} of ${outcome.created} created titles`
+    ? `${applied}\n\nApplied: ${JSON.stringify(outcome.result)}\nRefreshed ${outcome.refreshed} of ${outcome.created} created titles`
     : applied;
 }

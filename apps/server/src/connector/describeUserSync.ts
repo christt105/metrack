@@ -7,6 +7,6 @@ export function describeUserSync(outcome: UserSyncOutcome): string {
   const refreshed =
     outcome.created === 0
       ? ''
-      : `, refreshed ${outcome.created - outcome.refreshFailures} of ${outcome.created} created titles`;
+      : `, refreshed ${outcome.refreshed} of ${outcome.created} created titles`;
   return `${describeSyncResult(outcome.result)}${refreshed}`;
 }

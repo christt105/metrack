@@ -5,7 +5,7 @@ export interface UserSyncOutcome {
   plan: SyncPlan;
   /** Undefined when nothing was applied: a report, or a plan with no changes. */
   result?: SyncApplyResult;
-  /** Titles the plan created whose metadata was asked for, and how many of those requests failed. */
+  /** Titles the plan created, and how many of them got their metadata. */
   created: number;
-  refreshFailures: number;
+  refreshed: number;
 }

@@ -37,22 +37,22 @@ export class UserSync {
         today: this.now().toISOString().slice(0, 10),
         timeZone: this.timeZone,
       });
-      if (!apply || !hasChanges(plan)) return { plan, created: 0, refreshFailures: 0 };
+      if (!apply || !hasChanges(plan)) return { plan, created: 0, refreshed: 0 };
       try {
         const { result, created } = await this.cloud.sync(user.id, { contentVersion, plan });
-        let refreshFailures = 0;
+        let refreshed = 0;
         for (const ref of created) {
           try {
             await this.cloud.refresh(user.id, ref);
+            refreshed += 1;
           } catch (error) {
             if (error instanceof CloudError && error.status === 501) break;
-            refreshFailures += 1;
             this.logger.error(
               `Refreshing ${ref.type} ${ref.id} of user ${user.id} failed: ${String(error)}`,
             );
           }
         }
-        return { plan, result, created: created.length, refreshFailures };
+        return { plan, result, created: created.length, refreshed };
       } catch (error) {
         if (
           !(error instanceof CloudError && error.status === 409) ||

@@ -130,7 +130,7 @@ describe('UserSync against the home API', () => {
     );
     const outcome = await sync.run(FRIEND, true);
     expect(outcome.created).toBe(1);
-    expect(outcome.refreshFailures).toBe(1);
+    expect(outcome.refreshed).toBe(0);
     expect(requests.filter((request) => request.includes('/refresh/movie/'))).toHaveLength(1);
     expect(errors[0]).toContain('Refreshing movie');
     expect(describeUserSync(outcome)).toContain('refreshed 0 of 1');
@@ -139,8 +139,9 @@ describe('UserSync against the home API', () => {
   it('stops asking for metadata when the cloud has no source', async () => {
     const { sync, requests } = await setup();
     const outcome = await sync.run(FRIEND, true);
-    expect(outcome.refreshFailures).toBe(0);
+    expect(outcome.refreshed).toBe(0);
     expect(requests.filter((request) => request.includes('/refresh/'))).toHaveLength(1);
+    expect(describeUserSync(outcome)).toContain('refreshed 0 of 1');
   });
 
   it('is refused for a user other than the personal token owner', async () => {
