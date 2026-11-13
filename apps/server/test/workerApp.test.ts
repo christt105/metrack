@@ -188,6 +188,20 @@ describe('Worker app over D1 and R2', () => {
   });
 });
 
+describe('Worker ntfy topic routes', () => {
+  it('registers the generated-topic routes behind a browser session', async () => {
+    const post = await app.request('http://localhost/api/settings/ntfy-topic', {
+      method: 'POST',
+      headers: auth,
+    });
+    expect(post.status).toBe(403);
+    const anonymous = await app.request('http://localhost/api/settings/ntfy-topic', {
+      method: 'DELETE',
+    });
+    expect(anonymous.status).toBe(401);
+  });
+});
+
 describe('WorkerUrlGuard', () => {
   const guard = new WorkerUrlGuard();
   it.each(['https://covers.example.com/a.jpg', 'http://example.org/b.png'])(

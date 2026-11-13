@@ -76,6 +76,8 @@ export interface AppDeps {
     users: UserRepository;
     settings: UserSettingsRepository;
     profiles: PublicProfileRepository;
+    /** When set, users turn release alerts on, regenerate and turn them off themselves and the topic is never typed. */
+    generateNtfyTopic?: () => string;
   };
   /** Export and deletion of the signed-in user's own account. */
   account?: AccountRouteDeps;
@@ -146,6 +148,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       deps.settings.settings,
       deps.settings.profiles,
       deps.imageStore,
+      deps.settings.generateNtfyTopic,
     );
   if (deps.account) registerAccountRoutes(routes, deps.account);
   if (deps.handAddedCatalog) registerCatalogRoutes(routes, deps.handAddedCatalog);

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { HealthReport, OwnSettings, SyncPlan } from '@metrack/domain';
 import AccountPanel from '../components/AccountPanel.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
+import NtfyAlertsPanel from '../components/NtfyAlertsPanel.vue';
 import PublicPagePanel from '../components/PublicPagePanel.vue';
 import SettingsList from '../components/SettingsList.vue';
 import TokensPanel from '../components/TokensPanel.vue';
@@ -101,6 +102,11 @@ const backup = () =>
       <ErrorNotice :error="ownError" />
       <SettingsList v-if="own" :settings="own.settings" />
     </div>
+    <NtfyAlertsPanel
+      v-if="own?.ntfyTopicGenerated"
+      :topic="own.settings.ntfyTopic"
+      @saved="refreshOwn"
+    />
     <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
     <TokensPanel />
     <AccountPanel v-if="own" :handle="own.publicPage.handle" />
@@ -180,6 +186,7 @@ const backup = () =>
         :key="entry.user.id"
         :user="entry.user"
         :settings="entry.settings"
+        :topic-generated="own?.ntfyTopicGenerated === true"
         @saved="refreshOwn"
       />
     </div>

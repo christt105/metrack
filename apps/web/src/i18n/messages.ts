@@ -287,6 +287,17 @@ export const messages = {
         'Comments need the repository as owner/name and the repository id, category and category id.',
     } as Record<string, string>,
   },
+  ntfyAlerts: {
+    title: 'Release alerts',
+    hint: 'Get a notification on your phone when something you follow premieres or becomes available. Turn them on to get a private ntfy topic, then subscribe to it with the link below in the ntfy app or in the browser.',
+    link: 'Subscribe at',
+    secret: 'Anyone with this link can read your alerts, so do not share it.',
+    turnOn: 'Turn on release alerts',
+    regenerate: 'Generate a new link',
+    regenerateConfirm:
+      'Generate a new link? The current subscription stops receiving alerts and you must subscribe again.',
+    turnOff: 'Turn off release alerts',
+  },
   account: {
     title: 'Your data and account',
     hint: 'Download everything you have in metrack, or delete your account.',

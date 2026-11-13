@@ -13,7 +13,7 @@ import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import ErrorNotice from './ErrorNotice.vue';
 
-const props = defineProps<{ user: User; settings: UserSettings }>();
+const props = defineProps<{ user: User; settings: UserSettings; topicGenerated?: boolean }>();
 const emit = defineEmits<{ saved: [settings: UserSettings] }>();
 
 const api = useApi();
@@ -43,6 +43,9 @@ async function changeRole(): Promise<void> {
     busy.value = false;
   }
 }
+const editable = computed(() =>
+  WEB_EDITABLE_SETTINGS.filter((key) => !(props.topicGenerated && key === 'ntfyTopic')),
+);
 const problems = computed(() =>
   error.value instanceof ApiRequestError && error.value.code === 'invalid_settings'
     ? (error.value.details as Partial<Record<keyof UserSettings, string>>)
@@ -51,7 +54,7 @@ const problems = computed(() =>
 
 async function save(): Promise<void> {
   const patch: UserSettingsPatch = {};
-  for (const key of WEB_EDITABLE_SETTINGS) {
+  for (const key of editable.value) {
     if (draft[key].trim() !== (props.settings[key] ?? '')) patch[key] = draft[key];
   }
   busy.value = true;
@@ -88,7 +91,7 @@ async function save(): Promise<void> {
       </select>
       <span v-else>{{ messages.settings.roleLabels.owner }}</span>
     </label>
-    <label v-for="key in WEB_EDITABLE_SETTINGS" :key="key">
+    <label v-for="key in editable" :key="key">
       <span class="muted">{{ messages.settings.settingLabels[key] }}</span>
       <input v-model="draft[key]" type="text" :name="key" :aria-invalid="key in problems" />
       <span v-if="problems[key]" class="problem">{{ problems[key] }}</span>

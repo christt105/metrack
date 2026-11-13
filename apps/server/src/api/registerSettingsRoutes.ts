@@ -103,20 +103,27 @@ function validGiscus(value: GiscusConfig | null): GiscusConfig | null {
   return giscus;
 }
 
-const patchBody = {
-  type: 'object',
-  properties: Object.fromEntries(
-    WEB_EDITABLE_SETTINGS.map((key) => [key, { type: ['string', 'null'] }]),
-  ),
-  additionalProperties: false,
-} as const;
+function patchBodyFor(generatedTopic: boolean) {
+  return {
+    type: 'object',
+    properties: Object.fromEntries(
+      WEB_EDITABLE_SETTINGS.filter((key) => !(generatedTopic && key === 'ntfyTopic')).map((key) => [
+        key,
+        { type: ['string', 'null'] },
+      ]),
+    ),
+    additionalProperties: false,
+  } as const;
+}
 
 /**
  * `GET /api/settings` shows the signed-in user what their background jobs act on. Each setting points the instance's
  * credentials (Jellyfin, ntfy, Cloudflare) or its disk at something, so only the owner changes them: `GET /api/users`
  * lists everyone with their settings and `PATCH /api/users/{id}/settings` changes the web-editable ones of any user.
  * `PUT /api/users/{id}/role` makes a user trusted or normal; user 1 is always the owner. Every user sets their own
- * public page (handle, on/off, avatar, texts and comments) with `PATCH /api/settings/public-page`.
+ * public page (handle, on/off, avatar, texts and comments) with `PATCH /api/settings/public-page`. With
+ * `generateNtfyTopic` (the Worker) the ntfy topic is made by the server: every user turns alerts on or regenerates the
+ * topic with `POST /api/settings/ntfy-topic` and turns them off with `DELETE`, and the owner can no longer type it.
  */
 export function registerSettingsRoutes(
   routes: ApiRoutes,
@@ -124,7 +131,9 @@ export function registerSettingsRoutes(
   settings: UserSettingsRepository,
   profiles: PublicProfileRepository,
   images?: ImageStore,
+  generateNtfyTopic?: () => string,
 ): void {
+  const patchBody = patchBodyFor(generateNtfyTopic !== undefined);
   const settingsOf = async (userId: number): Promise<UserSettings> =>
     (await settings.get(userId)) ?? NO_SETTINGS;
 
@@ -137,9 +146,34 @@ export function registerSettingsRoutes(
         settings: await settingsOf(userId),
         publicPage: await profiles.get(userId),
         owner: userId === OWNER_ID,
+        ntfyTopicGenerated: generateNtfyTopic !== undefined,
       };
     },
   );
+
+  if (generateNtfyTopic) {
+    routes.post(
+      '/api/settings/ntfy-topic',
+      { config: { sessionOnly: true } },
+      async (request): Promise<UserSettings> => {
+        const userId = request.user?.id ?? 0;
+        const next = { ...(await settingsOf(userId)), ntfyTopic: generateNtfyTopic() };
+        await settings.save(userId, next);
+        return next;
+      },
+    );
+
+    routes.delete(
+      '/api/settings/ntfy-topic',
+      { config: { sessionOnly: true } },
+      async (request): Promise<UserSettings> => {
+        const userId = request.user?.id ?? 0;
+        const next = { ...(await settingsOf(userId)), ntfyTopic: null };
+        await settings.save(userId, next);
+        return next;
+      },
+    );
+  }
 
   routes.patch<{ Body: PublicPagePatch }>(
     '/api/settings/public-page',
