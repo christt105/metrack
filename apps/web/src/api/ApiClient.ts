@@ -318,6 +318,14 @@ export class ApiClient {
     return this.request('GET', '/settings');
   }
 
+  generateNtfyTopic(): Promise<UserSettings> {
+    return this.request('POST', '/settings/ntfy-topic');
+  }
+
+  clearNtfyTopic(): Promise<UserSettings> {
+    return this.request('DELETE', '/settings/ntfy-topic');
+  }
+
   updatePublicPage(patch: PublicPagePatch): Promise<PublicPage> {
     return this.request('PATCH', '/settings/public-page', patch);
   }

@@ -24,8 +24,9 @@ const byHeader: Authenticator = {
 
 let settings: SqliteUserSettingsRepository;
 let app: TestApp;
+let topics: string[];
 
-beforeEach(async () => {
+async function buildApp(generateNtfyTopic?: () => string): Promise<void> {
   const db = new DatabaseSync(':memory:');
   const runner = new MigrationRunner(db, migrations);
   runner.run();
@@ -42,11 +43,26 @@ beforeEach(async () => {
     authenticator: byHeader,
     scope: new AsyncUserScope(),
     migrationRunner: runner,
-    settings: { users, settings, profiles: new SqlitePublicProfileRepository(db) },
+    settings: {
+      users,
+      settings,
+      profiles: new SqlitePublicProfileRepository(db),
+      generateNtfyTopic,
+    },
   });
+}
+
+beforeEach(async () => {
+  topics = ['metrack-first', 'metrack-second', 'metrack-third'];
+  await buildApp();
 });
 
-function request(user: User, method: 'GET' | 'PATCH', url: string, payload?: object) {
+function request(
+  user: User,
+  method: 'GET' | 'PATCH' | 'POST' | 'DELETE',
+  url: string,
+  payload?: object,
+) {
   return app.inject({ method, url, payload, headers: { 'x-test-user': String(user.id) } });
 }
 
@@ -55,12 +71,14 @@ describe('settings routes', () => {
     const own = await request(OWNER, 'GET', '/api/settings');
     expect(own.json()).toEqual({
       owner: true,
+      ntfyTopicGenerated: false,
       publicPage: EMPTY_PAGE,
       settings: { ...NO_SETTINGS, jellyfinUser: 'admin', mirrorDir: '/vault/Media Tracker' },
     });
     const friend = await request(FRIEND, 'GET', '/api/settings');
     expect(friend.json()).toEqual({
       owner: false,
+      ntfyTopicGenerated: false,
       publicPage: EMPTY_PAGE,
       settings: NO_SETTINGS,
     });
@@ -116,5 +134,66 @@ describe('settings routes', () => {
 
     const missing = await request(OWNER, 'PATCH', '/api/users/9/settings', { ntfyTopic: 'x' });
     expect(missing.statusCode).toBe(404);
+  });
+});
+
+describe('settings routes at home', () => {
+  it('have no routes to generate the topic', async () => {
+    expect((await request(FRIEND, 'POST', '/api/settings/ntfy-topic')).statusCode).toBe(404);
+    expect((await request(FRIEND, 'DELETE', '/api/settings/ntfy-topic')).statusCode).toBe(404);
+  });
+
+  it('keep the topic as free text for the owner', async () => {
+    const changed = await request(OWNER, 'PATCH', '/api/users/2/settings', { ntfyTopic: 'mine' });
+    expect(changed.statusCode).toBe(200);
+    expect(changed.json().ntfyTopic).toBe('mine');
+  });
+});
+
+describe('settings routes in the cloud', () => {
+  beforeEach(async () => {
+    await buildApp(() => topics.shift() as string);
+  });
+
+  it('tell the web the topic is generated', async () => {
+    const own = await request(FRIEND, 'GET', '/api/settings');
+    expect(own.json().ntfyTopicGenerated).toBe(true);
+  });
+
+  it('let any signed-in user generate, regenerate and clear their own topic', async () => {
+    const first = await request(FRIEND, 'POST', '/api/settings/ntfy-topic');
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toEqual({ ...NO_SETTINGS, ntfyTopic: 'metrack-first' });
+    expect((await settings.get(2))?.ntfyTopic).toBe('metrack-first');
+
+    const second = await request(FRIEND, 'POST', '/api/settings/ntfy-topic');
+    expect(second.json().ntfyTopic).toBe('metrack-second');
+    expect((await request(FRIEND, 'GET', '/api/settings')).json().settings.ntfyTopic).toBe(
+      'metrack-second',
+    );
+
+    const cleared = await request(FRIEND, 'DELETE', '/api/settings/ntfy-topic');
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).toEqual(NO_SETTINGS);
+    expect((await settings.get(2))?.ntfyTopic).toBeNull();
+  });
+
+  it('keep the other settings of the user and leave other users alone', async () => {
+    const owned = await request(OWNER, 'POST', '/api/settings/ntfy-topic');
+    expect(owned.json()).toEqual({
+      ...NO_SETTINGS,
+      jellyfinUser: 'admin',
+      mirrorDir: '/vault/Media Tracker',
+      ntfyTopic: 'metrack-first',
+    });
+    expect(await settings.get(2)).toBeUndefined();
+  });
+
+  it('refuse a hand-written topic from the owner but still change the rest', async () => {
+    const typed = await request(OWNER, 'PATCH', '/api/users/2/settings', { ntfyTopic: 'mine' });
+    expect(typed.statusCode).toBe(400);
+    expect(await settings.get(2)).toBeUndefined();
+    const other = await request(OWNER, 'PATCH', '/api/users/2/settings', { jellyfinUser: 'haku' });
+    expect(other.statusCode).toBe(200);
   });
 });

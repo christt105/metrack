@@ -38,6 +38,7 @@ function ownerApi() {
       settings: ownerSettings,
       publicPage: EMPTY_PAGE,
       owner: true,
+      ntfyTopicGenerated: false,
     } satisfies OwnSettings),
     listUsers: vi.fn().mockResolvedValue([
       { user: owner, settings: ownerSettings },
@@ -214,6 +215,7 @@ describe('SettingsView user settings', () => {
         settings: { ...noSettings, jellyfinUser: 'haku' },
         publicPage: EMPTY_PAGE,
         owner: false,
+        ntfyTopicGenerated: false,
       } satisfies OwnSettings),
       listBackups,
       listUsers,
@@ -303,6 +305,7 @@ describe('SettingsView images', () => {
         settings: noSettings,
         publicPage: EMPTY_PAGE,
         owner: false,
+        ntfyTopicGenerated: false,
       } satisfies OwnSettings),
       imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: 209_715_200 }),
     });
@@ -317,6 +320,7 @@ describe('SettingsView images', () => {
         settings: noSettings,
         publicPage: EMPTY_PAGE,
         owner: false,
+        ntfyTopicGenerated: false,
       } satisfies OwnSettings),
       imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: null }),
     });
@@ -324,5 +328,87 @@ describe('SettingsView images', () => {
     const text = wrapper.find('[data-test="image-usage"]').text();
     expect(text).toContain('33.0 MB');
     expect(text).toContain('no limit');
+  });
+});
+
+describe('SettingsView release alerts', () => {
+  const topic = 'metrack-abcdefghijklmnopqrstuvwxyz234567';
+  const cloud = (ntfyTopic: string | null, ownerFlag = false): OwnSettings => ({
+    settings: { ...noSettings, ntfyTopic },
+    publicPage: EMPTY_PAGE,
+    owner: ownerFlag,
+    ntfyTopicGenerated: true,
+  });
+
+  it('offers to turn alerts on in the cloud and shows the new link', async () => {
+    const generateNtfyTopic = vi.fn().mockResolvedValue({ ...noSettings, ntfyTopic: topic });
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(cloudHealth),
+      ownSettings: vi.fn().mockResolvedValueOnce(cloud(null)).mockResolvedValueOnce(cloud(topic)),
+      generateNtfyTopic,
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-test="ntfy-link"]').exists()).toBe(false);
+    await wrapper.find('[data-test="ntfy-on"]').trigger('click');
+    await flushPromises();
+    expect(generateNtfyTopic).toHaveBeenCalledTimes(1);
+    const link = wrapper.find('[data-test="ntfy-link"]');
+    expect(link.attributes('href')).toBe(`https://ntfy.sh/${topic}`);
+    expect(link.text()).toBe(`https://ntfy.sh/${topic}`);
+    expect(wrapper.find('[data-test="ntfy-on"]').exists()).toBe(false);
+  });
+
+  it('regenerates only after confirming', async () => {
+    const generateNtfyTopic = vi.fn().mockResolvedValue({ ...noSettings, ntfyTopic: 'new' });
+    window.confirm = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(cloudHealth),
+      ownSettings: vi.fn().mockResolvedValue(cloud(topic)),
+      generateNtfyTopic,
+    });
+    await flushPromises();
+    await wrapper.find('[data-test="ntfy-regenerate"]').trigger('click');
+    await flushPromises();
+    expect(generateNtfyTopic).not.toHaveBeenCalled();
+    await wrapper.find('[data-test="ntfy-regenerate"]').trigger('click');
+    await flushPromises();
+    expect(generateNtfyTopic).toHaveBeenCalledTimes(1);
+  });
+
+  it('turns alerts off', async () => {
+    const clearNtfyTopic = vi.fn().mockResolvedValue(noSettings);
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(cloudHealth),
+      ownSettings: vi.fn().mockResolvedValueOnce(cloud(topic)).mockResolvedValueOnce(cloud(null)),
+      clearNtfyTopic,
+    });
+    await flushPromises();
+    await wrapper.find('[data-test="ntfy-off"]').trigger('click');
+    await flushPromises();
+    expect(clearNtfyTopic).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-test="ntfy-on"]').exists()).toBe(true);
+  });
+
+  it('does not let the owner type the topic of a user in the cloud', async () => {
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(cloudHealth),
+      ownSettings: vi.fn().mockResolvedValue(cloud(topic, true)),
+      listUsers: vi.fn().mockResolvedValue([{ user: friend, settings: noSettings }]),
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-test="ntfy-alerts"]').exists()).toBe(true);
+    expect(wrapper.find('form.user input[name="jellyfinUser"]').exists()).toBe(true);
+    expect(wrapper.find('form.user input[name="ntfyTopic"]').exists()).toBe(false);
+  });
+
+  it('keeps the free-text field and no alerts block at home', async () => {
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
+      listBackups: vi.fn().mockResolvedValue([]),
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-test="ntfy-alerts"]').exists()).toBe(false);
+    expect(wrapper.find('form.user input[name="ntfyTopic"]').exists()).toBe(true);
   });
 });

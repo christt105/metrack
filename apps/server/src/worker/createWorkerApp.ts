@@ -1,3 +1,4 @@
+import { generateNtfyTopic } from '@metrack/domain';
 import type { Hono } from 'hono';
 import { AccountExporter } from '../account/AccountExporter.js';
 import { WatchlistService } from '../alerts/WatchlistService.js';
@@ -8,6 +9,7 @@ import { SessionCookieAuthenticator } from '../auth/SessionCookieAuthenticator.j
 import { SessionService } from '../auth/SessionService.js';
 import { D1ContentVersions } from '../storage/d1/D1ContentVersions.js';
 import { D1PublicRenderCache } from '../storage/d1/D1PublicRenderCache.js';
+import { secureRandomBytes } from '../users/secureRandomBytes.js';
 import { createWorkerServices } from './createWorkerServices.js';
 import { D1SchemaVersion } from './D1SchemaVersion.js';
 import type { WorkerEnv } from './WorkerEnv.js';
@@ -54,6 +56,7 @@ export function createWorkerApp(
       users: repositories.users,
       settings: repositories.settings,
       profiles: repositories.profiles,
+      generateNtfyTopic: () => generateNtfyTopic(secureRandomBytes),
     },
     site: {
       profiles: repositories.profiles,
