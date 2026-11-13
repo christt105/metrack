@@ -5,12 +5,14 @@ import {
   type ConnectorSyncResponse,
   type ConnectorSyncState,
   type ConnectorUser,
+  type EntityRef,
   type MediaType,
   type RefreshResult,
 } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
 import { assertPlanOwned } from './assertPlanOwned.js';
 import type { ConnectorServiceDeps } from './ConnectorServiceDeps.js';
+import { loadPlanTitles } from './loadPlanTitles.js';
 import { loadSyncState } from './loadSyncState.js';
 
 /**
@@ -39,6 +41,7 @@ export class ConnectorService {
     return this.deps.scope.run(userId, async () => ({
       contentVersion: await this.deps.versions.current(userId),
       state: await loadSyncState(this.deps.targets),
+      unfetched: await this.unfetched(),
     }));
   }
 
@@ -50,13 +53,22 @@ export class ConnectorService {
           'The library changed since the plan was computed, read it again',
         );
       }
-      assertPlanOwned(request.plan, await loadSyncState(this.deps.targets));
+      assertPlanOwned(request.plan, await loadPlanTitles(request.plan, this.deps.targets));
       try {
         return await this.deps.applier.apply(request.plan);
       } finally {
         await this.deps.versions.bump(userId);
       }
     });
+  }
+
+  private async unfetched(): Promise<EntityRef[]> {
+    const refs: EntityRef[] = [];
+    for (const type of ['movie', 'series'] as const) {
+      if (!this.deps.metadata?.supports(type)) continue;
+      for (const id of await this.deps.states.unfetched(type)) refs.push({ type, id });
+    }
+    return refs;
   }
 
   refresh(userId: number, type: MediaType, id: number): Promise<RefreshResult> {

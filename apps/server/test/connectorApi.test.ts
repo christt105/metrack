@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MovieChange, ConnectorSyncState, ConnectorUser } from '@metrack/domain';
+import { emptyMovie, emptySeason, emptySeries } from '../src/media/emptyEntities.js';
 import { connectorHarness } from './support/connectorHarness.js';
 
 async function versionOf(
@@ -121,6 +122,37 @@ describe('/api/connector/users/{id}', () => {
       overrides: [],
       unlinked: [],
     });
+    expect(body.unfetched).toEqual([]);
+  });
+
+  it('lists the titles of the user with a TMDB id that were never fetched', async () => {
+    const { createToken, call, scope, repositories } = await connectorHarness({ metadata: true });
+    const { secret } = await createToken(1, 'connector');
+    const { movies, series, metadataStates } = repositories;
+    const ids = await scope.run(2, async () => {
+      const unfetched = await movies.create({ ...emptyMovie(), tmdbId: 1, title: 'Unfetched' });
+      const fetched = await movies.create({ ...emptyMovie(), tmdbId: 2, title: 'Fetched' });
+      await metadataStates.markFetched('movie', fetched.id, '2026-11-13T00:00:00Z');
+      await movies.create({ ...emptyMovie(), title: 'No TMDB id' });
+      const show = await series.create({ ...emptySeries(), tmdbId: 3, title: 'Show' });
+      return { movie: unfetched.id, series: show.id };
+    });
+    await scope.run(1, () => movies.create({ ...emptyMovie(), tmdbId: 4, title: 'Owner' }));
+    const response = await call('GET', '/api/connector/users/2/sync-state', secret);
+    expect(response.json<ConnectorSyncState>().unfetched).toEqual([
+      { type: 'movie', id: ids.movie },
+      { type: 'series', id: ids.series },
+    ]);
+  });
+
+  it('lists no unfetched titles without a metadata source', async () => {
+    const { createToken, call, scope, repositories } = await connectorHarness();
+    const { secret } = await createToken(1, 'connector');
+    await scope.run(2, () =>
+      repositories.movies.create({ ...emptyMovie(), tmdbId: 1, title: 'M' }),
+    );
+    const response = await call('GET', '/api/connector/users/2/sync-state', secret);
+    expect(response.json<ConnectorSyncState>().unfetched).toEqual([]);
   });
 });
 
@@ -240,6 +272,58 @@ describe('POST /api/connector/users/{id}/sync', () => {
       } as never),
     );
     expect(response.statusCode).toBe(400);
+  });
+
+  it('applies a plan naming titles the user has, checking only those', async () => {
+    const { createToken, call, syncBody, scope, repositories } = await connectorHarness();
+    const { secret } = await createToken(1, 'connector');
+    const { movie, show, season } = await scope.run(2, async () => {
+      await repositories.movies.create({ ...emptyMovie(), tmdbId: 1, title: 'Other' });
+      const show = await repositories.series.create({ ...emptySeries(), tmdbId: 2, title: 'S' });
+      return {
+        movie: await repositories.movies.create({ ...emptyMovie(), tmdbId: 603, title: 'M' }),
+        show,
+        season: await repositories.seasons.create({ ...emptySeason(), seriesId: show.id }),
+      };
+    });
+    const response = await call(
+      'POST',
+      '/api/connector/users/2/sync',
+      secret,
+      syncBody(await versionOf(call, secret, 2), {
+        movies: [{ ...MATRIX, action: 'complete', movieId: movie.id }],
+        series: [
+          {
+            action: 'update',
+            seriesId: show.id,
+            jellyfinId: 'jf-s',
+            tmdbId: 2,
+            tvdbId: null,
+            title: 'S',
+            year: null,
+            seasons: [
+              {
+                seasonId: season.id,
+                jellyfinSeasonId: 'jf-s1',
+                number: 1,
+                tmdbSeasonNumber: 1,
+                title: null,
+                firstAirDate: null,
+                episodeCount: 8,
+                status: 'completed',
+                startedAt: '2026-01-01',
+                finishedAt: '2026-01-02',
+                completes: true,
+              },
+            ],
+          },
+        ],
+      } as never),
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ result: { moviesUpdated: 1, seasonsUpdated: 1 } });
+    const updated = await scope.run(2, () => repositories.seasons.get(season.id));
+    expect(updated).toMatchObject({ status: 'completed', episodeCount: 8 });
   });
 
   it('rejects a malformed plan', async () => {

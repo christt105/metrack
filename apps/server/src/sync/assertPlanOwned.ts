@@ -1,11 +1,15 @@
-import type { SyncPlan, SyncState } from '@metrack/domain';
+import type { SyncPlan } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
+import type { PlanTitles } from './PlanTitles.js';
 
-/** Refuses a plan that names a movie, series or season the state does not hold, or a season of another series. */
-export function assertPlanOwned(plan: SyncPlan, state: SyncState): void {
-  const movies = new Set(state.movies.map((movie) => movie.id));
-  const series = new Set(state.series.map((entry) => entry.id));
-  const seasonSeries = new Map(state.seasons.map((season) => [season.id, season.seriesId]));
+/**
+ * Refuses a plan that names a movie, series or season the user does not have, or a season of another series. `owned`
+ * needs to hold only the titles the plan names (see `loadPlanTitles`).
+ */
+export function assertPlanOwned(plan: SyncPlan, owned: PlanTitles): void {
+  const movies = new Set(owned.movies.map((movie) => movie.id));
+  const series = new Set(owned.series.map((entry) => entry.id));
+  const seasonSeries = new Map(owned.seasons.map((season) => [season.id, season.seriesId]));
   const foreign = (what: string, id: number): ApiError =>
     ApiError.badRequest(
       'plan_foreign_id',

@@ -20,3 +20,11 @@ export function findCatalogSql(spec: MediaTableSpec<{ id: number }>, columns: re
 export function insertSql(table: string, columns: readonly string[]): string {
   return `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`;
 }
+
+/** Most ids one `IN` list binds, under D1's limit of 100 bound parameters per query. */
+export const MAX_IDS_PER_QUERY = 90;
+
+/** `?` placeholders for an `IN` list of this many values. */
+export function placeholders(count: number): string {
+  return Array.from({ length: count }, () => '?').join(', ');
+}

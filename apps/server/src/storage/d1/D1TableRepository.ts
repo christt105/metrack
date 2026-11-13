@@ -5,7 +5,14 @@ import type { MediaTableSpec } from '../mapping/MediaTableSpec.js';
 import type { Row } from '../mapping/Row.js';
 import type { RowValues } from '../mapping/RowValues.js';
 import type { SqlValue } from '../mapping/SqlValue.js';
-import { findCatalogSql, insertSql, qualifyColumn, selectMedia } from '../mapping/mediaTableSql.js';
+import {
+  findCatalogSql,
+  insertSql,
+  MAX_IDS_PER_QUERY,
+  placeholders,
+  qualifyColumn,
+  selectMedia,
+} from '../mapping/mediaTableSql.js';
 import {
   assignments,
   changedColumns,
@@ -74,6 +81,15 @@ export class D1TableRepository<T extends { id: number }> implements MediaEntityR
 
   async get(id: number): Promise<T | undefined> {
     return this.find(id);
+  }
+
+  async getMany(ids: readonly number[]): Promise<T[]> {
+    const found: T[] = [];
+    for (let start = 0; start < ids.length; start += MAX_IDS_PER_QUERY) {
+      const chunk = ids.slice(start, start + MAX_IDS_PER_QUERY);
+      found.push(...(await this.where(`c.id IN (${placeholders(chunk.length)})`, ...chunk)));
+    }
+    return found.sort((a, b) => a.id - b.id);
   }
 
   /** Reads the user's whole library; cache it (nr8fn1). */

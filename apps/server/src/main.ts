@@ -245,6 +245,7 @@ const connector = new ConnectorService({
   }),
   versions: contentVersions,
   scope,
+  states: metadataStates,
   metadata: metadataCache,
   editor: edit.editor,
 });

@@ -75,6 +75,8 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.metadataStates.markFetched('movie', movie.id, 'now');
   await owner.metadataStates.markFetched('movie', movie.id, 'now', 'hash');
   await owner.metadataStates.get('movie', movie.id);
+  await owner.metadataStates.unfetched('movie');
+  await owner.movies.getMany([movie.id, handMovie.id]);
 
   const series = await owner.series.create({ ...emptySeries(), tmdbId: 2, tvdbId: 3, title: 'S' });
   await owner.series.findByTmdbId(2);
@@ -84,6 +86,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   const season = await owner.seasons.create({ ...emptySeason(), seriesId: series.id });
   await owner.seasons.listBySeries(series.id);
   await owner.seasons.get(season.id);
+  await owner.seasons.getMany([season.id]);
   await owner.seasons.list();
   await owner.overrides.set({
     seriesId: series.id,
@@ -163,6 +166,8 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.metadataStates.markFetched('series', second.id, 'now');
   await owner.metadataStates.markFetched('series', second.id, 'now', 'hash');
   await owner.metadataStates.get('series', second.id);
+  await owner.metadataStates.unfetched('series');
+  await owner.series.getMany([series.id, second.id]);
   await owner.series.get(second.id);
   await owner.series.update(second.id, { note: 'n' });
   await owner.series.updateCatalog(second.id, { title: 'U' });
@@ -177,12 +182,14 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
     jellyfinSeasonId: null,
   });
   await owner.videogames.get(game.id);
+  await owner.videogames.getMany([game.id]);
   await owner.videogames.update(game.id, { rating: 4 });
   await owner.videogames.updateCatalog(game.id, { title: 'U' });
   await owner.videogames.override(game.id, { title: 'V' });
   await owner.videogames.overriddenFields(game.id);
   await owner.videogames.clearOverride(game.id, 'title');
   await owner.books.get(book.id);
+  await owner.books.getMany([book.id]);
   await owner.books.update(book.id, { rating: 4 });
   await owner.books.updateCatalog(book.id, { title: 'U' });
   await owner.books.override(book.id, { title: 'V' });

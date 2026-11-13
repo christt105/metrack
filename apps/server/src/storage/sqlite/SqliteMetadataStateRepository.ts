@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { UserScope } from '../../users/UserScope.js';
 import type { MediaType } from '@metrack/domain';
 import type { MetadataState } from '../../metadata/MetadataState.js';
+import type { CatalogType } from '../repositories/CatalogType.js';
 import type { MetadataStateRepository } from '../repositories/MetadataStateRepository.js';
 
 const TABLES: Record<MediaType, string> = {
@@ -31,6 +32,16 @@ export class SqliteMetadataStateRepository implements MetadataStateRepository {
       metadataHash: row.metadata_hash === null ? null : String(row.metadata_hash),
       editedFields: Object.keys(JSON.parse(String(row.overrides)) as Record<string, unknown>),
     };
+  }
+
+  async unfetched(type: CatalogType): Promise<number[]> {
+    return this.db
+      .prepare(
+        `SELECT c.id FROM ${type} c JOIN ${type}_entry e ON e.${type}_id = c.id AND e.user_id = ?
+         WHERE c.fetched_at IS NULL AND c.tmdb_id IS NOT NULL ORDER BY c.id`,
+      )
+      .all(this.scope.userId())
+      .map((row) => Number(row.id));
   }
 
   async markFetched(

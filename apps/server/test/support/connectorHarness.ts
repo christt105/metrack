@@ -1,7 +1,21 @@
-import type { CreatedToken, ConnectorSyncRequest, SyncPlan, TokenScope } from '@metrack/domain';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type {
+  CreatedToken,
+  ConnectorSyncRequest,
+  Movie,
+  Series,
+  SyncPlan,
+  TokenScope,
+} from '@metrack/domain';
 import { ApiTokenService } from '../../src/auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from '../../src/auth/SessionCookieAuthenticator.js';
 import { SessionService } from '../../src/auth/SessionService.js';
+import { createImageStore } from '../../src/images/createImageStore.js';
+import { MetadataCache } from '../../src/metadata/MetadataCache.js';
+import { movieLifecycle } from '../../src/metadata/movieLifecycle.js';
+import { seriesLifecycle } from '../../src/metadata/seriesLifecycle.js';
 import { MemoryContentVersions } from '../../src/site/MemoryContentVersions.js';
 import { ConnectorService } from '../../src/sync/ConnectorService.js';
 import { SyncApplier } from '../../src/sync/SyncApplier.js';
@@ -9,7 +23,9 @@ import { createSqliteRepositories } from '../../src/storage/sqlite/createSqliteR
 import { NO_SETTINGS } from '../../src/users/NO_SETTINGS.js';
 import { AsyncUserScope } from '../../src/users/AsyncUserScope.js';
 import { buildTestApp } from './buildTestApp.js';
+import { fakeFetch } from './fakeFetch.js';
 import { openTestDatabase } from './openTestDatabase.js';
+import { ScriptedMetadataSource } from './ScriptedMetadataSource.js';
 
 export const EMPTY_PLAN: SyncPlan = {
   movies: [],
@@ -20,8 +36,11 @@ export const EMPTY_PLAN: SyncPlan = {
   unmatchedTitles: [],
 };
 
-/** Owner (user 1, Jellyfin account "owner-jf"), a friend (2, "friend-jf") and a user with no Jellyfin account (3). */
-export async function connectorHarness() {
+/**
+ * Owner (user 1, Jellyfin account "owner-jf"), a friend (2, "friend-jf") and a user with no Jellyfin account (3). With
+ * `metadata`, movies and series get their metadata from scripted sources, returned as `sources`.
+ */
+export async function connectorHarness(options: { metadata?: boolean } = {}) {
   const db = openTestDatabase();
   const scope = new AsyncUserScope();
   const repositories = createSqliteRepositories(db, scope);
@@ -32,6 +51,30 @@ export async function connectorHarness() {
   const sessions = new SessionService(repositories.sessions, repositories.users);
   const tokens = new ApiTokenService(repositories.apiTokens, repositories.users);
   const versions = new MemoryContentVersions();
+  const sources = {
+    movie: new ScriptedMetadataSource<Movie>({ overview: 'Plot' }),
+    series: new ScriptedMetadataSource<Series>({ overview: 'Plot' }),
+  };
+  const metadata = options.metadata
+    ? new MetadataCache(
+        repositories.metadataStates,
+        createImageStore(
+          db,
+          join(mkdtempSync(join(tmpdir(), 'metrack-connector-')), 'images'),
+          fakeFetch({}).fetch,
+        ),
+      )
+    : undefined;
+  metadata?.register('movie', {
+    repository: repositories.movies,
+    source: sources.movie,
+    lifecycle: movieLifecycle,
+  });
+  metadata?.register('series', {
+    repository: repositories.series,
+    source: sources.series,
+    lifecycle: seriesLifecycle,
+  });
   const targets = {
     movies: repositories.movies,
     series: repositories.series,
@@ -54,6 +97,8 @@ export async function connectorHarness() {
       applier: new SyncApplier(repositories.transactions, targets),
       versions,
       scope,
+      states: repositories.metadataStates,
+      metadata,
     }),
   });
   const cookieFor = async (userId: number): Promise<string> => {
@@ -80,5 +125,16 @@ export async function connectorHarness() {
     contentVersion,
     plan: { ...EMPTY_PLAN, ...plan },
   });
-  return { db, app, scope, repositories, versions, cookieFor, createToken, call, syncBody };
+  return {
+    db,
+    app,
+    scope,
+    repositories,
+    versions,
+    sources,
+    cookieFor,
+    createToken,
+    call,
+    syncBody,
+  };
 }

@@ -3,6 +3,7 @@ import type { Logger } from '../notify/Logger.js';
 import type { SyncSources } from '../sync/SyncSources.js';
 import { CloudClient } from './CloudClient.js';
 import type { ConnectorConfig } from './ConnectorConfig.js';
+import { describeRefreshes } from './describeRefreshes.js';
 import { findConnectorUser } from './findConnectorUser.js';
 import { UserSync } from './UserSync.js';
 
@@ -15,7 +16,7 @@ export interface ConnectorCommandOptions {
 
 /**
  * One sync of one user, for the command line: `report` computes the plan and writes nothing, `sync` also applies
- * it the way a webhook does (re-planning on a 409, then refreshing the created titles). Returns the text to print.
+ * it the way a webhook does (re-planning on a 409, then refreshing the created titles and the ones without metadata). Returns the text to print.
  */
 export async function runConnectorCommand(
   config: ConnectorConfig,
@@ -34,12 +35,19 @@ export async function runConnectorCommand(
     options.apply,
   );
   const report = formatSyncReport(outcome.plan, options.verbose);
-  if (!options.apply) return report;
+  if (!options.apply) {
+    return outcome.unfetched === 0
+      ? report
+      : `${report}\n\n${outcome.unfetched} titles have no metadata yet; sync asks for it`;
+  }
   const applied = report.replace(
     '(nothing was written)',
     outcome.result ? '(applied)' : '(nothing to apply)',
   );
-  return outcome.result
-    ? `${applied}\n\nApplied: ${JSON.stringify(outcome.result)}\nRefreshed ${outcome.refreshed} of ${outcome.created} created titles`
-    : applied;
+  const refreshes = describeRefreshes(outcome);
+  return [
+    applied,
+    ...(outcome.result ? [`\nApplied: ${JSON.stringify(outcome.result)}`] : []),
+    ...(refreshes ? [refreshes.replace(/^r/, 'R')] : []),
+  ].join('\n');
 }

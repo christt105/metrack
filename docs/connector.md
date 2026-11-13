@@ -1,6 +1,6 @@
 # Home connector
 
-The Cloudflare Worker cannot reach Jellyfin or Jellystat, which live on the home network. The connector is the same image as the home server, started in another mode (`connector`), with no metrack database of its own. It reads Jellyfin and Jellystat, reads each user's state from the cloud, computes the sync plan at home with the same planner the server uses, and sends only the changes. The cloud checks that every id in the plan belongs to the user, writes it and fetches provider metadata for the titles it created. The sync rules (what counts as watched, how seasons are paired) are those described in the README.
+The Cloudflare Worker cannot reach Jellyfin or Jellystat, which live on the home network. The connector is the same image as the home server, started in another mode (`connector`), with no metrack database of its own. It reads Jellyfin and Jellystat, reads each user's state from the cloud, computes the sync plan at home with the same planner the server uses, and sends only the changes. The cloud checks that every id in the plan belongs to the user, reading only the titles the plan names, writes it and fetches provider metadata for the titles it created. The sync rules (what counts as watched, how seasons are paired) are those described in the README.
 
 The connector also works against a home server (`METRACK_URL=http://metrack:8097`), which is how to try it without a Worker.
 
@@ -69,7 +69,7 @@ In Jellyfin, install the Webhook plugin and add a Generic destination: URL `http
 ## 5. How it behaves
 
 - A webhook marks every user pending. Each user's sync starts after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet; a burst of webhooks is one run, and a webhook during a run triggers another afterwards.
-- A sync reads Jellyfin and Jellystat, reads the user's state and content version from the cloud, computes the plan, and posts it with that version. If the cloud answers 409 (the library changed meanwhile) it reads the state again and recomputes, up to three plans per attempt. A plan with no changes sends nothing. For every title the plan created it then asks the cloud to fetch the provider metadata, one request per title.
+- A sync reads Jellyfin and Jellystat, reads the user's state and content version from the cloud, computes the plan, and posts it with that version. If the cloud answers 409 (the library changed meanwhile) it reads the state again and recomputes, up to three plans per attempt. A plan with no changes sends nothing. Then, even when there was nothing to write, it asks the cloud to fetch the provider metadata of every title the plan created and of every title the state lists as never fetched (`unfetched`: movies and series with a TMDB id and no metadata yet), one request per title. So a title whose fetch failed, or that a sync cut short created, gets its metadata on a later sync; a title the provider keeps failing costs one request per sync until it works.
 - If the cloud is unreachable or answers an error, or Jellyfin or Jellystat fail, the user stays pending and is retried after 1, 5, 15 and then every 60 minutes, recomputing the plan each time (no plan is stored). After three failures in a row the connector notifies through ntfy, and once more when it works again. Pending users survive a restart, in `connector-state.json`.
 - Every `CONNECTOR_PASS_HOURS` hours (and at start) it asks the cloud who has a Jellyfin account and queues all of them.
 - Ratings, reviews, notes and images are never sent or touched; the cloud only accepts tracking fields and external ids.
@@ -81,7 +81,7 @@ docker exec metrack-connector node --disable-warning=ExperimentalWarning apps/se
 docker exec metrack-connector node --disable-warning=ExperimentalWarning apps/server/dist/cli.js connector sync --user <id|name|jellyfinUser>
 ```
 
-`metrack connector` with no subcommand is the long-lived service. `connector report` prints the plan for one user and writes nothing, like `metrack sync` does at home. `connector sync` computes and applies the plan for one user once and exits, the same path a webhook takes (re-planning on a 409, then refreshing the created titles), and prints the result. `--user` takes the user's id, name or Jellyfin account. Both need the same environment variables as the service.
+`metrack connector` with no subcommand is the long-lived service. `connector report` prints the plan for one user and writes nothing, like `metrack sync` does at home. `connector sync` computes and applies the plan for one user once and exits, the same path a webhook takes (re-planning on a 409, then refreshing the created titles and the ones without metadata), and prints the result; `report` also says how many titles have no metadata yet. `--user` takes the user's id, name or Jellyfin account. Both need the same environment variables as the service.
 
 ## What it does not do yet
 

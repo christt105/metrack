@@ -1,4 +1,4 @@
-import { planSync, type ConnectorUser, type SyncPlan } from '@metrack/domain';
+import { planSync, type ConnectorUser, type EntityRef, type SyncPlan } from '@metrack/domain';
 import type { Logger } from '../notify/Logger.js';
 import type { SyncSources } from '../sync/SyncSources.js';
 import { CloudClient } from './CloudClient.js';
@@ -13,7 +13,9 @@ const hasChanges = (plan: SyncPlan): boolean =>
 /**
  * Syncs one user at home: reads Jellyfin and Jellystat, reads the user's state from the cloud, plans the changes with
  * the same `planSync` the server uses, and sends the plan back. A 409 means the library changed since the state was
- * read, so the state is read again and the plan recomputed, up to `MAX_PLANS_PER_SYNC` times.
+ * read, so the state is read again and the plan recomputed, up to `MAX_PLANS_PER_SYNC` times. Applying also asks for
+ * the metadata of the titles the plan created and of the ones the cloud lists as never fetched, so a title whose
+ * fetch failed, or that a sync cut short created, gets it on a later sync.
  */
 export class UserSync {
   constructor(
@@ -28,7 +30,7 @@ export class UserSync {
     const { library, playback } = this.sources(user.jellyfinUser);
     const [{ movies, series }, plays] = await Promise.all([library.load(), playback.listPlays()]);
     for (let attempt = 1; ; attempt += 1) {
-      const { contentVersion, state } = await this.cloud.syncState(user.id);
+      const { contentVersion, state, unfetched } = await this.cloud.syncState(user.id);
       const plan = planSync({
         movies,
         series,
@@ -37,22 +39,15 @@ export class UserSync {
         today: this.now().toISOString().slice(0, 10),
         timeZone: this.timeZone,
       });
-      if (!apply || !hasChanges(plan)) return { plan, created: 0, refreshed: 0 };
+      const outcome = { plan, created: 0, unfetched: unfetched.length, refreshed: 0 };
+      if (!apply) return outcome;
+      if (!hasChanges(plan)) {
+        return { ...outcome, refreshed: await this.refresh(user.id, unfetched) };
+      }
       try {
         const { result, created } = await this.cloud.sync(user.id, { contentVersion, plan });
-        let refreshed = 0;
-        for (const ref of created) {
-          try {
-            await this.cloud.refresh(user.id, ref);
-            refreshed += 1;
-          } catch (error) {
-            if (error instanceof CloudError && error.status === 501) break;
-            this.logger.error(
-              `Refreshing ${ref.type} ${ref.id} of user ${user.id} failed: ${String(error)}`,
-            );
-          }
-        }
-        return { plan, result, created: created.length, refreshed };
+        const refreshed = await this.refresh(user.id, [...created, ...unfetched]);
+        return { ...outcome, result, created: created.length, refreshed };
       } catch (error) {
         if (
           !(error instanceof CloudError && error.status === 409) ||
@@ -62,5 +57,28 @@ export class UserSync {
         }
       }
     }
+  }
+
+  /** Asks for the metadata of each title, one request each; returns how many got it. */
+  private async refresh(userId: number, refs: EntityRef[]): Promise<number> {
+    let refreshed = 0;
+    for (const ref of refs) {
+      try {
+        const result = await this.cloud.refresh(userId, ref);
+        if (result.outcome === 'failed') {
+          this.logger.error(
+            `Refreshing ${ref.type} ${ref.id} of user ${userId} failed: ${result.error}`,
+          );
+        } else {
+          refreshed += 1;
+        }
+      } catch (error) {
+        if (error instanceof CloudError && error.status === 501) break;
+        this.logger.error(
+          `Refreshing ${ref.type} ${ref.id} of user ${userId} failed: ${String(error)}`,
+        );
+      }
+    }
+    return refreshed;
   }
 }

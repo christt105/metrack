@@ -40,8 +40,9 @@ async function setup(
     init: RequestInit | undefined,
     next: () => Response | Promise<Response>,
   ) => Promise<Response>,
+  options: { metadata?: boolean } = {},
 ) {
-  const harness = await connectorHarness();
+  const harness = await connectorHarness(options);
   const { secret } = await harness.createToken(1, 'connector');
   const requests: string[] = [];
   const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -143,6 +144,49 @@ describe('UserSync against the home API', () => {
     expect(outcome.refreshed).toBe(0);
     expect(requests.filter((request) => request.includes('/refresh/'))).toHaveLength(1);
     expect(describeUserSync(outcome)).toContain('refreshed 0 of 1');
+  });
+
+  it('asks again on later syncs for the metadata a cut or a failure left out, even with nothing to write', async () => {
+    let refreshDown = true;
+    const { sync, requests, sources } = await setup(
+      async (url, init, next) =>
+        refreshDown && url.includes('/refresh/')
+          ? new Response('{"error":"boom"}', { status: 500 })
+          : next(),
+      { metadata: true },
+    );
+    const first = await sync.run(FRIEND, true);
+    expect(first).toMatchObject({ created: 1, unfetched: 0, refreshed: 0 });
+    refreshDown = false;
+    requests.length = 0;
+    const second = await sync.run(FRIEND, true);
+    expect(second).toMatchObject({ created: 0, unfetched: 1, refreshed: 1 });
+    expect(second.result).toBeUndefined();
+    expect(requests.filter((request) => request.includes('/refresh/movie/'))).toHaveLength(1);
+    expect(sources.movie.fetched).toEqual(['The Matrix']);
+    expect(describeUserSync(second)).toBe(
+      'sync found nothing to write, refreshed 1 of 1 titles without metadata',
+    );
+    requests.length = 0;
+    const third = await sync.run(FRIEND, true);
+    expect(third).toMatchObject({ unfetched: 0, refreshed: 0 });
+    expect(requests).toEqual(['GET /api/connector/users/2/sync-state']);
+  });
+
+  it('does not count a title the provider failed to fetch, and retries it next time', async () => {
+    const { sync, sources, errors } = await setup(undefined, { metadata: true });
+    sources.movie.failing.add('The Matrix');
+    const first = await sync.run(FRIEND, true);
+    expect(first).toMatchObject({ created: 1, refreshed: 0 });
+    expect(errors[0]).toContain('provider down');
+    sources.movie.failing.clear();
+    expect(await sync.run(FRIEND, true)).toMatchObject({ unfetched: 1, refreshed: 1 });
+  });
+
+  it('only counts the titles without metadata in a report', async () => {
+    const { sync, requests } = await setup(undefined, { metadata: true });
+    await sync.run(FRIEND, false);
+    expect(requests.some((request) => request.includes('/refresh/'))).toBe(false);
   });
 
   it('is refused for a user other than the personal token owner', async () => {
