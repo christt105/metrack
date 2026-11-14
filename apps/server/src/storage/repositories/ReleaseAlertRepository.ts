@@ -6,6 +6,8 @@ export interface ReleaseAlertRepository {
   /** Records the alert. Resolves to false when that subject and kind were already recorded. */
   record(alert: NewReleaseAlert): Promise<boolean>;
   keysFor(subjectType: AlertSubjectType, subjectId: number): Promise<AlertKey[]>;
+  /** The keys of every alert recorded for the user, in one read. */
+  allKeys(): Promise<AlertKey[]>;
   /** Newest first. */
   list(limit?: number): Promise<ReleaseAlert[]>;
 }

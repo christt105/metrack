@@ -30,6 +30,7 @@ import { IgdbClient } from './providers/igdb/IgdbClient.js';
 import { OpenLibraryClient } from './providers/openlibrary/OpenLibraryClient.js';
 import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js';
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
+import { HomeReleaseStore } from './alerts/HomeReleaseStore.js';
 import { ReleaseWatcher } from './alerts/ReleaseWatcher.js';
 import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
 import { UserReleaseWatchers } from './alerts/UserReleaseWatchers.js';
@@ -114,11 +115,13 @@ if (tmdb) {
         () => jobs.usersWith((settings) => settings.ntfyTopic),
         (userId) =>
           new ReleaseWatcher({
-            movies,
-            series,
-            seasons,
-            overrides,
-            alerts: releaseAlerts,
+            store: new HomeReleaseStore({
+              movies,
+              series,
+              seasons,
+              overrides,
+              alerts: releaseAlerts,
+            }),
             source,
             notifier: jobs.notifier(userId),
             logger: jobs.logger(userId),
@@ -244,6 +247,7 @@ const connector = new ConnectorService({
     unlinked,
   }),
   versions: contentVersions,
+  alerts: releaseAlerts,
   scope,
   states: metadataStates,
   metadata: metadataCache,

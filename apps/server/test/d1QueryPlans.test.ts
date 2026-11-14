@@ -130,6 +130,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
     sentAt: 'now',
   });
   await owner.releaseAlerts.keysFor('movie', movie.id);
+  await owner.releaseAlerts.allKeys();
   await owner.releaseAlerts.list();
 
   await owner.images.insert({

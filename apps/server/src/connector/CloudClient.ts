@@ -6,6 +6,12 @@ import type {
   EntityRef,
   RefreshResult,
 } from '@metrack/domain';
+import type { AlertUser } from '../alerts/AlertUser.js';
+import type { ReconcileSeasonsRequest } from '../alerts/ReconcileSeasonsRequest.js';
+import type { ReconcileSeasonsResponse } from '../alerts/ReconcileSeasonsResponse.js';
+import type { RecordAlertsRequest } from '../alerts/RecordAlertsRequest.js';
+import type { RecordAlertsResponse } from '../alerts/RecordAlertsResponse.js';
+import type { ReleaseState } from '../alerts/ReleaseState.js';
 import type { FetchFn } from '../http/FetchFn.js';
 import { CloudError } from './CloudError.js';
 
@@ -33,6 +39,25 @@ export class CloudClient {
 
   refresh(userId: number, ref: EntityRef): Promise<RefreshResult> {
     return this.request('POST', `/users/${userId}/refresh/${ref.type}/${ref.id}`);
+  }
+
+  alertUsers(): Promise<AlertUser[]> {
+    return this.request('GET', '/alert-users');
+  }
+
+  releaseState(userId: number): Promise<ReleaseState> {
+    return this.request('GET', `/users/${userId}/release-state`);
+  }
+
+  reconcileSeasons(
+    userId: number,
+    body: ReconcileSeasonsRequest,
+  ): Promise<ReconcileSeasonsResponse> {
+    return this.request('POST', `/users/${userId}/seasons`, body);
+  }
+
+  recordAlerts(userId: number, body: RecordAlertsRequest): Promise<RecordAlertsResponse> {
+    return this.request('POST', `/users/${userId}/release-alerts`, body);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

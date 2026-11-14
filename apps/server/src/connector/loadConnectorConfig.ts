@@ -1,4 +1,5 @@
 import { loadSyncConfig } from '../sync/loadSyncConfig.js';
+import type { ReleaseAlertsConfig } from './ReleaseAlertsConfig.js';
 import type { ConnectorConfig } from './ConnectorConfig.js';
 
 export interface ConnectorConfigResult {
@@ -8,6 +9,55 @@ export interface ConnectorConfigResult {
 }
 
 const DEFAULT_PASS_HOURS = 6;
+const DEFAULT_ALERTS_NTFY_URL = 'https://ntfy.sh';
+const DEFAULT_ALERTS_FROM_HOUR = 9;
+const DEFAULT_ALERTS_TICK_MINUTES = 5;
+const DEFAULT_ALERTS_DAILY_LIMIT = 200;
+
+function numberFrom(
+  env: Record<string, string | undefined>,
+  name: string,
+  fallback: number,
+  valid: (value: number) => boolean,
+): number {
+  const value = Number(env[name] || fallback);
+  if (!Number.isFinite(value) || !valid(value)) throw new Error(`Invalid ${name}: ${env[name]}`);
+  return value;
+}
+
+function loadReleaseAlerts(
+  env: Record<string, string | undefined>,
+): ReleaseAlertsConfig | undefined {
+  if (env.CONNECTOR_RELEASE_ALERTS !== 'true') return undefined;
+  const ntfyUrl = env.CONNECTOR_RELEASE_NTFY_URL || DEFAULT_ALERTS_NTFY_URL;
+  try {
+    new URL(ntfyUrl);
+  } catch {
+    throw new Error(`Invalid CONNECTOR_RELEASE_NTFY_URL: ${ntfyUrl}`);
+  }
+  return {
+    ntfyUrl,
+    notifyFromHour: numberFrom(
+      env,
+      'CONNECTOR_RELEASE_FROM_HOUR',
+      DEFAULT_ALERTS_FROM_HOUR,
+      (v) => Number.isInteger(v) && v >= 0 && v <= 23,
+    ),
+    tickMs:
+      numberFrom(
+        env,
+        'CONNECTOR_RELEASE_TICK_MINUTES',
+        DEFAULT_ALERTS_TICK_MINUTES,
+        (v) => v >= 1 && v <= 1440,
+      ) * 60_000,
+    dailyLimit: numberFrom(
+      env,
+      'CONNECTOR_RELEASE_DAILY_LIMIT',
+      DEFAULT_ALERTS_DAILY_LIMIT,
+      (v) => Number.isInteger(v) && v >= 1,
+    ),
+  };
+}
 
 /** Reads the connector settings from the environment. `defaultDataDir` is used when `CONNECTOR_DATA_DIR` is not set. */
 export function loadConnectorConfig(
@@ -36,6 +86,7 @@ export function loadConnectorConfig(
       sync,
       dataDir: env.CONNECTOR_DATA_DIR || defaultDataDir,
       passIntervalMs: hours * 3_600_000,
+      releaseAlerts: loadReleaseAlerts(env),
     },
   };
 }

@@ -38,6 +38,13 @@ export class SqliteReleaseAlertRepository implements ReleaseAlertRepository {
       .map(alertKeyFromRow);
   }
 
+  async allKeys(): Promise<AlertKey[]> {
+    return this.db
+      .prepare('SELECT subject_type, subject_id, kind FROM release_alert WHERE user_id = ?')
+      .all(this.scope.userId())
+      .map(alertKeyFromRow);
+  }
+
   async list(limit = 100): Promise<ReleaseAlert[]> {
     return this.db
       .prepare(

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@metrack/domain';
+import { HomeReleaseStore } from '../src/alerts/HomeReleaseStore.js';
 import { ReleaseWatcher } from '../src/alerts/ReleaseWatcher.js';
 import { UserReleaseWatchers } from '../src/alerts/UserReleaseWatchers.js';
 import { buildTestApp } from './support/buildTestApp.js';
@@ -366,8 +367,7 @@ describe('per-user release alerts', () => {
         const notifier = new RecordingNotifier();
         notifiers.set(userId, notifier);
         return new ReleaseWatcher({
-          ...repos,
-          alerts: repos.releaseAlerts,
+          store: new HomeReleaseStore({ ...repos, alerts: repos.releaseAlerts }),
           source,
           notifier,
           logger: jobs.logger(userId),

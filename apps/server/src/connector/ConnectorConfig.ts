@@ -1,3 +1,4 @@
+import type { ReleaseAlertsConfig } from './ReleaseAlertsConfig.js';
 import type { SyncConfig } from '../sync/SyncConfig.js';
 
 export interface ConnectorConfig {
@@ -11,4 +12,6 @@ export interface ConnectorConfig {
   dataDir: string;
   /** Time between full passes over every user, whether a webhook arrived or not. */
   passIntervalMs: number;
+  /** Release alerts from home. Undefined when `CONNECTOR_RELEASE_ALERTS` is not `true`. */
+  releaseAlerts?: ReleaseAlertsConfig;
 }

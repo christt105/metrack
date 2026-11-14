@@ -83,6 +83,7 @@ export function createWorkerApp(
       targets,
       applier: new SyncApplier(new SequentialTransactionRunner(), targets),
       versions: contentVersions,
+      alerts: repositories.releaseAlerts,
       scope,
       states: repositories.metadataStates,
       metadata: metadataCache,
