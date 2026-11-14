@@ -61,12 +61,7 @@ export function runConnector(
   const server = serve({
     fetch: createConnectorApp({
       secret: config.sync.webhookSecret ? new WebhookSecret(config.sync.webhookSecret) : undefined,
-      onWebhook: async () => {
-        const known = pass.knownUsers();
-        if (known.length === 0) return (await pass.queueUsers()).length;
-        queue.markAll(known);
-        return known.length;
-      },
+      onWebhook: () => pass.queueUsersForWebhook(),
     }).fetch,
     port: app.port,
     hostname: app.host,
