@@ -1,11 +1,11 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { ensureOwnedDir } from '../files/ensureOwnedDir.js';
 import { matchParentOwner } from '../files/matchParentOwner.js';
 import { checkIntegrity } from '../storage/checkIntegrity.js';
 import type { BackupCopyConfig } from './BackupCopyConfig.js';
 import type { BackupCopyResult } from './BackupCopyResult.js';
+import { listedImages } from './listedImages.js';
 import type { BackupService } from './BackupService.js';
 
 const DB_FILE = 'metrack.db';
@@ -144,21 +144,6 @@ export class BackupCopier {
       rmSync(join(this.config.dir, DATABASES_DIR, `${name}.db`), { force: true });
     }
     return removed;
-  }
-}
-
-function listedImages(databasePath: string): string[] | undefined {
-  let db: DatabaseSync | undefined;
-  try {
-    db = new DatabaseSync(databasePath, { readOnly: true });
-    return db
-      .prepare('SELECT hash, extension FROM image')
-      .all()
-      .map((row) => `${String(row.hash)}.${String(row.extension)}`);
-  } catch {
-    return undefined;
-  } finally {
-    db?.close();
   }
 }
 
