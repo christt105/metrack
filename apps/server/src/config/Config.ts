@@ -1,6 +1,7 @@
 import type { BackupConfig } from '../backup/BackupConfig.js';
 import type { ImageLimits } from '../images/ImageLimits.js';
 import type { AlertsConfig } from './AlertsConfig.js';
+import type { GoogleLoginConfig } from './GoogleLoginConfig.js';
 import type { NtfyConfig } from '../notify/NtfyConfig.js';
 import type { NtfyServer } from '../notify/NtfyServer.js';
 import type { IgdbClientOptions } from '../providers/igdb/IgdbClientOptions.js';
@@ -18,6 +19,8 @@ export interface Config {
   openLibraryLanguage: string;
   steamGridDbToken: string | undefined;
   igdb?: IgdbClientOptions;
+  /** Offers "Sign in with Google" to users that already exist (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET). */
+  google?: GoogleLoginConfig;
   backup: BackupConfig;
   images: ImageLimits;
   alerts: AlertsConfig;

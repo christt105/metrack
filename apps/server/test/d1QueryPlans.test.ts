@@ -19,6 +19,11 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.users.get(created.id);
   await owner.users.list();
   await owner.users.setRole(created.id, 'trusted');
+  await owner.users.findByEmail('third@example.com');
+  await owner.users.findByGoogleSub('sub');
+  await owner.users.linkGoogleSub(created.id, 'sub');
+  await owner.users.setGoogleSub(created.id, null);
+  await owner.users.googleSubOf(created.id);
   const settings = {
     jellyfinUser: 'j',
     ntfyTopic: null,

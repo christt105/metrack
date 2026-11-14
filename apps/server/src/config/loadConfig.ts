@@ -54,6 +54,14 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   if (env.IGDB_CLIENT_ID && env.IGDB_CLIENT_SECRET) {
     config.igdb = { clientId: env.IGDB_CLIENT_ID, clientSecret: env.IGDB_CLIENT_SECRET };
   }
+  if (env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_SECRET) {
+    if (!env.GOOGLE_CLIENT_ID)
+      throw new Error('GOOGLE_CLIENT_SECRET is set but GOOGLE_CLIENT_ID is not');
+    if (!env.GOOGLE_CLIENT_SECRET) {
+      throw new Error('GOOGLE_CLIENT_ID is set but GOOGLE_CLIENT_SECRET is not');
+    }
+    config.google = { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET };
+  }
   if (env.NTFY_URL) {
     config.ntfyServer = { url: env.NTFY_URL, token: env.NTFY_TOKEN || undefined };
     if (env.NTFY_TOPIC) config.ntfy = { ...config.ntfyServer, topic: env.NTFY_TOPIC };

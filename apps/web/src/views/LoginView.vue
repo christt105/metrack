@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { User } from '@metrack/domain';
 import { useRoute, useRouter } from 'vue-router';
 import ErrorNotice from '../components/ErrorNotice.vue';
@@ -17,6 +17,18 @@ const { data: users, error, loading } = useLoader(() => api.devUsers());
 const busy = ref(false);
 const signInError = ref<unknown>(null);
 const accessToken = ref('');
+const { data: googleAvailable } = useLoader(async () => {
+  try {
+    return (await api.health()).features.googleLogin;
+  } catch {
+    return false;
+  }
+});
+const googleError = computed(() => {
+  const code = route.query.error;
+  if (code === 'google_no_account') return messages.login.googleNoAccount;
+  return code === 'google_failed' ? messages.login.googleFailed : null;
+});
 
 async function signIn(user: User): Promise<void> {
   busy.value = true;
@@ -51,6 +63,10 @@ async function signInWithToken(): Promise<void> {
     <h1>{{ messages.login.title }}</h1>
     <ErrorNotice :error="error" />
     <ErrorNotice :error="signInError" />
+    <p v-if="googleError" class="notice error" role="alert">{{ googleError }}</p>
+    <a v-if="googleAvailable" class="google" href="/api/auth/google/start">{{
+      messages.login.googleButton
+    }}</a>
     <p v-if="loading && users === null" class="muted">{{ messages.common.loading }}</p>
     <template v-else-if="users">
       <p class="muted">{{ messages.login.devHint }}</p>
@@ -102,6 +118,16 @@ ul button {
   gap: 12px;
   width: 100%;
   text-align: left;
+}
+
+.google {
+  display: block;
+  margin: 12px 0;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  text-align: center;
+  text-decoration: none;
 }
 
 .token {

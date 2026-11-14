@@ -11,9 +11,9 @@ const health = {
   status: 'ok',
   appVersion: 'dev',
   schemaVersion: 3,
-  features: { backups: true, sync: true },
+  features: { backups: true, sync: true, googleLogin: false },
 };
-const cloudHealth = { ...health, features: { backups: false, sync: false } };
+const cloudHealth = { ...health, features: { backups: false, sync: false, googleLogin: false } };
 const existing: BackupInfo = {
   name: 'metrack-20261001T000000000Z',
   createdAt: '2026-10-01T00:00:00.000Z',

@@ -26,10 +26,16 @@ const connectorScopeSql = readFileSync(
   'utf8',
 );
 
+const googleLoginSql = readFileSync(
+  new URL('../d1/migrations/0004_google_login.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
   db.exec(connectorScopeSql);
+  db.exec(googleLoginSql);
   return db;
 }
 

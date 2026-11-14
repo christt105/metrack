@@ -6,6 +6,7 @@ import type { ApiEnv } from '../api/ApiEnv.js';
 import { buildApp } from '../api/buildApp.js';
 import { ApiTokenService } from '../auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from '../auth/SessionCookieAuthenticator.js';
+import { GoogleSignIn } from '../auth/google/GoogleSignIn.js';
 import { SessionService } from '../auth/SessionService.js';
 import { D1ContentVersions } from '../storage/d1/D1ContentVersions.js';
 import { D1PublicRenderCache } from '../storage/d1/D1PublicRenderCache.js';
@@ -46,7 +47,13 @@ export function createWorkerApp(
     migrationRunner: new D1SchemaVersion(env.DB),
     authenticator: new SessionCookieAuthenticator(sessions),
     scope,
-    auth: { sessions, users: repositories.users, devLogin: config.devLogin },
+    auth: {
+      sessions,
+      users: repositories.users,
+      devLogin: config.devLogin,
+      google: config.google && new GoogleSignIn(config.google, repositories.users),
+      logger,
+    },
     tokens: new ApiTokenService(repositories.apiTokens, repositories.users),
     logger,
     imageStore,

@@ -129,6 +129,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       {
         backups: deps.backup !== undefined,
         sync: deps.sync !== undefined,
+        googleLogin: deps.auth?.google !== undefined,
       },
     );
     return jsonResponse(report, report.status === 'ok' ? 200 : 503);

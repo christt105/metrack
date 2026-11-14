@@ -7,3 +7,5 @@ STEAMGRIDDB_TOKEN=
 # Local only: lets anyone sign in as any user without a password (the web app has no other sign-in yet).
 # Never set it on a deployed Worker.
 # DEV_LOGIN=true
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=

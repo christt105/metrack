@@ -13,6 +13,7 @@ import {
 import { openAccountTools } from '../account/openAccountTools.js';
 import type { FetchFn } from '../http/FetchFn.js';
 import type { NtfyServer } from '../notify/NtfyServer.js';
+import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import { MigrationRunner } from '../storage/MigrationRunner.js';
 import { migrations } from '../storage/migrations/index.js';
 import { openDatabase } from '../storage/sqlite/openDatabase.js';
@@ -43,6 +44,8 @@ export interface UsersCommand {
     /** The public page intro and description; an empty string clears one. */
     intro?: string;
     description?: string;
+    /** The Google account identifier users may sign in with; an empty string unlinks it. */
+    googleSub?: string;
   };
   /**
    * Schedules the user's account for deletion after the grace period, or with `cancel` withdraws the request.
@@ -57,7 +60,7 @@ export interface UsersCommand {
 }
 
 /**
- * Runs `metrack users` (list), `metrack users add <name> [--email <address>]`, `metrack users set <id> [...]`,
+ * Runs `metrack users` (list), `metrack users add <name> [--email <address>]`, `metrack users set <id> [...]` (`--google-sub <sub>` links a Google account, an empty value unlinks it),
  * `metrack users delete <id> [--cancel]` and `metrack users export <id> <file>`.
  */
 export async function runUsersCommand(command: UsersCommand): Promise<string> {
@@ -73,7 +76,8 @@ export async function runUsersCommand(command: UsersCommand): Promise<string> {
     const accounts = new SqliteAccountRepository(db);
     if (command.add) return `Created ${describe(await users.create(command.add))}`;
     if (command.set) {
-      const { userId, changes, role, handle, publicPage, intro, description } = command.set;
+      const { userId, changes, role, handle, publicPage, intro, description, googleSub } =
+        command.set;
       let user = await users.get(userId);
       if (!user) throw new Error(`There is no user ${userId}`);
       if (role !== undefined && !ASSIGNABLE_ROLES.includes(role as UserRole)) {
@@ -102,7 +106,8 @@ export async function runUsersCommand(command: UsersCommand): Promise<string> {
       ) {
         await changePublicPage(profiles, userId, { handle, publicPage, intro, description });
       }
-      return `${describe(user)}\n${describeSettings(result.settings)}\n${describePublicPage(await profiles.get(userId))}`;
+      if (googleSub !== undefined) await changeGoogleLink(users, userId, googleSub.trim());
+      return `${describe(user)}${googleMark(await users.googleSubOf(userId))}\n${describeSettings(result.settings)}\n${describePublicPage(await profiles.get(userId))}`;
     }
     const stored = new Map((await settings.list()).map((entry) => [entry.userId, entry.settings]));
     const lines: string[] = [];
@@ -111,12 +116,31 @@ export async function runUsersCommand(command: UsersCommand): Promise<string> {
       const requestedAt = await accounts.deletionRequestedAt(user.id);
       const deletion =
         requestedAt === null ? '' : `  deletion on ${scheduleOf(requestedAt).deleteAt}`;
-      lines.push(`${describe(user)}  ${jobs}${deletion}`);
+      lines.push(
+        `${describe(user)}${googleMark(await users.googleSubOf(user.id))}  ${jobs}${deletion}`,
+      );
     }
     return lines.join('\n');
   } finally {
     db.close();
   }
+}
+
+async function changeGoogleLink(
+  users: UserRepository,
+  userId: number,
+  googleSub: string,
+): Promise<void> {
+  if (googleSub === '') return users.setGoogleSub(userId, null);
+  const owner = await users.findByGoogleSub(googleSub);
+  if (owner && owner.id !== userId) {
+    throw new Error(`That Google account is already linked to user ${owner.id}`);
+  }
+  await users.setGoogleSub(userId, googleSub);
+}
+
+function googleMark(sub: string | null): string {
+  return sub === null ? '' : '  [google]';
 }
 
 async function runDelete(

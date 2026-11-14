@@ -1,7 +1,7 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryHistory } from 'vue-router';
-import type { User } from '@metrack/domain';
+import type { HealthReport, User } from '@metrack/domain';
 import { ApiClient } from '../src/api/ApiClient';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { Session } from '../src/auth/Session';
@@ -109,6 +109,21 @@ describe('LoginView', () => {
     const { wrapper } = await mountLogin({ devUsers: async () => null });
     expect(wrapper.text()).toContain('Sign in with an access token');
     expect(wrapper.findAll('button').map((b) => b.text())).toEqual(['Sign in']);
+  });
+
+  it('offers the Google link only when the server has it, and explains a refusal', async () => {
+    const health = (googleLogin: boolean) => async () =>
+      ({ features: { backups: false, sync: false, googleLogin } }) as HealthReport;
+    const off = await mountLogin({ devUsers: async () => null, health: health(false) });
+    expect(off.wrapper.find('a.google').exists()).toBe(false);
+    const on = await mountLogin({ devUsers: async () => null, health: health(true) });
+    expect(on.wrapper.find('a.google').attributes('href')).toBe('/api/auth/google/start');
+    await on.router.push({ name: 'login', query: { error: 'google_no_account' } });
+    await flushPromises();
+    expect(on.wrapper.text()).toContain('There is no metrack account for that Google account');
+    await on.router.push({ name: 'login', query: { error: 'google_failed' } });
+    await flushPromises();
+    expect(on.wrapper.text()).toContain('Signing in with Google did not work');
   });
 
   it('signs in with an access token and goes on to the next page', async () => {
