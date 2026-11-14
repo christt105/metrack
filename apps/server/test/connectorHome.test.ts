@@ -139,6 +139,56 @@ describe('loadConnectorConfig', () => {
     expect(loadConnectorConfig(env, '/data').config?.passIntervalMs).toBe(6 * 3_600_000);
   });
 
+  it('leaves release alerts off unless CONNECTOR_RELEASE_ALERTS is true', () => {
+    expect(loadConnectorConfig(env, '/data').config?.releaseAlerts).toBeUndefined();
+    expect(
+      loadConnectorConfig({ ...env, CONNECTOR_RELEASE_ALERTS: 'yes' }, '/data').config
+        ?.releaseAlerts,
+    ).toBeUndefined();
+  });
+
+  it('reads the release alert settings with their defaults', () => {
+    expect(
+      loadConnectorConfig({ ...env, CONNECTOR_RELEASE_ALERTS: 'true' }, '/data').config
+        ?.releaseAlerts,
+    ).toEqual({
+      ntfyUrl: 'https://ntfy.sh',
+      notifyFromHour: 9,
+      tickMs: 300_000,
+      dailyLimit: 200,
+    });
+    expect(
+      loadConnectorConfig(
+        {
+          ...env,
+          CONNECTOR_RELEASE_ALERTS: 'true',
+          CONNECTOR_RELEASE_NTFY_URL: 'https://ntfy.example.com',
+          CONNECTOR_RELEASE_FROM_HOUR: '10',
+          CONNECTOR_RELEASE_TICK_MINUTES: '2',
+          CONNECTOR_RELEASE_DAILY_LIMIT: '50',
+        },
+        '/data',
+      ).config?.releaseAlerts,
+    ).toEqual({
+      ntfyUrl: 'https://ntfy.example.com',
+      notifyFromHour: 10,
+      tickMs: 120_000,
+      dailyLimit: 50,
+    });
+  });
+
+  it('refuses bad release alert settings', () => {
+    const on = { ...env, CONNECTOR_RELEASE_ALERTS: 'true' };
+    for (const bad of [
+      { CONNECTOR_RELEASE_FROM_HOUR: '24' },
+      { CONNECTOR_RELEASE_TICK_MINUTES: '0' },
+      { CONNECTOR_RELEASE_DAILY_LIMIT: 'many' },
+      { CONNECTOR_RELEASE_NTFY_URL: 'nope' },
+    ]) {
+      expect(() => loadConnectorConfig({ ...on, ...bad }, '/d')).toThrow('CONNECTOR_RELEASE_');
+    }
+  });
+
   it('refuses a bad address or interval', () => {
     expect(() => loadConnectorConfig({ ...env, METRACK_URL: 'nope' }, '/d')).toThrow('METRACK_URL');
     expect(() => loadConnectorConfig({ ...env, CONNECTOR_PASS_HOURS: '0' }, '/d')).toThrow(
@@ -151,8 +201,14 @@ describe('ConnectorStateStore', () => {
   it('reads empty when there is no file or it is unreadable, and round-trips what it writes', () => {
     const dir = mkdtempSync(join(tmpdir(), 'connector-'));
     const store = new ConnectorStateStore(dir);
-    expect(store.read()).toEqual({ users: [], pending: {} });
-    store.write({ users: [1], pending: { '1': { dueAt: 5, failures: 2 } } });
-    expect(store.read()).toEqual({ users: [1], pending: { '1': { dueAt: 5, failures: 2 } } });
+    const empty = { users: [], pending: {}, alertsSent: { day: '', count: 0 } };
+    expect(store.read()).toEqual(empty);
+    const saved = {
+      users: [1],
+      pending: { '1': { dueAt: 5, failures: 2 } },
+      alertsSent: { day: '2026-11-14', count: 3 },
+    };
+    store.write(saved);
+    expect(store.read()).toEqual(saved);
   });
 });

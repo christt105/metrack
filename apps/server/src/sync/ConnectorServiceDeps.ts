@@ -2,6 +2,7 @@ import type { MetadataCache } from '../metadata/MetadataCache.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
 import type { ContentVersions } from '../site/ContentVersions.js';
 import type { MetadataStateRepository } from '../storage/repositories/MetadataStateRepository.js';
+import type { ReleaseAlertRepository } from '../storage/repositories/ReleaseAlertRepository.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import type { UserScope } from '../users/UserScope.js';
@@ -14,6 +15,7 @@ export interface ConnectorServiceDeps {
   targets: SyncTargets;
   applier: SyncApplier;
   versions: ContentVersions;
+  alerts: ReleaseAlertRepository;
   scope: UserScope;
   /** Lists the titles never fetched, for the types `metadata` supports. */
   states: MetadataStateRepository;

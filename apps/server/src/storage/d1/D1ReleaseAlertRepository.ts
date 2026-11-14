@@ -39,6 +39,15 @@ export class D1ReleaseAlertRepository implements ReleaseAlertRepository {
     return rows.map(alertKeyFromRow);
   }
 
+  async allKeys(): Promise<AlertKey[]> {
+    const rows = await queryAll(
+      this.db,
+      'SELECT subject_type, subject_id, kind FROM release_alert WHERE user_id = ?',
+      this.scope.userId(),
+    );
+    return rows.map(alertKeyFromRow);
+  }
+
   async list(limit = 100): Promise<ReleaseAlert[]> {
     const rows = await queryAll(
       this.db,

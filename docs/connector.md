@@ -60,6 +60,11 @@ The service joins the Jellystat network to reach its Postgres by container name.
 | `SYNC_TIME_ZONE`                                              | `Europe/Madrid`           | Time zone that decides on which day a viewing falls                                       |
 | `TMDB_API_KEY`, `TMDB_LANGUAGE`                               | unset, `es-ES`            | Optional: pairs series Jellyfin only knows by TheTVDB id (the cloud fetches the metadata) |
 | `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`                        | unset                     | Where the connector reports a run of failures                                             |
+| `CONNECTOR_RELEASE_ALERTS`                                    | unset (off)               | `true` turns on the release alerts of section 7                                           |
+| `CONNECTOR_RELEASE_NTFY_URL`                                  | `https://ntfy.sh`         | Server the users' topics live on (no token), separate from `NTFY_URL`                     |
+| `CONNECTOR_RELEASE_FROM_HOUR`                                 | 9                         | Madrid hour before which nothing is checked or sent                                       |
+| `CONNECTOR_RELEASE_TICK_MINUTES`                              | 5                         | Minutes between looks at which titles are due                                             |
+| `CONNECTOR_RELEASE_DAILY_LIMIT`                               | 200                       | Alerts sent per UTC day before stopping, to stay under ntfy.sh's 250 per IP               |
 | `PORT`, `HOST`                                                | 8097, `0.0.0.0`           | Where the webhook listens                                                                 |
 
 ## 4. Jellyfin webhook
@@ -83,6 +88,15 @@ docker exec metrack-connector node --disable-warning=ExperimentalWarning apps/se
 
 `metrack connector` with no subcommand is the long-lived service. `connector report` prints the plan for one user and writes nothing, like `metrack sync` does at home. `connector sync` computes and applies the plan for one user once and exits, the same path a webhook takes (re-planning on a 409, then refreshing the created titles and the ones without metadata), and prints the result; `report` also says how many titles have no metadata yet. `--user` takes the user's id, name or Jellyfin account. Both need the same environment variables as the service.
 
+## 7. Release alerts
+
+With `CONNECTOR_RELEASE_ALERTS=true` (and `TMDB_API_KEY`) the connector also checks the followed movies and series of every cloud user with an ntfy topic and sends them their release alerts, so the Worker does no TMDB work. It is off by default: while the home server (`ALERTS_ENABLED`) still sends alerts to the same topics, leave it off so no topic gets two. A user must be given an ntfy topic in their settings; the connector's own `NTFY_*` is only for its failure reports.
+
+- The same logic as the home server's: each title is looked at at an interval that depends on how close its release is, TMDB is asked from home, the announced seasons are created in the cloud (`POST /api/connector/users/{id}/seasons`) and each alert is sent once. Alerts use Europe/Madrid for everyone and nothing is checked or sent before `CONNECTOR_RELEASE_FROM_HOUR` (9).
+- Next-check times are kept in memory. The cloud is asked for a user's state (`GET /api/connector/users/{id}/release-state`, one read) only when one of their titles is due, and every six hours to notice new follows and users; a tick with nothing due makes no cloud request. After a restart every title is checked once.
+- Each alert is posted to the user's topic on `CONNECTOR_RELEASE_NTFY_URL` and recorded in the cloud (`POST /api/connector/users/{id}/release-alerts`) only after ntfy accepted it. Recorded keys are never sent again, so a restart does not repeat an alert. If the cloud is down when recording, the alert is remembered in memory and recorded later, so it is not resent either; only a restart during that outage would repeat it.
+- The alerts sent per UTC day are counted in `connector-state.json`. At `CONNECTOR_RELEASE_DAILY_LIMIT` the connector stops sending, logs it once, and the rest wait for the next day (their titles are checked again after 30 minutes). The default leaves margin under ntfy.sh's limit of 250 anonymous messages a day per IP.
+
 ## What it does not do yet
 
-Release alerts, the daily export of the database and the Obsidian mirror are separate tasks. The web sync page on a Worker says that syncing is done by the connector and shows no report; a report in the web, by uploading the last plan to the cloud, would be a later addition.
+The daily export of the database and the Obsidian mirror are separate tasks. The web sync page on a Worker says that syncing is done by the connector and shows no report; a report in the web, by uploading the last plan to the cloud, would be a later addition.

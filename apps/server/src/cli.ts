@@ -164,7 +164,7 @@ async function main(argv: string[]): Promise<number> {
     const sources = (jellyfinUser: string) =>
       createSyncSources(config.sync, jellyfinUser, pool, tmdb);
     if (target === undefined) {
-      const stop = runConnector(config, appConfig, sources, logger);
+      const stop = runConnector(config, appConfig, sources, logger, tmdb);
       const shutdown = (): void => {
         stop();
         void pool.end().finally(() => process.exit(0));

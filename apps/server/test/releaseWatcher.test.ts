@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { HomeReleaseStore } from '../src/alerts/HomeReleaseStore.js';
 import { ReleaseWatcher } from '../src/alerts/ReleaseWatcher.js';
 import { ReleaseWatchScheduler } from '../src/alerts/ReleaseWatchScheduler.js';
 import type { SeriesRelease } from '../src/alerts/SeriesRelease.js';
@@ -64,11 +65,7 @@ describe('ReleaseWatcher', () => {
     notifier = new RecordingNotifier();
     clock = new Date('2026-10-22T09:00:00Z');
     watcher = new ReleaseWatcher({
-      movies,
-      series,
-      seasons,
-      overrides,
-      alerts,
+      store: new HomeReleaseStore({ movies, series, seasons, overrides, alerts }),
       source,
       notifier,
       logger,

@@ -96,6 +96,7 @@ export async function connectorHarness(options: { metadata?: boolean } = {}) {
       targets,
       applier: new SyncApplier(repositories.transactions, targets),
       versions,
+      alerts: repositories.releaseAlerts,
       scope,
       states: repositories.metadataStates,
       metadata,

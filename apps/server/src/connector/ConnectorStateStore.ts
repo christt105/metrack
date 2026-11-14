@@ -5,6 +5,10 @@ import type { ConnectorState } from './ConnectorState.js';
 
 const FILE = 'connector-state.json';
 
+function emptyState(): ConnectorState {
+  return { users: [], pending: {}, alertsSent: { day: '', count: 0 } };
+}
+
 /** The connector's state in its data directory, written atomically. A missing or unreadable file reads as empty. */
 export class ConnectorStateStore {
   private readonly path: string;
@@ -14,12 +18,16 @@ export class ConnectorStateStore {
   }
 
   read(): ConnectorState {
-    if (!existsSync(this.path)) return { users: [], pending: {} };
+    if (!existsSync(this.path)) return emptyState();
     try {
       const parsed = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<ConnectorState>;
-      return { users: parsed.users ?? [], pending: parsed.pending ?? {} };
+      return {
+        users: parsed.users ?? [],
+        pending: parsed.pending ?? {},
+        alertsSent: parsed.alertsSent ?? { day: '', count: 0 },
+      };
     } catch {
-      return { users: [], pending: {} };
+      return emptyState();
     }
   }
 

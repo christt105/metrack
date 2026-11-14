@@ -9,6 +9,14 @@ import {
   type MediaType,
   type RefreshResult,
 } from '@metrack/domain';
+import type { AlertUser } from '../alerts/AlertUser.js';
+import type { FollowedTitle } from '../alerts/FollowedTitle.js';
+import type { ReconcileSeasonsRequest } from '../alerts/ReconcileSeasonsRequest.js';
+import type { ReconcileSeasonsResponse } from '../alerts/ReconcileSeasonsResponse.js';
+import { reconcileSeasons } from '../alerts/reconcileSeasons.js';
+import type { RecordAlertsRequest } from '../alerts/RecordAlertsRequest.js';
+import type { RecordAlertsResponse } from '../alerts/RecordAlertsResponse.js';
+import type { ReleaseState } from '../alerts/ReleaseState.js';
 import { ApiError } from '../api/ApiError.js';
 import { assertPlanOwned } from './assertPlanOwned.js';
 import type { ConnectorServiceDeps } from './ConnectorServiceDeps.js';
@@ -62,6 +70,58 @@ export class ConnectorService {
     });
   }
 
+  /** The users with an ntfy topic set, ordered by id. */
+  async alertUsers(): Promise<AlertUser[]> {
+    const names = new Map((await this.deps.users.list()).map((user) => [user.id, user.name]));
+    return (await this.deps.settings.list()).flatMap(({ userId, settings }) =>
+      settings.ntfyTopic ? [{ id: userId, name: names.get(userId) ?? '' }] : [],
+    );
+  }
+
+  /** The user's followed titles with a TMDB id, their recorded alert keys and their ntfy topic, one read each. */
+  releaseState(userId: number): Promise<ReleaseState> {
+    return this.deps.scope.run(userId, async () => {
+      const ntfyTopic = (await this.deps.settings.get(userId))?.ntfyTopic;
+      if (!ntfyTopic) throw ApiError.notFound('That user has no ntfy topic set');
+      const { movies, series } = this.deps.targets;
+      return {
+        ntfyTopic,
+        series: followed(await series.listFollowed()),
+        movies: followed(await movies.listFollowed()),
+        alerts: await this.deps.alerts.allKeys(),
+      };
+    });
+  }
+
+  /** Links and creates the seasons a series' release data announces, as `reconcileSeasons` does at home. */
+  reconcile(userId: number, request: ReconcileSeasonsRequest): Promise<ReconcileSeasonsResponse> {
+    return this.deps.scope.run(userId, async () => {
+      if (!(await this.deps.targets.series.get(request.seriesId))) throw ApiError.notFound();
+      try {
+        const seasons = await reconcileSeasons(
+          request.seriesId,
+          request.release,
+          request.today,
+          this.deps.targets,
+        );
+        return { seasons };
+      } finally {
+        await this.deps.versions.bump(userId);
+      }
+    });
+  }
+
+  /** Records alerts the connector delivered. Keys that were recorded before are ignored. */
+  recordAlerts(userId: number, request: RecordAlertsRequest): Promise<RecordAlertsResponse> {
+    return this.deps.scope.run(userId, async () => {
+      let recorded = 0;
+      for (const alert of request.alerts) {
+        if (await this.deps.alerts.record(alert)) recorded += 1;
+      }
+      return { recorded };
+    });
+  }
+
   private async unfetched(): Promise<EntityRef[]> {
     const refs: EntityRef[] = [];
     for (const type of ['movie', 'series'] as const) {
@@ -91,4 +151,12 @@ export class ConnectorService {
       }
     });
   }
+}
+
+function followed(
+  titles: readonly { id: number; tmdbId: number | null; title: string }[],
+): FollowedTitle[] {
+  return titles.flatMap((t) =>
+    t.tmdbId === null ? [] : [{ id: t.id, tmdbId: t.tmdbId, title: t.title }],
+  );
 }

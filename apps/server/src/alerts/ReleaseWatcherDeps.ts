@@ -1,20 +1,10 @@
 import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
-import type {
-  MovieRepository,
-  ReleaseAlertRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-} from '../storage/repositories/index.js';
 import type { ReleaseSource } from './ReleaseSource.js';
+import type { ReleaseStore } from './ReleaseStore.js';
 
 export interface ReleaseWatcherDeps {
-  movies: MovieRepository;
-  series: SeriesRepository;
-  seasons: SeasonRepository;
-  overrides: SeasonOverrideRepository;
-  alerts: ReleaseAlertRepository;
+  store: ReleaseStore;
   source: ReleaseSource;
   notifier: Notifier;
   logger: Logger;

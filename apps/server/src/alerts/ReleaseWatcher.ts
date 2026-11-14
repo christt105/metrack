@@ -6,7 +6,6 @@ import {
   type AlertSubjectType,
 } from '@metrack/domain';
 import { readClock } from './readClock.js';
-import { reconcileSeasons } from './reconcileSeasons.js';
 import { releaseAlertText } from './releaseAlertText.js';
 import type { ReleaseWatcherDeps } from './ReleaseWatcherDeps.js';
 import type { WatchSummary } from './WatchSummary.js';
@@ -29,8 +28,16 @@ interface Subject {
  */
 export class ReleaseWatcher {
   private readonly nextCheck = new Map<string, number>();
+  private completed = false;
 
   constructor(private readonly deps: ReleaseWatcherDeps) {}
+
+  /** Whether a tick has not completed yet or a title is due at `now`, so a tick would do something. */
+  hasDue(now: Date = this.now()): boolean {
+    if (!this.completed) return true;
+    for (const due of this.nextCheck.values()) if (due <= now.getTime()) return true;
+    return false;
+  }
 
   /** Checks the titles that are due. */
   async tick(): Promise<WatchSummary> {
@@ -39,11 +46,11 @@ export class ReleaseWatcher {
     const local = readClock(now, this.deps.timeZone);
     if (local.hour < this.deps.notifyFromHour) return summary;
 
-    for (const series of await this.deps.series.listFollowed()) {
+    for (const series of await this.deps.store.followedSeries()) {
       if (series.tmdbId === null) continue;
       await this.check(`series:${series.id}`, now, summary, async () => {
         const release = await this.deps.source.series(series.tmdbId as number);
-        const reconciled = await reconcileSeasons(series.id, release, local.date, this.deps);
+        const reconciled = await this.deps.store.reconcileSeasons(series.id, release, local.date);
         summary.seasonsCreated += reconciled.filter((r) => r.created).length;
         const subjects = reconciled.map<Subject>((r) => ({
           title: `${series.title}, season ${r.season.number}`,
@@ -58,7 +65,7 @@ export class ReleaseWatcher {
         return subjects;
       });
     }
-    for (const movie of await this.deps.movies.listFollowed()) {
+    for (const movie of await this.deps.store.followedMovies()) {
       if (movie.tmdbId === null) continue;
       await this.check(`movie:${movie.id}`, now, summary, async () => {
         const release = await this.deps.source.movie(movie.tmdbId as number);
@@ -77,6 +84,7 @@ export class ReleaseWatcher {
         return subjects;
       });
     }
+    this.completed = true;
     return summary;
   }
 
@@ -114,12 +122,7 @@ export class ReleaseWatcher {
     now: Date,
     summary: WatchSummary,
   ): Promise<void> {
-    const sent: AlertKey[] = [];
-    for (const s of subjects) {
-      sent.push(
-        ...(await this.deps.alerts.keysFor(s.candidate.subjectType, s.candidate.subjectId)),
-      );
-    }
+    const sent = await this.deps.store.sentAlerts(subjects.map((s) => s.candidate));
     const due = planReleaseAlerts(
       subjects.map((s) => s.candidate),
       sent,
@@ -139,7 +142,7 @@ export class ReleaseWatcher {
         undelivered += 1;
         continue;
       }
-      await this.deps.alerts.record({
+      await this.deps.store.recordAlert({
         ...key,
         title: subject.title,
         message,

@@ -148,6 +148,13 @@ The routes the home connector syncs through (see [connector.md](connector.md)). 
 - `POST /api/connector/users/{id}/sync` with `{ contentVersion, plan }` (`ConnectorSyncRequest`): 409 `content_changed` when the content version moved since it was read; 400 `plan_foreign_id` when the plan names a movie, series or season that is not the user's; otherwise it writes the plan with the same applier as `POST /api/sync/apply` (tracking fields and external ids only, never notes, reviews, ratings or images), bumps the user's content version and answers `{ result: SyncApplyResult, created: EntityRef[] }`. On the home server the writes share one SQLite transaction. On D1, which has no interactive transactions, they run one after another, so a failure halfway leaves what was written and the next plan, computed from the new state, finishes the job.
 - `POST /api/connector/users/{id}/refresh/{type}/{titleId}` (`type` is `movie` or `series`): fetches the provider metadata of one title, 501 `no_metadata_source` when none is configured.
 
+The release alert routes below follow the same rules, except that the users they accept are the ones with an ntfy topic in their settings (404 for the others).
+
+- `GET /api/connector/alert-users`: the users the token may act on that have an ntfy topic, `[{ id, name }]`.
+- `GET /api/connector/users/{id}/release-state`: `{ ntfyTopic, series, movies, alerts }` in one response: the followed series and movies that have a TMDB id as `[{ id, tmdbId, title }]`, and the keys `[{ subjectType, subjectId, kind }]` of the alerts already recorded.
+- `POST /api/connector/users/{id}/seasons` with `{ seriesId, release, today }`: runs the season reconciliation of the release alerts with `release` (what TMDB announces for the series, fetched by the caller: `posterUrl`, `numberOfSeasons`, `seasons`, `nextEpisode`, `flatrateEs`) and the local date `today`, creating the announced seasons that are new, and answers `{ seasons: [{ season, airDate, created }] }` with the linked seasons and their ids. 404 when the series is not the user's.
+- `POST /api/connector/users/{id}/release-alerts` with `{ alerts: [{ subjectType, subjectId, kind, title, message, sentAt }] }`: records alerts the connector delivered, once per (subject, kind), and answers `{ recorded }` with how many were new.
+
 ## Jellyfin sync
 
 - `GET /api/sync/report`: the `SyncPlan` a sync would apply: `movies` (`MovieChange`), `series` (`SeriesChange` with its `seasons`), `unlinked`, `warnings`, `ignoredPlays` and `unmatchedTitles`. Reads Jellyfin and Jellystat and the database; writes nothing.
