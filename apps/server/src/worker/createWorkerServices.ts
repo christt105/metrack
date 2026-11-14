@@ -25,8 +25,7 @@ import { stringsOf } from './stringsOf.js';
 import type { WorkerEnv } from './WorkerEnv.js';
 import type { WorkerServices } from './WorkerServices.js';
 import { WorkerUrlGuard } from './WorkerUrlGuard.js';
-
-const fetchFn: typeof fetch = (input, init) => fetch(input, init);
+import { workerFetch } from './workerFetch.js';
 
 /**
  * Builds what both the `fetch` and the `scheduled` handler of the Worker need, over D1 and R2, once per isolate.
@@ -46,7 +45,7 @@ export function createWorkerServices(
   const imageStore = new ImageStore(
     repositories.images,
     new R2ImageBlobStore(env.IMAGES),
-    fetchFn,
+    workerFetch,
     () => new Date(),
     {
       encoder: new WebpValidatingEncoder({
@@ -64,7 +63,7 @@ export function createWorkerServices(
   const titleProviders = new TitleProviders();
   const imageProviders: ImageProvider[] = [];
   const tmdb = config.tmdbApiKey
-    ? new TmdbClient(fetchFn, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
+    ? new TmdbClient(workerFetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
     : undefined;
   if (tmdb) {
     registerTmdbMetadata(metadataCache, tmdb, { movies, series });
@@ -75,13 +74,13 @@ export function createWorkerServices(
     imageProviders.push(new TmdbImageProvider(tmdb));
   }
   const steamGridDb = config.steamGridDbToken
-    ? new SteamGridDbClient(fetchFn, config.steamGridDbToken)
+    ? new SteamGridDbClient(workerFetch, config.steamGridDbToken)
     : null;
   if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
   if (config.igdb) {
     titleProviders.register(
       new IgdbGameProvider(
-        new IgdbClient(fetchFn, config.igdb),
+        new IgdbClient(workerFetch, config.igdb),
         videogames,
         imageStore,
         steamGridDb,
@@ -90,7 +89,7 @@ export function createWorkerServices(
   }
   titleProviders.register(
     new OpenLibraryBookProvider(
-      new OpenLibraryClient(fetchFn, config.openLibraryLanguage),
+      new OpenLibraryClient(workerFetch, config.openLibraryLanguage),
       books,
       imageStore,
     ),

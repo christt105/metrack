@@ -14,7 +14,7 @@ export function renderPrivacy(options: PrivacyOptions): string {
 
 <h2>What is stored</h2>
 <ul>
-<li>Your account: a name and, if one was given when the account was created, an email address.</li>
+<li>Your account: a name and, if one was given when the account was created, an email address. If you sign in with Google, the identifier of your Google account is stored too; your email address is used only to find your account, and no sign-ups are created that way.</li>
 <li>What you track: titles with their status, dates, ratings, reviews, notes, tags and the edits you made to them, plus the titles you follow for release alerts and the alerts already sent.</li>
 <li>Your settings: your public page handle and whether the page is on, and the Jellyfin account name, notification topic and similar fields the owner may have set for you.</li>
 <li>Your API tokens: name, access level and dates. Only a one-way hash of each token is stored.</li>

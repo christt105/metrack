@@ -41,6 +41,26 @@ describe.each(backends)('$name: accounts and settings', (backend) => {
     repos = harness.repositories(OWNER_SCOPE);
   });
 
+  it('links a user to a Google account once, finds users by sub and email, and unlinks', async () => {
+    await repos.users.create({ name: 'Friend', email: 'Friend@Example.com' });
+    await repos.users.create({ name: 'Other', email: null });
+    expect((await repos.users.findByEmail('friend@example.COM'))?.id).toBe(2);
+    expect(await repos.users.findByEmail('nobody@example.com')).toBeUndefined();
+    expect(await repos.users.googleSubOf(2)).toBeNull();
+    expect(await repos.users.findByGoogleSub('sub-a')).toBeUndefined();
+
+    expect(await repos.users.linkGoogleSub(2, 'sub-a')).toBe(true);
+    expect(await repos.users.linkGoogleSub(2, 'sub-b')).toBe(false);
+    expect(await repos.users.googleSubOf(2)).toBe('sub-a');
+    expect((await repos.users.findByGoogleSub('sub-a'))?.id).toBe(2);
+    await expect(repos.users.setGoogleSub(3, 'sub-a')).rejects.toThrow();
+
+    await repos.users.setGoogleSub(2, 'sub-c');
+    expect(await repos.users.googleSubOf(2)).toBe('sub-c');
+    await repos.users.setGoogleSub(2, null);
+    expect(await repos.users.googleSubOf(2)).toBeNull();
+  });
+
   it('stores users, roles and per-user settings', async () => {
     expect(await repos.users.list()).toEqual([
       { id: 1, name: 'Owner', email: null, role: 'owner' },

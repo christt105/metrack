@@ -234,6 +234,22 @@ describe('users', () => {
     ).rejects.toThrow('User 1 is always the owner');
   });
 
+  it('are linked to a Google account from the CLI, and unlinked with an empty value', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
+    await runUsersCommand({ dataDir, add: { name: 'Friend', email: null } });
+    await runUsersCommand({ dataDir, add: { name: 'Other', email: null } });
+    expect(
+      await runUsersCommand({ dataDir, set: { userId: 2, changes: {}, googleSub: ' 1234 ' } }),
+    ).toContain('2  Friend  normal  [google]');
+    expect(await runUsersCommand({ dataDir })).toContain('2  Friend  normal  [google]  [no jobs]');
+    expect(await runUsersCommand({ dataDir })).toContain('3  Other  normal  [no jobs]');
+    await expect(
+      runUsersCommand({ dataDir, set: { userId: 3, changes: {}, googleSub: '1234' } }),
+    ).rejects.toThrow('already linked to user 2');
+    await runUsersCommand({ dataDir, set: { userId: 2, changes: {}, googleSub: '' } });
+    expect(await runUsersCommand({ dataDir })).not.toContain('[google]');
+  });
+
   it('get their job settings from the CLI, where an empty value clears one', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'metrack-users-'));
     await runUsersCommand({ dataDir, add: { name: 'Friend', email: null } });

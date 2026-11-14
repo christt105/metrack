@@ -23,6 +23,10 @@ export const messages = {
     title: 'Sign in',
     devHint:
       'Development sign-in: pick who you are. Anyone who can open this page can do the same.',
+    googleButton: 'Sign in with Google',
+    googleNoAccount:
+      'There is no metrack account for that Google account; ask the owner for an invitation.',
+    googleFailed: 'Signing in with Google did not work. Try again, or use an access token.',
     tokenTitle: 'Sign in with an access token',
     tokenHint: 'Paste a personal API token with write access.',
     tokenLabel: 'Access token',

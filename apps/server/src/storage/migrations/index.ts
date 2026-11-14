@@ -19,6 +19,7 @@ import { publicPageProfileMigration } from './0017-public-page-profile.js';
 import { accountDeletionMigration } from './0018-account-deletion.js';
 import { queryIndexesMigration } from './0019-query-indexes.js';
 import { connectorTokenScopeMigration } from './0020-connector-token-scope.js';
+import { googleLoginMigration } from './0021-google-login.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -41,4 +42,5 @@ export const migrations: readonly Migration[] = [
   accountDeletionMigration,
   queryIndexesMigration,
   connectorTokenScopeMigration,
+  googleLoginMigration,
 ];

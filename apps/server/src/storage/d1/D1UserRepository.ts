@@ -1,4 +1,5 @@
 import type { User, UserRole } from '@metrack/domain';
+import { text } from '../mapping/rowMapping.js';
 import { userFromRow } from '../mapping/userFromRow.js';
 import type { NewUser } from '../repositories/NewUser.js';
 import type { UserRepository } from '../repositories/UserRepository.js';
@@ -36,5 +37,34 @@ export class D1UserRepository implements UserRepository {
 
   async setRole(id: number, role: UserRole): Promise<void> {
     await execute(this.db, 'UPDATE user SET role = ? WHERE id = ?', role, id);
+  }
+
+  async findByGoogleSub(sub: string): Promise<User | undefined> {
+    const row = await queryFirst(this.db, 'SELECT * FROM user WHERE google_sub = ?', sub);
+    return row ? userFromRow(row) : undefined;
+  }
+
+  async findByEmail(email: string): Promise<User | undefined> {
+    const row = await queryFirst(this.db, 'SELECT * FROM user WHERE email = ?', email);
+    return row ? userFromRow(row) : undefined;
+  }
+
+  async linkGoogleSub(id: number, sub: string): Promise<boolean> {
+    const meta = await execute(
+      this.db,
+      'UPDATE user SET google_sub = ? WHERE id = ? AND google_sub IS NULL',
+      sub,
+      id,
+    );
+    return meta.changes > 0;
+  }
+
+  async setGoogleSub(id: number, sub: string | null): Promise<void> {
+    await execute(this.db, 'UPDATE user SET google_sub = ? WHERE id = ?', sub, id);
+  }
+
+  async googleSubOf(id: number): Promise<string | null> {
+    const row = await queryFirst(this.db, 'SELECT google_sub FROM user WHERE id = ?', id);
+    return text(row?.google_sub);
   }
 }

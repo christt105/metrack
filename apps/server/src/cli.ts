@@ -42,7 +42,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
        metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
                      [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>]
-                     [--handle <name>] [--public-page on|off] [--intro <text>] [--description <text>] [--data-dir <dir>]
+                     [--handle <name>] [--public-page on|off] [--intro <text>] [--description <text>] [--google-sub <sub>] [--data-dir <dir>]
        metrack users delete <id> [--cancel] [--data-dir <dir>]
        metrack users export <id> <file.zip> [--data-dir <dir>]
        metrack catalog [delete <movies|series|games|books> <id>] [--data-dir <dir>]
@@ -85,7 +85,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   the Jellyfin account synced, the ntfy topic for release alerts and job failures, the Cloudflare Pages project and
   address of their site, and the vault folder their notes are mirrored into. A job runs only for users who set what
   it needs. --handle sets the name their public page is served under (/u/<handle>/; an empty value clears it) and
-  --public-page on|off switches the page; it needs a handle. --intro and --description set the title and text of its header (an empty value clears them); the avatar, about text and comments are set in the web app. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
+  --public-page on|off switches the page; it needs a handle. --intro and --description set the title and text of its header (an empty value clears them); --google-sub links the Google account (its OpenID "sub") a user may sign in with and an empty value unlinks it; users marks linked ones [google]. The avatar, about text and comments are set in the web app. User 1's settings start from JELLYFIN_USER, NTFY_TOPIC, CLOUDFLARE_PAGES_PROJECT, PUBLISH_BASE_URL,
   VAULT_MIRROR_DIR and VAULT_MIRROR_LINK_PREFIX the first time the server starts; after that the stored ones win.
 
   users delete schedules the deletion of a user's account: it goes through the same 7 days of grace as when the user
@@ -125,6 +125,7 @@ async function main(argv: string[]): Promise<number> {
       'public-page': { type: 'string' },
       intro: { type: 'string' },
       description: { type: 'string' },
+      'google-sub': { type: 'string' },
       'publish-base-url': { type: 'string' },
       'mirror-dir': { type: 'string' },
       'mirror-link-prefix': { type: 'string' },
@@ -277,6 +278,7 @@ async function main(argv: string[]): Promise<number> {
         values.handle !== undefined ||
         values.intro !== undefined ||
         values.description !== undefined ||
+        values['google-sub'] !== undefined ||
         values['public-page'] !== undefined) &&
         !setting) ||
       (values['public-page'] !== undefined && !['on', 'off'].includes(values['public-page'])) ||
@@ -298,6 +300,7 @@ async function main(argv: string[]): Promise<number> {
               handle: values.handle,
               intro: values.intro,
               description: values.description,
+              googleSub: values['google-sub'],
               publicPage:
                 values['public-page'] === undefined ? undefined : values['public-page'] === 'on',
             }

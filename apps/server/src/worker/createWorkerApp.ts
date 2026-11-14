@@ -6,6 +6,7 @@ import type { ApiEnv } from '../api/ApiEnv.js';
 import { buildApp } from '../api/buildApp.js';
 import { ApiTokenService } from '../auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from '../auth/SessionCookieAuthenticator.js';
+import { GoogleSignIn } from '../auth/google/GoogleSignIn.js';
 import { SessionService } from '../auth/SessionService.js';
 import { D1ContentVersions } from '../storage/d1/D1ContentVersions.js';
 import { D1PublicRenderCache } from '../storage/d1/D1PublicRenderCache.js';
@@ -17,6 +18,7 @@ import { createWorkerServices } from './createWorkerServices.js';
 import { D1SchemaVersion } from './D1SchemaVersion.js';
 import type { WorkerEnv } from './WorkerEnv.js';
 import type { WorkerServices } from './WorkerServices.js';
+import { workerFetch } from './workerFetch.js';
 
 /**
  * The same Hono app as the home server, over D1 and R2. Images are always recoded by the browser
@@ -46,7 +48,13 @@ export function createWorkerApp(
     migrationRunner: new D1SchemaVersion(env.DB),
     authenticator: new SessionCookieAuthenticator(sessions),
     scope,
-    auth: { sessions, users: repositories.users, devLogin: config.devLogin },
+    auth: {
+      sessions,
+      users: repositories.users,
+      devLogin: config.devLogin,
+      google: config.google && new GoogleSignIn(config.google, repositories.users, workerFetch),
+      logger,
+    },
     tokens: new ApiTokenService(repositories.apiTokens, repositories.users),
     logger,
     imageStore,

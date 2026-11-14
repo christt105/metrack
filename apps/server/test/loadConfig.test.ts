@@ -34,6 +34,16 @@ describe('loadConfig', () => {
     expect(config.mirrorWebUrl).toBe('http://lan:8100');
   });
 
+  it('reads the Google client when both parts are set and fails when only one is', () => {
+    expect(loadConfig({}).google).toBeUndefined();
+    expect(loadConfig({ GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' }).google).toEqual({
+      clientId: 'id',
+      clientSecret: 'secret',
+    });
+    expect(() => loadConfig({ GOOGLE_CLIENT_ID: 'id' })).toThrow(/GOOGLE_CLIENT_SECRET/);
+    expect(() => loadConfig({ GOOGLE_CLIENT_SECRET: 'secret' })).toThrow(/GOOGLE_CLIENT_ID/);
+  });
+
   it('defaults image limits to 5 MB uploads, 1920 px, 200 MB quota and quality 82', () => {
     expect(loadConfig({}).images).toEqual({
       quotaBytes: 200 * 1024 * 1024,

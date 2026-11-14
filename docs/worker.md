@@ -89,6 +89,28 @@ npm run worker:deploy
 
 Provider keys are Worker secrets read from the environment bindings; without one, search for that type answers 501 `provider_not_configured` (books come from Open Library and need none). Never set `DEV_LOGIN` on a deployed Worker.
 
+## Sign in with Google
+
+Google sign-in lets users that already exist sign in with their Google account; it never creates users. Token login stays available as the owner's fallback.
+
+1. In the Google Cloud Console, create an OAuth client of type "Web application" (consent screen scopes: `openid` and `email`).
+2. Add the authorized redirect URIs `https://metrack.hakulino.dpdns.org/api/auth/google/callback` (production) and `https://metrack-test.christt105.workers.dev/api/auth/google/callback` (test).
+3. Give the Worker the client: `GOOGLE_CLIENT_ID` as a var or secret and `GOOGLE_CLIENT_SECRET` as a secret.
+
+```sh
+cd apps/server
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put GOOGLE_CLIENT_ID --env production
+npx wrangler secret put GOOGLE_CLIENT_SECRET --env production
+```
+
+Both must be set or neither: with only one, the Worker fails when it starts. Without them the Google routes do not exist and the sign-in page shows no button. The D1 migration `0004_google_login.sql` adds the nullable, unique `user.google_sub` column, so apply migrations before deploying.
+
+Linking: the first time a Google account signs in, it is matched by its email (only when Google says the email is verified) to a user with the same email and no Google account yet, and its `sub` is stored on that user from then on. Later sign-ins match by `sub`. A Google account with no match is refused with no session. Users with no email, or with a different one, are linked from the home server with `metrack users set <id> --google-sub <sub>` (an empty value unlinks); `metrack users` marks linked users with `[google]`.
+
+The home instance on a plain-http LAN address cannot use Google sign-in: Google only accepts https redirect URIs (or `localhost`), so it keeps token login. At home, setting the same `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` works only when the instance is reached over https (or on `localhost`) and that address is an authorized redirect URI.
+
 ## Production deploy
 
 `apps/server/wrangler.jsonc` has an `env.production` section: the Worker `metrack`, the D1 database `metrack`, the R2 bucket `metrack-images`, the same binding names as the test Worker (`DB`, `IMAGES`, `ASSETS`), `workers_dev` and `preview_urls` off, and `TMDB_LANGUAGE`. It has no `routes`: the custom domain is attached to the Worker in the dashboard and a deploy without `routes` keeps it. Bindings and `vars` are not inherited by an environment, so they are repeated there; the top level stays the test Worker. Check the result without touching Cloudflare with `npx wrangler deploy --dry-run --env production --outdir /tmp/out`.
