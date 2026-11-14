@@ -128,17 +128,23 @@ The copy does not protect against a mistake that is copied identically during th
 
 ### Restoring a copy into D1
 
-`connector restore-sql` turns a copied database into one SQL file that D1 accepts: foreign keys deferred, no transaction or `PRAGMA` D1 refuses, the tables first, then one INSERT per row, then the indexes and triggers; `d1_migrations` is included so `wrangler d1 migrations apply` still works afterwards. `connector row-counts` prints the rows per table, to compare with the restored database.
+`connector restore-sql` turns a copied database into one SQL file that D1 accepts: foreign keys deferred, no transaction or `PRAGMA` D1 refuses, the tables first, then the rows of each table with parents before the tables that reference them (a real D1 import runs in batches, so the deferral alone is not enough), then the indexes and triggers; `d1_migrations` is included so `wrangler d1 migrations apply` still works afterwards. A row whose INSERT would pass D1's 100 KB statement limit is inserted with its large text or blob columns cut, and the rest is appended by `UPDATE ... SET "col" = "col" || ...` statements. `connector row-counts` prints the rows per table, to compare with the restored database.
 
 ```sh
 CLI="node --disable-warning=ExperimentalWarning apps/server/dist/cli.js connector"
 $CLI restore-sql /path/to/databases/metrack-<stamp>.db --out restore.sql
 $CLI row-counts /path/to/databases/metrack-<stamp>.db > counts-copy.txt
 wrangler d1 create metrack-restore
-wrangler d1 execute metrack-restore --remote --file restore.sql
+wrangler d1 execute metrack-restore --remote --yes --file restore.sql
 ```
 
-The target must be an empty D1 database (the file creates every table). Then count the rows of each table in D1, for example `wrangler d1 execute metrack-restore --remote --command 'SELECT COUNT(*) FROM "user"'`, and compare with `counts-copy.txt`. To restore the images, upload the files of `images/` to the bucket under their own names (`wrangler r2 object put <bucket>/<name> --file images/<name>`).
+The target must be an empty D1 database (the file creates every table); `--yes` skips the confirmation prompt. Check the import by comparing the rows of every table with `counts-copy.txt`. D1 rejects a compound `UNION ALL` of many tables, so count with one row of scalar subqueries:
+
+```sh
+wrangler d1 execute metrack-restore --remote --command 'SELECT (SELECT COUNT(*) FROM "movie") AS "movie", (SELECT COUNT(*) FROM "series") AS "series", (SELECT COUNT(*) FROM "user") AS "user"'
+```
+
+List every table of `counts-copy.txt` the same way. To restore the images, upload the files of `images/` to the bucket under their own names (`wrangler r2 object put <bucket>/<name> --file images/<name>`).
 
 ## What it does not do yet
 
