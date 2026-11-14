@@ -30,7 +30,7 @@ import { workerFetch } from './workerFetch.js';
 /**
  * Builds what both the `fetch` and the `scheduled` handler of the Worker need, over D1 and R2, once per isolate.
  * Images are always recoded by the browser (`IMAGE_ENCODED_BY=client`). The scheduled tick erases deleted
- * accounts, which have no data directory to clean here.
+ * accounts, which have no data directory to clean here, and leaves their images for the connector's orphan cleanup.
  */
 export function createWorkerServices(
   env: WorkerEnv,
@@ -108,7 +108,7 @@ export function createWorkerServices(
   const accountDeletion = new AccountDeletionService(
     repositories.accounts,
     repositories.users,
-    imageStore,
+    null,
     null,
     logger,
     now,

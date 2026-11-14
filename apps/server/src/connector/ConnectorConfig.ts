@@ -1,5 +1,6 @@
 import type { ReleaseAlertsConfig } from './ReleaseAlertsConfig.js';
 import type { CloudBackupConfig } from '../cloudbackup/CloudBackupConfig.js';
+import type { CloudImageCleanupConfig } from '../cloudcleanup/CloudImageCleanupConfig.js';
 import type { SyncConfig } from '../sync/SyncConfig.js';
 
 export interface ConnectorConfig {
@@ -17,4 +18,6 @@ export interface ConnectorConfig {
   releaseAlerts?: ReleaseAlertsConfig;
   /** The daily copy of the cloud data. Undefined when its variables are not set. */
   cloudBackup?: CloudBackupConfig;
+  /** The daily deletion of orphan images in the cloud. Undefined when `CLOUD_IMAGE_CLEANUP` is not `true`. */
+  cloudImageCleanup?: CloudImageCleanupConfig;
 }

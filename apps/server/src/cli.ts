@@ -15,6 +15,8 @@ import { runCatalogCommand } from './account/runCatalogCommand.js';
 import { loadConnectorConfig } from './connector/loadConnectorConfig.js';
 import { runConnector } from './connector/runConnector.js';
 import { loadCloudBackupConfig } from './cloudbackup/loadCloudBackupConfig.js';
+import { loadCloudImageCleanupConfig } from './cloudcleanup/loadCloudImageCleanupConfig.js';
+import { runCloudImageCleanupCommand } from './cloudcleanup/runCloudImageCleanupCommand.js';
 import { runCloudBackupCommand } from './cloudbackup/runCloudBackupCommand.js';
 import { runConnectorCommand } from './connector/runConnectorCommand.js';
 import { openJellystatPool } from './sync/jellystat/openJellystatPool.js';
@@ -35,6 +37,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack sync [--apply] [--verbose] [--user <id>] [--data-dir <dir>]
        metrack connector [report|sync --user <id|name|jellyfinUser>] [--verbose] [--data-dir <dir>]
        metrack connector cloud-backup
+       metrack connector cloud-image-cleanup [--apply]
        metrack connector restore-sql <database.db> [--out <file.sql>]
        metrack connector row-counts <database.db>
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
@@ -64,6 +67,10 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
 
   connector cloud-backup copies the cloud data now (docs/connector.md, CLOUD_BACKUP_*); restore-sql turns a copied database into the SQL file
   that imports it into an empty D1, and row-counts prints the rows per table.
+
+  connector cloud-image-cleanup lists the orphan images of the cloud (unused for over 24 hours) and their size, and with --apply
+  deletes them from D1 and R2. It needs the cloud backup settings with the R2 bucket, and an R2 credential that may delete.
+  It refuses to delete more than CLOUD_IMAGE_CLEANUP_MAX_COUNT images or CLOUD_IMAGE_CLEANUP_MAX_FRACTION of all of them.
 
   redirect writes 404.html and index.html for the old GitHub Pages site. Every old address is sent to the same
   path on --origin (the old site was served under --old-base, default /MediaTracker). Nothing else is touched.
@@ -145,6 +152,23 @@ async function main(argv: string[]): Promise<number> {
       ] as const
     ).filter(([, value]) => value !== undefined),
   ) as Partial<Record<keyof UserSettings, string>>;
+  if (!values.help && command === 'connector' && target === 'cloud-image-cleanup') {
+    if (positionals.length > 2) {
+      console.error(USAGE);
+      return 2;
+    }
+    const backup = loadCloudBackupConfig(process.env);
+    const config = loadCloudImageCleanupConfig(process.env, backup.config);
+    if (!config) {
+      console.error(
+        `The cloud image cleanup needs the cloud backup with its R2 bucket${backup.missing.length > 0 ? `, missing: ${backup.missing.join(', ')}` : ' (CLOUD_BACKUP_DIR, the D1 variables and CLOUD_BACKUP_R2_*)'}`,
+      );
+      return 2;
+    }
+    const logger = { info: console.log, error: console.error };
+    console.log(await runCloudImageCleanupCommand(config, values.apply, logger));
+    return 0;
+  }
   if (
     !values.help &&
     command === 'connector' &&

@@ -1,5 +1,6 @@
 import { loadSyncConfig } from '../sync/loadSyncConfig.js';
 import { loadCloudBackupConfig } from '../cloudbackup/loadCloudBackupConfig.js';
+import { loadCloudImageCleanupConfig } from '../cloudcleanup/loadCloudImageCleanupConfig.js';
 import type { ReleaseAlertsConfig } from './ReleaseAlertsConfig.js';
 import type { ConnectorConfig } from './ConnectorConfig.js';
 
@@ -85,6 +86,12 @@ export function loadConnectorConfig(
       `The cloud backup is partly configured, missing: ${cloudBackup.missing.join(', ')}`,
     );
   }
+  const cloudImageCleanup = loadCloudImageCleanupConfig(env, cloudBackup.config);
+  if (env.CLOUD_IMAGE_CLEANUP === 'true' && !cloudImageCleanup) {
+    throw new Error(
+      'CLOUD_IMAGE_CLEANUP needs the cloud backup with its R2 bucket (CLOUD_BACKUP_DIR, the D1 variables and CLOUD_BACKUP_R2_*)',
+    );
+  }
   return {
     missing: [],
     config: {
@@ -95,6 +102,7 @@ export function loadConnectorConfig(
       passIntervalMs: hours * 3_600_000,
       releaseAlerts: loadReleaseAlerts(env),
       cloudBackup: cloudBackup.config,
+      cloudImageCleanup: env.CLOUD_IMAGE_CLEANUP === 'true' ? cloudImageCleanup : undefined,
     },
   };
 }

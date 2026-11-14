@@ -11,6 +11,8 @@ import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import { CloudBackupJob } from '../cloudbackup/CloudBackupJob.js';
 import { CloudBackupScheduler } from '../cloudbackup/CloudBackupScheduler.js';
 import { createCloudBackup } from '../cloudbackup/createCloudBackup.js';
+import { CloudImageCleanupJob } from '../cloudcleanup/CloudImageCleanupJob.js';
+import { createCloudImageCleanup } from '../cloudcleanup/createCloudImageCleanup.js';
 import { CloudClient } from './CloudClient.js';
 import type { ConnectorConfig } from './ConnectorConfig.js';
 import { ConnectorQueue } from './ConnectorQueue.js';
@@ -67,11 +69,20 @@ export function runConnector(
       new CloudBackupJob(backup, notifier, logger),
       config.cloudBackup.time,
       scheduler,
+      undefined,
+      config.cloudImageCleanup
+        ? new CloudImageCleanupJob(
+            createCloudImageCleanup(config.cloudImageCleanup, logger),
+            notifier,
+            logger,
+          )
+        : undefined,
     ).start();
     const { hour, minute } = config.cloudBackup.time;
     logger.info(
       `cloud backup on: every day at ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} into ${config.cloudBackup.dir}, keeping ${config.cloudBackup.retention}`,
     );
+    if (config.cloudImageCleanup) logger.info('cloud image cleanup on: after each cloud backup');
   }
   const alertScheduler = startReleaseAlerts(config, cloud, store, tmdb, logger);
   const server = serve({

@@ -91,4 +91,46 @@ describe('loadCloudBackupConfig', () => {
     );
     expect(loadConnectorConfig(connector, '/data').config?.cloudBackup).toBeUndefined();
   });
+
+  it('enables the image cleanup only with the flag and the bucket, with its limits', () => {
+    const connector = {
+      METRACK_URL: 'http://cloud.test',
+      METRACK_CONNECTOR_TOKEN: 't',
+      JELLYFIN_URL: 'http://jf',
+      JELLYFIN_TOKEN: 't',
+      JELLYSTAT_DB_HOST: 'h',
+      JELLYSTAT_DB_PASSWORD: 'p',
+    };
+    const r2 = {
+      ...d1,
+      CLOUD_BACKUP_R2_BUCKET: 'metrack-images',
+      CLOUD_BACKUP_R2_ACCESS_KEY_ID: 'key',
+      CLOUD_BACKUP_R2_SECRET_ACCESS_KEY: 'sec',
+    };
+    expect(
+      loadConnectorConfig({ ...connector, ...r2 }, '/d').config?.cloudImageCleanup,
+    ).toBeUndefined();
+    const on = { ...connector, ...r2, CLOUD_IMAGE_CLEANUP: 'true' };
+    expect(loadConnectorConfig(on, '/d').config?.cloudImageCleanup).toMatchObject({
+      maxFraction: 0.5,
+      maxCount: 1000,
+      r2: { bucket: 'metrack-images' },
+      d1: { databaseId: 'db' },
+    });
+    expect(
+      loadConnectorConfig(
+        { ...on, CLOUD_IMAGE_CLEANUP_MAX_FRACTION: '0.9', CLOUD_IMAGE_CLEANUP_MAX_COUNT: '5' },
+        '/d',
+      ).config?.cloudImageCleanup,
+    ).toMatchObject({ maxFraction: 0.9, maxCount: 5 });
+    expect(() =>
+      loadConnectorConfig({ ...on, CLOUD_IMAGE_CLEANUP_MAX_FRACTION: '2' }, '/d'),
+    ).toThrow('CLOUD_IMAGE_CLEANUP_MAX_FRACTION');
+    expect(() => loadConnectorConfig({ ...on, CLOUD_IMAGE_CLEANUP_MAX_COUNT: '0' }, '/d')).toThrow(
+      'CLOUD_IMAGE_CLEANUP_MAX_COUNT',
+    );
+    expect(() =>
+      loadConnectorConfig({ ...connector, ...d1, CLOUD_IMAGE_CLEANUP: 'true' }, '/d'),
+    ).toThrow('CLOUD_IMAGE_CLEANUP needs the cloud backup');
+  });
 });
