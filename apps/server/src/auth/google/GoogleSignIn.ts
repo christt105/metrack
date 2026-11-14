@@ -91,8 +91,8 @@ export class GoogleSignIn {
       if (!response.ok) return failed(`the token endpoint answered ${response.status}`);
       const body = (await response.json()) as { id_token?: unknown };
       return typeof body.id_token === 'string' ? body.id_token : failed('no id token was returned');
-    } catch {
-      return failed('the token endpoint could not be reached');
+    } catch (error) {
+      return failed(`the token endpoint could not be reached: ${String(error)}`);
     }
   }
 

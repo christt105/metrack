@@ -18,6 +18,7 @@ import { createWorkerServices } from './createWorkerServices.js';
 import { D1SchemaVersion } from './D1SchemaVersion.js';
 import type { WorkerEnv } from './WorkerEnv.js';
 import type { WorkerServices } from './WorkerServices.js';
+import { workerFetch } from './workerFetch.js';
 
 /**
  * The same Hono app as the home server, over D1 and R2. Images are always recoded by the browser
@@ -51,7 +52,7 @@ export function createWorkerApp(
       sessions,
       users: repositories.users,
       devLogin: config.devLogin,
-      google: config.google && new GoogleSignIn(config.google, repositories.users),
+      google: config.google && new GoogleSignIn(config.google, repositories.users, workerFetch),
       logger,
     },
     tokens: new ApiTokenService(repositories.apiTokens, repositories.users),
