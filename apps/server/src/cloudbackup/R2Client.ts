@@ -14,7 +14,7 @@ function decodeXml(text: string): string {
     .replace(/&amp;/g, '&');
 }
 
-/** A read-only client for one bucket of the S3 API of R2: listing and getting objects. */
+/** A client for one bucket of the S3 API of R2: listing, getting, probing and deleting objects. */
 export class R2Client {
   constructor(
     private readonly config: R2Config,
@@ -47,19 +47,32 @@ export class R2Client {
 
   /** The bytes of one object. */
   async get(key: string): Promise<Buffer> {
-    const response = await this.send(
-      this.url(`/${key.split('/').map(encodeURIComponent).join('/')}`),
-    );
+    const response = await this.send(this.objectUrl(key));
     return Buffer.from(await response.arrayBuffer());
+  }
+
+  /** Whether an object exists. */
+  async has(key: string): Promise<boolean> {
+    const response = await this.send(this.objectUrl(key), 'HEAD', true);
+    return response.ok;
+  }
+
+  /** Deletes one object; deleting one that does not exist succeeds. */
+  async delete(key: string): Promise<void> {
+    await this.send(this.objectUrl(key), 'DELETE');
+  }
+
+  private objectUrl(key: string): URL {
+    return this.url(`/${key.split('/').map(encodeURIComponent).join('/')}`);
   }
 
   private url(path: string): URL {
     return new URL(`${this.config.endpoint}/${encodeURIComponent(this.config.bucket)}${path}`);
   }
 
-  private async send(url: URL): Promise<Response> {
+  private async send(url: URL, method = 'GET', missingIsOk = false): Promise<Response> {
     const headers = signAwsRequest({
-      method: 'GET',
+      method,
       url,
       accessKeyId: this.config.accessKeyId,
       secretAccessKey: this.config.secretAccessKey,
@@ -67,8 +80,8 @@ export class R2Client {
       service: SERVICE,
       date: this.now(),
     });
-    const response = await this.fetchFn(url, { headers });
-    if (!response.ok) {
+    const response = await this.fetchFn(url, { method, headers });
+    if (!response.ok && !(missingIsOk && response.status === 404)) {
       const detail = /<Code>([\s\S]*?)<\/Code>/.exec(await response.text())?.[1];
       throw new Error(`R2 request failed: HTTP ${response.status}${detail ? ` ${detail}` : ''}`);
     }

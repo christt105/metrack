@@ -88,4 +88,57 @@ describe('CloudBackupScheduler', () => {
     expect(notifier.sent[1]!.title).toBe('metrack connector: the cloud backup recovered');
     expect(scheduler.delays.at(-1)).toBe(18.5 * HOUR);
   });
+
+  describe('with a job to run after the backup', () => {
+    let order: string[];
+    let afterFails: boolean;
+
+    beforeEach(() => {
+      order = [];
+      afterFails = false;
+      const real = backup.run.bind(backup);
+      backup.run = async () => {
+        order.push('backup');
+        return real();
+      };
+      scheduled = new CloudBackupScheduler(
+        backup,
+        new CloudBackupJob(backup, notifier, logger),
+        time,
+        scheduler,
+        () => clock,
+        {
+          run: async () => {
+            order.push('after');
+            if (afterFails) throw new Error('cleanup failed');
+          },
+        },
+      );
+    });
+
+    it('runs it after each successful backup, not before', async () => {
+      scheduled.start();
+      await scheduler.fire();
+      await scheduler.fire();
+      expect(order).toEqual(['backup', 'after', 'backup', 'after']);
+    });
+
+    it('skips it while the backup fails and runs it once a retry succeeds', async () => {
+      failing = true;
+      scheduled.start();
+      await scheduler.fire();
+      expect(order).toEqual(['backup']);
+      failing = false;
+      await scheduler.fire();
+      expect(order).toEqual(['backup', 'backup', 'after']);
+    });
+
+    it('does not retry the backup or delay the next one when it fails', async () => {
+      afterFails = true;
+      scheduled.start();
+      await scheduler.fire();
+      expect(scheduler.delays[1]).toBe(18.5 * HOUR);
+      expect(notifier.sent).toEqual([]);
+    });
+  });
 });

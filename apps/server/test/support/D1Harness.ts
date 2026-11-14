@@ -7,7 +7,7 @@ import { recordStatements } from './recordStatements.js';
 import type { StorageHarness } from './StorageHarness.js';
 
 export class D1Harness implements StorageHarness {
-  constructor(private readonly db: D1Database) {}
+  constructor(readonly db: D1Database) {}
 
   /** The same database, with every statement the repositories bind added to `log`. */
   recording(log: RecordedStatement[]): D1Harness {

@@ -55,4 +55,35 @@ describe('R2Client', () => {
     expect((await client.get('ok.webp')).toString()).toBe('bytes');
     await expect(client.get('no.webp')).rejects.toThrow('HTTP 403 AccessDenied');
   });
+
+  it('probes objects with HEAD and treats a 404 as missing', async () => {
+    const seen: string[] = [];
+    const client = new R2Client(config, (async (input: URL, init: RequestInit) => {
+      seen.push(`${init.method} ${input.pathname}`);
+      if (String(input).endsWith('/gone.webp')) return new Response(null, { status: 404 });
+      if (String(input).endsWith('/denied.webp')) return new Response(null, { status: 403 });
+      return new Response(null);
+    }) as unknown as typeof fetch);
+    expect(await client.has('here.webp')).toBe(true);
+    expect(await client.has('gone.webp')).toBe(false);
+    await expect(client.has('denied.webp')).rejects.toThrow('HTTP 403');
+    expect(seen[0]).toBe('HEAD /metrack-images/here.webp');
+  });
+
+  it('deletes an object with a signed DELETE and fails with the S3 error code', async () => {
+    const seen: { method: string; auth: string }[] = [];
+    const client = new R2Client(config, (async (input: URL, init: RequestInit) => {
+      seen.push({
+        method: init.method!,
+        auth: (init.headers as Record<string, string>).authorization!,
+      });
+      return String(input).endsWith('/no.webp')
+        ? new Response('<Error><Code>AccessDenied</Code></Error>', { status: 403 })
+        : new Response(null, { status: 204 });
+    }) as unknown as typeof fetch);
+    await client.delete('ok.webp');
+    expect(seen[0]!.method).toBe('DELETE');
+    expect(seen[0]!.auth).toMatch(/^AWS4-HMAC-SHA256 Credential=key\//);
+    await expect(client.delete('no.webp')).rejects.toThrow('HTTP 403 AccessDenied');
+  });
 });

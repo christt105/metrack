@@ -2,24 +2,25 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { AccountDeletion, AccountStatus } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
-import type { ImageStore } from '../images/ImageStore.js';
 import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
 import type { AccountRepository } from '../storage/repositories/AccountRepository.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import { OWNER_ID } from '../users/OWNER_ID.js';
 import { lastDueRequest, scheduleOf } from './AccountDeletionSchedule.js';
+import type { UnusedImageRemover } from './UnusedImageRemover.js';
 
 /**
  * Schedules, cancels and carries out account deletions. A request waits out the grace period; `eraseDue`
  * then deletes each account that has passed it, together with the images only that account owned that
- * nothing uses and the account's folder in the data directory, when there is one. The owner's account is never deleted.
+ * nothing uses (when an image remover is given; otherwise they are left for a later cleanup) and the account's
+ * folder in the data directory, when there is one. The owner's account is never deleted.
  */
 export class AccountDeletionService {
   constructor(
     private readonly accounts: AccountRepository,
     private readonly users: UserRepository,
-    private readonly images: ImageStore,
+    private readonly images: UnusedImageRemover | null,
     private readonly dataDir: string | null,
     private readonly logger: Logger,
     private readonly now: () => Date = () => new Date(),
@@ -83,12 +84,14 @@ export class AccountDeletionService {
 
   private async erase(userId: number): Promise<void> {
     const owned = await this.accounts.erase(userId);
-    const removed = await this.images.removeUnused(owned);
+    const removed = this.images ? await this.images.removeUnused(owned) : null;
     if (this.dataDir !== null) {
       await rm(join(this.dataDir, 'users', String(userId)), { recursive: true, force: true });
     }
-    this.logger.info(
-      `deleted account ${userId} (${owned.length} images owned, ${removed.length} removed)`,
-    );
+    const images =
+      removed === null
+        ? `${owned.length} images owned, left for the image cleanup`
+        : `${owned.length} images owned, ${removed.length} removed`;
+    this.logger.info(`deleted account ${userId} (${images})`);
   }
 }
