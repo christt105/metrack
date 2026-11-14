@@ -8,6 +8,9 @@ import type { SyncSources } from '../sync/SyncSources.js';
 import { ReleaseWatchScheduler } from '../alerts/ReleaseWatchScheduler.js';
 import { TmdbReleaseSource } from '../providers/tmdb/TmdbReleaseSource.js';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
+import { CloudBackupJob } from '../cloudbackup/CloudBackupJob.js';
+import { CloudBackupScheduler } from '../cloudbackup/CloudBackupScheduler.js';
+import { createCloudBackup } from '../cloudbackup/createCloudBackup.js';
 import { CloudClient } from './CloudClient.js';
 import type { ConnectorConfig } from './ConnectorConfig.js';
 import { ConnectorQueue } from './ConnectorQueue.js';
@@ -57,6 +60,19 @@ export function runConnector(
     scheduler,
     config.passIntervalMs,
   );
+  if (config.cloudBackup) {
+    const backup = createCloudBackup(config.cloudBackup);
+    new CloudBackupScheduler(
+      backup,
+      new CloudBackupJob(backup, notifier, logger),
+      config.cloudBackup.time,
+      scheduler,
+    ).start();
+    const { hour, minute } = config.cloudBackup.time;
+    logger.info(
+      `cloud backup on: every day at ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} into ${config.cloudBackup.dir}, keeping ${config.cloudBackup.retention}`,
+    );
+  }
   const alertScheduler = startReleaseAlerts(config, cloud, store, tmdb, logger);
   const server = serve({
     fetch: createConnectorApp({

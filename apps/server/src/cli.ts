@@ -14,6 +14,8 @@ import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 import { runCatalogCommand } from './account/runCatalogCommand.js';
 import { loadConnectorConfig } from './connector/loadConnectorConfig.js';
 import { runConnector } from './connector/runConnector.js';
+import { loadCloudBackupConfig } from './cloudbackup/loadCloudBackupConfig.js';
+import { runCloudBackupCommand } from './cloudbackup/runCloudBackupCommand.js';
 import { runConnectorCommand } from './connector/runConnectorCommand.js';
 import { openJellystatPool } from './sync/jellystat/openJellystatPool.js';
 import { createSyncSources } from './sync/createSyncSources.js';
@@ -32,6 +34,9 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack retrieve <backupName> [--data-dir <dir>]
        metrack sync [--apply] [--verbose] [--user <id>] [--data-dir <dir>]
        metrack connector [report|sync --user <id|name|jellyfinUser>] [--verbose] [--data-dir <dir>]
+       metrack connector cloud-backup
+       metrack connector restore-sql <database.db> [--out <file.sql>]
+       metrack connector row-counts <database.db>
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
@@ -56,6 +61,9 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   from the cloud (METRACK_URL, METRACK_CONNECTOR_TOKEN) and sends only the changes. Alone it runs the long-lived service
   (webhook, queue, periodic pass); connector report prints one user's plan and writes nothing; connector sync computes and
   applies it once and exits. --user takes an id, a name or a Jellyfin account.
+
+  connector cloud-backup copies the cloud data now (docs/connector.md, CLOUD_BACKUP_*); restore-sql turns a copied database into the SQL file
+  that imports it into an empty D1, and row-counts prints the rows per table.
 
   redirect writes 404.html and index.html for the old GitHub Pages site. Every old address is sent to the same
   path on --origin (the old site was served under --old-base, default /MediaTracker). Nothing else is touched.
@@ -108,6 +116,7 @@ async function main(argv: string[]): Promise<number> {
       'link-prefix': { type: 'string' },
       email: { type: 'string' },
       user: { type: 'string' },
+      out: { type: 'string' },
       'jellyfin-user': { type: 'string' },
       'ntfy-topic': { type: 'string' },
       'publish-project': { type: 'string' },
@@ -135,6 +144,30 @@ async function main(argv: string[]): Promise<number> {
       ] as const
     ).filter(([, value]) => value !== undefined),
   ) as Partial<Record<keyof UserSettings, string>>;
+  if (
+    !values.help &&
+    command === 'connector' &&
+    (target === 'cloud-backup' || target === 'restore-sql' || target === 'row-counts')
+  ) {
+    const file = positionals[2];
+    if (
+      positionals.length > (target === 'cloud-backup' ? 2 : 3) ||
+      (target !== 'cloud-backup' && !file)
+    ) {
+      console.error(USAGE);
+      return 2;
+    }
+    const logger = { info: console.log, error: console.error };
+    const { config, missing } = loadCloudBackupConfig(process.env);
+    if (target === 'cloud-backup' && !config) {
+      console.error(
+        `The cloud backup is not configured${missing.length > 0 ? `, missing: ${missing.join(', ')}` : ' (CLOUD_BACKUP_DIR and the D1 variables)'}`,
+      );
+      return 2;
+    }
+    console.log(await runCloudBackupCommand(target, config, { file, out: values.out }, logger));
+    return 0;
+  }
   if (!values.help && command === 'connector') {
     const reporting = target === 'report';
     const syncing = target === 'sync';

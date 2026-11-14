@@ -1,4 +1,5 @@
 import { loadSyncConfig } from '../sync/loadSyncConfig.js';
+import { loadCloudBackupConfig } from '../cloudbackup/loadCloudBackupConfig.js';
 import type { ReleaseAlertsConfig } from './ReleaseAlertsConfig.js';
 import type { ConnectorConfig } from './ConnectorConfig.js';
 
@@ -78,6 +79,12 @@ export function loadConnectorConfig(
   } catch {
     throw new Error(`Invalid METRACK_URL: ${env.METRACK_URL}`);
   }
+  const cloudBackup = loadCloudBackupConfig(env);
+  if (cloudBackup.missing.length > 0) {
+    throw new Error(
+      `The cloud backup is partly configured, missing: ${cloudBackup.missing.join(', ')}`,
+    );
+  }
   return {
     missing: [],
     config: {
@@ -87,6 +94,7 @@ export function loadConnectorConfig(
       dataDir: env.CONNECTOR_DATA_DIR || defaultDataDir,
       passIntervalMs: hours * 3_600_000,
       releaseAlerts: loadReleaseAlerts(env),
+      cloudBackup: cloudBackup.config,
     },
   };
 }
