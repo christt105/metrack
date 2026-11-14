@@ -1,26 +1,12 @@
 import type { AlertKey } from '@metrack/domain';
-import type {
-  MovieRepository,
-  ReleaseAlertRepository,
-  SeasonOverrideRepository,
-  SeasonRepository,
-  SeriesRepository,
-} from '../storage/repositories/index.js';
 import type { NewReleaseAlert } from '../storage/repositories/NewReleaseAlert.js';
 import type { AlertSubject } from './AlertSubject.js';
 import type { FollowedTitle } from './FollowedTitle.js';
+import type { HomeReleaseStoreDeps } from './HomeReleaseStoreDeps.js';
 import type { ReconciledSeason } from './ReconciledSeason.js';
 import { reconcileSeasons } from './reconcileSeasons.js';
 import type { ReleaseStore } from './ReleaseStore.js';
 import type { SeriesRelease } from './SeriesRelease.js';
-
-export interface HomeReleaseStoreDeps {
-  movies: MovieRepository;
-  series: SeriesRepository;
-  seasons: SeasonRepository;
-  overrides: SeasonOverrideRepository;
-  alerts: ReleaseAlertRepository;
-}
 
 /** The release store over the repositories of whoever the surrounding scope is bound to. */
 export class HomeReleaseStore implements ReleaseStore {
