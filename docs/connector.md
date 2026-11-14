@@ -30,8 +30,17 @@ services:
       JELLYSTAT_DB_PASSWORD: ${JELLYSTAT_DB_PASSWORD}
       SYNC_WEBHOOK_SECRET: ${SYNC_WEBHOOK_SECRET}
       TZ: Europe/Madrid
+      # Optional daily copy of the cloud data, section 8:
+      # CLOUD_BACKUP_DIR: /cloud-backup
+      # CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      # CLOUD_BACKUP_D1_DATABASE_ID: ${CLOUD_BACKUP_D1_DATABASE_ID}
+      # CLOUD_BACKUP_D1_TOKEN: ${CLOUD_BACKUP_D1_TOKEN}
+      # CLOUD_BACKUP_R2_BUCKET: metrack-images
+      # CLOUD_BACKUP_R2_ACCESS_KEY_ID: ${CLOUD_BACKUP_R2_ACCESS_KEY_ID}
+      # CLOUD_BACKUP_R2_SECRET_ACCESS_KEY: ${CLOUD_BACKUP_R2_SECRET_ACCESS_KEY}
     volumes:
       - ./connector-data:/data
+      # - /path/to/backups/metrack-cloud:/cloud-backup
     networks:
       - default
       - jellystat
@@ -46,26 +55,34 @@ The service joins the Jellystat network to reach its Postgres by container name.
 
 ## 3. Environment variables
 
-| Variable                                                      | Default                   | Meaning                                                                                   |
-| ------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------- |
-| `METRACK_URL`                                                 | required                  | Address of the metrack to sync into                                                       |
-| `METRACK_CONNECTOR_TOKEN`                                     | required                  | The `connector` token (or a personal `write` token)                                       |
-| `JELLYFIN_URL`, `JELLYFIN_TOKEN`                              | required                  | Jellyfin address and an API key                                                           |
-| `JELLYSTAT_DB_HOST`, `JELLYSTAT_DB_PASSWORD`                  | required                  | Jellystat Postgres host and password                                                      |
-| `JELLYSTAT_DB_PORT`, `JELLYSTAT_DB_USER`, `JELLYSTAT_DB_NAME` | 5432, postgres, jellystat | Rest of the connection                                                                    |
-| `SYNC_WEBHOOK_SECRET`                                         | unset                     | Secret the webhook must send (16+ characters), as `X-Webhook-Secret` or `?token=`         |
-| `SYNC_WEBHOOK_DELAY_SECONDS`                                  | 120                       | Quiet time after a webhook before a user's sync runs, so Jellystat has recorded the play  |
-| `CONNECTOR_PASS_HOURS`                                        | 6                         | Hours between full passes over every user, in case a webhook was lost                     |
-| `CONNECTOR_DATA_DIR`                                          | `DATA_DIR` (`/data`)      | Where the connector keeps its state (`connector-state.json`: pending users)               |
-| `SYNC_TIME_ZONE`                                              | `Europe/Madrid`           | Time zone that decides on which day a viewing falls                                       |
-| `TMDB_API_KEY`, `TMDB_LANGUAGE`                               | unset, `es-ES`            | Optional: pairs series Jellyfin only knows by TheTVDB id (the cloud fetches the metadata) |
-| `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`                        | unset                     | Where the connector reports a run of failures                                             |
-| `CONNECTOR_RELEASE_ALERTS`                                    | unset (off)               | `true` turns on the release alerts of section 7                                           |
-| `CONNECTOR_RELEASE_NTFY_URL`                                  | `https://ntfy.sh`         | Server the users' topics live on (no token), separate from `NTFY_URL`                     |
-| `CONNECTOR_RELEASE_FROM_HOUR`                                 | 9                         | Madrid hour before which nothing is checked or sent                                       |
-| `CONNECTOR_RELEASE_TICK_MINUTES`                              | 5                         | Minutes between looks at which titles are due                                             |
-| `CONNECTOR_RELEASE_DAILY_LIMIT`                               | 200                       | Alerts sent per UTC day before stopping, to stay under ntfy.sh's 250 per IP               |
-| `PORT`, `HOST`                                                | 8097, `0.0.0.0`           | Where the webhook listens                                                                 |
+| Variable                                                             | Default                                      | Meaning                                                                                         |
+| -------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `METRACK_URL`                                                        | required                                     | Address of the metrack to sync into                                                             |
+| `METRACK_CONNECTOR_TOKEN`                                            | required                                     | The `connector` token (or a personal `write` token)                                             |
+| `JELLYFIN_URL`, `JELLYFIN_TOKEN`                                     | required                                     | Jellyfin address and an API key                                                                 |
+| `JELLYSTAT_DB_HOST`, `JELLYSTAT_DB_PASSWORD`                         | required                                     | Jellystat Postgres host and password                                                            |
+| `JELLYSTAT_DB_PORT`, `JELLYSTAT_DB_USER`, `JELLYSTAT_DB_NAME`        | 5432, postgres, jellystat                    | Rest of the connection                                                                          |
+| `SYNC_WEBHOOK_SECRET`                                                | unset                                        | Secret the webhook must send (16+ characters), as `X-Webhook-Secret` or `?token=`               |
+| `SYNC_WEBHOOK_DELAY_SECONDS`                                         | 120                                          | Quiet time after a webhook before a user's sync runs, so Jellystat has recorded the play        |
+| `CONNECTOR_PASS_HOURS`                                               | 6                                            | Hours between full passes over every user, in case a webhook was lost                           |
+| `CONNECTOR_DATA_DIR`                                                 | `DATA_DIR` (`/data`)                         | Where the connector keeps its state (`connector-state.json`: pending users)                     |
+| `SYNC_TIME_ZONE`                                                     | `Europe/Madrid`                              | Time zone that decides on which day a viewing falls                                             |
+| `TMDB_API_KEY`, `TMDB_LANGUAGE`                                      | unset, `es-ES`                               | Optional: pairs series Jellyfin only knows by TheTVDB id (the cloud fetches the metadata)       |
+| `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`                               | unset                                        | Where the connector reports a run of failures                                                   |
+| `CONNECTOR_RELEASE_ALERTS`                                           | unset (off)                                  | `true` turns on the release alerts of section 7                                                 |
+| `CONNECTOR_RELEASE_NTFY_URL`                                         | `https://ntfy.sh`                            | Server the users' topics live on (no token), separate from `NTFY_URL`                           |
+| `CONNECTOR_RELEASE_FROM_HOUR`                                        | 9                                            | Madrid hour before which nothing is checked or sent                                             |
+| `CONNECTOR_RELEASE_TICK_MINUTES`                                     | 5                                            | Minutes between looks at which titles are due                                                   |
+| `CONNECTOR_RELEASE_DAILY_LIMIT`                                      | 200                                          | Alerts sent per UTC day before stopping, to stay under ntfy.sh's 250 per IP                     |
+| `CLOUD_BACKUP_DIR`                                                   | unset (off)                                  | Folder for the daily copy of the cloud data (section 8); the copy needs this and the next three |
+| `CLOUDFLARE_ACCOUNT_ID`                                              | unset                                        | Cloudflare account of the D1 database and the R2 bucket                                         |
+| `CLOUD_BACKUP_D1_DATABASE_ID`, `CLOUD_BACKUP_D1_TOKEN`               | unset                                        | D1 database to copy and an API token with D1 Edit (the export endpoint requires it)             |
+| `CLOUD_BACKUP_R2_BUCKET`                                             | unset                                        | R2 bucket whose images are copied; unset copies only the database                               |
+| `CLOUD_BACKUP_R2_ACCESS_KEY_ID`, `CLOUD_BACKUP_R2_SECRET_ACCESS_KEY` | unset                                        | S3 credentials of the bucket (read access is enough); required with the bucket                  |
+| `CLOUD_BACKUP_R2_ENDPOINT`                                           | `https://<account>.r2.cloudflarestorage.com` | S3 endpoint, to point the copy at another S3 server                                             |
+| `CLOUD_BACKUP_RETENTION`                                             | 14                                           | Copied databases to keep                                                                        |
+| `CLOUD_BACKUP_TIME`                                                  | `04:30`                                      | Time of the daily copy, in the container's time zone (`TZ`)                                     |
+| `PORT`, `HOST`                                                       | 8097, `0.0.0.0`                              | Where the webhook listens                                                                       |
 
 ## 4. Jellyfin webhook
 
@@ -86,7 +103,7 @@ docker exec metrack-connector node --disable-warning=ExperimentalWarning apps/se
 docker exec metrack-connector node --disable-warning=ExperimentalWarning apps/server/dist/cli.js connector sync --user <id|name|jellyfinUser>
 ```
 
-`metrack connector` with no subcommand is the long-lived service. `connector report` prints the plan for one user and writes nothing, like `metrack sync` does at home. `connector sync` computes and applies the plan for one user once and exits, the same path a webhook takes (re-planning on a 409, then refreshing the created titles and the ones without metadata), and prints the result; `report` also says how many titles have no metadata yet. `--user` takes the user's id, name or Jellyfin account. Both need the same environment variables as the service.
+`metrack connector` with no subcommand is the long-lived service. `connector cloud-backup`, `connector restore-sql` and `connector row-counts` belong to the cloud copy (section 8). `connector report` prints the plan for one user and writes nothing, like `metrack sync` does at home. `connector sync` computes and applies the plan for one user once and exits, the same path a webhook takes (re-planning on a 409, then refreshing the created titles and the ones without metadata), and prints the result; `report` also says how many titles have no metadata yet. `--user` takes the user's id, name or Jellyfin account. Both need the same environment variables as the service.
 
 ## 7. Release alerts
 
@@ -97,6 +114,38 @@ With `CONNECTOR_RELEASE_ALERTS=true` (and `TMDB_API_KEY`) the connector also che
 - Each alert is posted to the user's topic on `CONNECTOR_RELEASE_NTFY_URL` and recorded in the cloud (`POST /api/connector/users/{id}/release-alerts`) only after ntfy accepted it. Recorded keys are never sent again, so a restart does not repeat an alert. If the cloud is down when recording, the alert is remembered in memory and recorded later, so it is not resent either; only a restart during that outage would repeat it.
 - The alerts sent per UTC day are counted in `connector-state.json`. At `CONNECTOR_RELEASE_DAILY_LIMIT` the connector stops sending, logs it once, and the rest wait for the next day (their titles are checked again after 30 minutes). The default leaves margin under ntfy.sh's limit of 250 anonymous messages a day per IP.
 
+## 8. Daily copy of the cloud data
+
+D1's Time Travel only keeps 7 days and cannot be downloaded, so the connector can copy the cloud data to the home server every day. It is off unless `CLOUD_BACKUP_DIR` and the D1 variables are set; setting only some of them makes the connector refuse to start and name the rest. It uses the layout of the home server's backup copy (`BACKUP_COPY_DIR`): `databases/metrack-<UTC timestamp>.db`, one per run, and one shared `images/` folder.
+
+- **Database:** at `CLOUD_BACKUP_TIME` it asks D1 for its official SQL export (`POST /accounts/{account}/d1/database/{database}/export`, polled until it is ready), loads the SQL into a new SQLite file, runs `PRAGMA integrity_check` and renames it into `databases/`. The export reads the whole database once (about as many rows as it has, against the free plan's 5 million rows read per day) and costs the Worker nothing. The token needs the D1 Edit permission, which Cloudflare scopes to the whole account (every D1 database in it, not just this one), so keep it only in the connector's environment.
+- **Images:** it lists the bucket through the S3 API (SigV4 signing is built in, no extra dependency) and downloads only the images the new database lists and the copy does not have; images are stored by hash and never change, so each is downloaded once. R2 credentials come from the R2 API token page (an Object Read only token on the bucket is enough: the access key id is the token id, the secret is the SHA-256 of the token value).
+- **Order and retention:** images are written before the database, and every file is written under a partial name and renamed, so a failed run leaves no half file and every copied database has its images. After the run it keeps the newest `CLOUD_BACKUP_RETENTION` databases and removes images no retained database lists; if any retained database cannot be read, no image is removed.
+- **Schedule and alerts:** one run a day at `CLOUD_BACKUP_TIME`; when the connector starts and the newest copy is more than a day old, it runs a minute later. A failed run is retried after 1, 5 and 15 minutes and then every hour. After three failures in a row the connector notifies through ntfy (`NTFY_URL`), and once more when it works again. Each run logs the rows, SQL and database sizes, images downloaded and pruned, and the duration.
+- **One run now:** `docker exec metrack-connector node --disable-warning=ExperimentalWarning apps/server/dist/cli.js connector cloud-backup`.
+
+The copy does not protect against a mistake that is copied identically during the whole retention, and it copies only the database and bucket the variables name.
+
+### Restoring a copy into D1
+
+`connector restore-sql` turns a copied database into one SQL file that D1 accepts: foreign keys deferred, no transaction or `PRAGMA` D1 refuses, the tables first, then the rows of each table with parents before the tables that reference them (a real D1 import runs in batches, so the deferral alone is not enough), then the indexes and triggers; `d1_migrations` is included so `wrangler d1 migrations apply` still works afterwards. A row whose INSERT would pass D1's 100 KB statement limit is inserted with its large text or blob columns cut, and the rest is appended by `UPDATE ... SET "col" = "col" || ...` statements. `connector row-counts` prints the rows per table, to compare with the restored database.
+
+```sh
+CLI="node --disable-warning=ExperimentalWarning apps/server/dist/cli.js connector"
+$CLI restore-sql /path/to/databases/metrack-<stamp>.db --out restore.sql
+$CLI row-counts /path/to/databases/metrack-<stamp>.db > counts-copy.txt
+wrangler d1 create metrack-restore
+wrangler d1 execute metrack-restore --remote --yes --file restore.sql
+```
+
+The target must be an empty D1 database (the file creates every table); `--yes` skips the confirmation prompt. Check the import by comparing the rows of every table with `counts-copy.txt`. D1 rejects a compound `UNION ALL` of many tables, so count with one row of scalar subqueries:
+
+```sh
+wrangler d1 execute metrack-restore --remote --command 'SELECT (SELECT COUNT(*) FROM "movie") AS "movie", (SELECT COUNT(*) FROM "series") AS "series", (SELECT COUNT(*) FROM "user") AS "user"'
+```
+
+List every table of `counts-copy.txt` the same way. To restore the images, upload the files of `images/` to the bucket under their own names (`wrangler r2 object put <bucket>/<name> --file images/<name>`).
+
 ## What it does not do yet
 
-The daily export of the database and the Obsidian mirror are separate tasks. The web sync page on a Worker says that syncing is done by the connector and shows no report; a report in the web, by uploading the last plan to the cloud, would be a later addition.
+The Obsidian mirror is a separate task. The web sync page on a Worker says that syncing is done by the connector and shows no report; a report in the web, by uploading the last plan to the cloud, would be a later addition.

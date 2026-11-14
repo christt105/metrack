@@ -1,4 +1,5 @@
 import type { ReleaseAlertsConfig } from './ReleaseAlertsConfig.js';
+import type { CloudBackupConfig } from '../cloudbackup/CloudBackupConfig.js';
 import type { SyncConfig } from '../sync/SyncConfig.js';
 
 export interface ConnectorConfig {
@@ -14,4 +15,6 @@ export interface ConnectorConfig {
   passIntervalMs: number;
   /** Release alerts from home. Undefined when `CONNECTOR_RELEASE_ALERTS` is not `true`. */
   releaseAlerts?: ReleaseAlertsConfig;
+  /** The daily copy of the cloud data. Undefined when its variables are not set. */
+  cloudBackup?: CloudBackupConfig;
 }
