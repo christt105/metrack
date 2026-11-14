@@ -56,6 +56,48 @@ describe('FullPass', () => {
   });
 });
 
+describe('FullPass.queueUsersForWebhook', () => {
+  it('queues a user linked in the cloud after the last full pass', async () => {
+    let users = [{ id: 1, name: 'a', jellyfinUser: 'a' }];
+    const { fullPass, queueScheduler, store } = pass(async () => Response.json(users));
+    await fullPass.run();
+    expect(queueScheduler.pending()).toBe(1);
+    users = [...users, { id: 2, name: 'b', jellyfinUser: 'b' }];
+    expect(await fullPass.queueUsersForWebhook()).toBe(2);
+    expect(queueScheduler.pending()).toBe(2);
+    expect(store.read().users).toEqual([1, 2]);
+  });
+
+  it('queues the known users when the cloud cannot be reached', async () => {
+    let down = false;
+    const { fullPass, queueScheduler } = pass(async () => {
+      if (down) throw new TypeError('fetch failed');
+      return Response.json([
+        { id: 1, name: 'a', jellyfinUser: 'a' },
+        { id: 2, name: 'b', jellyfinUser: 'b' },
+      ]);
+    });
+    await fullPass.run();
+    await queueScheduler.fire();
+    await queueScheduler.fire();
+    expect(queueScheduler.pending()).toBe(0);
+    down = true;
+    const response = await createConnectorApp({
+      onWebhook: () => fullPass.queueUsersForWebhook(),
+    }).request('/webhook', { method: 'POST' });
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ status: 'queued', users: 2 });
+    expect(queueScheduler.pending()).toBe(2);
+  });
+
+  it('fails when the cloud cannot be reached and no user is known', async () => {
+    const { fullPass } = pass(async () => {
+      throw new TypeError('fetch failed');
+    });
+    await expect(fullPass.queueUsersForWebhook()).rejects.toThrow('fetch failed');
+  });
+});
+
 describe('connector webhook', () => {
   const app = (queued: number[] = []) =>
     createConnectorApp({

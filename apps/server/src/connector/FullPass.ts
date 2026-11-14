@@ -42,6 +42,25 @@ export class FullPass {
     return ids;
   }
 
+  /**
+   * Re-reads the users from the cloud so a newly linked account is queued right away. When the cloud cannot be reached
+   * it queues the users of the last pass instead, and only fails when there are none.
+   */
+  async queueUsersForWebhook(): Promise<number> {
+    try {
+      return (await this.queueUsers()).length;
+    } catch (error) {
+      const known = this.knownUsers();
+      if (known.length === 0) throw error;
+      const reason = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Webhook could not read the users, queueing the ${known.length} known ones: ${reason}`,
+      );
+      this.queue.markAll(known);
+      return known.length;
+    }
+  }
+
   /** Queues every user, then schedules the next pass: after the interval, or sooner when this one failed. */
   async run(): Promise<void> {
     let delay = this.intervalMs;
