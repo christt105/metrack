@@ -79,7 +79,8 @@ onBeforeUnmount(() => clearTimeout(timer));
     </header>
     <ErrorNotice :error="error" />
     <LibraryWelcome v-if="page && !error && libraryEmpty" />
-    <template v-else>
+    <p v-else-if="!page && !error" class="muted">{{ messages.common.loading }}</p>
+    <template v-else-if="page">
       <section v-if="inProgress.length" class="shelf" aria-labelledby="shelf-progress">
         <h2 id="shelf-progress">{{ messages.list.inProgressTitle }}</h2>
         <div class="rail">
@@ -87,8 +88,7 @@ onBeforeUnmount(() => clearTimeout(timer));
         </div>
       </section>
       <LibraryFilters v-model="filters" />
-      <p v-if="loading && !page" class="muted">{{ messages.common.loading }}</p>
-      <p v-else-if="page && cards.length === 0" class="muted">{{ messages.list.empty }}</p>
+      <p v-if="cards.length === 0 && !loading" class="muted">{{ messages.list.empty }}</p>
       <div class="grid">
         <MediaCard v-for="card in cards" :key="card.key" :card="card" />
       </div>
