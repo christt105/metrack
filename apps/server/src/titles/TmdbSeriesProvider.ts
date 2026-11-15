@@ -83,7 +83,7 @@ export class TmdbSeriesProvider implements TitleProvider {
         cover: poster ? (covers.get(poster) ?? null) : null,
       });
     }
-    await this.cache.refresh('series', series.id, true);
+    await this.cache.refresh('series', series.id, true, { pinStored: false });
     return { type: 'series', id: series.id };
   }
 

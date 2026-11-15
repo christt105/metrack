@@ -115,6 +115,7 @@ describe('adding titles', () => {
       status: 'planned',
     });
     expect(movie.cover).toBe(`${IMG}/p.jpg`);
+    expect(await api.movies.overriddenFields(1)).toEqual([]);
     const archived = await api.store.findBySourceUrl(`${IMG}/p.jpg`);
     expect(archived).toBeDefined();
     expect((await get(archived?.ref ?? '')).statusCode).toBe(200);
@@ -125,6 +126,7 @@ describe('adding titles', () => {
     expect(response.statusCode).toBe(201);
     const detail = (await get('/api/series/1')).json();
     expect(detail.title).toBe('Lupin');
+    expect(await api.series.overriddenFields(1)).toEqual([]);
     expect(detail.seasons).toMatchObject([
       {
         number: 1,

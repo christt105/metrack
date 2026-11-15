@@ -113,6 +113,18 @@ describe.each(backends)('$name: first metadata refresh of imported titles', (bac
     });
   });
 
+  it('lets the provider win over the placeholder of a title that was just created', async () => {
+    const created = await repos.movies.create({
+      ...emptyMovie(),
+      tmdbId: 9,
+      title: 'Jellyfin name',
+    });
+    await cache.refresh('movie', created.id, true, { pinStored: false });
+
+    expect(await repos.movies.overriddenFields(created.id)).toEqual([]);
+    expect((await repos.movies.get(created.id))?.title).toBe('Crímenes');
+  });
+
   it('changes nothing for the user on later refreshes', async () => {
     await cache.refresh('movie', movieId);
     const before = pick(await repos.movies.get(movieId));

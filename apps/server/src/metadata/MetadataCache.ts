@@ -8,7 +8,7 @@ import type { MetadataStateRepository } from '../storage/repositories/MetadataSt
 import type { MetadataTarget } from './MetadataTarget.js';
 import type { RefreshResult } from './RefreshResult.js';
 
-type Refresher = (id: number, force: boolean) => Promise<RefreshResult>;
+type Refresher = (id: number, force: boolean, pinStored: boolean) => Promise<RefreshResult>;
 
 /**
  * Keeps provider metadata fresh without asking for what has not expired and without
@@ -27,18 +27,28 @@ export class MetadataCache {
   ) {}
 
   register<T extends { id: number }>(type: MediaType, target: MetadataTarget<T>): void {
-    this.refreshers.set(type, (id, force) => this.refreshOne(type, id, target, force));
+    this.refreshers.set(type, (id, force, pinStored) =>
+      this.refreshOne(type, id, target, force, pinStored),
+    );
   }
 
   supports(type: MediaType): boolean {
     return this.refreshers.has(type);
   }
 
-  /** Refreshes when stale, or unconditionally with `force` (the manual refresh button). */
-  async refresh(type: MediaType, id: number, force = false): Promise<RefreshResult> {
+  /**
+   * Refreshes when stale, or unconditionally with `force` (the manual refresh button). `pinStored: false` skips
+   * keeping the stored values of a never fetched row, for rows that were just created from a placeholder.
+   */
+  async refresh(
+    type: MediaType,
+    id: number,
+    force = false,
+    options: { pinStored?: boolean } = {},
+  ): Promise<RefreshResult> {
     const refresher = this.refreshers.get(type);
     if (!refresher) throw new Error(`No metadata source registered for ${type}`);
-    return refresher(id, force);
+    return refresher(id, force, options.pinStored ?? true);
   }
 
   private async refreshOne<T extends { id: number }>(
@@ -46,6 +56,7 @@ export class MetadataCache {
     id: number,
     target: MetadataTarget<T>,
     force: boolean,
+    pinStored: boolean,
   ): Promise<RefreshResult> {
     const entity = await target.repository.get(id);
     if (!entity) throw new Error(`${type} ${id} not found`);
@@ -90,7 +101,7 @@ export class MetadataCache {
         hashContent(patch[field]) !== hashContent((entity as Record<string, unknown>)[field]),
     );
     if (changed.length > 0) {
-      if (state.fetchedAt === null) {
+      if (pinStored && state.fetchedAt === null) {
         await target.repository.pinCatalogValues(id, patch as Partial<Omit<T, 'id'>>);
       }
       await target.repository.updateCatalog(id, patch as Partial<Omit<T, 'id'>>);

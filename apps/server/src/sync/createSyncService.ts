@@ -32,6 +32,7 @@ export function createSyncService(
   );
   return new SyncService(library, playback, targets, new SyncApplier(transactions, targets), {
     timeZone: config.timeZone,
-    refreshCreated: tmdb && ((ref) => tmdb.metadata.refresh(ref.type, ref.id, true)),
+    refreshCreated:
+      tmdb && ((ref) => tmdb.metadata.refresh(ref.type, ref.id, true, { pinStored: false })),
   });
 }

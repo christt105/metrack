@@ -50,7 +50,7 @@ export class TmdbMovieProvider implements TitleProvider {
       tmdbId,
       title: details.title ?? `TMDB ${tmdbId}`,
     });
-    await this.cache.refresh('movie', movie.id, true);
+    await this.cache.refresh('movie', movie.id, true, { pinStored: false });
     return { type: 'movie', id: movie.id };
   }
 }
