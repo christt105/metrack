@@ -81,130 +81,221 @@ const backup = () =>
     await reloadBackups();
     return messages.settings.backupDone(created.name);
   });
+const groups = computed(() =>
+  (['profile', 'connections', 'people', 'system'] as const)
+    .filter((id) => id !== 'people' || owner.value)
+    .map((id) => ({ id })),
+);
 </script>
 
 <template>
   <section>
     <h1>{{ messages.settings.title }}</h1>
-    <div class="panel">
-      <h2>{{ messages.settings.service }}</h2>
-      <ErrorNotice :error="healthError" />
-      <dl v-if="health">
-        <dt class="muted">{{ messages.settings.status }}</dt>
-        <dd>{{ health.status }}</dd>
-        <dt class="muted">{{ messages.settings.version }}</dt>
-        <dd>{{ health.appVersion }}</dd>
-        <dt class="muted">{{ messages.settings.schema }}</dt>
-        <dd>{{ health.schemaVersion }}</dd>
-      </dl>
+    <div class="settings">
+      <nav class="index" :aria-label="messages.settings.sections">
+        <a v-for="group in groups" :key="group.id" :href="`#${group.id}`" class="chip">
+          {{ messages.settings.groups[group.id] }}
+        </a>
+      </nav>
+      <div class="groups">
+        <div id="profile" class="group">
+          <p class="group-title">{{ messages.settings.groups.profile }}</p>
+          <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
+          <AccountPanel v-if="own" :handle="own.publicPage.handle" />
+        </div>
+        <div id="connections" class="group">
+          <p class="group-title">{{ messages.settings.groups.connections }}</p>
+          <div class="panel">
+            <h2>{{ messages.settings.jobs }}</h2>
+            <p class="muted">{{ messages.settings.jobsHint }}</p>
+            <ErrorNotice :error="ownError" />
+            <SettingsList v-if="own" :settings="own.settings" />
+          </div>
+          <NtfyAlertsPanel
+            v-if="own?.ntfyTopicGenerated"
+            :topic="own.settings.ntfyTopic"
+            @saved="refreshOwn"
+          />
+          <TokensPanel :connector="owner" />
+          <div v-if="own?.settings.jellyfinUser" class="panel">
+            <h2>{{ messages.settings.sync }}</h2>
+            <p v-if="health?.features.sync === false" class="muted">
+              {{ messages.settings.syncByConnector }}
+            </p>
+            <template v-else>
+              <p class="muted">{{ messages.settings.syncHint }}</p>
+              <ul v-if="plan" class="sync">
+                <li>{{ messages.settings.syncMovies(plan.movies.length) }}</li>
+                <li>
+                  {{ messages.settings.syncSeasons(plan.series.flatMap((s) => s.seasons).length) }}
+                </li>
+                <li>{{ messages.settings.syncUnlinked(plan.unlinked.length) }}</li>
+                <li>{{ messages.settings.syncWarnings(plan.warnings.length) }}</li>
+                <li class="muted">
+                  {{
+                    messages.settings.syncUnmatched(plan.ignoredPlays, plan.unmatchedTitles.length)
+                  }}
+                </li>
+              </ul>
+              <button type="button" :disabled="busy" @click="checkSync">
+                {{ messages.settings.syncCheck }}
+              </button>
+              <button v-if="syncChanges > 0" type="button" :disabled="busy" @click="applySync">
+                {{ messages.settings.syncApply }}
+              </button>
+            </template>
+          </div>
+        </div>
+        <div v-if="owner" id="people" class="group">
+          <p class="group-title">{{ messages.settings.groups.people }}</p>
+          <InvitationsPanel v-if="owner" />
+          <UsersPanel v-if="owner" />
+          <div v-if="owner" class="panel">
+            <h2>{{ messages.settings.users }}</h2>
+            <p class="muted">{{ messages.settings.usersHint }}</p>
+            <ErrorNotice :error="usersError" />
+            <UserSettingsEditor
+              v-for="entry in users ?? []"
+              :key="entry.user.id"
+              :user="entry.user"
+              :settings="entry.settings"
+              :topic-generated="own?.ntfyTopicGenerated === true"
+              @saved="refreshOwn"
+            />
+          </div>
+        </div>
+        <div id="system" class="group">
+          <p class="group-title">{{ messages.settings.groups.system }}</p>
+          <div class="panel">
+            <h2>{{ messages.settings.service }}</h2>
+            <ErrorNotice :error="healthError" />
+            <dl v-if="health">
+              <dt class="muted">{{ messages.settings.status }}</dt>
+              <dd>{{ health.status }}</dd>
+              <dt class="muted">{{ messages.settings.version }}</dt>
+              <dd>{{ health.appVersion }}</dd>
+              <dt class="muted">{{ messages.settings.schema }}</dt>
+              <dd>{{ health.schemaVersion }}</dd>
+            </dl>
+          </div>
+          <div class="panel">
+            <h2>{{ messages.images.title }}</h2>
+            <ErrorNotice :error="imageUsageError" />
+            <p v-if="imageUsage" data-test="image-usage">
+              {{
+                imageUsage.quotaBytes === null
+                  ? messages.images.usageUnlimited(messages.images.megabytes(imageUsage.usedBytes))
+                  : messages.images.usage(
+                      messages.images.megabytes(imageUsage.usedBytes),
+                      messages.images.megabytes(imageUsage.quotaBytes),
+                    )
+              }}
+            </p>
+          </div>
+          <div v-if="own?.settings.publishProject" class="panel">
+            <h2>{{ messages.settings.publishing }}</h2>
+            <p class="muted">{{ messages.settings.publishHint }}</p>
+            <button type="button" :disabled="busy" @click="publish">
+              {{ messages.settings.publish }}
+            </button>
+          </div>
+          <div v-if="owner" class="panel">
+            <h2>{{ messages.settings.storage }}</h2>
+            <button type="button" :disabled="busy" @click="cleanup">
+              {{ messages.settings.cleanup }}
+            </button>
+          </div>
+          <div v-if="owner && health?.features.backups" class="panel">
+            <h2>{{ messages.settings.backups }}</h2>
+            <ErrorNotice :error="backupsError" />
+            <p v-if="backups && backups.length === 0" class="muted">
+              {{ messages.settings.backupsEmpty }}
+            </p>
+            <ul v-if="backups" class="backups">
+              <li v-for="item in backups" :key="item.name">
+                <span>{{ item.name }}</span>
+                <span class="muted">
+                  {{ messages.settings.backupSize(item.sizeBytes)
+                  }}<template v-if="item.hasImages"
+                    >, {{ messages.settings.backupWithImages }}</template
+                  >
+                </span>
+              </li>
+            </ul>
+            <button type="button" :disabled="busy" @click="backup">
+              {{ messages.settings.backupNow }}
+            </button>
+          </div>
+        </div>
+        <p v-if="actionResult" class="notice success" role="status">{{ actionResult }}</p>
+        <ErrorNotice :error="actionError" />
+      </div>
     </div>
-    <div class="panel">
-      <h2>{{ messages.settings.jobs }}</h2>
-      <p class="muted">{{ messages.settings.jobsHint }}</p>
-      <ErrorNotice :error="ownError" />
-      <SettingsList v-if="own" :settings="own.settings" />
-    </div>
-    <NtfyAlertsPanel
-      v-if="own?.ntfyTopicGenerated"
-      :topic="own.settings.ntfyTopic"
-      @saved="refreshOwn"
-    />
-    <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
-    <TokensPanel :connector="owner" />
-    <InvitationsPanel v-if="owner" />
-    <UsersPanel v-if="owner" />
-    <AccountPanel v-if="own" :handle="own.publicPage.handle" />
-    <div class="panel">
-      <h2>{{ messages.images.title }}</h2>
-      <ErrorNotice :error="imageUsageError" />
-      <p v-if="imageUsage" data-test="image-usage">
-        {{
-          imageUsage.quotaBytes === null
-            ? messages.images.usageUnlimited(messages.images.megabytes(imageUsage.usedBytes))
-            : messages.images.usage(
-                messages.images.megabytes(imageUsage.usedBytes),
-                messages.images.megabytes(imageUsage.quotaBytes),
-              )
-        }}
-      </p>
-    </div>
-    <div v-if="own?.settings.publishProject" class="panel">
-      <h2>{{ messages.settings.publishing }}</h2>
-      <p class="muted">{{ messages.settings.publishHint }}</p>
-      <button type="button" :disabled="busy" @click="publish">
-        {{ messages.settings.publish }}
-      </button>
-    </div>
-    <div v-if="owner" class="panel">
-      <h2>{{ messages.settings.storage }}</h2>
-      <button type="button" :disabled="busy" @click="cleanup">
-        {{ messages.settings.cleanup }}
-      </button>
-    </div>
-    <div v-if="owner && health?.features.backups" class="panel">
-      <h2>{{ messages.settings.backups }}</h2>
-      <ErrorNotice :error="backupsError" />
-      <p v-if="backups && backups.length === 0" class="muted">
-        {{ messages.settings.backupsEmpty }}
-      </p>
-      <ul v-if="backups" class="backups">
-        <li v-for="item in backups" :key="item.name">
-          <span>{{ item.name }}</span>
-          <span class="muted">
-            {{ messages.settings.backupSize(item.sizeBytes)
-            }}<template v-if="item.hasImages">, {{ messages.settings.backupWithImages }}</template>
-          </span>
-        </li>
-      </ul>
-      <button type="button" :disabled="busy" @click="backup">
-        {{ messages.settings.backupNow }}
-      </button>
-    </div>
-    <div v-if="own?.settings.jellyfinUser" class="panel">
-      <h2>{{ messages.settings.sync }}</h2>
-      <p v-if="health?.features.sync === false" class="muted">
-        {{ messages.settings.syncByConnector }}
-      </p>
-      <template v-else>
-        <p class="muted">{{ messages.settings.syncHint }}</p>
-        <ul v-if="plan" class="sync">
-          <li>{{ messages.settings.syncMovies(plan.movies.length) }}</li>
-          <li>
-            {{ messages.settings.syncSeasons(plan.series.flatMap((s) => s.seasons).length) }}
-          </li>
-          <li>{{ messages.settings.syncUnlinked(plan.unlinked.length) }}</li>
-          <li>{{ messages.settings.syncWarnings(plan.warnings.length) }}</li>
-          <li class="muted">
-            {{ messages.settings.syncUnmatched(plan.ignoredPlays, plan.unmatchedTitles.length) }}
-          </li>
-        </ul>
-        <button type="button" :disabled="busy" @click="checkSync">
-          {{ messages.settings.syncCheck }}
-        </button>
-        <button v-if="syncChanges > 0" type="button" :disabled="busy" @click="applySync">
-          {{ messages.settings.syncApply }}
-        </button>
-      </template>
-    </div>
-    <div v-if="owner" class="panel">
-      <h2>{{ messages.settings.users }}</h2>
-      <p class="muted">{{ messages.settings.usersHint }}</p>
-      <ErrorNotice :error="usersError" />
-      <UserSettingsEditor
-        v-for="entry in users ?? []"
-        :key="entry.user.id"
-        :user="entry.user"
-        :settings="entry.settings"
-        :topic-generated="own?.ntfyTopicGenerated === true"
-        @saved="refreshOwn"
-      />
-    </div>
-    <p v-if="actionResult" class="notice success" role="status">{{ actionResult }}</p>
-    <ErrorNotice :error="actionError" />
   </section>
 </template>
 
 <style scoped>
+.settings {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 820px);
+  gap: var(--s-7);
+  align-items: start;
+}
+
+.index {
+  position: sticky;
+  top: calc(var(--nav) + var(--s-5));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.index .chip {
+  justify-content: flex-start;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.index .chip:hover {
+  color: var(--on-surface);
+  background: var(--surface-low);
+  text-decoration: none;
+}
+
+.group {
+  scroll-margin-top: calc(var(--nav) + var(--s-4));
+  margin-bottom: var(--s-7);
+}
+
+.group-title {
+  margin: 0 0 var(--s-3);
+  color: var(--muted);
+  font-size: var(--t-label);
+  font-weight: 500;
+}
+
+@media (max-width: 959px) {
+  .settings {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+  }
+
+  .index {
+    top: var(--nav);
+    z-index: 5;
+    flex-direction: row;
+    overflow-x: auto;
+    margin: 0 calc(var(--gut) * -1);
+    padding: var(--s-2) var(--gut);
+    background: var(--bg);
+    scrollbar-width: none;
+  }
+
+  .index .chip {
+    border-color: var(--outline);
+  }
+}
+
 .backups {
   list-style: none;
   padding: 0;

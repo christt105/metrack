@@ -20,6 +20,13 @@ export const messages = {
     unlinked: 'Unlinked',
     settings: 'Settings',
   },
+  landing: {
+    title: 'Everything you watch and play, in one library.',
+    lead: 'metrack keeps your films, series and games with their posters, ratings and reviews, follows the seasons still to come and fills itself in from what you play on Jellyfin.',
+    access: 'Sign-in is by invitation.',
+    facts: ['Films', 'Series', 'Games', 'Books', 'Jellyfin sync', 'Release alerts'],
+    otherWays: 'Other ways to sign in',
+  },
   shell: {
     skip: 'Skip to content',
     mainNav: 'Main',
@@ -241,6 +248,13 @@ export const messages = {
     source: (source: string) => `from ${source}`,
   },
   settings: {
+    sections: 'Settings sections',
+    groups: {
+      profile: 'Profile',
+      connections: 'Connections',
+      people: 'People',
+      system: 'Server',
+    },
     title: 'Settings',
     service: 'Service',
     status: 'Status',
@@ -435,7 +449,6 @@ export const messages = {
     nobody: 'Nobody has used it yet.',
     page: {
       title: (inviter: string) => `${inviter} invites you to metrack`,
-      lead: 'metrack keeps track of the movies, series, games and books you watch, play and read.',
       signIn: 'Sign in with Google',
       problem: {
         expired: 'This invitation has expired. Ask for a new one.',
