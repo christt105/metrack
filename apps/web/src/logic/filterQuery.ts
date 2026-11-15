@@ -29,6 +29,11 @@ export function filtersFromQuery(query: Record<string, unknown>): LibraryFilterS
   };
 }
 
+/** Whether the filters can hide titles: a search text, a type or a status. */
+export function hasNarrowing(filters: LibraryFilterState): boolean {
+  return filters.q.trim() !== '' || filters.type !== '' || filters.status !== '';
+}
+
 /** The route query that reproduces the filters, leaving out defaults. */
 export function filtersToQuery(filters: LibraryFilterState): Record<string, string> {
   const query: Record<string, string> = {};

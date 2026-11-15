@@ -4,11 +4,17 @@ import { useRoute, useRouter } from 'vue-router';
 import type { MediaPage } from '@metrack/domain';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import LibraryFilters from '../components/LibraryFilters.vue';
+import LibraryWelcome from '../components/LibraryWelcome.vue';
 import MediaCard from '../components/MediaCard.vue';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import { buildCards } from '../logic/buildCards';
-import { filtersFromQuery, filtersToMediaQuery, filtersToQuery } from '../logic/filterQuery';
+import {
+  filtersFromQuery,
+  filtersToMediaQuery,
+  filtersToQuery,
+  hasNarrowing,
+} from '../logic/filterQuery';
 
 const api = useApi();
 const route = useRoute();
@@ -18,6 +24,7 @@ const filters = ref(filtersFromQuery(route.query));
 const page = ref<MediaPage | null>(null);
 const error = ref<unknown>(null);
 const loading = ref(false);
+const libraryEmpty = ref(false);
 let ticket = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -32,6 +39,7 @@ async function load(): Promise<void> {
     const result = await api.listMedia(filtersToMediaQuery(filters.value));
     if (mine !== ticket) return;
     page.value = result;
+    libraryEmpty.value = result.total === 0 && !hasNarrowing(filters.value);
     error.value = null;
   } catch (cause) {
     if (mine === ticket) error.value = cause;
@@ -57,19 +65,22 @@ onBeforeUnmount(() => clearTimeout(timer));
 <template>
   <section>
     <h1>{{ messages.nav.library }}</h1>
-    <LibraryFilters v-model="filters" />
     <ErrorNotice :error="error" />
-    <p v-if="page && !error" class="muted count">
-      {{ messages.list.count(cards.length) }}
-      <template v-if="page.total > page.items.length">
-        {{ messages.list.truncated(page.items.length, page.total) }}
-      </template>
-    </p>
-    <p v-if="loading && !page" class="muted">{{ messages.common.loading }}</p>
-    <p v-else-if="page && cards.length === 0" class="muted">{{ messages.list.empty }}</p>
-    <div class="grid">
-      <MediaCard v-for="card in cards" :key="card.key" :card="card" />
-    </div>
+    <LibraryWelcome v-if="page && !error && libraryEmpty" />
+    <template v-else>
+      <LibraryFilters v-model="filters" />
+      <p v-if="page && !error" class="muted count">
+        {{ messages.list.count(cards.length) }}
+        <template v-if="page.total > page.items.length">
+          {{ messages.list.truncated(page.items.length, page.total) }}
+        </template>
+      </p>
+      <p v-if="loading && !page" class="muted">{{ messages.common.loading }}</p>
+      <p v-else-if="page && cards.length === 0" class="muted">{{ messages.list.empty }}</p>
+      <div class="grid">
+        <MediaCard v-for="card in cards" :key="card.key" :card="card" />
+      </div>
+    </template>
   </section>
 </template>
 
