@@ -54,11 +54,7 @@ export class EpisodeGroupService {
       }
     }
     await this.series.update(seriesId, { tmdbEpisodeGroup: episodeGroup }, options);
-    for (const season of await this.seasons.listBySeries(seriesId)) {
-      if (season.tmdbSeasonNumber !== null) {
-        await this.seasons.updateCatalog(season.id, { tmdbSeasonNumber: null });
-      }
-    }
+    await this.seasons.unlinkProviderSeasons(seriesId);
     await this.cache.refresh('series', seriesId, true);
   }
 

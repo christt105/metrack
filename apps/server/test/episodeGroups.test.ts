@@ -99,7 +99,7 @@ describe('seasons that follow a TMDB episode group', () => {
       series.seasons.map((s) => [s.number, s.tmdbSeasonNumber, s.title, s.episodeCount]),
     ).toEqual([
       [1, 1, 'Season 1', 28],
-      [2, 2, 'Season 2', 10],
+      [2, 2, null, 10],
     ]);
     expect(created.json().tmdbSeasonNumber).toBe(2);
   });
@@ -125,6 +125,28 @@ describe('seasons that follow a TMDB episode group', () => {
     expect(await addSeries(normal, DANDADAN_ID)).toBe(seriesId);
     await normal.post('/api/seasons', { seriesId, number: 2 });
     expect((await seriesOf(other, seriesId)).tmdbEpisodeGroup).toBe(DANDADAN_SEASONS_GROUP);
+  });
+
+  it('unlinks the seasons only other users have, so their next refresh links them by the new ordering', async () => {
+    const seriesId = await addSeries(other, DANDADAN_ID);
+    expect(await addSeries(normal, DANDADAN_ID)).toBe(seriesId);
+    const first = (await seriesOf(normal, seriesId)).seasons[0];
+    expect(
+      (
+        await api.app.inject({
+          method: 'DELETE',
+          url: `/api/seasons/${first?.id}`,
+          headers: { 'x-test-user': '2' },
+        })
+      ).statusCode,
+    ).toBe(204);
+
+    await normal.post('/api/seasons', { seriesId, number: 2 });
+    expect((await seriesOf(other, seriesId)).seasons[0]?.tmdbSeasonNumber).toBeNull();
+
+    await other.post(`/api/metadata/series/${seriesId}/refresh`, {});
+    const linked = (await seriesOf(other, seriesId)).seasons[0];
+    expect([linked?.tmdbSeasonNumber, linked?.episodeCount]).toEqual([1, 12]);
   });
 
   it('leaves the ordering alone when several Seasons groups have the season', async () => {

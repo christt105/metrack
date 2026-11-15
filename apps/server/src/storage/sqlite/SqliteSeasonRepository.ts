@@ -16,4 +16,10 @@ export class SqliteSeasonRepository
   async listBySeries(seriesId: number): Promise<Season[]> {
     return this.where('c.series_id = ? ORDER BY c.number', seriesId);
   }
+
+  async unlinkProviderSeasons(seriesId: number): Promise<void> {
+    this.db
+      .prepare('UPDATE season SET tmdb_season_number = NULL WHERE series_id = ?')
+      .run(seriesId);
+  }
 }

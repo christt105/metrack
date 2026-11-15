@@ -90,6 +90,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.series.list();
   const season = await owner.seasons.create({ ...emptySeason(), seriesId: series.id });
   await owner.seasons.listBySeries(series.id);
+  await owner.seasons.unlinkProviderSeasons(series.id);
   await owner.seasons.get(season.id);
   await owner.seasons.getMany([season.id]);
   await owner.seasons.list();

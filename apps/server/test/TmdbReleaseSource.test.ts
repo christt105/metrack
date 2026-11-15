@@ -145,8 +145,8 @@ describe('TmdbReleaseSource', () => {
       const release = await source.series(10, 'g');
       expect(release.numberOfSeasons).toBe(2);
       expect(release.seasons).toEqual([
-        { number: 1, name: 'Season 1', overview: null, airDate: '2023-09-29', episodeCount: 2 },
-        { number: 2, name: 'Season 2', overview: null, airDate: '2026-01-16', episodeCount: 2 },
+        { number: 1, name: null, overview: null, airDate: '2023-09-29', episodeCount: 2 },
+        { number: 2, name: null, overview: null, airDate: '2026-01-16', episodeCount: 2 },
       ]);
       expect(release.nextEpisode).toEqual({
         seasonNumber: 2,

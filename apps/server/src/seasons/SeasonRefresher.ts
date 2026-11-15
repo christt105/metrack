@@ -60,7 +60,12 @@ export class SeasonRefresher {
       }
     }
 
-    const plan = planSeasonRefresh(stored, provider, applied !== null);
+    let current = stored;
+    if (applied !== null) {
+      await this.seasons.unlinkProviderSeasons(series.id);
+      current = stored.map((season) => ({ ...season, tmdbSeasonNumber: null }));
+    }
+    const plan = planSeasonRefresh(current, provider, applied !== null);
     for (const update of plan.updates) {
       const patch: Record<string, unknown> = { ...update.fields };
       if (update.coverUrl !== null) {
