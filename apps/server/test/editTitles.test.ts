@@ -150,6 +150,36 @@ describe('adding titles', () => {
   });
 });
 
+describe('adding a title whose first provider answer has no name', () => {
+  it('lets the provider name win over the placeholder name', async () => {
+    const full: Record<string, object> = {
+      [`${TMDB}/movie/603`]: { id: 603, title: 'Matrix', release_date: '1999-03-31' },
+      [`${TMDB}/tv/1`]: { id: 1, name: 'Lupin', seasons: [] },
+    };
+    const seen = new Set<string>();
+    const net = pathFetch(full);
+    api = await createTestApi(((input: string | URL | Request) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      const key = `${url.origin}${url.pathname}`;
+      if (full[key] && !seen.has(key)) {
+        seen.add(key);
+        return Promise.resolve(
+          Response.json({ id: (full[key] as { id: number }).id, seasons: [] }),
+        );
+      }
+      return net.fetch(input);
+    }) as typeof fetch);
+
+    await post('/api/titles', { type: 'movie', externalId: '603' });
+    await post('/api/titles', { type: 'series', externalId: '1' });
+
+    expect((await get('/api/movies/1')).json().title).toBe('Matrix');
+    expect(await api.movies.overriddenFields(1)).toEqual([]);
+    expect((await get('/api/series/1')).json().title).toBe('Lupin');
+    expect(await api.series.overriddenFields(1)).toEqual([]);
+  });
+});
+
 describe('unlinked inbox', () => {
   const unlink = (mediaType: 'movie' | 'series' | 'season' | 'videogame' | 'book', title: string) =>
     api.unlinked.create({

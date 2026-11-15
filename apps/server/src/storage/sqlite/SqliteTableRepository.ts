@@ -12,8 +12,10 @@ import {
   MAX_IDS_PER_QUERY,
   placeholders,
   qualifyColumn,
+  selectEntries,
   selectMedia,
 } from '../mapping/mediaTableSql.js';
+import { pinnedCatalogValues } from '../mapping/pinnedCatalogValues.js';
 import {
   assignments,
   changedColumns,
@@ -105,6 +107,29 @@ export class SqliteTableRepository<T extends { id: number }> implements MediaEnt
     if (personal.length > 0) throw new Error(`Not catalog columns: ${personal.join(', ')}`);
     this.write(id, { catalog: after.catalog, entry: before.entry }, overrides);
     return this.require(id);
+  }
+
+  async pinCatalogValues(id: number, patch: Partial<Omit<T, 'id'>>): Promise<string[]> {
+    const rows = this.db.prepare(`${selectEntries(this.spec)} WHERE c.id = ?`).all(id);
+    const fields = new Set<string>();
+    this.atomically(() => {
+      for (const row of rows) {
+        const overrides = parseOverrides(row.overrides);
+        const pinned = pinnedCatalogValues(
+          this.spec.fromRow(row),
+          patch as Record<string, unknown>,
+          overrides,
+        );
+        if (Object.keys(pinned).length === 0) continue;
+        for (const field of Object.keys(pinned)) fields.add(field);
+        this.db
+          .prepare(
+            `UPDATE ${this.entryTable} SET overrides = ? WHERE user_id = ? AND ${this.key} = ?`,
+          )
+          .run(JSON.stringify({ ...overrides, ...pinned }), Number(row.entry_user_id), id);
+      }
+    });
+    return [...fields];
   }
 
   async override(id: number, fields: Partial<Omit<T, 'id'>>): Promise<T> {

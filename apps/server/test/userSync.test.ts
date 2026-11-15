@@ -173,6 +173,28 @@ describe('UserSync against the home API', () => {
     expect(requests).toEqual(['GET /api/connector/users/2/sync-state']);
   });
 
+  it('refreshes created titles without pinning and the ones without metadata with pinning', async () => {
+    let refreshDown = true;
+    const refreshUrls: string[] = [];
+    const { sync } = await setup(
+      async (url, init, next) => {
+        if (url.includes('/refresh/')) refreshUrls.push(url);
+        return refreshDown && url.includes('/refresh/')
+          ? new Response('{"error":"boom"}', { status: 500 })
+          : next();
+      },
+      { metadata: true },
+    );
+    await sync.run(FRIEND, true);
+    refreshDown = false;
+    await sync.run(FRIEND, true);
+
+    expect(refreshUrls).toEqual([
+      `${BASE}/api/connector/users/2/refresh/movie/1?pinStored=false`,
+      `${BASE}/api/connector/users/2/refresh/movie/1`,
+    ]);
+  });
+
   it('does not count a title the provider failed to fetch, and retries it next time', async () => {
     const { sync, sources, errors } = await setup(undefined, { metadata: true });
     sources.movie.failing.add('The Matrix');

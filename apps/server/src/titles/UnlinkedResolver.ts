@@ -67,7 +67,9 @@ export class UnlinkedResolver {
       const detail = await this.editor.create(collection, { title: title.title, ...ids });
       created = { type: title.mediaType, id: detail.id };
       if (this.cache.supports(title.mediaType)) {
-        refresh = await this.cache.refresh(title.mediaType, detail.id, true);
+        refresh = await this.cache.refresh(title.mediaType, detail.id, true, {
+          pinStored: false,
+        });
       }
     }
     await this.unlinked.delete(id);

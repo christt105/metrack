@@ -28,6 +28,11 @@ const refreshParams = {
   required: ['id', 'type', 'titleId'],
 } as const;
 
+const refreshQuery = {
+  type: 'object',
+  properties: { pinStored: { type: 'boolean' } },
+} as const;
+
 const SYNC_BODY_LIMIT = 8_388_608;
 
 /**
@@ -86,13 +91,18 @@ export function registerConnectorRoutes(routes: ApiRoutes, service: ConnectorSer
     },
   );
 
-  routes.post<{ Params: { id: number; type: MediaType; titleId: number } }>(
+  routes.post<{
+    Params: { id: number; type: MediaType; titleId: number };
+    Querystring: { pinStored?: boolean };
+  }>(
     '/api/connector/users/:id/refresh/:type/:titleId',
-    { config, schema: { params: refreshParams } },
+    { config, schema: { params: refreshParams, querystring: refreshQuery } },
     async (request) => {
       await allowed(request, request.params.id);
       const { id, type, titleId } = request.params;
-      return jsonResponse(await service.refresh(id, type, titleId));
+      return jsonResponse(
+        await service.refresh(id, type, titleId, request.query.pinStored ?? true),
+      );
     },
   );
 

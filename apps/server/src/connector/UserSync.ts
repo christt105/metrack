@@ -42,11 +42,13 @@ export class UserSync {
       const outcome = { plan, created: 0, unfetched: unfetched.length, refreshed: 0 };
       if (!apply) return outcome;
       if (!hasChanges(plan)) {
-        return { ...outcome, refreshed: await this.refresh(user.id, unfetched) };
+        return { ...outcome, refreshed: await this.refresh(user.id, unfetched, true) };
       }
       try {
         const { result, created } = await this.cloud.sync(user.id, { contentVersion, plan });
-        const refreshed = await this.refresh(user.id, [...created, ...unfetched]);
+        const refreshed =
+          (await this.refresh(user.id, created, false)) +
+          (await this.refresh(user.id, unfetched, true));
         return { ...outcome, result, created: created.length, refreshed };
       } catch (error) {
         if (
@@ -60,11 +62,11 @@ export class UserSync {
   }
 
   /** Asks for the metadata of each title, one request each; returns how many got it. */
-  private async refresh(userId: number, refs: EntityRef[]): Promise<number> {
+  private async refresh(userId: number, refs: EntityRef[], pinStored: boolean): Promise<number> {
     let refreshed = 0;
     for (const ref of refs) {
       try {
-        const result = await this.cloud.refresh(userId, ref);
+        const result = await this.cloud.refresh(userId, ref, pinStored);
         if (result.outcome === 'failed') {
           this.logger.error(
             `Refreshing ${ref.type} ${ref.id} of user ${userId} failed: ${result.error}`,
