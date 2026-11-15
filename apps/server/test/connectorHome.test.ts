@@ -15,7 +15,7 @@ import { RecordingNotifier } from './support/RecordingNotifier.js';
 
 const logger = { info: () => {}, error: () => {} };
 
-function pass(users: () => Promise<Response>) {
+function pass(users: () => Promise<Response>, clock: { now: number } = { now: 0 }) {
   const dir = mkdtempSync(join(tmpdir(), 'connector-'));
   const store = new ConnectorStateStore(dir);
   const queueScheduler = new FakeScheduler();
@@ -26,7 +26,17 @@ function pass(users: () => Promise<Response>) {
   });
   const cloud = new CloudClient('http://cloud.test', 'token', (async () =>
     users()) as unknown as typeof fetch);
-  const fullPass = new FullPass(cloud, queue, store, notifier, logger, scheduler, 6 * 3_600_000);
+  const fullPass = new FullPass(
+    cloud,
+    queue,
+    store,
+    notifier,
+    logger,
+    scheduler,
+    6 * 3_600_000,
+    120_000,
+    () => clock.now,
+  );
   return { fullPass, queueScheduler, scheduler, notifier, store };
 }
 
@@ -66,6 +76,51 @@ describe('FullPass.queueUsersForWebhook', () => {
     expect(await fullPass.queueUsersForWebhook()).toBe(2);
     expect(queueScheduler.pending()).toBe(2);
     expect(store.read().users).toEqual([1, 2]);
+  });
+
+  it('reads the cloud once for a burst of notices and again for the next burst', async () => {
+    const clock = { now: 0 };
+    let reads = 0;
+    const { fullPass } = pass(async () => {
+      reads += 1;
+      return Response.json([{ id: 1, name: 'a', jellyfinUser: 'a' }]);
+    }, clock);
+    for (let i = 0; i < 30; i += 1) {
+      expect(await fullPass.queueUsersForWebhook()).toBe(1);
+      clock.now += 10_000;
+    }
+    expect(reads).toBe(1);
+    clock.now += 120_000;
+    await fullPass.queueUsersForWebhook();
+    expect(reads).toBe(2);
+  });
+
+  it('picks up a newly linked user on the next burst and logs once per burst', async () => {
+    const clock = { now: 0 };
+    let users = [{ id: 1, name: 'a', jellyfinUser: 'a' }];
+    const { fullPass, store } = pass(async () => Response.json(users), clock);
+    await fullPass.queueUsersForWebhook();
+    users = [...users, { id: 2, name: 'b', jellyfinUser: 'b' }];
+    clock.now += 10_000;
+    expect(await fullPass.queueUsersForWebhook()).toBe(1);
+    clock.now += 200_000;
+    expect(await fullPass.queueUsersForWebhook()).toBe(2);
+    expect(store.read().users).toEqual([1, 2]);
+  });
+
+  it('falls back to the known users when the first notice of a burst cannot read the cloud', async () => {
+    const clock = { now: 0 };
+    let down = false;
+    const { fullPass, queueScheduler } = pass(async () => {
+      if (down) throw new TypeError('fetch failed');
+      return Response.json([{ id: 1, name: 'a', jellyfinUser: 'a' }]);
+    }, clock);
+    await fullPass.queueUsersForWebhook();
+    await queueScheduler.fire();
+    down = true;
+    clock.now += 500_000;
+    expect(await fullPass.queueUsersForWebhook()).toBe(1);
+    expect(queueScheduler.pending()).toBe(1);
   });
 
   it('queues the known users when the cloud cannot be reached', async () => {

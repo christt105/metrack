@@ -61,6 +61,7 @@ export function runConnector(
     logger,
     scheduler,
     config.passIntervalMs,
+    config.sync.webhookDelayMs,
   );
   if (config.cloudBackup) {
     const backup = createCloudBackup(config.cloudBackup);
