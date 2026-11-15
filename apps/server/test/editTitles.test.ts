@@ -115,7 +115,6 @@ describe('adding titles', () => {
       status: 'planned',
     });
     expect(movie.cover).toBe(`${IMG}/p.jpg`);
-    expect(await api.movies.overriddenFields(1)).toEqual([]);
     const archived = await api.store.findBySourceUrl(`${IMG}/p.jpg`);
     expect(archived).toBeDefined();
     expect((await get(archived?.ref ?? '')).statusCode).toBe(200);
@@ -126,7 +125,6 @@ describe('adding titles', () => {
     expect(response.statusCode).toBe(201);
     const detail = (await get('/api/series/1')).json();
     expect(detail.title).toBe('Lupin');
-    expect(await api.series.overriddenFields(1)).toEqual([]);
     expect(detail.seasons).toMatchObject([
       {
         number: 1,
@@ -149,6 +147,36 @@ describe('adding titles', () => {
     expect((await post('/api/titles', { type: 'movie', externalId: '999' })).statusCode).toBe(404);
     expect((await post('/api/titles', { type: 'movie', externalId: 'abc' })).statusCode).toBe(400);
     expect((await post('/api/titles', { type: 'book', externalId: 'OL1' })).statusCode).toBe(501);
+  });
+});
+
+describe('adding a title whose first provider answer has no name', () => {
+  it('lets the provider name win over the placeholder name', async () => {
+    const full: Record<string, object> = {
+      [`${TMDB}/movie/603`]: { id: 603, title: 'Matrix', release_date: '1999-03-31' },
+      [`${TMDB}/tv/1`]: { id: 1, name: 'Lupin', seasons: [] },
+    };
+    const seen = new Set<string>();
+    const net = pathFetch(full);
+    api = await createTestApi(((input: string | URL | Request) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      const key = `${url.origin}${url.pathname}`;
+      if (full[key] && !seen.has(key)) {
+        seen.add(key);
+        return Promise.resolve(
+          Response.json({ id: (full[key] as { id: number }).id, seasons: [] }),
+        );
+      }
+      return net.fetch(input);
+    }) as typeof fetch);
+
+    await post('/api/titles', { type: 'movie', externalId: '603' });
+    await post('/api/titles', { type: 'series', externalId: '1' });
+
+    expect((await get('/api/movies/1')).json().title).toBe('Matrix');
+    expect(await api.movies.overriddenFields(1)).toEqual([]);
+    expect((await get('/api/series/1')).json().title).toBe('Lupin');
+    expect(await api.series.overriddenFields(1)).toEqual([]);
   });
 });
 

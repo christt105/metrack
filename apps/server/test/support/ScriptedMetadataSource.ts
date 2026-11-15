@@ -6,7 +6,7 @@ export class ScriptedMetadataSource<T extends { title: string }> implements Meta
   readonly failing = new Set<string>();
   readonly fetched: string[] = [];
 
-  constructor(private readonly fields: Partial<Omit<T, 'id'>>) {}
+  constructor(public fields: Partial<Omit<T, 'id'>>) {}
 
   fetch(entity: T): Promise<ProviderMetadata<T>> {
     this.fetched.push(entity.title);

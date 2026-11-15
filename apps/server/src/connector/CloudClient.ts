@@ -37,8 +37,10 @@ export class CloudClient {
     return this.request('POST', `/users/${userId}/sync`, body);
   }
 
-  refresh(userId: number, ref: EntityRef): Promise<RefreshResult> {
-    return this.request('POST', `/users/${userId}/refresh/${ref.type}/${ref.id}`);
+  /** With `pinStored: false` the provider's values win over the stored ones even for a never fetched title. */
+  refresh(userId: number, ref: EntityRef, pinStored = true): Promise<RefreshResult> {
+    const query = pinStored ? '' : '?pinStored=false';
+    return this.request('POST', `/users/${userId}/refresh/${ref.type}/${ref.id}${query}`);
   }
 
   alertUsers(): Promise<AlertUser[]> {

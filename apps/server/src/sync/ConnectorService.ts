@@ -131,7 +131,7 @@ export class ConnectorService {
     return refs;
   }
 
-  refresh(userId: number, type: MediaType, id: number): Promise<RefreshResult> {
+  refresh(userId: number, type: MediaType, id: number, pinStored = true): Promise<RefreshResult> {
     const { metadata, editor, versions, scope } = this.deps;
     if (!metadata?.supports(type)) {
       throw ApiError.notImplemented(
@@ -143,7 +143,7 @@ export class ConnectorService {
       const collection = COLLECTIONS.find((c) => MEDIA_TYPE_OF_COLLECTION[c] === type);
       if (editor && collection) await editor.require(collection, id);
       try {
-        return await metadata.refresh(type, id, true);
+        return await metadata.refresh(type, id, true, { pinStored });
       } catch {
         throw ApiError.notFound();
       } finally {

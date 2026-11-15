@@ -344,4 +344,29 @@ describe('POST /api/connector/users/{id}/refresh/{type}/{titleId}', () => {
     const response = await call('POST', '/api/connector/users/1/refresh/movie/1', secret);
     expect(response.statusCode).toBe(501);
   });
+
+  it('keeps the stored values of a never fetched title unless told not to pin', async () => {
+    const { createToken, call, repositories, scope, sources } = await connectorHarness({
+      metadata: true,
+    });
+    sources.movie.fields = { title: 'TMDB title' };
+    const { secret } = await createToken(1, 'connector');
+    const [created, imported] = await scope.run(1, async () => [
+      await repositories.movies.create({ ...emptyMovie(), tmdbId: 1, title: 'Jellyfin name' }),
+      await repositories.movies.create({ ...emptyMovie(), tmdbId: 2, title: 'My own title' }),
+    ]);
+    const base = '/api/connector/users/1/refresh/movie';
+
+    expect((await call('POST', `${base}/${created?.id}?pinStored=false`, secret)).statusCode).toBe(
+      200,
+    );
+    expect((await call('POST', `${base}/${imported?.id}`, secret)).statusCode).toBe(200);
+
+    await scope.run(1, async () => {
+      expect(await repositories.movies.overriddenFields(created?.id ?? 0)).toEqual([]);
+      expect((await repositories.movies.get(created?.id ?? 0))?.title).toBe('TMDB title');
+      expect(await repositories.movies.overriddenFields(imported?.id ?? 0)).toEqual(['title']);
+      expect((await repositories.movies.get(imported?.id ?? 0))?.title).toBe('My own title');
+    });
+  });
 });
