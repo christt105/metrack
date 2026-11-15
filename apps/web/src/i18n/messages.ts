@@ -135,6 +135,20 @@ export const messages = {
     deleteItem: 'Delete',
     openLink: 'Open',
   },
+  seasons: {
+    watchedOf: (watched: number, total: number) => `${watched} of ${total} episodes`,
+  },
+  hero: {
+    episodes: (n: number) => (n === 1 ? '1 episode' : `${n} episodes`),
+    rating: (n: number) => `${n}/10`,
+    yourReview: 'Your review',
+    genres: 'Genres',
+    people: 'By',
+    platforms: 'Platforms',
+    cast: 'Cast',
+    edit: 'Edit details',
+    advanced: 'Images, ordering and more',
+  },
   ordering: {
     title: 'Season ordering',
     description:

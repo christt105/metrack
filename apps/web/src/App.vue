@@ -5,7 +5,7 @@ import AppIcon from './components/AppIcon.vue';
 import DeletionBanner from './components/DeletionBanner.vue';
 import { useSession } from './composables/useSession';
 import { messages } from './i18n/messages';
-import { NAV_ITEMS } from './logic/navItems';
+import { NAV_ITEMS } from './logic/mainNavItems';
 
 const session = useSession();
 const route = useRoute();

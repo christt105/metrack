@@ -95,7 +95,8 @@ describe('FollowToggle', () => {
       { unfollow },
       { collection: 'series', id: 3, following: true },
     );
-    expect(wrapper.text()).toContain('Stop following');
+    expect(wrapper.find('button').attributes('aria-pressed')).toBe('true');
+    expect(wrapper.find('button').attributes('title')).toBe('Stop following');
     await wrapper.find('button').trigger('click');
     await flushPromises();
     expect(unfollow).toHaveBeenCalledWith('series', 3);

@@ -4,8 +4,10 @@ import { useRouter } from 'vue-router';
 import { MEDIA_TYPE_OF_COLLECTION } from '@metrack/domain';
 import type { Collection, Season, SeasonOverride, SeriesDetail } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
+import AppIcon from '../components/AppIcon.vue';
 import ArtworkPanel from '../components/ArtworkPanel.vue';
 import EntityForm from '../components/EntityForm.vue';
+import DetailHero from '../components/DetailHero.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import FollowToggle from '../components/FollowToggle.vue';
 import MetadataRefresh from '../components/MetadataRefresh.vue';
@@ -13,7 +15,6 @@ import RewatchList from '../components/RewatchList.vue';
 import SeasonList from '../components/SeasonList.vue';
 import SeasonOrderingPanel from '../components/SeasonOrderingPanel.vue';
 import SeasonOverrideEditor from '../components/SeasonOverrideEditor.vue';
-import StatusBadge from '../components/StatusBadge.vue';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import { isTracked } from '../logic/fieldSchemas';
@@ -98,27 +99,40 @@ async function remove(): Promise<void> {
   }
 }
 
+const titleText = computed(() => {
+  if (!detail.value) return '';
+  if ('title' in detail.value && detail.value.title) return detail.value.title;
+  return `${messages.typeLabels.season} ${seasonOf.value?.number ?? ''}`;
+});
+const eyebrow = computed(() =>
+  seasonOf.value && parentTitle.value
+    ? `${messages.typeLabels.season} ${seasonOf.value.number}`
+    : messages.typeLabels[type.value],
+);
+
+function scrollToEdit(): void {
+  document.getElementById('edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 watch(() => [props.collection, props.id], load, { immediate: true });
 </script>
 
 <template>
-  <section v-if="detail">
-    <header class="head">
-      <RouterLink v-if="seasonOf" :to="`/series/${seasonOf.seriesId}`" class="muted">
-        {{ messages.detail.seasonOf }} {{ parentTitle ?? `#${seasonOf.seriesId}` }}
-      </RouterLink>
-      <h1>
-        {{
-          'title' in detail && detail.title
-            ? detail.title
-            : `${messages.typeLabels.season} ${seasonOf?.number ?? ''}`
-        }}
-      </h1>
-      <div class="row">
-        <span class="muted">{{ messages.collectionLabels[collection] }}</span>
-        <StatusBadge v-if="trackedStatus" :status="trackedStatus" />
-      </div>
-      <div class="actions">
+  <article v-if="detail" class="detail">
+    <DetailHero
+      :detail="detail"
+      :title="titleText"
+      :eyebrow="eyebrow"
+      :status="trackedStatus"
+      :fallback="parentArtwork"
+    >
+      <template #before-title>
+        <RouterLink v-if="seasonOf" :to="`/series/${seasonOf.seriesId}`" class="back">
+          <AppIcon name="back" :size="18" />
+          {{ messages.detail.seasonOf }} {{ parentTitle ?? `#${seasonOf.seriesId}` }}
+        </RouterLink>
+      </template>
+      <template #actions>
         <FollowToggle
           v-if="followCollection && 'follow' in detail"
           :id="detail.id"
@@ -126,6 +140,37 @@ watch(() => [props.collection, props.id], load, { immediate: true });
           :following="detail.follow"
           @changed="setFollowing"
         />
+        <button type="button" @click="scrollToEdit">
+          <AppIcon name="edit" :size="18" />
+          {{ messages.hero.edit }}
+        </button>
+      </template>
+    </DetailHero>
+
+    <SeasonList
+      v-if="series"
+      :series-id="series.id"
+      :seasons="series.seasons"
+      :series-cover="series.cover"
+      @changed="load"
+    />
+
+    <section id="edit" class="section" aria-labelledby="edit-title">
+      <h2 id="edit-title">{{ messages.hero.edit }}</h2>
+      <EntityForm :collection="collection" :detail="detail" @saved="onSaved" @changed="load" />
+      <RewatchList
+        v-if="trackedStatus"
+        :id="detail.id"
+        :collection="collection"
+        :rewatches="rewatches"
+        :completed="trackedStatus === 'completed'"
+        @updated="onSaved"
+      />
+    </section>
+
+    <details class="panel advanced">
+      <summary>{{ messages.hero.advanced }}</summary>
+      <div class="advanced__body">
         <MetadataRefresh
           v-if="refreshable"
           :id="detail.id"
@@ -133,68 +178,83 @@ watch(() => [props.collection, props.id], load, { immediate: true });
           :fetched-at="detail.fetchedAt"
           @refreshed="load"
         />
+        <SeasonOrderingPanel
+          v-if="series && series.tmdbId !== null"
+          :series-id="series.id"
+          :has-unlinked-seasons="hasUnlinkedSeasons"
+          @changed="load"
+        />
+        <SeasonOverrideEditor
+          v-if="series"
+          :series-id="series.id"
+          :overrides="overrides"
+          @changed="load"
+        />
+        <ArtworkPanel
+          :collection="collection"
+          :detail="detail"
+          :fallback="parentArtwork"
+          @updated="
+            (d) => {
+              onSaved(d);
+              load();
+            }
+          "
+        />
+        <div>
+          <button type="button" class="danger" @click="remove">
+            <AppIcon name="trash" :size="18" />
+            {{ messages.detail.deleteItem }}
+          </button>
+        </div>
       </div>
-    </header>
-
-    <SeasonList v-if="series" :series-id="series.id" :seasons="series.seasons" @changed="load" />
-    <SeasonOrderingPanel
-      v-if="series && series.tmdbId !== null"
-      :series-id="series.id"
-      :has-unlinked-seasons="hasUnlinkedSeasons"
-      @changed="load"
-    />
-    <EntityForm :collection="collection" :detail="detail" @saved="onSaved" @changed="load" />
-
-    <SeasonOverrideEditor
-      v-if="series"
-      :series-id="series.id"
-      :overrides="overrides"
-      @changed="load"
-    />
-    <RewatchList
-      v-if="trackedStatus"
-      :id="detail.id"
-      :collection="collection"
-      :rewatches="rewatches"
-      :completed="trackedStatus === 'completed'"
-      @updated="onSaved"
-    />
-    <ArtworkPanel
-      :collection="collection"
-      :detail="detail"
-      :fallback="parentArtwork"
-      @updated="
-        (d) => {
-          onSaved(d);
-          load();
-        }
-      "
-    />
-
-    <button type="button" class="danger" @click="remove">{{ messages.detail.deleteItem }}</button>
-  </section>
+    </details>
+  </article>
   <ErrorNotice :error="error" />
   <p v-if="!detail && !error" class="muted">{{ messages.common.loading }}</p>
 </template>
 
 <style scoped>
-.head {
-  margin-bottom: var(--gap);
+.detail {
+  max-width: 1120px;
+  margin: 0 auto;
 }
 
-.head h1 {
-  margin-bottom: 6px;
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: var(--s-1);
+  color: var(--muted);
+  font-size: var(--t-small);
+  font-weight: 500;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px 12px;
-  margin-top: 12px;
+.back:hover {
+  color: var(--on-surface);
+  text-decoration: none;
 }
 
-.actions:empty {
-  display: none;
+.section {
+  scroll-margin-top: calc(var(--nav) + var(--s-4));
+  margin-bottom: var(--s-6);
+}
+
+.advanced > summary {
+  font-weight: 500;
+}
+
+.advanced[open] > summary {
+  margin-bottom: var(--s-4);
+}
+
+.advanced__body {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.advanced__body :deep(.panel) {
+  margin-bottom: 0;
+  background: var(--bg);
 }
 </style>
