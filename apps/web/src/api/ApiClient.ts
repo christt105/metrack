@@ -67,6 +67,7 @@ export class ApiClient {
     private readonly fetchFn: typeof fetch = (...args) => fetch(...args),
     private readonly onUnauthenticated: () => void = () => {},
     private readonly recode: (file: Blob, maxSide: number) => Promise<Blob> = recodeToWebp,
+    private readonly onReachable: (reachable: boolean) => void = () => {},
   ) {}
 
   private settings: Promise<ImageSettings> | undefined;
@@ -88,7 +89,9 @@ export class ApiClient {
     let response: Response;
     try {
       response = await this.fetchFn(`/api${path}`, init);
+      this.onReachable(true);
     } catch (cause) {
+      this.onReachable(false);
       throw new ApiRequestError(
         cause instanceof Error ? cause.message : 'Network error',
         0,

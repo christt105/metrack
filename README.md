@@ -71,6 +71,12 @@ The Cloudflare Workers build (D1, R2, Static Assets) is described in [docs/worke
 
 Run the API with `npm run dev:server` (port 8097, data in `./data`) and the web app with `npm run dev:web`, which proxies `/api` to the API.
 
+## Installing the web app
+
+The web app is an installable PWA (a web app manifest, icons and a small service worker) and needs HTTPS, as on the Cloudflare Worker. On Android Chrome, open the site, then the menu and "Install app" (or "Add to Home screen"). On iOS Safari, use Share, then "Add to Home Screen". It opens full screen with its own icon. The service worker only keeps the app shell available offline: the API, the public pages (`/u/`, `/privacy`) and images always go to the network, so editing needs a connection and the app says so when it is offline. A new deploy takes over on the next reload.
+
+Release alerts as notifications on the installed app would need Web Push: a VAPID key pair kept as a Worker secret, a `push` and `notificationclick` handler in `sw.js`, an endpoint that stores each user's push subscription, and a sender that signs and posts the payload from the Worker or the connector (task 5vopg8). iOS only delivers Web Push to an app installed to the Home screen.
+
 ## Docker
 
 Images are published to GitHub Container Registry as `ghcr.io/christt105/metrack` and can be pulled without logging in.

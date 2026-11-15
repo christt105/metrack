@@ -13,6 +13,7 @@ import type {
 /** Every user-facing text of the app. Translating the interface means replacing this module. */
 export const messages = {
   appName: 'metrack',
+  offline: 'You are offline. Changes cannot be saved until the connection is back.',
   nav: {
     library: 'Library',
     search: 'Add title',

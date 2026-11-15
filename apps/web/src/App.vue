@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import DeletionBanner from './components/DeletionBanner.vue';
+import OfflineNotice from './components/OfflineNotice.vue';
 import { useSession } from './composables/useSession';
 import { messages } from './i18n/messages';
 
@@ -28,6 +29,7 @@ async function signOut(): Promise<void> {
       <button type="button" class="small" @click="signOut">{{ messages.login.signOut }}</button>
     </div>
   </header>
+  <OfflineNotice />
   <DeletionBanner v-if="session.user.value" />
   <main class="page">
     <RouterView />
