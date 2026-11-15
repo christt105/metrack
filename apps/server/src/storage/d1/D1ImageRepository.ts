@@ -2,7 +2,13 @@ import { IMAGE_COLUMNS } from '../../images/imageColumns.js';
 import { imageRef } from '../../images/imageRef.js';
 import type { StoredImage } from '../../images/StoredImage.js';
 import { imageFromRow } from '../mapping/imageFromRow.js';
-import { REVIEW_TABLES, catalogShowsSql } from '../mapping/imageSql.js';
+import {
+  REVIEW_TABLES,
+  USER_IMAGE_REFERENCES,
+  USER_IMAGE_TEXTS,
+  catalogShowsSql,
+  userReferenceSql,
+} from '../mapping/imageSql.js';
 import type { ImageRepository } from '../repositories/ImageRepository.js';
 import type { D1Database } from './D1Database.js';
 import { execute, queryAll, queryFirst, statement } from './d1Query.js';
@@ -97,14 +103,21 @@ export class D1ImageRepository implements ImageRepository {
    */
   async orphans(createdBefore?: string): Promise<string[]> {
     const prefix = imageRef('');
-    const referenceReads = IMAGE_COLUMNS.flatMap(({ table, column }) => [
+    const referenceReads: string[] = IMAGE_COLUMNS.flatMap(({ table, column }) => [
       `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
       `SELECT json_extract(overrides, '$.${column}') AS ref FROM ${table}_entry
        WHERE json_extract(overrides, '$.${column}') IS NOT NULL`,
     ]);
-    const reviewReads = REVIEW_TABLES.map(
-      (table) => `SELECT review FROM ${table} WHERE instr(review, '${prefix}') > 0`,
-    );
+    referenceReads.push(...USER_IMAGE_REFERENCES.map(userReferenceSql));
+    const reviewReads = [
+      ...REVIEW_TABLES.map(
+        (table) => `SELECT review FROM ${table} WHERE instr(review, '${prefix}') > 0`,
+      ),
+      ...USER_IMAGE_TEXTS.map(
+        ({ table, column }) =>
+          `SELECT ${column} AS review FROM ${table} WHERE instr(${column}, '${prefix}') > 0`,
+      ),
+    ];
     const results = await this.db.batch(
       [
         'SELECT hash, source_url, created_at FROM image',

@@ -1,6 +1,11 @@
 import { IMAGE_COLUMNS } from '../../images/imageColumns.js';
 import { imageRef } from '../../images/imageRef.js';
-import { REVIEW_TABLES } from '../mapping/imageSql.js';
+import {
+  REVIEW_TABLES,
+  USER_IMAGE_REFERENCES,
+  USER_IMAGE_TEXTS,
+  userReferenceSql,
+} from '../mapping/imageSql.js';
 
 /**
  * Selects the hashes of images nothing references, binding the age limit three times (or null three
@@ -13,11 +18,18 @@ function orphansSql(): string {
     `SELECT ${column} AS ref FROM ${table} WHERE ${column} IS NOT NULL`,
     `SELECT json_extract(overrides, '$.${column}') AS ref FROM ${table}_entry
      WHERE json_extract(overrides, '$.${column}') IS NOT NULL`,
-  ]).join(' UNION ');
-  const embedded = REVIEW_TABLES.map(
-    (table) =>
-      `EXISTS (SELECT 1 FROM ${table} WHERE instr(review, '${imageRef('')}' || image.hash) > 0)`,
-  ).join(' OR ');
+  ])
+    .concat(USER_IMAGE_REFERENCES.map(userReferenceSql))
+    .join(' UNION ');
+  const embedded = [
+    ...REVIEW_TABLES.map((table) => ({ table, column: 'review' })),
+    ...USER_IMAGE_TEXTS,
+  ]
+    .map(
+      ({ table, column }) =>
+        `EXISTS (SELECT 1 FROM ${table} WHERE instr(${column}, '${imageRef('')}' || image.hash) > 0)`,
+    )
+    .join(' OR ');
   return `WITH referenced (ref) AS (${referenced})
      SELECT hash FROM image
      WHERE '${imageRef('')}' || hash NOT IN (SELECT ref FROM referenced)

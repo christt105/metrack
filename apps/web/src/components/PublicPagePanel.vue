@@ -76,7 +76,7 @@ async function save(): Promise<void> {
     const page = await api.updatePublicPage({
       handle: handle.value.trim(),
       enabled: enabled.value,
-      avatar: avatar.value,
+      ...(avatar.value === props.page.avatar ? {} : { avatar: avatar.value }),
       intro: intro.value.trim(),
       description: description.value.trim(),
       about: about.value.trim(),

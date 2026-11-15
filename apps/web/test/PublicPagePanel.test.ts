@@ -32,7 +32,6 @@ describe('PublicPagePanel', () => {
     expect(updatePublicPage).toHaveBeenCalledWith({
       handle: 'christian',
       enabled: true,
-      avatar: null,
       intro: '',
       description: '',
       about: '',
@@ -42,6 +41,15 @@ describe('PublicPagePanel', () => {
     expect(wrapper.emitted('saved')).toEqual([
       [{ ...EMPTY_PAGE, handle: 'christian', enabled: true }],
     ]);
+  });
+
+  it('sends the avatar only when it changed', async () => {
+    const page = { ...EMPTY_PAGE, avatar: '/api/images/abc' };
+    const updatePublicPage = vi.fn().mockResolvedValue(page);
+    const { wrapper } = await mountWithApi(PublicPagePanel, { updatePublicPage }, { page });
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(updatePublicPage.mock.calls[0]?.[0]).not.toHaveProperty('avatar');
   });
 
   it('explains a handle another user has', async () => {
