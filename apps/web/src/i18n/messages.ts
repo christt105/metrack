@@ -263,6 +263,7 @@ export const messages = {
     weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     episode: (season: number, episode: number) => `S${season} · E${episode}`,
     premiere: 'Premiere',
+    newSeason: 'New season',
     relative: (days: number) => {
       if (days === 0) return 'Today';
       if (days === 1) return 'Tomorrow';
@@ -272,7 +273,7 @@ export const messages = {
     upcomingEmpty: 'Nothing with a date is coming up for what you follow.',
     waitingTitle: 'Nothing announced yet',
     dataNote:
-      'Next episodes come from the release check, which runs for accounts with release alerts on.',
+      'Next episodes come from the release check, which runs for accounts with release alerts on. Without it, only the date of a new season shows.',
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     thisMonth: 'Today',

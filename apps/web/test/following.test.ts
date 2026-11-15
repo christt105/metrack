@@ -34,13 +34,13 @@ describe('followingEvents', () => {
     const events = followingEvents([
       series(1, '2026-12-01'),
       movie(2, '2026-11-20'),
-      series(3, null),
+      movie(3, null),
     ]);
     expect(events.map((e) => e.key)).toEqual(['movie-2', 'series-1']);
   });
 
-  it('ignores the latest season date of a series without a next episode', () => {
-    expect(followingEvents([series(1, null)])).toEqual([]);
+  it('falls back to the newest season date of a series without a next episode', () => {
+    expect(followingEvents([series(1, null)]).map((e) => e.date)).toEqual(['2020-01-01']);
   });
 });
 

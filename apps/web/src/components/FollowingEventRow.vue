@@ -17,7 +17,8 @@ const image = computed(() => {
 });
 const what = computed(() => {
   const next = entry.value.nextEpisode;
-  if (entry.value.type === 'movie' || !next) return messages.watchlist.premiere;
+  if (entry.value.type === 'movie') return messages.watchlist.premiere;
+  if (!next) return messages.watchlist.newSeason;
   const code = messages.watchlist.episode(next.seasonNumber, next.episodeNumber);
   return next.name ? `${code} · ${next.name}` : code;
 });
