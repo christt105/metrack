@@ -104,11 +104,7 @@ const titleText = computed(() => {
   if ('title' in detail.value && detail.value.title) return detail.value.title;
   return `${messages.typeLabels.season} ${seasonOf.value?.number ?? ''}`;
 });
-const eyebrow = computed(() =>
-  seasonOf.value && parentTitle.value
-    ? `${messages.typeLabels.season} ${seasonOf.value.number}`
-    : messages.typeLabels[type.value],
-);
+const eyebrow = computed(() => messages.typeLabels[type.value]);
 
 function scrollToEdit(): void {
   document.getElementById('edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -129,7 +125,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       <template #before-title>
         <RouterLink v-if="seasonOf" :to="`/series/${seasonOf.seriesId}`" class="back">
           <AppIcon name="back" :size="18" />
-          {{ messages.detail.seasonOf }} {{ parentTitle ?? `#${seasonOf.seriesId}` }}
+          {{ parentTitle ?? `${messages.detail.seasonOf} #${seasonOf.seriesId}` }}
         </RouterLink>
       </template>
       <template #actions>
