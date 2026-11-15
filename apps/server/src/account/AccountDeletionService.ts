@@ -32,6 +32,7 @@ export class AccountDeletionService {
     return {
       deletion: requestedAt === null ? null : scheduleOf(requestedAt),
       canDelete: userId !== OWNER_ID,
+      needsWelcome: !(await this.users.isWelcomed(userId)),
     };
   }
 

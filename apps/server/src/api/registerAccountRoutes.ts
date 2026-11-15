@@ -1,11 +1,20 @@
 import type { ApiRoutes } from './ApiRoutes.js';
-import type { AccountDeletion, AccountStatus, DeleteAccountRequest } from '@metrack/domain';
+import type {
+  AccountDeletion,
+  AccountStatus,
+  DeleteAccountRequest,
+  User,
+  WelcomeRequest,
+} from '@metrack/domain';
 import type { AccountDeletionService } from '../account/AccountDeletionService.js';
 import type { AccountExporter } from '../account/AccountExporter.js';
 import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
+import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import { bytesBody } from './bytesBody.js';
 import { ApiError } from './ApiError.js';
+import { parseHandle } from './parseHandle.js';
 import { requireUser } from './requireUser.js';
+import { savePublicPage } from './savePublicPage.js';
 
 const deleteBody = {
   type: 'object',
@@ -14,7 +23,20 @@ const deleteBody = {
   additionalProperties: false,
 } as const;
 
+const welcomeBody = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', maxLength: 200 },
+    handle: { type: 'string', maxLength: 200 },
+  },
+  required: ['name', 'handle'],
+  additionalProperties: false,
+} as const;
+
+const NAME_MAX = 80;
+
 export interface AccountRouteDeps {
+  users: UserRepository;
   exporter: AccountExporter;
   /** Whether the server builds the export ZIP itself; the Worker leaves it to the browser. */
   serverZip: boolean;
@@ -27,7 +49,8 @@ export interface AccountRouteDeps {
  * images they own listed, and `GET /api/account/export` downloads a ZIP with both when the server builds it
  * (a token may call either). `GET /api/account` says whether a deletion is waiting, `POST
  * /api/account/deletion` schedules one, confirmed by typing the user's handle or `delete`, and `DELETE
- * /api/account/deletion` cancels it. The last three need the browser session, so a token cannot delete an
+ * /api/account/deletion` cancels it. `POST /api/account/welcome` is the first entry of a user who joined by
+ * invitation: they confirm their display name and public page handle, validated as in the settings. The last three need the browser session, so a token cannot delete an
  * account, and the owner's account cannot be deleted at all.
  */
 export function registerAccountRoutes(routes: ApiRoutes, deps: AccountRouteDeps): void {
@@ -50,6 +73,27 @@ export function registerAccountRoutes(routes: ApiRoutes, deps: AccountRouteDeps)
       });
     });
   }
+
+  routes.post<{ Body: WelcomeRequest }>(
+    '/api/account/welcome',
+    { config: { sessionOnly: true }, schema: { body: welcomeBody } },
+    async (request): Promise<User> => {
+      const user = requireUser(request.user);
+      if (await deps.users.isWelcomed(user.id)) {
+        throw ApiError.conflict('already_welcomed', 'This account has already been set up');
+      }
+      const name = request.body.name.trim();
+      if (name === '' || name.length > NAME_MAX) {
+        throw ApiError.badRequest('invalid_name', `The name must have 1 to ${NAME_MAX} characters`);
+      }
+      const handle = parseHandle(request.body.handle);
+      if (handle === null) throw ApiError.badRequest('handle_required', 'Choose a handle');
+      const current = await deps.profiles.get(user.id);
+      await savePublicPage(deps.profiles, user.id, { ...current, handle });
+      await deps.users.completeWelcome(user.id, name, new Date().toISOString());
+      return { ...user, name };
+    },
+  );
 
   routes.get(
     '/api/account',

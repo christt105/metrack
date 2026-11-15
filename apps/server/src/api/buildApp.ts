@@ -42,6 +42,9 @@ import { publicNotFound } from '../site/publicNotFound.js';
 import type { PublicSiteSources } from '../site/PublicSiteSources.js';
 import { registerSettingsRoutes } from './registerSettingsRoutes.js';
 import { registerAccountRoutes, type AccountRouteDeps } from './registerAccountRoutes.js';
+import { registerInviteRoutes } from './registerInviteRoutes.js';
+import { registerUserAdminRoutes, type UserAdminDeps } from './registerUserAdminRoutes.js';
+import type { InviteService } from '../invites/InviteService.js';
 import { registerCatalogRoutes } from './registerCatalogRoutes.js';
 import type { HandAddedCatalogRepository } from '../storage/repositories/HandAddedCatalogRepository.js';
 import { registerTokenRoutes } from './registerTokenRoutes.js';
@@ -82,6 +85,10 @@ export interface AppDeps {
     /** When set, users turn release alerts on, regenerate and turn them off themselves and the topic is never typed. */
     generateNtfyTopic?: () => string;
   };
+  /** The owner's invitation links, and the public page that previews one. */
+  invites?: InviteService;
+  /** The owner's users panel: accounts with their storage, and scheduling their deletion. */
+  userAdmin?: Omit<UserAdminDeps, 'images'>;
   /** Export and deletion of the signed-in user's own account. */
   account?: AccountRouteDeps;
   /** Lets the owner and trusted users delete hand-added catalog items nobody has any more. */
@@ -162,6 +169,9 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       deps.settings.generateNtfyTopic,
     );
   if (deps.account) registerAccountRoutes(routes, deps.account);
+  if (deps.invites) registerInviteRoutes(routes, deps.invites);
+  if (deps.userAdmin)
+    registerUserAdminRoutes(routes, { ...deps.userAdmin, images: deps.imageStore });
   if (deps.handAddedCatalog) registerCatalogRoutes(routes, deps.handAddedCatalog);
   if (deps.site) {
     registerPublicPageRoutes(app, { ...deps.site, scope: deps.scope, images: deps.imageStore });

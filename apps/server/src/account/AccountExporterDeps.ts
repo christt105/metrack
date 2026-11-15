@@ -1,6 +1,7 @@
 import type { ImageStore } from '../images/ImageStore.js';
 import type { ApiTokenRepository } from '../storage/repositories/ApiTokenRepository.js';
 import type { BookRepository } from '../storage/repositories/BookRepository.js';
+import type { InviteRepository } from '../storage/repositories/InviteRepository.js';
 import type { MovieRepository } from '../storage/repositories/MovieRepository.js';
 import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
 import type { ReleaseAlertRepository } from '../storage/repositories/ReleaseAlertRepository.js';
@@ -18,6 +19,7 @@ export interface AccountExporterDeps {
   settings: UserSettingsRepository;
   profiles: PublicProfileRepository;
   apiTokens: ApiTokenRepository;
+  invites: InviteRepository;
   movies: MovieRepository;
   series: SeriesRepository;
   seasons: SeasonRepository;

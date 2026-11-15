@@ -12,7 +12,7 @@ Local D1 and R2 live under `apps/server/.wrangler` (Miniflare); nothing reaches 
 npm ci
 cp apps/server/.dev.vars.example apps/server/.dev.vars   # optional: provider keys, DEV_LOGIN=true
 cd apps/server
-npx wrangler d1 migrations apply metrack-test --local            # applies 0001 and 0002
+npx wrangler d1 migrations apply metrack-test --local            # applies 0001 to 0005
 npx wrangler d1 execute metrack-test --local --file d1/seed/test-data.sql
 node d1/seed/makeTestToken.mjs > /tmp/token.sql          # prints the token on stderr, once
 npx wrangler d1 execute metrack-test --local --file /tmp/token.sql
@@ -91,9 +91,9 @@ Provider keys are Worker secrets read from the environment bindings; without one
 
 ## Sign in with Google
 
-Google sign-in lets users that already exist sign in with their Google account; it never creates users. Token login stays available as the owner's fallback.
+Google sign-in lets users that already exist sign in with their Google account, and lets a friend with a valid invitation link create their account (see below). Without a valid invitation it never creates users. Token login stays available as the owner's fallback.
 
-1. In the Google Cloud Console, create an OAuth client of type "Web application" (consent screen scopes: `openid` and `email`).
+1. In the Google Cloud Console, create an OAuth client of type "Web application" (consent screen scopes: `openid`, `email` and `profile`).
 2. Add the authorized redirect URIs `https://metrack.hakulino.dpdns.org/api/auth/google/callback` (production) and `https://metrack-test.christt105.workers.dev/api/auth/google/callback` (test).
 3. Give the Worker the client: `GOOGLE_CLIENT_ID` as a var or secret and `GOOGLE_CLIENT_SECRET` as a secret.
 
@@ -107,7 +107,9 @@ npx wrangler secret put GOOGLE_CLIENT_SECRET --env production
 
 Both must be set or neither: with only one, the Worker fails when it starts. Without them the Google routes do not exist and the sign-in page shows no button. The D1 migration `0004_google_login.sql` adds the nullable, unique `user.google_sub` column, so apply migrations before deploying.
 
-Linking: the first time a Google account signs in, it is matched by its email (only when Google says the email is verified) to a user with the same email and no Google account yet, and its `sub` is stored on that user from then on. Later sign-ins match by `sub`. A Google account with no match is refused with no session. Users with no email, or with a different one, are linked from the home server with `metrack users set <id> --google-sub <sub>` (an empty value unlinks); `metrack users` marks linked users with `[google]`.
+Linking: the first time a Google account signs in, it is matched by its email (only when Google says the email is verified) to a user with the same email and no Google account yet, and its `sub` is stored on that user from then on. Later sign-ins match by `sub`. A Google account with no match and no valid invitation is refused with no session. Users with no email, or with a different one, are linked from the home server with `metrack users set <id> --google-sub <sub>` (an empty value unlinks); `metrack users` marks linked users with `[google]`.
+
+Invitations: the owner creates links in settings (`/invite/<code>`, with a number of uses and an expiry) and sends them, for example through WhatsApp with the Web Share API. The migration `0005_invites.sql` adds the `invite` and `invite_use` tables and `user.onboarded_at`, which is null for a user created through an invitation until they confirm their name and handle on first entry; it sets it for every existing user, so apply it before deploying. A person who signs in with Google through a valid link gets a `normal` user with the Google name and the verified email, and one use is spent in the same D1 `batch` that inserts the user. The email is stored and shown only to the owner in the accounts panel of settings; the privacy page says so. The seed files set `onboarded_at` on their users.
 
 The home instance on a plain-http LAN address cannot use Google sign-in: Google only accepts https redirect URIs (or `localhost`), so it keeps token login. At home, setting the same `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` works only when the instance is reached over https (or on `localhost`) and that address is an authorized redirect URI.
 

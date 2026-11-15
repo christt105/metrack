@@ -3,10 +3,12 @@ import { computed, ref } from 'vue';
 import type { HealthReport, OwnSettings, SyncPlan } from '@metrack/domain';
 import AccountPanel from '../components/AccountPanel.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
+import InvitationsPanel from '../components/InvitationsPanel.vue';
 import NtfyAlertsPanel from '../components/NtfyAlertsPanel.vue';
 import PublicPagePanel from '../components/PublicPagePanel.vue';
 import SettingsList from '../components/SettingsList.vue';
 import TokensPanel from '../components/TokensPanel.vue';
+import UsersPanel from '../components/UsersPanel.vue';
 import UserSettingsEditor from '../components/UserSettingsEditor.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
@@ -109,6 +111,8 @@ const backup = () =>
     />
     <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
     <TokensPanel :connector="owner" />
+    <InvitationsPanel v-if="owner" />
+    <UsersPanel v-if="owner" />
     <AccountPanel v-if="own" :handle="own.publicPage.handle" />
     <div class="panel">
       <h2>{{ messages.images.title }}</h2>

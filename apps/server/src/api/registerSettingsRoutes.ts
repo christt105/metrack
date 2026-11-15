@@ -4,8 +4,6 @@ import {
   PUBLIC_PAGE_LIMITS,
   isGiscusRepo,
   applySettingsPatch,
-  handleProblem,
-  normalizeHandle,
   type GiscusConfig,
   type PublicPage,
   type PublicPagePatch,
@@ -19,14 +17,15 @@ import {
 } from '@metrack/domain';
 import { isImageHash } from '../images/imageRef.js';
 import type { ImageStore } from '../images/ImageStore.js';
-import { HandleTakenError } from '../storage/HandleTakenError.js';
 import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
 import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import { NO_SETTINGS } from '../users/NO_SETTINGS.js';
 import { OWNER_ID } from '../users/OWNER_ID.js';
 import { ApiError } from './ApiError.js';
+import { parseHandle } from './parseHandle.js';
 import { requireUser } from './requireUser.js';
+import { savePublicPage } from './savePublicPage.js';
 
 const params = {
   type: 'object',
@@ -183,10 +182,7 @@ export function registerSettingsRoutes(
       const current = await profiles.get(userId);
       let handle = current.handle;
       if (request.body.handle !== undefined) {
-        const wanted = normalizeHandle(request.body.handle ?? '');
-        const problem = wanted === '' ? null : handleProblem(wanted);
-        if (problem) throw ApiError.badRequest('invalid_handle', `The handle must be ${problem}`);
-        handle = wanted === '' ? null : wanted;
+        handle = parseHandle(request.body.handle ?? '');
       }
       const enabled = request.body.enabled ?? current.enabled;
       const body = request.body;
@@ -217,18 +213,7 @@ export function registerSettingsRoutes(
       if (enabled && handle === null) {
         throw ApiError.badRequest('handle_required', 'Choose a handle before turning the page on');
       }
-      const owner = handle === null ? undefined : await profiles.findByHandle(handle);
-      if (owner && owner.userId !== userId) {
-        throw ApiError.conflict('handle_taken', 'Another user already has that handle');
-      }
-      try {
-        await profiles.save(userId, page);
-      } catch (error) {
-        if (error instanceof HandleTakenError) {
-          throw ApiError.conflict('handle_taken', 'Another user already has that handle');
-        }
-        throw error;
-      }
+      await savePublicPage(profiles, userId, page);
       return page;
     },
   );

@@ -24,6 +24,25 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.users.linkGoogleSub(created.id, 'sub');
   await owner.users.setGoogleSub(created.id, null);
   await owner.users.googleSubOf(created.id);
+  await owner.users.createdAtByUser();
+  await owner.users.isWelcomed(created.id);
+  await owner.users.completeWelcome(created.id, 'Third', 'now');
+  const invite = await owner.invites.create({
+    codeHash: 'code',
+    maxUses: 2,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2999-01-01T00:00:00.000Z',
+  });
+  await owner.invites.byCodeHash('code');
+  await owner.invites.redeem({
+    codeHash: 'code',
+    name: 'Joiner',
+    email: 'joiner@example.com',
+    googleSub: 'joiner-sub',
+    at: '2026-01-02T00:00:00.000Z',
+  });
+  await owner.invites.list();
+  await owner.invites.revoke(invite.id, 'now');
   const settings = {
     jellyfinUser: 'j',
     ntfyTopic: null,
@@ -260,6 +279,21 @@ function emptyBookLike() {
  * of them on a request path. Everything else must search an index.
  */
 const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
+  {
+    sql: /^SELECT id, created_at FROM user$/,
+    scan: /^SCAN user/,
+    why: 'the owner users panel lists every account',
+  },
+  {
+    sql: /^SELECT \* FROM invite ORDER BY created_at DESC, id DESC$/,
+    scan: /^SCAN invite/,
+    why: 'the owner lists every invitation',
+  },
+  {
+    sql: /^SELECT u\.invite_id, u\.user_id, u\.used_at, x\.name AS user_name FROM invite_use u LEFT JOIN user x ON x\.id = u\.user_id ORDER BY u\.id$/,
+    scan: /^SCAN u/,
+    why: 'the owner lists who used every invitation',
+  },
   { sql: /^SELECT \* FROM user ORDER BY id$/, scan: /^SCAN user/, why: 'admin account list' },
   {
     sql: /^SELECT \* FROM user_setting ORDER BY user_id$/,

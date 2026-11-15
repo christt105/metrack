@@ -5,6 +5,7 @@ import { buildApp } from './api/buildApp.js';
 import { DiskStaticFiles } from './web/DiskStaticFiles.js';
 import { ApiTokenService } from './auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from './auth/SessionCookieAuthenticator.js';
+import { InviteService } from './invites/InviteService.js';
 import { GoogleSignIn } from './auth/google/GoogleSignIn.js';
 import { SessionService } from './auth/SessionService.js';
 import { AsyncUserScope } from './users/AsyncUserScope.js';
@@ -266,7 +267,8 @@ const app = buildApp({
     sessions,
     users: repositories.users,
     devLogin: config.devLogin,
-    google: config.google && new GoogleSignIn(config.google, repositories.users),
+    google:
+      config.google && new GoogleSignIn(config.google, repositories.users, repositories.invites),
     logger,
   },
   tokens: new ApiTokenService(repositories.apiTokens, repositories.users),
@@ -287,7 +289,10 @@ const app = buildApp({
     serverZip: true,
     deletion: accountDeletion,
     profiles: repositories.profiles,
+    users: repositories.users,
   },
+  invites: new InviteService(repositories.invites, repositories.users),
+  userAdmin: { users: repositories.users, deletion: accountDeletion },
   handAddedCatalog: repositories.handAddedCatalog,
   settings: {
     users: repositories.users,

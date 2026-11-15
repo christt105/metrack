@@ -1,4 +1,6 @@
-import type { UserSettings } from '@metrack/domain';
+import type { Invite, UserSettings } from '@metrack/domain';
+import { inviteStatus } from '../invites/inviteStatus.js';
+import { OWNER_ID } from '../users/OWNER_ID.js';
 import type { StoredImage } from '../images/StoredImage.js';
 import { ZipArchive } from './ZipArchive.js';
 import type { AccountArchive } from './AccountArchive.js';
@@ -34,6 +36,14 @@ export class AccountExporter {
     return { fileName: fileNameFor(userId, exportedAt), bytes: zip.toBuffer() };
   }
 
+  private async invites(): Promise<Invite[]> {
+    const now = this.now();
+    return (await this.deps.invites.list()).map((stored) => ({
+      ...stored,
+      status: inviteStatus(stored, now),
+    }));
+  }
+
   async data(userId: number, exportedAt: Date = this.now()): Promise<AccountExport> {
     const { deps } = this;
     const user = await deps.users.get(userId);
@@ -66,6 +76,7 @@ export class AccountExporter {
       settings: settings ? withoutTopic(settings) : null,
       publicPage: await deps.profiles.get(userId),
       tokens: await deps.apiTokens.listForUser(userId),
+      invites: userId === OWNER_ID ? await this.invites() : [],
       movies: await deps.movies.list(),
       series,
       seasons: await deps.seasons.list(),

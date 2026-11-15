@@ -1,6 +1,7 @@
 import type {
   ApiToken,
   Book,
+  Invite,
   Movie,
   PublicPage,
   ReleaseAlert,
@@ -35,6 +36,8 @@ export interface AccountExport {
   publicPage: PublicPage;
   /** Name, access and dates only; the secrets are not stored in a form that can be given back. */
   tokens: ApiToken[];
+  /** The owner's invitation links with who used them, never their codes; empty for everyone else. */
+  invites: Invite[];
   /** Each item merges the shared catalog row with the user's own entry and edits, as the app shows it. */
   movies: Movie[];
   series: Series[];

@@ -5,6 +5,7 @@ import { SqliteHandAddedCatalogRepository } from './SqliteHandAddedCatalogReposi
 import { SqliteApiTokenRepository } from './SqliteApiTokenRepository.js';
 import { SqliteBookRepository } from './SqliteBookRepository.js';
 import { SqliteImageRepository } from './SqliteImageRepository.js';
+import { SqliteInviteRepository } from './SqliteInviteRepository.js';
 import { SqliteMetadataStateRepository } from './SqliteMetadataStateRepository.js';
 import { SqliteMovieRepository } from './SqliteMovieRepository.js';
 import type { Repositories } from '../repositories/Repositories.js';
@@ -39,6 +40,7 @@ export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): Re
     sessions: new SqliteSessionRepository(db),
     apiTokens: new SqliteApiTokenRepository(db),
     accounts: new SqliteAccountRepository(db),
+    invites: new SqliteInviteRepository(db),
     handAddedCatalog: new SqliteHandAddedCatalogRepository(db),
     transactions: new SqliteTransactionRunner(db),
   };
