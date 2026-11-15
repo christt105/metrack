@@ -1,4 +1,4 @@
-import type { Series } from '@metrack/domain';
+import type { NextEpisode, Series } from '@metrack/domain';
 import type { MediaTableSpec } from './MediaTableSpec.js';
 import type { Row } from './Row.js';
 import type { RowValues } from './RowValues.js';
@@ -30,7 +30,20 @@ function seriesToRow(s: Omit<Series, 'id'>): RowValues {
     slug: s.slug,
     tags: JSON.stringify(s.tags),
     review: s.review,
+    next_episode_season: s.nextEpisode?.seasonNumber ?? null,
+    next_episode_number: s.nextEpisode?.episodeNumber ?? null,
+    next_episode_air_date: s.nextEpisode?.airDate ?? null,
+    next_episode_name: s.nextEpisode?.name ?? null,
+    next_episode_checked_at: s.nextEpisodeCheckedAt,
   };
+}
+
+function nextEpisodeFromRow(row: Row): NextEpisode | null {
+  const airDate = text(row.next_episode_air_date);
+  const seasonNumber = num(row.next_episode_season);
+  const episodeNumber = num(row.next_episode_number);
+  if (airDate === null || seasonNumber === null || episodeNumber === null) return null;
+  return { seasonNumber, episodeNumber, airDate, name: text(row.next_episode_name) };
 }
 
 function seriesFromRow(row: Row): Series {
@@ -53,6 +66,8 @@ function seriesFromRow(row: Row): Series {
     slug: text(row.slug),
     tags: parseList(row.tags),
     review: text(row.review),
+    nextEpisode: nextEpisodeFromRow(row),
+    nextEpisodeCheckedAt: text(row.next_episode_checked_at),
   };
 }
 

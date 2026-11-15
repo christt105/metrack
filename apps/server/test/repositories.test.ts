@@ -42,6 +42,8 @@ const newSeries = (over: Partial<Omit<Series, 'id'>> = {}): Omit<Series, 'id'> =
   slug: null,
   tags: [],
   review: null,
+  nextEpisode: null,
+  nextEpisodeCheckedAt: null,
   ...over,
 });
 
@@ -218,6 +220,28 @@ describe.each(backends)('$name repositories', (backend) => {
       expect(await repo.listFollowed()).toEqual([]);
       await repo.update(a.id, { follow: true });
       expect((await repo.listFollowed()).map((s) => s.title)).toEqual(['A']);
+    });
+
+    it('round-trips the next episode and clears it', async () => {
+      const repo = repos.series;
+      const created = await repo.create(newSeries({ tmdbId: 1 }));
+      expect(created.nextEpisode).toBeNull();
+      expect(created.nextEpisodeCheckedAt).toBeNull();
+      const next = { seasonNumber: 2, episodeNumber: 5, airDate: '2026-12-01', name: null };
+      await repo.updateCatalog(created.id, {
+        nextEpisode: next,
+        nextEpisodeCheckedAt: '2026-11-15T10:00:00.000Z',
+      });
+      expect(await repo.get(created.id)).toMatchObject({
+        nextEpisode: next,
+        nextEpisodeCheckedAt: '2026-11-15T10:00:00.000Z',
+      });
+      await repo.update(created.id, { follow: true, overview: 'Plot' });
+      expect((await repo.listFollowed())[0]?.nextEpisode).toEqual(next);
+      await repo.updateCatalog(created.id, { nextEpisode: { ...next, name: 'Five' } });
+      expect((await repo.get(created.id))?.nextEpisode?.name).toBe('Five');
+      await repo.updateCatalog(created.id, { nextEpisode: null });
+      expect((await repo.get(created.id))?.nextEpisode).toBeNull();
     });
 
     it('cascades season deletion with the series and keeps numbers unique per series', async () => {

@@ -22,6 +22,7 @@ import { connectorTokenScopeMigration } from './0020-connector-token-scope.js';
 import { googleLoginMigration } from './0021-google-login.js';
 import { invitesMigration } from './0022-invites.js';
 import { episodeGroupMigration } from './0023-episode-group.js';
+import { nextEpisodeMigration } from './0024-next-episode.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -47,4 +48,5 @@ export const migrations: readonly Migration[] = [
   googleLoginMigration,
   invitesMigration,
   episodeGroupMigration,
+  nextEpisodeMigration,
 ];

@@ -32,6 +32,7 @@ export const reconcileSeasonsBody = {
                 seasonNumber: { type: 'integer', minimum: 0 },
                 episodeNumber: { type: 'integer', minimum: 0 },
                 airDate: { type: 'string', pattern: DATE_PATTERN },
+                name: nullableString,
               },
               required: ['seasonNumber', 'episodeNumber', 'airDate'],
             },

@@ -50,6 +50,8 @@ export function emptySeries(): Omit<Series, 'id'> {
     slug: null,
     tags: [],
     review: null,
+    nextEpisode: null,
+    nextEpisodeCheckedAt: null,
     cover: null,
     banner: null,
   };

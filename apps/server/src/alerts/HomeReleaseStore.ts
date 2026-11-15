@@ -25,7 +25,7 @@ export class HomeReleaseStore implements ReleaseStore {
     release: SeriesRelease,
     today: string,
   ): Promise<ReconciledSeason[]> {
-    return reconcileSeasons(seriesId, release, today, this.deps);
+    return reconcileSeasons(seriesId, release, today, this.deps, this.deps.now);
   }
 
   async sentAlerts(subjects: readonly AlertSubject[]): Promise<AlertKey[]> {
