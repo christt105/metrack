@@ -86,6 +86,7 @@ export const messages = {
     sectionRewatches: 'Rewatches',
     sectionSeasons: 'Seasons',
     sectionOverrides: 'Season overrides',
+    confirmForAll: 'This changes it for every user who has this series. Continue?',
     edited: 'Edited by hand',
     editedHint: 'A metadata refresh will not overwrite this field.',
     release: 'Release',
@@ -109,7 +110,34 @@ export const messages = {
     deleteItem: 'Delete',
     openLink: 'Open',
   },
+  ordering: {
+    title: 'Season ordering',
+    description:
+      'How the seasons of this series are numbered. TMDB can split a series into seasons differently from its regular seasons, for example to match the library.',
+    regular: 'TMDB seasons',
+    label: 'Ordering',
+    typeLabels: {
+      1: 'Original air date',
+      2: 'Absolute',
+      3: 'DVD',
+      4: 'Digital',
+      5: 'Story arc',
+      6: 'Production',
+      7: 'TV',
+    } as Record<number, string>,
+    groupOption: (name: string, type: string, seasons: number, episodes: number) =>
+      `${name} (${type}, ${seasons} seasons, ${episodes} episodes)`,
+    apply: 'Apply ordering',
+    suggestion: (name: string) =>
+      `This series has seasons that TMDB does not know. TMDB's "${name}" ordering has them.`,
+    loading: 'Looking for the orderings TMDB has...',
+    none: 'TMDB has no other ordering for this series.',
+    confirmForAll:
+      'Other users have this series too. This changes it for every user who has this series. Continue?',
+    sharedNotice: 'Other users have this series, so only the owner can change its ordering.',
+  },
   artwork: {
+    fromSeries: 'From the series',
     cover: 'Cover',
     banner: 'Banner',
     change: 'Change',

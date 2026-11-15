@@ -26,6 +26,25 @@ describe('ApiClient', () => {
     expect(calls[0]?.init?.body).toBe('{"rating":7}');
   });
 
+  it('asks to change a shared catalog field for everyone only when told to', async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const client = new ApiClient((async (url: string, init?: RequestInit) => {
+      calls.push({ url, init });
+      return new Response('{}');
+    }) as unknown as typeof fetch);
+    await client.patch('seasons', 3, { tmdbSeasonNumber: 2 }, { forAll: true });
+    await client.setSeasonOrdering(4, 'g1');
+    await client.setSeasonOrdering(4, null, { forAll: true });
+    await client.episodeGroups(4);
+    expect(calls.map((c) => `${c.init?.method ?? 'GET'} ${c.url}`)).toEqual([
+      'PATCH /api/seasons/3?forAll=true',
+      'PUT /api/series/4/season-ordering',
+      'PUT /api/series/4/season-ordering?forAll=true',
+      'GET /api/series/4/episode-groups',
+    ]);
+    expect(calls[1]?.init?.body).toBe('{"episodeGroup":"g1"}');
+  });
+
   it('encodes free-text path segments', async () => {
     const { calls, client } = recorder(new Response('{}'));
     await client.removeRewatch('movies', 3, '2026/../x?y#z');

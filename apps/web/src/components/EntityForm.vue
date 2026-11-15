@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import type { Collection, MediaStatus } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
+import { sessionKey } from '../auth/sessionKey';
 import { useApi } from '../composables/useApi';
 import { fieldLabel, messages } from '../i18n/messages';
 import type { FieldSchema, FieldSection } from '../logic/FieldSchema';
@@ -9,6 +10,7 @@ import { fieldSchemas, isTracked } from '../logic/fieldSchemas';
 import { buildPatch, DraftError, toDraft } from '../logic/formDraft';
 import type { Draft } from '../logic/formDraft';
 import { openableLink } from '../logic/openableLink';
+import { saveForAll } from '../logic/saveForAll';
 import { statusOptions } from '../logic/statusOptions';
 import ErrorNotice from './ErrorNotice.vue';
 import FieldInput from './FieldInput.vue';
@@ -18,6 +20,7 @@ const props = defineProps<{ collection: Collection; detail: AnyDetail }>();
 const emit = defineEmits<{ saved: [detail: AnyDetail]; changed: [] }>();
 
 const api = useApi();
+const session = inject(sessionKey, null);
 const schemas = computed(() => fieldSchemas[props.collection]);
 const tracked = computed(() => isTracked(props.collection));
 const draft = ref<Draft>({});
@@ -94,7 +97,11 @@ async function save(confirm = false): Promise<void> {
   }
   saving.value = true;
   try {
-    const updated = await api.patch(props.collection, props.detail.id, patch as never);
+    const updated = await saveForAll(
+      (options) => api.patch(props.collection, props.detail.id, patch as never, options),
+      session?.user.value?.role === 'owner',
+      () => window.confirm(messages.detail.confirmForAll),
+    );
     emit('saved', updated as AnyDetail);
     saved.value = true;
   } catch (cause) {

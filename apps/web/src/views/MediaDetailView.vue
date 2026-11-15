@@ -11,6 +11,7 @@ import FollowToggle from '../components/FollowToggle.vue';
 import MetadataRefresh from '../components/MetadataRefresh.vue';
 import RewatchList from '../components/RewatchList.vue';
 import SeasonList from '../components/SeasonList.vue';
+import SeasonOrderingPanel from '../components/SeasonOrderingPanel.vue';
 import SeasonOverrideEditor from '../components/SeasonOverrideEditor.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import { useApi } from '../composables/useApi';
@@ -45,6 +46,10 @@ const rewatches = computed(() =>
   detail.value && 'rewatches' in detail.value ? detail.value.rewatches : [],
 );
 const parentTitle = ref<string | null>(null);
+const parentArtwork = ref<{ cover: string | null; banner: string | null } | null>(null);
+const hasUnlinkedSeasons = computed(() =>
+  (series.value?.seasons ?? []).some((s) => s.number >= 1 && s.tmdbSeasonNumber === null),
+);
 const overrides = computed<SeasonOverride[]>(() => series.value?.overrides ?? []);
 
 async function load(): Promise<void> {
@@ -55,11 +60,15 @@ async function load(): Promise<void> {
     detail.value = result;
     error.value = null;
     parentTitle.value = null;
+    parentArtwork.value = null;
     if (props.collection === 'seasons') {
       const parent = await api
         .getDetail('series', (result as unknown as Season).seriesId)
         .catch(() => null);
-      if (mine === ticket) parentTitle.value = parent?.title ?? null;
+      if (mine === ticket) {
+        parentTitle.value = parent?.title ?? null;
+        parentArtwork.value = parent ? { cover: parent.cover, banner: parent.banner } : null;
+      }
     }
   } catch (cause) {
     if (mine !== ticket) return;
@@ -128,6 +137,12 @@ watch(() => [props.collection, props.id], load, { immediate: true });
     </header>
 
     <SeasonList v-if="series" :series-id="series.id" :seasons="series.seasons" @changed="load" />
+    <SeasonOrderingPanel
+      v-if="series && series.tmdbId !== null"
+      :series-id="series.id"
+      :has-unlinked-seasons="hasUnlinkedSeasons"
+      @changed="load"
+    />
     <EntityForm :collection="collection" :detail="detail" @saved="onSaved" @changed="load" />
 
     <SeasonOverrideEditor
@@ -147,6 +162,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
     <ArtworkPanel
       :collection="collection"
       :detail="detail"
+      :fallback="parentArtwork"
       @updated="
         (d) => {
           onSaved(d);

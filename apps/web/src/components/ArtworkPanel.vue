@@ -8,7 +8,11 @@ import { imageKindsOf } from '../logic/fieldSchemas';
 import ErrorNotice from './ErrorNotice.vue';
 import ImagePicker from './ImagePicker.vue';
 
-const props = defineProps<{ collection: Collection; detail: AnyDetail }>();
+const props = defineProps<{
+  collection: Collection;
+  detail: AnyDetail;
+  fallback?: Partial<Record<ImageKind, string | null>> | null;
+}>();
 const emit = defineEmits<{ updated: [detail: AnyDetail] }>();
 
 const api = useApi();
@@ -18,6 +22,10 @@ const error = ref<unknown>(null);
 
 function current(kind: ImageKind): string | null {
   return (props.detail as unknown as Record<string, string | null | undefined>)[kind] ?? null;
+}
+
+function shown(kind: ImageKind): string | null {
+  return current(kind) ?? props.fallback?.[kind] ?? null;
 }
 
 function onChosen(detail: unknown): void {
@@ -42,14 +50,17 @@ async function clear(kind: ImageKind): Promise<void> {
       <div v-for="kind in kinds" :key="kind" class="slot" :class="kind">
         <div class="preview">
           <img
-            v-if="current(kind)"
-            :src="sizedImageUrl(current(kind) ?? '', kind === 'banner' ? 'banner' : 'cover')"
+            v-if="shown(kind)"
+            :src="sizedImageUrl(shown(kind) ?? '', kind === 'banner' ? 'banner' : 'cover')"
             :alt="messages.imageKindLabels[kind]"
           />
           <span v-else class="muted">{{ messages.artwork.noImage }}</span>
         </div>
         <div class="row">
           <strong>{{ messages.imageKindLabels[kind] }}</strong>
+          <span v-if="current(kind) === null && shown(kind) !== null" class="muted">
+            {{ messages.artwork.fromSeries }}
+          </span>
           <span
             v-if="detail.editedFields.includes(kind)"
             class="edited"
