@@ -89,7 +89,7 @@ The service joins the Jellystat network to reach its Postgres by container name.
 
 ## 4. Jellyfin webhook
 
-In Jellyfin, install the Webhook plugin and add a Generic destination: URL `http://<host address>:8099/webhook`, a JSON body such as `{"event": "{{NotificationType}}"}`, the header `Content-Type: application/json`, the notification types Playback Stop and User Data Saved, and no user filter (the connector syncs everyone with a Jellyfin account). Send the secret in an `X-Webhook-Secret` header (another header in the same destination), or as `?token=<secret>` in the URL if the sender cannot set headers. The body is ignored: a request queues a sync for every user the connector knew at its last pass.
+In Jellyfin, install the Webhook plugin and add a Generic destination: URL `http://<host address>:8099/webhook`, a JSON body such as `{"event": "{{NotificationType}}"}`, the header `Content-Type: application/json`, the notification types Playback Stop and User Data Saved, and no user filter (the connector syncs everyone with a Jellyfin account). Send the secret in an `X-Webhook-Secret` header (another header in the same destination), or as `?token=<secret>` in the URL if the sender cannot set headers. The body is ignored: a request queues a sync for every user the connector knows. The first notice of a burst (one arriving more than `SYNC_WEBHOOK_DELAY_SECONDS` after the previous one) re-reads the users from the cloud, so an account linked since the last pass is picked up without restarting; the rest of the burst reuses them, and the log has one `Webhook burst queued N users` line per burst.
 
 ## 5. How it behaves
 

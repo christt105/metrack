@@ -14,6 +14,7 @@ import { retryDelay } from './retryDelay.js';
  */
 export class FullPass {
   private failures = 0;
+  private lastWebhookAt: number | undefined;
   private readonly alert: FailureAlert;
 
   constructor(
@@ -24,6 +25,8 @@ export class FullPass {
     private readonly logger: Logger,
     private readonly scheduler: Scheduler,
     private readonly intervalMs: number,
+    private readonly burstGapMs: number = 0,
+    private readonly now: () => number = Date.now,
   ) {
     this.alert = new FailureAlert(notifier, 'the pass over every user');
   }
@@ -35,22 +38,31 @@ export class FullPass {
 
   /** Reads who has a Jellyfin account and queues a sync for each. Fails when the cloud cannot be reached. */
   async queueUsers(): Promise<number[]> {
-    const ids = (await this.cloud.users()).map((user) => user.id);
-    this.store.write({ ...this.store.read(), users: ids });
-    this.queue.markAll(ids);
+    const ids = await this.readUsers();
     this.logger.info(`Full pass queued ${ids.length} users`);
     return ids;
   }
 
   /**
-   * Re-reads the users from the cloud so a newly linked account is queued right away. When the cloud cannot be reached
-   * it queues the users of the last pass instead, and only fails when there are none.
+   * Queues a sync for every user after a webhook. The first notice of a burst, one that comes more than `burstGapMs`
+   * after the previous one, re-reads the users from the cloud so a newly linked account is queued right away; the
+   * rest of the burst queues the users already known. When the cloud cannot be reached it queues the users of the
+   * last read instead, and only fails when there are none.
    */
   async queueUsersForWebhook(): Promise<number> {
+    const now = this.now();
+    const inBurst = this.lastWebhookAt !== undefined && now - this.lastWebhookAt < this.burstGapMs;
+    this.lastWebhookAt = now;
+    const known = this.knownUsers();
+    if (inBurst && known.length > 0) {
+      this.queue.markAll(known);
+      return known.length;
+    }
     try {
-      return (await this.queueUsers()).length;
+      const ids = await this.readUsers();
+      this.logger.info(`Webhook burst queued ${ids.length} users`);
+      return ids.length;
     } catch (error) {
-      const known = this.knownUsers();
       if (known.length === 0) throw error;
       const reason = error instanceof Error ? error.message : String(error);
       this.logger.error(
@@ -59,6 +71,13 @@ export class FullPass {
       this.queue.markAll(known);
       return known.length;
     }
+  }
+
+  private async readUsers(): Promise<number[]> {
+    const ids = (await this.cloud.users()).map((user) => user.id);
+    this.store.write({ ...this.store.read(), users: ids });
+    this.queue.markAll(ids);
+    return ids;
   }
 
   /** Queues every user, then schedules the next pass: after the interval, or sooner when this one failed. */
