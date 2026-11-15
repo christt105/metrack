@@ -3,7 +3,7 @@ import type { Tracking } from './Tracking.js';
 
 /**
  * The unit that is followed and rated. `number` is the canonical number (Jellyfin/TVDB when known),
- * `tmdbSeasonNumber` is the number TMDB uses for the same season.
+ * `tmdbSeasonNumber` is the number TMDB uses for the same season, or the order inside the series' episode group when it has one.
  */
 export interface Season extends Tracking, Artwork {
   id: number;

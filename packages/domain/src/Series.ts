@@ -8,6 +8,8 @@ export interface Series extends Artwork {
   id: number;
   tmdbId: number | null;
   tvdbId: number | null;
+  /** The TMDB episode group whose seasons number this series; null for the regular TMDB seasons. */
+  tmdbEpisodeGroup: string | null;
   jellyfinId: string | null;
   title: string;
   originalTitle: string | null;

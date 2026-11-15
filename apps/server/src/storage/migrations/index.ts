@@ -20,6 +20,7 @@ import { accountDeletionMigration } from './0018-account-deletion.js';
 import { queryIndexesMigration } from './0019-query-indexes.js';
 import { connectorTokenScopeMigration } from './0020-connector-token-scope.js';
 import { googleLoginMigration } from './0021-google-login.js';
+import { episodeGroupMigration } from './0022-episode-group.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -43,4 +44,5 @@ export const migrations: readonly Migration[] = [
   queryIndexesMigration,
   connectorTokenScopeMigration,
   googleLoginMigration,
+  episodeGroupMigration,
 ];

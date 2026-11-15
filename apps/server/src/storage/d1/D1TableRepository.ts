@@ -1,5 +1,6 @@
 import type { UserScope } from '../../users/UserScope.js';
 import type { MediaEntityRepository } from '../repositories/MediaEntityRepository.js';
+import type { UpdateOptions } from '../repositories/UpdateOptions.js';
 import { SharedCatalogError } from '../SharedCatalogError.js';
 import type { MediaTableSpec } from '../mapping/MediaTableSpec.js';
 import type { Row } from '../mapping/Row.js';
@@ -97,7 +98,7 @@ export class D1TableRepository<T extends { id: number }> implements MediaEntityR
     return this.where('1 = 1 ORDER BY c.id');
   }
 
-  async update(id: number, patch: Partial<Omit<T, 'id'>>): Promise<T> {
+  async update(id: number, patch: Partial<Omit<T, 'id'>>, options: UpdateOptions = {}): Promise<T> {
     const { base, overrides, row } = await this.requireStored(id);
     const rest: Record<string, unknown> = {};
     const nextOverrides = { ...overrides };
@@ -107,7 +108,7 @@ export class D1TableRepository<T extends { id: number }> implements MediaEntityR
     }
     const next = this.split(this.spec.toRow({ ...withoutId(base), ...rest } as Omit<T, 'id'>));
     const changed = changedColumns(row, next.catalog);
-    if (changed.length > 0 && (await this.sharedWithOthers(id))) {
+    if (changed.length > 0 && !options.allowSharedCatalog && (await this.sharedWithOthers(id))) {
       throw new SharedCatalogError(this.table, changed);
     }
     await this.write(id, next, nextOverrides);

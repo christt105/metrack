@@ -35,6 +35,7 @@ export const series = (over: Partial<Series> = {}): Series => ({
   id: 1,
   tmdbId: 20,
   tvdbId: null,
+  tmdbEpisodeGroup: null,
   jellyfinId: null,
   title: 'Show',
   originalTitle: null,

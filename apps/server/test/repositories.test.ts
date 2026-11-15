@@ -27,6 +27,7 @@ const tracking: Tracking = {
 const newSeries = (over: Partial<Omit<Series, 'id'>> = {}): Omit<Series, 'id'> => ({
   tmdbId: null,
   tvdbId: null,
+  tmdbEpisodeGroup: null,
   jellyfinId: null,
   title: 'Series',
   originalTitle: null,

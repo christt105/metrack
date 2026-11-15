@@ -37,6 +37,7 @@ export function emptySeries(): Omit<Series, 'id'> {
   return {
     tmdbId: null,
     tvdbId: null,
+    tmdbEpisodeGroup: null,
     jellyfinId: null,
     title: '',
     originalTitle: null,

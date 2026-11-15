@@ -7,12 +7,16 @@ import type { StorageBackend } from './StorageBackend.js';
 const OWNER = `INSERT INTO user (id, name, email, created_at, role)
 VALUES (1, 'Owner', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 'owner')`;
 
-const SCHEMA = ['0001_schema.sql', '0002_public_render_cache.sql', '0004_google_login.sql'].flatMap(
-  (file) =>
-    readFileSync(new URL(`../../d1/migrations/${file}`, import.meta.url), 'utf8')
-      .split(/;\s*\n/)
-      .map((sql) => sql.trim())
-      .filter((sql) => sql.length > 0),
+const SCHEMA = [
+  '0001_schema.sql',
+  '0002_public_render_cache.sql',
+  '0004_google_login.sql',
+  '0005_episode_group.sql',
+].flatMap((file) =>
+  readFileSync(new URL(`../../d1/migrations/${file}`, import.meta.url), 'utf8')
+    .split(/;\s*\n/)
+    .map((sql) => sql.trim())
+    .filter((sql) => sql.length > 0),
 );
 
 /** Local D1 under Miniflare, one database per file that is emptied and re-seeded on every `open`. */
