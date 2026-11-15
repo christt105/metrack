@@ -321,6 +321,11 @@ const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
     why: 'orphan detection',
   },
   {
+    sql: /^SELECT public_(avatar AS ref|about AS review) FROM user_setting WHERE/,
+    scan: /^SCAN user_setting/,
+    why: 'orphan detection reads the public page avatar and about text of every user',
+  },
+  {
     sql: /^SELECT hash, (source_url, created_at FROM image|url FROM image_source|created_at FROM image_owner)$/,
     scan: /^SCAN image/,
     why: 'orphan detection',

@@ -537,6 +537,18 @@ describe('the public page profile', () => {
       expect(stolen.json().code).toBe('invalid_avatar');
     });
 
+    it('does not block saving the text when the stored avatar is no longer readable', async () => {
+      const image = await upload(OWNER.id, 23);
+      await owner.patch('/api/settings/public-page', { avatar: image.ref });
+      await api.store.delete(image.hash);
+      const kept = await owner.patch('/api/settings/public-page', {
+        avatar: image.ref,
+        intro: 'hello',
+      });
+      expect(kept.statusCode).toBe(200);
+      expect(kept.json().intro).toBe('hello');
+    });
+
     it('is not shown on a page that is off', async () => {
       await publish(OWNER, 'christian');
       const image = await upload(OWNER.id, 22);

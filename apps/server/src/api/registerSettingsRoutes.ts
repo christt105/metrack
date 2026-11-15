@@ -190,7 +190,7 @@ export function registerSettingsRoutes(
       if (body.avatar !== undefined) {
         avatar = body.avatar === null || body.avatar === '' ? null : body.avatar;
         const hash = avatar === null ? null : (OWN_IMAGE.exec(avatar)?.[1] ?? null);
-        if (avatar !== null) {
+        if (avatar !== null && avatar !== current.avatar) {
           const user = requireUser(request.user);
           const image = hash !== null && isImageHash(hash) ? await images?.get(hash) : undefined;
           if (!image || !(await images?.canRead(image.hash, user))) {
