@@ -291,6 +291,38 @@ describe.each(backends)('$name: hand-added catalog rows and images', (backend) =
     expect(await repos.images.usedBytes(1)).toBe(0);
   });
 
+  it('keeps an image only the public page avatar uses', async () => {
+    await repos.images.insert(image('aa'));
+    await repos.images.insert(image('bb'));
+    const page = {
+      handle: 'owner',
+      enabled: true,
+      avatar: imageRef('aa'),
+      intro: null,
+      description: null,
+      about: null,
+      giscus: null,
+    };
+    await repos.profiles.save(1, page);
+    expect(await repos.images.orphans()).toEqual(['bb']);
+    await repos.profiles.save(1, { ...page, avatar: null });
+    expect(await repos.images.orphans()).toEqual(['aa', 'bb']);
+  });
+
+  it('keeps an image only the public about page embeds', async () => {
+    await repos.images.insert(image('aa'));
+    await repos.profiles.save(1, {
+      handle: 'owner',
+      enabled: true,
+      avatar: null,
+      intro: null,
+      description: null,
+      about: `![me](${imageRef('aa')})`,
+      giscus: null,
+    });
+    expect(await repos.images.orphans()).toEqual([]);
+  });
+
   it('finds unreferenced images and clears references when one is deleted', async () => {
     await repos.images.insert(image('aa'));
     await repos.images.insert(image('bb'));
