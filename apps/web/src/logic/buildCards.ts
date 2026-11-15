@@ -12,6 +12,7 @@ export interface LibraryCard {
   title: string;
   subtitle: string | null;
   cover: string | null;
+  banner: string | null;
   status: MediaSummary['status'];
   rating: number | null;
   seasonCount: number | null;
@@ -26,6 +27,7 @@ function toCard(item: MediaSummary): LibraryCard {
     title: item.title,
     subtitle: item.subtitle,
     cover: item.cover,
+    banner: item.banner,
     status: item.status,
     rating: item.rating,
     seasonCount: item.seasonCount,

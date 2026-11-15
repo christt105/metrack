@@ -1,0 +1,20 @@
+/** A glyph drawn by `AppIcon`. */
+export type AppIconName =
+  | 'library'
+  | 'add'
+  | 'following'
+  | 'inbox'
+  | 'settings'
+  | 'logout'
+  | 'star'
+  | 'back'
+  | 'chevron'
+  | 'edit'
+  | 'calendar'
+  | 'list'
+  | 'bell'
+  | 'check'
+  | 'refresh'
+  | 'sortAsc'
+  | 'sortDesc'
+  | 'trash';

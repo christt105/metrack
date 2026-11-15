@@ -7,6 +7,7 @@ const base = {
   subtitle: null,
   releaseDate: null,
   cover: null,
+  banner: null,
   startedAt: null,
   finishedAt: null,
   seriesId: null,
@@ -38,8 +39,9 @@ describe('MediaListView', () => {
     const { wrapper } = await mountWithApi(MediaListView, { listMedia });
     await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
-    expect(wrapper.findAll('.card')).toHaveLength(2);
-    expect(wrapper.text()).toContain('In progress');
+    expect(wrapper.findAll('.grid .card')).toHaveLength(2);
+    expect(wrapper.findAll('.rail .continue')).toHaveLength(1);
+    expect(wrapper.find('.rail').text()).toContain('Dan Da Dan');
 
     await wrapper.find('input[type="search"]').setValue('dan');
     await vi.advanceTimersByTimeAsync(300);

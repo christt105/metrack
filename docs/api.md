@@ -75,7 +75,7 @@ One list across every collection, as `MediaPage` (`{ items: MediaSummary[], tota
 - `sort`: `title` (default), `recent`, `rating`, `startedAt`, `finishedAt`, `releaseDate` or `id`. `order`: `asc` (default) or `desc`. Rows missing the sort value always come last. `recent` puts titles in progress first and then orders by the latest day each was started, finished or rewatched, newest first unless `order=asc`; a series takes both from its seasons. The web library uses `recent` by default.
 - `limit` (1 to 1000, default 50) and `offset`.
 
-A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, `status`, `rating`, `startedAt`, `finishedAt`, plus `seriesId` and `seriesTitle` for seasons and `seasonCount` for series, and `pendingReview` (a series is pending when any of its seasons is). A season without its own cover shows the cover of its series.
+A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, `banner`, `status`, `rating`, `startedAt`, `finishedAt`, plus `seriesId` and `seriesTitle` for seasons and `seasonCount` for series, and `pendingReview` (a series is pending when any of its seasons is). A season without its own cover or banner shows the one of its series; books have no banner.
 
 ### Per collection
 

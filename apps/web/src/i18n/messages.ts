@@ -20,6 +20,10 @@ export const messages = {
     unlinked: 'Unlinked',
     settings: 'Settings',
   },
+  shell: {
+    skip: 'Skip to content',
+    mainNav: 'Main',
+  },
   login: {
     title: 'Sign in',
     devHint:
@@ -60,6 +64,11 @@ export const messages = {
   },
   list: {
     searchPlaceholder: 'Search titles',
+    allTypes: 'All',
+    rating: 'Rating',
+    inProgressTitle: 'In progress',
+    allTitle: 'Everything',
+    toggleOrder: 'Reverse the order',
     type: 'Type',
     status: 'Status',
     sort: 'Sort by',

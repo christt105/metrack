@@ -25,6 +25,7 @@ function summary(partial: Pick<MediaSummary, 'type' | 'id' | 'title'>): MediaSum
     subtitle: null,
     releaseDate: null,
     cover: null,
+    banner: null,
     status: null,
     rating: null,
     startedAt: null,
@@ -75,6 +76,7 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
           subtitle: m.originalTitle !== m.title ? m.originalTitle : null,
           releaseDate: m.releaseDate,
           cover: m.cover,
+          banner: m.banner,
           ...trackingOf(m),
         };
       },
@@ -95,6 +97,7 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
           subtitle: s.originalTitle !== s.title ? s.originalTitle : null,
           releaseDate: s.firstAirDate,
           cover: s.cover,
+          banner: s.banner,
           seasonCount: seasons.length,
           pendingReview: seasons.some((season) => season.pendingReview),
         };
@@ -131,6 +134,7 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
           subtitle: parent?.title ?? null,
           releaseDate: s.firstAirDate,
           cover: s.cover ?? parent?.cover ?? null,
+          banner: s.banner ?? parent?.banner ?? null,
           seriesId: s.seriesId,
           seriesTitle: parent?.title ?? null,
           ...trackingOf(s),
@@ -152,6 +156,7 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
           subtitle: g.developer,
           releaseDate: g.releaseDate,
           cover: g.cover,
+          banner: g.banner,
           ...trackingOf(g),
         };
       },

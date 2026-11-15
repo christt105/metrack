@@ -9,6 +9,7 @@ function summary(
     subtitle: null,
     releaseDate: null,
     cover: null,
+  banner: null,
     status: null,
     rating: null,
     startedAt: null,

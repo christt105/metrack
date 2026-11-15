@@ -6,32 +6,27 @@ defineProps<{ status: MediaStatus }>();
 </script>
 
 <template>
-  <span class="badge" :class="`status-${status}`">{{ messages.statusLabels[status] }}</span>
+  <span class="badge" :style="{ '--dot': `var(--status-${status})` }">
+    {{ messages.statusLabels[status] }}
+  </span>
 </template>
 
 <style scoped>
 .badge {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  background: var(--surface-highest);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--on-surface);
+  font-size: var(--t-label);
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.status-in_progress {
-  background: #2d4a73;
-}
-
-.status-completed {
-  background: #1f4d2c;
-}
-
-.status-paused {
-  background: #5c4a12;
-}
-
-.status-dropped {
-  background: #5a2a26;
+.badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot);
 }
 </style>
