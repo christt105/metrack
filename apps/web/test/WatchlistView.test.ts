@@ -10,6 +10,8 @@ const lupin: WatchlistEntry = {
   id: 3,
   title: 'Lupin',
   cover: null,
+  banner: null,
+  nextEpisode: null,
   releaseDate: '2026-10-23',
 };
 const heat: WatchlistEntry = {
@@ -17,6 +19,8 @@ const heat: WatchlistEntry = {
   id: 8,
   title: 'Heat 2',
   cover: null,
+  banner: null,
+  nextEpisode: null,
   releaseDate: null,
 };
 const alert: ReleaseAlert = {

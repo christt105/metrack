@@ -7,6 +7,7 @@ import {
 } from '@metrack/domain';
 import { emptySeason } from '../media/emptyEntities.js';
 import type { SeasonOverrideRepository } from '../storage/repositories/SeasonOverrideRepository.js';
+import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
 import type { SeasonRepository } from '../storage/repositories/SeasonRepository.js';
 import type { ReconciledSeason } from './ReconciledSeason.js';
 import type { SeriesRelease } from './SeriesRelease.js';
@@ -22,15 +23,22 @@ function addDays(date: string, days: number): string {
  * new. A season is linked by its stored provider number first, then by the date of its first episode,
  * never by number alone, so a season that Jellyfin numbers differently is not duplicated. Only seasons
  * released recently or still to come are created, so seasons missing locally from long ago are left alone.
- * Seasons without a date are not announced yet and are ignored.
+ * Seasons without a date are not announced yet and are ignored. The next episode the source announces is
+ * stored on the series, numbered by the local season it belongs to when there is one, and cleared when the
+ * source announces none.
  */
 export async function reconcileSeasons(
   seriesId: number,
   release: SeriesRelease,
   today: string,
-  repositories: { seasons: SeasonRepository; overrides: SeasonOverrideRepository },
+  repositories: {
+    series: SeriesRepository;
+    seasons: SeasonRepository;
+    overrides: SeasonOverrideRepository;
+  },
+  now: () => Date = () => new Date(),
 ): Promise<ReconciledSeason[]> {
-  const { seasons, overrides } = repositories;
+  const { series, seasons, overrides } = repositories;
   const next = release.nextEpisode;
   const announced = release.seasons
     .filter(
@@ -122,6 +130,20 @@ export async function reconcileSeasons(
     });
     result.push({ season: created, airDate: provider.airDate, created: true });
   }
+  await series.updateCatalog(seriesId, {
+    nextEpisode:
+      next === null
+        ? null
+        : {
+            seasonNumber:
+              result.find((r) => r.season.tmdbSeasonNumber === next.seasonNumber)?.season.number ??
+              next.seasonNumber,
+            episodeNumber: next.episodeNumber,
+            airDate: next.airDate,
+            name: next.name ?? null,
+          },
+    nextEpisodeCheckedAt: now().toISOString(),
+  });
   return result;
 }
 

@@ -37,6 +37,8 @@ export function planSeriesEntity(
     slug: readSlug(note),
     tags: readList(fm.tags),
     review: hasSeasonNotes && note.body.trim() !== '' ? note.body.trim() : null,
+    nextEpisode: null,
+    nextEpisodeCheckedAt: null,
   };
   return { path: note.path, entity, ...readArtwork(note, vaultDir, issues) };
 }

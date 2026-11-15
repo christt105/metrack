@@ -12,4 +12,5 @@ export interface HomeReleaseStoreDeps {
   seasons: SeasonRepository;
   overrides: SeasonOverrideRepository;
   alerts: ReleaseAlertRepository;
+  now?: () => Date;
 }

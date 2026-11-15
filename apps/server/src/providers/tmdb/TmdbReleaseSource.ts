@@ -29,6 +29,7 @@ export class TmdbReleaseSource implements ReleaseSource {
           seasonNumber: next.season_number,
           episodeNumber: next.episode_number,
           airDate: next.air_date,
+          name: emptyToNull(next.name ?? undefined),
         }
       : null;
     const release: SeriesRelease = {
@@ -62,7 +63,7 @@ export class TmdbReleaseSource implements ReleaseSource {
         nextEpisode.episodeNumber,
       );
       if (position) {
-        grouped = { ...position, airDate: nextEpisode.airDate };
+        grouped = { ...position, airDate: nextEpisode.airDate, name: nextEpisode.name };
       } else {
         const guessed = Math.max(0, ...seasons.map((s) => s.number)) + 1;
         seasons.push({
@@ -72,7 +73,12 @@ export class TmdbReleaseSource implements ReleaseSource {
           airDate: nextEpisode.airDate,
           episodeCount: null,
         });
-        grouped = { seasonNumber: guessed, episodeNumber: 1, airDate: nextEpisode.airDate };
+        grouped = {
+          seasonNumber: guessed,
+          episodeNumber: 1,
+          airDate: nextEpisode.airDate,
+          name: nextEpisode.name,
+        };
       }
     }
     return {

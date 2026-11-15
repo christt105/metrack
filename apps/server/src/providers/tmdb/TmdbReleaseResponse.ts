@@ -10,7 +10,12 @@ export interface TmdbReleaseResponse {
   release_date?: string;
   number_of_seasons?: number;
   seasons?: TmdbSeasonSummary[];
-  next_episode_to_air?: { season_number: number; episode_number: number; air_date?: string } | null;
+  next_episode_to_air?: {
+    season_number: number;
+    episode_number: number;
+    air_date?: string;
+    name?: string | null;
+  } | null;
   'watch/providers'?: {
     results?: Record<
       string,

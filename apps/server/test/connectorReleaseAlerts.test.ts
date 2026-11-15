@@ -31,7 +31,7 @@ function lupin(): SeriesRelease {
       { number: 1, name: 'Part 1', overview: null, airDate: '2021-01-08', episodeCount: 5 },
       { number: 2, name: 'Part 2', overview: null, airDate: '2026-10-23', episodeCount: 8 },
     ],
-    nextEpisode: { seasonNumber: 2, episodeNumber: 1, airDate: '2026-10-23' },
+    nextEpisode: { seasonNumber: 2, episodeNumber: 1, airDate: '2026-10-23', name: null },
     flatrateEs: false,
   };
 }

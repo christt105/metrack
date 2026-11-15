@@ -183,7 +183,7 @@ The release alert routes below follow the same rules, except that the users they
 
 ## Release alerts
 
-- `GET /api/watchlist`: the followed movies and series as `WatchlistEntry[]`, ordered by title. A series shows the first air date of its newest season.
+- `GET /api/watchlist`: the followed movies and series as `WatchlistEntry[]`, ordered by title. Each entry has `type`, `id`, `title`, `cover` and `banner` (image refs or null), `releaseDate` (a series shows the first air date of its newest season) and `nextEpisode`: `{ seasonNumber, episodeNumber, airDate, name }` (`name` may be null) for a series whose last release check announced a dated next episode, otherwise null, and always null for a movie. `seasonNumber` is the local season number when the check linked the provider season to one. The value is stored by the release check, never fetched when the list is read, so it only refreshes for users whose release alerts are checked and is null until the first check after an update.
 - `PUT /api/watchlist/{movies|series}/{id}` and `DELETE /api/watchlist/{movies|series}/{id}`: follow and unfollow (the `follow` field, so a `PATCH` does the same). 204, or 404 for an unknown id.
 - `GET /api/alerts?limit=100`: the alerts already sent as `ReleaseAlert[]`, newest first (`limit` from 1 to 500).
 

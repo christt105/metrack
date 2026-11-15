@@ -78,6 +78,8 @@ describe('backup and restore of the whole data directory', () => {
       slug: null,
       tags: [],
       review: null,
+      nextEpisode: null,
+      nextEpisodeCheckedAt: null,
     });
     await new SqliteSeasonRepository(db, OWNER_SCOPE).create({
       seriesId: series.id,

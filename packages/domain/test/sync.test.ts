@@ -64,6 +64,8 @@ function series(over: Partial<Series>): Series {
     slug: null,
     tags: [],
     review: null,
+    nextEpisode: null,
+    nextEpisodeCheckedAt: null,
     ...ART,
     ...over,
   };

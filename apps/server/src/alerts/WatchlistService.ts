@@ -24,7 +24,9 @@ export class WatchlistService {
       id: m.id,
       title: m.title,
       cover: m.cover,
+      banner: m.banner,
       releaseDate: m.releaseDate,
+      nextEpisode: null,
     }));
     const series: WatchlistEntry[] = [];
     for (const s of await this.series.listFollowed()) {
@@ -37,7 +39,9 @@ export class WatchlistService {
         id: s.id,
         title: s.title,
         cover: s.cover,
+        banner: s.banner,
         releaseDate: dates[dates.length - 1] ?? s.firstAirDate,
+        nextEpisode: s.nextEpisode,
       });
     }
     return [...movies, ...series].sort((a, b) => a.title.localeCompare(b.title));
