@@ -34,7 +34,7 @@ const devLoginBody = {
  * login on, `GET /api/auth/dev-users` lists who can sign in and `POST /api/auth/dev-login` signs in as
  * any of them; with it off, both routes do not exist. `POST /api/auth/token-login` exchanges a valid
  * `write` personal API token for a normal session of the token's user. With Google sign-in on,
- * `GET /api/auth/google/start` and `/callback` sign in a user that already exists; the browser leaves with a redirect either way.
+ * `GET /api/auth/google/start` and `/callback` sign in a user that already exists, or create one when `start` was given a usable invitation code in `?invite=`; the browser leaves with a redirect either way.
  */
 export function registerAuthRoutes(
   routes: ApiRoutes,
@@ -94,12 +94,19 @@ function registerGoogleRoutes(routes: ApiRoutes, deps: AuthRouteDeps, google: Go
   const redirectUri = (request: RouteRequest): string =>
     `${request.url.origin}/api/auth/google/callback`;
 
-  routes.get('/api/auth/google/start', { config: { public: true } }, async (request) => {
-    const { location, flow } = await google.begin(redirectUri(request));
-    const response = redirect(location);
-    response.headers.append('set-cookie', googleFlowCookie(flow, isHttps(request)));
-    return response;
-  });
+  routes.get<{ Querystring: { invite?: string | string[] } }>(
+    '/api/auth/google/start',
+    { config: { public: true } },
+    async (request) => {
+      const { location, flow } = await google.begin(
+        redirectUri(request),
+        single(request.query.invite),
+      );
+      const response = redirect(location);
+      response.headers.append('set-cookie', googleFlowCookie(flow, isHttps(request)));
+      return response;
+    },
+  );
 
   routes.get<{ Querystring: GoogleCallbackQuery }>(
     '/api/auth/google/callback',
@@ -121,6 +128,8 @@ function registerGoogleRoutes(routes: ApiRoutes, deps: AuthRouteDeps, google: Go
         const { token, expiresAt } = await deps.sessions.start(outcome.userId);
         response = redirect('/');
         response.headers.append('set-cookie', sessionCookie(token, expiresAt, secure));
+      } else if (outcome.kind === 'invite-unusable') {
+        response = redirect(`/invite/${outcome.code}`);
       } else if (outcome.kind === 'no-account') {
         response = redirect('/login?error=google_no_account');
       } else {

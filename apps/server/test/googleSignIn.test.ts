@@ -7,6 +7,7 @@ import { SessionService } from '../src/auth/SessionService.js';
 import type { FetchFn } from '../src/http/FetchFn.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
+import { SqliteInviteRepository } from '../src/storage/sqlite/SqliteInviteRepository.js';
 import { SqliteSessionRepository } from '../src/storage/sqlite/SqliteSessionRepository.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
@@ -36,6 +37,7 @@ async function setup() {
   const google = new GoogleSignIn(
     { clientId: CLIENT_ID, clientSecret: 'secret' },
     users,
+    new SqliteInviteRepository(db),
     fetchFn,
     () => NOW,
   );
@@ -106,7 +108,7 @@ describe('Google sign-in', () => {
     const query = location.searchParams;
     expect(query.get('client_id')).toBe(CLIENT_ID);
     expect(query.get('redirect_uri')).toBe(CALLBACK);
-    expect(query.get('scope')).toBe('openid email');
+    expect(query.get('scope')).toBe('openid email profile');
     expect(query.get('response_type')).toBe('code');
     expect(query.get('code_challenge_method')).toBe('S256');
     expect(query.get('prompt')).toBe('select_account');

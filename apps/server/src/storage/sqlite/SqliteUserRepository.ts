@@ -13,8 +13,8 @@ export class SqliteUserRepository implements UserRepository {
 
   async create(user: NewUser): Promise<User> {
     const result = this.db
-      .prepare('INSERT INTO user (name, email, created_at) VALUES (?, ?, ?)')
-      .run(user.name, user.email, this.now().toISOString());
+      .prepare('INSERT INTO user (name, email, created_at, onboarded_at) VALUES (?, ?, ?, ?)')
+      .run(user.name, user.email, this.now().toISOString(), this.now().toISOString());
     const created = await this.get(Number(result.lastInsertRowid));
     if (!created) throw new Error('The new user was not stored');
     return created;
@@ -57,5 +57,19 @@ export class SqliteUserRepository implements UserRepository {
   async googleSubOf(id: number): Promise<string | null> {
     const row = this.db.prepare('SELECT google_sub FROM user WHERE id = ?').get(id);
     return text(row?.google_sub);
+  }
+
+  async createdAtByUser(): Promise<Map<number, string>> {
+    const rows = this.db.prepare('SELECT id, created_at FROM user').all();
+    return new Map(rows.map((row) => [Number(row.id), String(row.created_at)]));
+  }
+
+  async isWelcomed(id: number): Promise<boolean> {
+    const row = this.db.prepare('SELECT onboarded_at FROM user WHERE id = ?').get(id);
+    return row?.onboarded_at !== null;
+  }
+
+  async completeWelcome(id: number, name: string, at: string): Promise<void> {
+    this.db.prepare('UPDATE user SET name = ?, onboarded_at = ? WHERE id = ?').run(name, at, id);
   }
 }

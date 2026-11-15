@@ -6,6 +6,7 @@ import { D1ApiTokenRepository } from './D1ApiTokenRepository.js';
 import { D1BookRepository } from './D1BookRepository.js';
 import { D1HandAddedCatalogRepository } from './D1HandAddedCatalogRepository.js';
 import { D1ImageRepository } from './D1ImageRepository.js';
+import { D1InviteRepository } from './D1InviteRepository.js';
 import { D1MetadataStateRepository } from './D1MetadataStateRepository.js';
 import { D1MovieRepository } from './D1MovieRepository.js';
 import { D1PublicProfileRepository } from './D1PublicProfileRepository.js';
@@ -39,6 +40,7 @@ export function createD1Repositories(db: D1Database, scope: UserScope): Reposito
     sessions: new D1SessionRepository(db),
     apiTokens: new D1ApiTokenRepository(db),
     accounts: new D1AccountRepository(db),
+    invites: new D1InviteRepository(db),
     handAddedCatalog: new D1HandAddedCatalogRepository(db),
     transactions: new D1TransactionRunner(),
   };

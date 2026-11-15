@@ -3,6 +3,7 @@ import type { HandAddedCatalogRepository } from './HandAddedCatalogRepository.js
 import type { ApiTokenRepository } from './ApiTokenRepository.js';
 import type { BookRepository } from './BookRepository.js';
 import type { ImageRepository } from './ImageRepository.js';
+import type { InviteRepository } from './InviteRepository.js';
 import type { MetadataStateRepository } from './MetadataStateRepository.js';
 import type { MovieRepository } from './MovieRepository.js';
 import type { ReleaseAlertRepository } from './ReleaseAlertRepository.js';
@@ -34,6 +35,7 @@ export interface Repositories {
   sessions: SessionRepository;
   apiTokens: ApiTokenRepository;
   accounts: AccountRepository;
+  invites: InviteRepository;
   handAddedCatalog: HandAddedCatalogRepository;
   transactions: TransactionRunner;
 }

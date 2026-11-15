@@ -1,16 +1,26 @@
 import type { RouteRecordRaw } from 'vue-router';
+import InviteView from '../views/InviteView.vue';
 import LoginView from '../views/LoginView.vue';
 import MediaDetailView from '../views/MediaDetailView.vue';
 import MediaListView from '../views/MediaListView.vue';
 import NewMediaView from '../views/NewMediaView.vue';
 import SearchView from '../views/SearchView.vue';
 import SettingsView from '../views/SettingsView.vue';
+import WelcomeView from '../views/WelcomeView.vue';
 import WatchlistView from '../views/WatchlistView.vue';
 import UnlinkedView from '../views/UnlinkedView.vue';
 import './routeMeta';
 
 export const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
+  {
+    path: '/invite/:code',
+    name: 'invite',
+    component: InviteView,
+    meta: { public: true },
+    props: true,
+  },
+  { path: '/welcome', name: 'welcome', component: WelcomeView },
   { path: '/', name: 'library', component: MediaListView },
   { path: '/search', name: 'search', component: SearchView },
   { path: '/watchlist', name: 'watchlist', component: WatchlistView },

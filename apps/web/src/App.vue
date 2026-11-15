@@ -16,7 +16,7 @@ async function signOut(): Promise<void> {
 <template>
   <header class="topbar">
     <RouterLink to="/" class="brand">{{ messages.appName }}</RouterLink>
-    <nav v-if="session.user.value">
+    <nav v-if="session.user.value && !session.needsWelcome.value">
       <RouterLink to="/">{{ messages.nav.library }}</RouterLink>
       <RouterLink to="/search">{{ messages.nav.search }}</RouterLink>
       <RouterLink to="/watchlist">{{ messages.nav.watchlist }}</RouterLink>

@@ -6,6 +6,7 @@ import type { ApiEnv } from '../api/ApiEnv.js';
 import { buildApp } from '../api/buildApp.js';
 import { ApiTokenService } from '../auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from '../auth/SessionCookieAuthenticator.js';
+import { InviteService } from '../invites/InviteService.js';
 import { GoogleSignIn } from '../auth/google/GoogleSignIn.js';
 import { SessionService } from '../auth/SessionService.js';
 import { D1ContentVersions } from '../storage/d1/D1ContentVersions.js';
@@ -52,7 +53,9 @@ export function createWorkerApp(
       sessions,
       users: repositories.users,
       devLogin: config.devLogin,
-      google: config.google && new GoogleSignIn(config.google, repositories.users, workerFetch),
+      google:
+        config.google &&
+        new GoogleSignIn(config.google, repositories.users, repositories.invites, workerFetch),
       logger,
     },
     tokens: new ApiTokenService(repositories.apiTokens, repositories.users),
@@ -69,7 +72,10 @@ export function createWorkerApp(
       serverZip: false,
       deletion: services.accountDeletion,
       profiles: repositories.profiles,
+      users: repositories.users,
     },
+    invites: new InviteService(repositories.invites, repositories.users),
+    userAdmin: { users: repositories.users, deletion: services.accountDeletion },
     handAddedCatalog: repositories.handAddedCatalog,
     settings: {
       users: repositories.users,

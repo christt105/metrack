@@ -427,3 +427,35 @@ describe('SettingsView release alerts', () => {
     expect(wrapper.find('form.user input[name="ntfyTopic"]').exists()).toBe(true);
   });
 });
+
+describe('SettingsView invitations and accounts', () => {
+  const panels = (api: object) => ({
+    health: vi.fn().mockResolvedValue(health),
+    listInvites: vi.fn().mockResolvedValue([]),
+    listUserSummaries: vi.fn().mockResolvedValue([]),
+    ...api,
+  });
+
+  it('shows the Invitations and Accounts sections to the owner', async () => {
+    const { wrapper } = await mountWithApi(SettingsView, panels(ownerApi()));
+    await flushPromises();
+    expect(wrapper.text()).toContain('Invitations');
+    expect(wrapper.text()).toContain('Accounts');
+  });
+
+  it('hides them from a normal user and never asks for them', async () => {
+    const api = panels({
+      ownSettings: vi.fn().mockResolvedValue({
+        settings: noSettings,
+        publicPage: EMPTY_PAGE,
+        owner: false,
+        ntfyTopicGenerated: false,
+      } satisfies OwnSettings),
+    });
+    const { wrapper } = await mountWithApi(SettingsView, api);
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('Invitations');
+    expect(api.listInvites).not.toHaveBeenCalled();
+    expect(api.listUserSummaries).not.toHaveBeenCalled();
+  });
+});

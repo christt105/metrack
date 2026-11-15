@@ -1,5 +1,5 @@
-INSERT INTO user (id, name, email, created_at, role, handle)
-VALUES (1, 'Test Owner', NULL, '2026-01-01T00:00:00.000Z', 'owner', 'test');
+INSERT INTO user (id, name, email, created_at, role, handle, onboarded_at)
+VALUES (1, 'Test Owner', NULL, '2026-01-01T00:00:00.000Z', 'owner', 'test', '2026-01-01T00:00:00.000Z');
 
 INSERT INTO user_setting (user_id, public_page, public_intro, public_description)
 VALUES (1, 1, 'Sample data for the metrack test Worker.', 'A public page with made-up titles.');
