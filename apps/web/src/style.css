@@ -398,6 +398,7 @@ details > summary {
 }
 
 .chip[aria-pressed='true'],
+.chip[aria-pressed='true']:hover:not(:disabled),
 .chip.router-link-exact-active {
   background: var(--on-surface);
   border-color: var(--on-surface);
