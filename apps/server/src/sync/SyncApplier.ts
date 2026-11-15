@@ -83,8 +83,10 @@ export class SyncApplier {
         await this.updateSeries(seriesId, ids);
         result.seriesUpdated += 1;
       }
+      let seasonAdded = false;
       for (const season of change.seasons) {
         if (season.seasonId === null) {
+          seasonAdded = true;
           await seasons.create({
             ...emptySeason(),
             ...seasonFields(season),
@@ -95,6 +97,11 @@ export class SyncApplier {
         } else {
           await this.updateSeason(season.seasonId, season);
           result.seasonsUpdated += 1;
+        }
+      }
+      if (seasonAdded && !created.some((r) => r.type === 'series' && r.id === seriesId)) {
+        if (((await series.get(seriesId))?.tmdbId ?? null) !== null) {
+          created.push({ type: 'series', id: seriesId });
         }
       }
     }

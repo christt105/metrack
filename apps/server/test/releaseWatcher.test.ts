@@ -121,6 +121,12 @@ describe('ReleaseWatcher', () => {
     ]);
   });
 
+  it('asks the source for the episode group the series follows', async () => {
+    await series.updateCatalog(seriesId, { tmdbEpisodeGroup: 'group-1' });
+    await watcher.tick();
+    expect(source.groups).toEqual(['group-1']);
+  });
+
   it('sends each alert once and checks near a release every 30 minutes', async () => {
     await watcher.tick();
     await watcher.tick();

@@ -154,9 +154,23 @@ export class ConnectorService {
 }
 
 function followed(
-  titles: readonly { id: number; tmdbId: number | null; title: string }[],
+  titles: readonly {
+    id: number;
+    tmdbId: number | null;
+    title: string;
+    tmdbEpisodeGroup?: string | null;
+  }[],
 ): FollowedTitle[] {
   return titles.flatMap((t) =>
-    t.tmdbId === null ? [] : [{ id: t.id, tmdbId: t.tmdbId, title: t.title }],
+    t.tmdbId === null
+      ? []
+      : [
+          {
+            id: t.id,
+            tmdbId: t.tmdbId,
+            title: t.title,
+            ...(t.tmdbEpisodeGroup ? { tmdbEpisodeGroup: t.tmdbEpisodeGroup } : {}),
+          },
+        ],
   );
 }

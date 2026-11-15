@@ -27,6 +27,31 @@ beforeEach(async () => {
       [`${TMDB}/tv/1/season/2/images`]: {
         posters: [{ file_path: '/s2.jpg', width: 500, height: 750 }],
       },
+      [`${TMDB}/tv/1/season/1/images`]: {
+        posters: [{ file_path: '/s1.jpg', width: 500, height: 750 }],
+      },
+      [`${TMDB}/tv/1/images`]: {
+        posters: [{ file_path: '/series.jpg', width: 1000, height: 1500 }],
+      },
+      [`${TMDB}/tv/episode_group/g1`]: {
+        id: 'g1',
+        name: 'Seasons',
+        type: 6,
+        groups: [
+          {
+            id: 'a',
+            name: 'Season 1',
+            order: 1,
+            episodes: [{ season_number: 1, episode_number: 1 }],
+          },
+          {
+            id: 'b',
+            name: 'Season 2',
+            order: 2,
+            episodes: [{ season_number: 1, episode_number: 29 }],
+          },
+        ],
+      },
       'https://www.steamgriddb.com/api/v2/grids/game/77': {
         data: [
           {
@@ -95,10 +120,55 @@ describe('image candidates', () => {
       })
     ).json();
     const covers = (await call('GET', `/api/seasons/${season.id}/images/cover`)).json();
-    expect(covers.candidates).toHaveLength(1);
+    expect(covers.candidates.map((c: { url: string }) => c.url)).toEqual([
+      `${IMG}/s2.jpg`,
+      `${IMG}/series.jpg`,
+    ]);
     expect(
       (await call('GET', `/api/seasons/${season.id}/images/banner`)).json().candidates,
     ).toEqual([]);
+  });
+
+  it('asks for the posters of the TMDB season where an episode group season falls', async () => {
+    const series = (
+      await api.app.inject({
+        method: 'POST',
+        url: '/api/series',
+        payload: { title: 'Frieren', tmdbId: 1 },
+      })
+    ).json();
+    await api.series.updateCatalog(series.id, { tmdbEpisodeGroup: 'g1' });
+    const season = (
+      await api.app.inject({
+        method: 'POST',
+        url: '/api/seasons',
+        payload: { seriesId: series.id, number: 2, tmdbSeasonNumber: 2 },
+      })
+    ).json();
+    const covers = (await call('GET', `/api/seasons/${season.id}/images/cover`)).json();
+    expect(covers.candidates.map((c: { url: string }) => c.url)).toEqual([
+      `${IMG}/s1.jpg`,
+      `${IMG}/series.jpg`,
+    ]);
+  });
+
+  it('still offers the series posters when TMDB has no such season', async () => {
+    const series = (
+      await api.app.inject({
+        method: 'POST',
+        url: '/api/series',
+        payload: { title: 'Lupin', tmdbId: 1 },
+      })
+    ).json();
+    const season = (
+      await api.app.inject({
+        method: 'POST',
+        url: '/api/seasons',
+        payload: { seriesId: series.id, number: 9 },
+      })
+    ).json();
+    const covers = (await call('GET', `/api/seasons/${season.id}/images/cover`)).json();
+    expect(covers.candidates.map((c: { url: string }) => c.url)).toEqual([`${IMG}/series.jpg`]);
   });
 
   it('lists SteamGridDB images for games and nothing for a game without its id', async () => {

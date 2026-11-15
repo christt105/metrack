@@ -1,4 +1,4 @@
-import type { ImageCandidate, ImageKind, MediaType } from '@metrack/domain';
+import type { ImageCandidate, ImageKind, MediaType, Season, Series } from '@metrack/domain';
 import { TMDB_IMAGE_BASE, TMDB_IMAGE_HOST, type TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import type { TmdbImage } from '../providers/tmdb/TmdbImage.js';
 import type { ImageProvider } from './ImageProvider.js';
@@ -48,9 +48,44 @@ export class TmdbImageProvider implements ImageProvider {
       return (kind === 'cover' ? response.posters : response.backdrops) ?? [];
     }
     if (subject.type === 'season' && kind === 'cover' && subject.series.tmdbId !== null) {
-      const number = subject.entity.tmdbSeasonNumber ?? subject.entity.number;
-      return (await this.client.seasonImages(subject.series.tmdbId, number)).posters ?? [];
+      const tmdbId = subject.series.tmdbId;
+      const [own, shared] = await Promise.all([
+        this.seasonPosters(tmdbId, subject.series, subject.entity),
+        this.seriesPosters(tmdbId),
+      ]);
+      return [...own, ...shared];
     }
     return [];
+  }
+
+  private async seriesPosters(tmdbId: number): Promise<TmdbImage[]> {
+    try {
+      return (await this.client.images('tv', tmdbId)).posters ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async seasonPosters(
+    tmdbId: number,
+    series: Series,
+    season: Season,
+  ): Promise<TmdbImage[]> {
+    try {
+      const number = await this.tmdbSeasonOf(series, season);
+      if (number === null) return [];
+      return (await this.client.seasonImages(tmdbId, number)).posters ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** The regular TMDB season the season's episodes fall in: with an episode group, the one its first episode has. */
+  private async tmdbSeasonOf(series: Series, season: Season): Promise<number | null> {
+    const number = season.tmdbSeasonNumber ?? season.number;
+    if (series.tmdbEpisodeGroup === null) return number;
+    const group = await this.client.episodeGroup(series.tmdbEpisodeGroup);
+    const first = group.groups?.find((g) => g.order === number)?.episodes?.[0];
+    return first?.season_number ?? null;
   }
 }

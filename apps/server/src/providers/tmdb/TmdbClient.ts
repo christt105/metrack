@@ -4,6 +4,8 @@ import type { TmdbReleaseResponse } from './TmdbReleaseResponse.js';
 import type { TmdbImagesResponse } from './TmdbImagesResponse.js';
 import type { TmdbSearchResponse } from './TmdbSearchResponse.js';
 import type { TmdbClientOptions } from './TmdbClientOptions.js';
+import type { TmdbEpisodeGroup } from './TmdbEpisodeGroup.js';
+import type { TmdbEpisodeGroupList } from './TmdbEpisodeGroupList.js';
 import type { TmdbFindResponse } from './TmdbFindResponse.js';
 import type { TmdbTitleResponse } from './TmdbTitleResponse.js';
 
@@ -38,6 +40,18 @@ export class TmdbClient {
     return this.get(`/movie/${id}`, {
       language: this.options.language,
       append_to_response: 'release_dates,watch/providers',
+    });
+  }
+
+  /** The alternative season orderings TMDB has for a series. */
+  episodeGroups(tvId: number): Promise<TmdbEpisodeGroupList> {
+    return this.get(`/tv/${tvId}/episode_groups`, {});
+  }
+
+  /** One episode group with its seasons and their episodes. */
+  episodeGroup(groupId: string): Promise<TmdbEpisodeGroup> {
+    return this.get(`/tv/episode_group/${encodeURIComponent(groupId)}`, {
+      language: this.options.language,
     });
   }
 

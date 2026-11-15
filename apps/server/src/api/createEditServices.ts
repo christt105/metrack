@@ -2,6 +2,7 @@ import { ArtworkService } from '../artwork/ArtworkService.js';
 import { buildMediaKinds } from '../media/buildMediaKinds.js';
 import { MediaCatalog } from '../media/MediaCatalog.js';
 import { MediaEditor } from '../media/MediaEditor.js';
+import { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
 import { UnlinkedResolver } from '../titles/UnlinkedResolver.js';
 import type { EditServices } from './EditServices.js';
 import type { EditServicesDeps } from './EditServicesDeps.js';
@@ -19,5 +20,15 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     series: sources.series,
     overrides: sources.overrides,
     unlinked: deps.unlinked,
+    ...(deps.tmdb
+      ? {
+          episodeGroups: new EpisodeGroupService(
+            deps.tmdb,
+            sources.series,
+            sources.seasons,
+            deps.cache,
+          ),
+        }
+      : {}),
   };
 }

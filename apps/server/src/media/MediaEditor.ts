@@ -9,6 +9,7 @@ import {
 import { ApiError } from '../api/ApiError.js';
 import { imageRef } from '../images/imageRef.js';
 import type { ImageStore } from '../images/ImageStore.js';
+import type { UpdateOptions } from '../storage/repositories/UpdateOptions.js';
 import type { MetadataStateRepository } from '../storage/repositories/MetadataStateRepository.js';
 import { fieldsOf } from './fieldsOf.js';
 import { isIsoDate } from './isIsoDate.js';
@@ -63,6 +64,7 @@ export class MediaEditor {
     collection: Collection,
     id: number,
     patch: Record<string, unknown>,
+    options: UpdateOptions = {},
   ): Promise<MediaDetail<MediaEntity>> {
     const kind = this.kinds[collection];
     const current = fieldsOf(await this.require(collection, id));
@@ -110,7 +112,7 @@ export class MediaEditor {
       if (kind.metadataFields.includes(field) && field in rest) edits[field] = value;
       else others[field] = value;
     }
-    let updated = await kind.repository.update(id, others);
+    let updated = await kind.repository.update(id, others, options);
     if (Object.keys(edits).length > 0) updated = await kind.repository.override(id, edits);
     return this.describe(collection, updated);
   }

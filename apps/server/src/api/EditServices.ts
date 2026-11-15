@@ -1,6 +1,7 @@
 import type { ArtworkService } from '../artwork/ArtworkService.js';
 import type { MediaCatalog } from '../media/MediaCatalog.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
+import type { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
 import type { SeasonOverrideRepository } from '../storage/repositories/SeasonOverrideRepository.js';
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
 import type { UnlinkedTitleRepository } from '../storage/repositories/UnlinkedTitleRepository.js';
@@ -17,4 +18,6 @@ export interface EditServices {
   series: SeriesRepository;
   overrides: SeasonOverrideRepository;
   unlinked: UnlinkedTitleRepository;
+  /** Present when a TMDB client is configured. */
+  episodeGroups?: EpisodeGroupService;
 }

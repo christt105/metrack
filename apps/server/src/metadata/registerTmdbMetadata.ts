@@ -1,16 +1,23 @@
+import type { ImageStore } from '../images/ImageStore.js';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import { TmdbMovieSource } from '../providers/tmdb/TmdbMovieSource.js';
 import { TmdbSeriesSource } from '../providers/tmdb/TmdbSeriesSource.js';
-import type { MovieRepository, SeriesRepository } from '../storage/repositories/index.js';
+import { SeasonRefresher } from '../seasons/SeasonRefresher.js';
+import type {
+  MovieRepository,
+  SeasonRepository,
+  SeriesRepository,
+} from '../storage/repositories/index.js';
 import type { MetadataCache } from './MetadataCache.js';
 import { movieLifecycle } from './movieLifecycle.js';
 import { seriesLifecycle } from './seriesLifecycle.js';
 
-/** Makes TMDB the metadata source of movies and series. */
+/** Makes TMDB the metadata source of movies and series; a series refresh also refreshes its seasons. */
 export function registerTmdbMetadata(
   cache: MetadataCache,
   tmdb: TmdbClient,
-  repositories: { movies: MovieRepository; series: SeriesRepository },
+  repositories: { movies: MovieRepository; series: SeriesRepository; seasons: SeasonRepository },
+  images: ImageStore,
 ): void {
   cache.register('movie', {
     repository: repositories.movies,
@@ -19,7 +26,7 @@ export function registerTmdbMetadata(
   });
   cache.register('series', {
     repository: repositories.series,
-    source: new TmdbSeriesSource(tmdb),
+    source: new TmdbSeriesSource(tmdb, new SeasonRefresher(tmdb, repositories.seasons, images)),
     lifecycle: seriesLifecycle,
   });
 }

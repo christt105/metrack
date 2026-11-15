@@ -49,7 +49,10 @@ export class ReleaseWatcher {
     for (const series of await this.deps.store.followedSeries()) {
       if (series.tmdbId === null) continue;
       await this.check(`series:${series.id}`, now, summary, async () => {
-        const release = await this.deps.source.series(series.tmdbId as number);
+        const release = await this.deps.source.series(
+          series.tmdbId as number,
+          series.tmdbEpisodeGroup ?? null,
+        );
         const reconciled = await this.deps.store.reconcileSeasons(series.id, release, local.date);
         summary.seasonsCreated += reconciled.filter((r) => r.created).length;
         const subjects = reconciled.map<Subject>((r) => ({
