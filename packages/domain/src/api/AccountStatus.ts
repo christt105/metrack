@@ -5,4 +5,6 @@ export interface AccountStatus {
   deletion: AccountDeletion | null;
   /** False for the owner, whose account cannot be deleted. */
   canDelete: boolean;
+  /** True until a user who joined by invitation confirms their name and handle. */
+  needsWelcome: boolean;
 }

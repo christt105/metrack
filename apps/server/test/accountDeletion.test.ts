@@ -224,8 +224,13 @@ describe('asking for the deletion', () => {
     expect((await nia.get('/api/account')).json()).toEqual({
       deletion: { requestedAt: '2026-03-05T12:00:00.000Z', deleteAt: '2026-03-12T12:00:00.000Z' },
       canDelete: true,
+      needsWelcome: false,
     });
-    expect((await ned.get('/api/account')).json()).toEqual({ deletion: null, canDelete: true });
+    expect((await ned.get('/api/account')).json()).toEqual({
+      deletion: null,
+      canDelete: true,
+      needsWelcome: false,
+    });
   });
 
   it('can be cancelled, and then nothing is erased', async () => {
@@ -234,6 +239,7 @@ describe('asking for the deletion', () => {
     expect((await nia.delete('/api/account/deletion')).json()).toEqual({
       deletion: null,
       canDelete: true,
+      needsWelcome: false,
     });
     api.clock.now = new Date(api.clock.now.getTime() + 30 * DAY_MS);
     expect(await api.deletion.eraseDue()).toEqual([]);

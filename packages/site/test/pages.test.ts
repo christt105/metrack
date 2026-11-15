@@ -266,4 +266,10 @@ describe('renderPrivacy', () => {
     expect(page).toContain('Served by metrack');
     expect(page).not.toContain('<script');
   });
+
+  it('says the email Google verified is stored for users who joined by invitation', () => {
+    const page = renderPrivacy({ contactEmail: 'a@example.com' });
+    expect(page).toContain('the email address Google verified for your Google account is stored');
+    expect(page).not.toContain('no sign-ups are created');
+  });
 });

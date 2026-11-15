@@ -182,3 +182,47 @@ describe('sessions and a waiting deletion', () => {
     expect(session.deletion.value).toBeNull();
   });
 });
+
+describe('first entry guard', () => {
+  function welcomeRouter(needsWelcome: boolean) {
+    const session = new Session({
+      me: async () => FRIEND,
+      accountStatus: async () => ({ deletion: null, canDelete: true, needsWelcome }),
+    } as unknown as ApiClient);
+    const router = createAppRouter(createMemoryHistory());
+    installAuthGuard(router, session);
+    return { router, session };
+  }
+
+  it('keeps a user who has not confirmed on the first-entry form', async () => {
+    const { router, session } = welcomeRouter(true);
+    await router.push('/settings');
+    expect(router.currentRoute.value.name).toBe('welcome');
+    expect(session.needsWelcome.value).toBe(true);
+    await router.push('/search');
+    expect(router.currentRoute.value.name).toBe('welcome');
+  });
+
+  it('lets them in once they have confirmed', async () => {
+    const { router, session } = welcomeRouter(true);
+    await router.push('/');
+    session.welcomed({ ...FRIEND, name: 'Ana' });
+    await router.push('/search');
+    expect(router.currentRoute.value.name).toBe('search');
+  });
+
+  it('keeps users who are already set up away from the form', async () => {
+    const { router } = welcomeRouter(false);
+    await router.push('/welcome');
+    expect(router.currentRoute.value.name).toBe('library');
+  });
+
+  it('opens the invitation page with no session', async () => {
+    const session = new Session({ me: async () => null } as unknown as ApiClient);
+    const router = createAppRouter(createMemoryHistory());
+    installAuthGuard(router, session);
+    await router.push('/invite/abc');
+    expect(router.currentRoute.value.name).toBe('invite');
+    expect(router.currentRoute.value.params.code).toBe('abc');
+  });
+});

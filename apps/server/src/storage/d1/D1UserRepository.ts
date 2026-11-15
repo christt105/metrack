@@ -15,9 +15,10 @@ export class D1UserRepository implements UserRepository {
   async create(user: NewUser): Promise<User> {
     const meta = await execute(
       this.db,
-      'INSERT INTO user (name, email, created_at) VALUES (?, ?, ?)',
+      'INSERT INTO user (name, email, created_at, onboarded_at) VALUES (?, ?, ?, ?)',
       user.name,
       user.email,
+      this.now().toISOString(),
       this.now().toISOString(),
     );
     const created = await this.get(meta.last_row_id);
@@ -66,5 +67,19 @@ export class D1UserRepository implements UserRepository {
   async googleSubOf(id: number): Promise<string | null> {
     const row = await queryFirst(this.db, 'SELECT google_sub FROM user WHERE id = ?', id);
     return text(row?.google_sub);
+  }
+
+  async createdAtByUser(): Promise<Map<number, string>> {
+    const rows = await queryAll(this.db, 'SELECT id, created_at FROM user');
+    return new Map(rows.map((row) => [Number(row.id), String(row.created_at)]));
+  }
+
+  async isWelcomed(id: number): Promise<boolean> {
+    const row = await queryFirst(this.db, 'SELECT onboarded_at FROM user WHERE id = ?', id);
+    return row?.onboarded_at !== null;
+  }
+
+  async completeWelcome(id: number, name: string, at: string): Promise<void> {
+    await execute(this.db, 'UPDATE user SET name = ?, onboarded_at = ? WHERE id = ?', name, at, id);
   }
 }

@@ -7,6 +7,8 @@ export class Session {
   readonly user = shallowRef<User | null>(null);
   /** The deletion waiting for the signed-in user, to warn them and let them cancel it. */
   readonly deletion = shallowRef<AccountDeletion | null>(null);
+  /** True until a user who joined by invitation confirms their name and handle. */
+  readonly needsWelcome = shallowRef(false);
   private known = false;
 
   constructor(private readonly api: ApiClient) {}
@@ -30,13 +32,23 @@ export class Session {
   async refreshDeletion(): Promise<void> {
     if (this.user.value === null) {
       this.deletion.value = null;
+      this.needsWelcome.value = false;
       return;
     }
     try {
-      this.deletion.value = (await this.api.accountStatus()).deletion;
+      const status = await this.api.accountStatus();
+      this.deletion.value = status.deletion;
+      this.needsWelcome.value = status.needsWelcome;
     } catch {
       this.deletion.value = null;
+      this.needsWelcome.value = false;
     }
+  }
+
+  /** Records the user as they confirmed themselves on first entry. */
+  welcomed(user: User): void {
+    this.user.value = user;
+    this.needsWelcome.value = false;
   }
 
   setDeletion(deletion: AccountDeletion | null): void {
@@ -52,6 +64,7 @@ export class Session {
   forget(): void {
     this.user.value = null;
     this.deletion.value = null;
+    this.needsWelcome.value = false;
     this.known = true;
   }
 }

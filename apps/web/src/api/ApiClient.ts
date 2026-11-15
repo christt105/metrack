@@ -2,6 +2,12 @@ import type {
   AccountDeletion,
   AccountStatus,
   AddTitleRequest,
+  CreateInviteRequest,
+  CreatedInvite,
+  Invite,
+  InvitePreview,
+  UserSummary,
+  WelcomeRequest,
   UserRole,
   ApiToken,
   CreatedToken,
@@ -348,6 +354,39 @@ export class ApiClient {
 
   revokeToken(id: number): Promise<void> {
     return this.request('DELETE', `/tokens/${id}`);
+  }
+
+  /** Public: whether an invitation link works and who invites. Spends nothing. */
+  invitePreview(code: string): Promise<InvitePreview> {
+    return this.request('GET', `/invites/${encodeURIComponent(code)}`);
+  }
+
+  listInvites(): Promise<Invite[]> {
+    return this.request('GET', '/invites');
+  }
+
+  createInvite(request: CreateInviteRequest): Promise<CreatedInvite> {
+    return this.request('POST', '/invites', request);
+  }
+
+  revokeInvite(id: number): Promise<void> {
+    return this.request('DELETE', `/invites/${id}`);
+  }
+
+  listUserSummaries(): Promise<UserSummary[]> {
+    return this.request('GET', '/users/summary');
+  }
+
+  scheduleUserDeletion(userId: number): Promise<AccountDeletion> {
+    return this.request('POST', `/users/${userId}/deletion`);
+  }
+
+  cancelUserDeletion(userId: number): Promise<void> {
+    return this.request('DELETE', `/users/${userId}/deletion`);
+  }
+
+  completeWelcome(request: WelcomeRequest): Promise<User> {
+    return this.request('POST', '/account/welcome', request);
   }
 
   accountStatus(): Promise<AccountStatus> {

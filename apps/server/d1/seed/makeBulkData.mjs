@@ -141,7 +141,7 @@ const out = [];
 const sql = (text) => out.push(`${text};`);
 
 sql(
-  `INSERT INTO user (id, name, email, created_at, role, handle) VALUES (${USER_ID}, 'Bulk Owner', NULL, '2026-01-01T00:00:00.000Z', 'trusted', 'bulk')`,
+  `INSERT INTO user (id, name, email, created_at, role, handle, onboarded_at) VALUES (${USER_ID}, 'Bulk Owner', NULL, '2026-01-01T00:00:00.000Z', 'trusted', 'bulk', '2026-01-01T00:00:00.000Z')`,
 );
 sql(
   `INSERT INTO user_setting (user_id, public_page, public_intro, public_description, public_about) VALUES (${USER_ID}, 1, 'Synthetic library of made-up titles.', ${quote(paragraph())}, ${quote(`${paragraph()}\n\n${paragraph()}`)})`,

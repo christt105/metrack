@@ -46,6 +46,8 @@ import { ApiTokenService } from '../../src/auth/ApiTokenService.js';
 import { AccountDeletionService } from '../../src/account/AccountDeletionService.js';
 import { AccountExporter } from '../../src/account/AccountExporter.js';
 import { SqliteAccountRepository } from '../../src/storage/sqlite/SqliteAccountRepository.js';
+import { InviteService } from '../../src/invites/InviteService.js';
+import { SqliteInviteRepository } from '../../src/storage/sqlite/SqliteInviteRepository.js';
 import { SqliteApiTokenRepository } from '../../src/storage/sqlite/SqliteApiTokenRepository.js';
 import { SqliteHandAddedCatalogRepository } from '../../src/storage/sqlite/SqliteHandAddedCatalogRepository.js';
 import { WatchlistService } from '../../src/alerts/WatchlistService.js';
@@ -78,6 +80,7 @@ export interface TestApi {
   /** The data directory of the test: its database, `images/` and `users/`. */
   dir: string;
   deletion: AccountDeletionService;
+  invites: InviteService;
   tokens: ApiTokenService;
   /** What the account deletion service reads as the current time; move it to pass the grace period. */
   clock: { now: Date };
@@ -175,6 +178,8 @@ export async function createTestApi(
     { info: () => {}, error: () => {} },
     () => clock.now,
   );
+  const inviteRepository = new SqliteInviteRepository(db);
+  const invites = new InviteService(inviteRepository, users, () => clock.now);
   const app = buildTestApp({
     appVersion: 'test',
     authenticator: options.authenticator ?? signedInAs(),
@@ -194,6 +199,7 @@ export async function createTestApi(
           settings,
           profiles,
           apiTokens: new SqliteApiTokenRepository(db),
+          invites: inviteRepository,
           movies,
           series,
           seasons,
@@ -208,7 +214,10 @@ export async function createTestApi(
       ),
       deletion,
       profiles,
+      users,
     },
+    invites,
+    userAdmin: { users, deletion },
     handAddedCatalog: new SqliteHandAddedCatalogRepository(db),
     settings: { users, settings, profiles },
     site: {
@@ -233,6 +242,7 @@ export async function createTestApi(
     alerts,
     dir,
     deletion,
+    invites,
     tokens,
     clock,
   };
