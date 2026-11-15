@@ -33,13 +33,30 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+function assetsOf(html) {
+  return [...new Set(html.match(/\/assets\/[^"'\s)]+/g) ?? [])];
+}
+
+async function pruneAssets(cache, html) {
+  const current = new Set(assetsOf(html));
+  const keys = await cache.keys();
+  await Promise.all(
+    keys
+      .filter((key) => {
+        const path = new URL(key.url).pathname;
+        return path.startsWith('/assets/') && !path.endsWith('.woff2') && !current.has(path);
+      })
+      .map((key) => cache.delete(key)),
+  );
+}
+
 async function precache() {
   const cache = await caches.open(CACHE);
   const response = await fetch(SHELL, { cache: 'reload' });
   if (!response.ok) throw new Error('shell unavailable');
   const html = await response.clone().text();
   await cache.put(SHELL, response);
-  const assets = [...new Set(html.match(/\/assets\/[^"'\s)]+/g) ?? [])];
+  const assets = assetsOf(html);
   await Promise.all(
     assets.map(async (path) => {
       const asset = await fetch(path);
@@ -53,7 +70,9 @@ async function navigate(request) {
     const response = await fetch(request);
     if (response.ok && (response.headers.get('content-type') ?? '').includes('text/html')) {
       const cache = await caches.open(CACHE);
+      const html = await response.clone().text();
       await cache.put(SHELL, response.clone());
+      await pruneAssets(cache, html);
     }
     return response;
   } catch (error) {
