@@ -50,3 +50,36 @@ describe('MediaListView', () => {
     vi.useRealTimers();
   });
 });
+
+describe('MediaListView empty states', () => {
+  it('welcomes a user whose library is empty and links to adding a title', async () => {
+    const listMedia = vi.fn().mockResolvedValue({ total: 0, items: [] });
+    const { wrapper, router } = await mountWithApi(MediaListView, { listMedia });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Welcome to metrack');
+    expect(wrapper.text()).not.toContain('Nothing matches these filters.');
+    await wrapper.find('button.primary').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe('search');
+  });
+
+  it('keeps the filters and the plain message when filters match nothing', async () => {
+    const listMedia = vi
+      .fn()
+      .mockResolvedValueOnce({
+        total: 1,
+        items: [{ ...base, type: 'movie', id: 1, title: 'Heat', status: 'completed' }],
+      })
+      .mockResolvedValue({ total: 0, items: [] });
+    const { wrapper } = await mountWithApi(MediaListView, { listMedia });
+    await flushPromises();
+    vi.useFakeTimers();
+    await wrapper.find('input[type="search"]').setValue('zzz');
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+    vi.useRealTimers();
+    expect(wrapper.text()).toContain('Nothing matches these filters.');
+    expect(wrapper.text()).not.toContain('Welcome to metrack');
+    expect(wrapper.find('input[type="search"]').exists()).toBe(true);
+  });
+});
