@@ -18,5 +18,11 @@ export interface MediaEntityRepository<T extends { id: number }> extends EntityR
   clearOverride(id: number, field: string): Promise<T>;
   overriddenFields(id: number): Promise<string[]>;
   /** Writes provider data to the shared catalog row, whoever else has it. Entry fields are not allowed. */
+  /**
+   * Keeps the stored catalog values a patch is about to replace: for every entry of the row, in every user's
+   * library, copies each non-empty value that differs from the patch into the entry's overrides unless the
+   * entry already overrides the field. Returns the fields that were pinned for at least one entry.
+   */
+  pinCatalogValues(id: number, patch: Partial<Omit<T, 'id'>>): Promise<string[]>;
   updateCatalog(id: number, patch: Partial<Omit<T, 'id'>>): Promise<T>;
 }

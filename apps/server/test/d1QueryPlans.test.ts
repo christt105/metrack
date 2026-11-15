@@ -92,6 +92,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.movies.findByTmdbId(1);
   await owner.movies.update(movie.id, { rating: 5 });
   await expect(owner.movies.update(movie.id, { originalTitle: 'x' })).rejects.toThrow();
+  await owner.movies.pinCatalogValues(movie.id, { title: 'N' });
   await owner.movies.updateCatalog(movie.id, { title: 'N' });
   await owner.movies.override(movie.id, { title: 'O' });
   await owner.movies.overriddenFields(movie.id);

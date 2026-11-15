@@ -7,6 +7,13 @@ export function selectMedia(spec: MediaTableSpec<{ id: number }>): string {
       JOIN ${spec.table}_entry e ON e.${spec.table}_id = c.id AND e.user_id = ?`;
 }
 
+/** Every user's entry of the catalog rows, with the entry's user id; callers append a `WHERE`. */
+export function selectEntries(spec: MediaTableSpec<{ id: number }>): string {
+  const entry = spec.entryColumns.map((column) => `e.${column}`).join(', ');
+  return `SELECT c.*, ${entry}, e.overrides AS overrides, e.user_id AS entry_user_id FROM ${spec.table} c
+      JOIN ${spec.table}_entry e ON e.${spec.table}_id = c.id`;
+}
+
 /** The column prefixed with the alias of the table that holds it. */
 export function qualifyColumn(spec: MediaTableSpec<{ id: number }>, column: string): string {
   return `${spec.entryColumns.includes(column) ? 'e' : 'c'}.${column}`;

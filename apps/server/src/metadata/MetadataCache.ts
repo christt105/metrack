@@ -13,7 +13,8 @@ type Refresher = (id: number, force: boolean) => Promise<RefreshResult>;
 /**
  * Keeps provider metadata fresh without asking for what has not expired and without
  * writing what has not changed. Fields marked as edited are never overwritten, and a
- * provider failure leaves the stored data untouched.
+ * provider failure leaves the stored data untouched. The first refresh of a catalog row moves the values it
+ * would replace, such as the ones an import stored, into the overrides of every entry first.
  */
 export class MetadataCache {
   private readonly refreshers = new Map<MediaType, Refresher>();
@@ -89,6 +90,9 @@ export class MetadataCache {
         hashContent(patch[field]) !== hashContent((entity as Record<string, unknown>)[field]),
     );
     if (changed.length > 0) {
+      if (state.fetchedAt === null) {
+        await target.repository.pinCatalogValues(id, patch as Partial<Omit<T, 'id'>>);
+      }
       await target.repository.updateCatalog(id, patch as Partial<Omit<T, 'id'>>);
     }
     await this.states.markFetched(type, id, fetchedAt, imageFailed ? undefined : hash);
