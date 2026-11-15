@@ -1,4 +1,4 @@
-import { flushPromises } from '@vue/test-utils';
+import { flushPromises, type VueWrapper } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { ReleaseAlert, WatchlistEntry } from '@metrack/domain';
 import FollowToggle from '../src/components/FollowToggle.vue';
@@ -33,13 +33,48 @@ const alert: ReleaseAlert = {
   sentAt: '2026-10-22T09:00:00.000Z',
 };
 
+async function showAll(wrapper: VueWrapper): Promise<void> {
+  const chip = wrapper.findAll('.views button').find((b) => b.text() === 'All followed');
+  await chip?.trigger('click');
+}
+
 describe('WatchlistView', () => {
+  it('shows the next episode in the agenda and on the calendar', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 16, 12));
+    const show: WatchlistEntry = {
+      ...lupin,
+      nextEpisode: { seasonNumber: 4, episodeNumber: 2, airDate: '2026-11-17', name: 'The Heist' },
+    };
+    const premiere: WatchlistEntry = { ...heat, releaseDate: '2026-12-25' };
+    const { wrapper } = await mountWithApi(WatchlistView, {
+      listWatchlist: vi.fn().mockResolvedValue([show, premiere]),
+      listAlerts: vi.fn().mockResolvedValue([]),
+    });
+    await flushPromises();
+    const agenda = wrapper.find('.agenda').text();
+    expect(agenda).toContain('Tomorrow');
+    expect(agenda).toContain('S4 · E2 · The Heist');
+    expect(agenda).toContain('December 2026');
+    expect(agenda).toContain('Premiere');
+
+    const calendarChip = wrapper.findAll('.views button').find((b) => b.text() === 'Calendar');
+    await calendarChip?.trigger('click');
+    const day = wrapper.find('button[aria-label^="Tuesday 17 November"]');
+    expect(day.attributes('aria-label')).toContain('Lupin');
+    await day.trigger('click');
+    expect(wrapper.find('.selected').text()).toContain('S4 · E2 · The Heist');
+    vi.useRealTimers();
+  });
+
   it('lists followed titles and sent alerts', async () => {
     const { wrapper } = await mountWithApi(WatchlistView, {
       listWatchlist: vi.fn().mockResolvedValue([lupin, heat]),
       listAlerts: vi.fn().mockResolvedValue([alert]),
     });
     await flushPromises();
+    expect(wrapper.find('.waiting').text()).toContain('Lupin');
+    await showAll(wrapper);
     const text = wrapper.text();
     expect(text).toContain('Lupin');
     expect(text).toContain('Latest release 2026-10-23');
@@ -71,7 +106,8 @@ describe('WatchlistView', () => {
       unfollow,
     });
     await flushPromises();
-    await wrapper.find('button').trigger('click');
+    await showAll(wrapper);
+    await wrapper.find('.entry button').trigger('click');
     await flushPromises();
     expect(unfollow).toHaveBeenCalledWith('series', 3);
     expect(wrapper.text()).toContain('Nothing is followed yet.');
