@@ -22,6 +22,7 @@ export function planSeriesEntity(
   const entity: Omit<Series, 'id'> = {
     tmdbId: readExternalId(note, 'tmdb_id', issues),
     tvdbId: readExternalId(note, 'thetvdb_id', issues),
+    tmdbEpisodeGroup: null,
     jellyfinId: null,
     title: readTitle(note, issues),
     originalTitle: readText(fm.original_title),

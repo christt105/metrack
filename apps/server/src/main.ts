@@ -106,7 +106,7 @@ const tmdb = config.tmdbApiKey
   ? new TmdbClient(fetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
   : undefined;
 if (tmdb) {
-  registerTmdbMetadata(metadataCache, tmdb, { movies, series });
+  registerTmdbMetadata(metadataCache, tmdb, { movies, series, seasons }, imageStore);
   titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
   titleProviders.register(new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore));
   imageProviders.push(new TmdbImageProvider(tmdb));
@@ -160,6 +160,7 @@ const edit = createEditServices({
   states: metadataStates,
   images: imageStore,
   cache: metadataCache,
+  ...(tmdb ? { tmdb } : {}),
   titleProviders,
   imageProviders,
 });

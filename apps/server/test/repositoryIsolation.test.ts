@@ -72,6 +72,21 @@ describe.each(backends)('$name: users cannot reach each other', (backend) => {
     expect((await alice.movies.listFollowed()).length).toBe(1);
   });
 
+  it('changes a shared catalog column for everyone only when the caller allows it', async () => {
+    const mine = await alice.series.create({ ...emptySeries(), tmdbId: 7, title: 'Show' });
+    await bob.series.create({ ...emptySeries(), tmdbId: 7, title: 'Show' });
+    await expect(
+      alice.series.update(mine.id, { tmdbEpisodeGroup: 'g1' }, { allowSharedCatalog: false }),
+    ).rejects.toBeInstanceOf(SharedCatalogError);
+    const changed = await alice.series.update(
+      mine.id,
+      { tmdbEpisodeGroup: 'g1' },
+      { allowSharedCatalog: true },
+    );
+    expect(changed.tmdbEpisodeGroup).toBe('g1');
+    expect((await bob.series.get(mine.id))?.tmdbEpisodeGroup).toBe('g1');
+  });
+
   it('keeps the catalog row until the last user drops the title', async () => {
     const mine = await alice.movies.create({ ...emptyMovie(), tmdbId: 5, title: 'Shared' });
     await bob.movies.create({ ...emptyMovie(), tmdbId: 5, title: 'Shared' });

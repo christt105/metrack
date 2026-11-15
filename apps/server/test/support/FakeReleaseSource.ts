@@ -7,9 +7,12 @@ export class FakeReleaseSource implements ReleaseSource {
   readonly seriesById = new Map<number, SeriesRelease>();
   readonly moviesById = new Map<number, MovieRelease>();
   calls: string[] = [];
+  /** The episode group each series lookup asked for, in order. */
+  groups: (string | null)[] = [];
 
-  async series(tmdbId: number): Promise<SeriesRelease> {
+  async series(tmdbId: number, episodeGroup: string | null = null): Promise<SeriesRelease> {
     this.calls.push(`series:${tmdbId}`);
+    this.groups.push(episodeGroup);
     const release = this.seriesById.get(tmdbId);
     if (!release) throw new Error(`no series ${tmdbId}`);
     return release;

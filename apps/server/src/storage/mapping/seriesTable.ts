@@ -15,6 +15,7 @@ function seriesToRow(s: Omit<Series, 'id'>): RowValues {
   return {
     tmdb_id: s.tmdbId,
     tvdb_id: s.tvdbId,
+    tmdb_episode_group: s.tmdbEpisodeGroup,
     jellyfin_id: s.jellyfinId,
     title: s.title,
     original_title: s.originalTitle,
@@ -37,6 +38,7 @@ function seriesFromRow(row: Row): Series {
     id: Number(row.id),
     tmdbId: num(row.tmdb_id),
     tvdbId: num(row.tvdb_id),
+    tmdbEpisodeGroup: text(row.tmdb_episode_group),
     jellyfinId: text(row.jellyfin_id),
     title: String(row.title),
     originalTitle: text(row.original_title),

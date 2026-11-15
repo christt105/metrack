@@ -50,11 +50,9 @@ export async function runSyncCommand(
   let tmdb;
   if (options.tmdb) {
     const client = new TmdbClient(fetch, options.tmdb);
-    const metadata = new MetadataCache(
-      repositories.metadataStates,
-      createImageStore(db, join(options.dataDir, 'images')),
-    );
-    registerTmdbMetadata(metadata, client, targets);
+    const images = createImageStore(db, join(options.dataDir, 'images'));
+    const metadata = new MetadataCache(repositories.metadataStates, images);
+    registerTmdbMetadata(metadata, client, targets, images);
     tmdb = { client, metadata };
   }
   const pool = openJellystatPool(config.jellystat, console);

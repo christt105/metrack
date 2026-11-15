@@ -63,6 +63,7 @@ describe('backup and restore of the whole data directory', () => {
     const series = await new SqliteSeriesRepository(db, OWNER_SCOPE).create({
       tmdbId: 1,
       tvdbId: 2,
+      tmdbEpisodeGroup: null,
       jellyfinId: null,
       title: 'Lupin',
       originalTitle: null,

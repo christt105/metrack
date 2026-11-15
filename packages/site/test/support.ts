@@ -41,6 +41,7 @@ export function series(overrides: Partial<Series> & { id: number }): Series {
   return {
     tmdbId: null,
     tvdbId: null,
+    tmdbEpisodeGroup: null,
     jellyfinId: null,
     title: `Series ${overrides.id}`,
     originalTitle: null,

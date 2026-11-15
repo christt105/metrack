@@ -1,5 +1,9 @@
 import { flushPromises } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ApiClient } from '../src/api/ApiClient';
+import { ApiRequestError } from '../src/api/ApiRequestError';
+import { Session } from '../src/auth/Session';
+import { sessionKey } from '../src/auth/sessionKey';
 import type { AnyDetail } from '../src/api/AnyDetail';
 import EntityForm from '../src/components/EntityForm.vue';
 import { mountWithApi } from './mountWithApi';
@@ -32,7 +36,32 @@ const movie = {
   fetchedAt: null,
 } as unknown as AnyDetail;
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe('EntityForm', () => {
+  it('asks the owner before changing a field other users hold, then saves it for everyone', async () => {
+    const confirm = vi.fn().mockReturnValue(true);
+    vi.stubGlobal('confirm', confirm);
+    const patch = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiRequestError('shared', 409, 'catalog_shared'))
+      .mockResolvedValueOnce({ ...movie, tmdbId: 11 });
+    const session = new Session({} as ApiClient);
+    session.signedIn({ id: 1, name: 'O', email: null, role: 'owner' });
+    const { wrapper } = await mountWithApi(
+      EntityForm,
+      { patch },
+      { collection: 'movies', detail: movie },
+      { [sessionKey as symbol]: session },
+    );
+    await wrapper.find('#field-tmdbId').setValue('11');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('every user who has this series'));
+    expect(patch).toHaveBeenLastCalledWith('movies', 4, { tmdbId: 11 }, { forAll: true });
+    expect(wrapper.emitted('saved')).toHaveLength(1);
+  });
+
   it('offers only valid status transitions', async () => {
     const { wrapper } = await mountWithApi(EntityForm, {}, { collection: 'movies', detail: movie });
     const options = wrapper.findAll('#field-status option').map((o) => o.attributes('value'));
@@ -62,7 +91,7 @@ describe('EntityForm', () => {
     await wrapper.find('#field-rating').setValue('9');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
-    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 });
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 }, {});
     expect(wrapper.emitted('saved')).toHaveLength(1);
   });
 
@@ -78,7 +107,7 @@ describe('EntityForm', () => {
     await wrapper.find('#field-rating').setValue('9');
     await wrapper.find('.actions button[type="button"]').trigger('click');
     await flushPromises();
-    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9, pendingReview: false });
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9, pendingReview: false }, {});
   });
 
   it('keeps a pending viewing pending on a plain save', async () => {
@@ -92,7 +121,7 @@ describe('EntityForm', () => {
     await wrapper.find('#field-rating').setValue('9');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
-    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 });
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 }, {});
   });
 
   it('offers no confirmation for a confirmed viewing', async () => {

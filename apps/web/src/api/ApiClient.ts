@@ -17,6 +17,7 @@ import type {
   CreateInput,
   EditablePatch,
   EntityRef,
+  EpisodeGroupOptions,
   HealthReport,
   ImageCandidateList,
   ImageKind,
@@ -172,12 +173,28 @@ export class ApiClient {
     return this.request('POST', `/${collection}`, input);
   }
 
+  /** `forAll` is the owner's way to change a catalog field other users hold too. */
   patch<C extends Collection>(
     collection: C,
     id: number,
     patch: EditablePatch<EntityOf[C]>,
+    options: { forAll?: boolean } = {},
   ): Promise<Detail<C>> {
-    return this.request('PATCH', `/${collection}/${id}`, patch);
+    const query = options.forAll ? '?forAll=true' : '';
+    return this.request('PATCH', `/${collection}/${id}${query}`, patch);
+  }
+
+  episodeGroups(seriesId: number): Promise<EpisodeGroupOptions> {
+    return this.request('GET', `/series/${seriesId}/episode-groups`);
+  }
+
+  setSeasonOrdering(
+    seriesId: number,
+    episodeGroup: string | null,
+    options: { forAll?: boolean } = {},
+  ): Promise<Detail<'series'>> {
+    const query = options.forAll ? '?forAll=true' : '';
+    return this.request('PUT', `/series/${seriesId}/season-ordering${query}`, { episodeGroup });
   }
 
   remove(collection: Collection, id: number): Promise<void> {

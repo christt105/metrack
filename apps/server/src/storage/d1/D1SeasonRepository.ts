@@ -4,6 +4,7 @@ import { seasonTable } from '../mapping/seasonTable.js';
 import type { SeasonRepository } from '../repositories/SeasonRepository.js';
 import type { D1Database } from './D1Database.js';
 import { D1TableRepository } from './D1TableRepository.js';
+import { execute } from './d1Query.js';
 
 export class D1SeasonRepository extends D1TableRepository<Season> implements SeasonRepository {
   constructor(db: D1Database, scope: UserScope) {
@@ -12,5 +13,13 @@ export class D1SeasonRepository extends D1TableRepository<Season> implements Sea
 
   async listBySeries(seriesId: number): Promise<Season[]> {
     return this.where('c.series_id = ? ORDER BY c.number', seriesId);
+  }
+
+  async unlinkProviderSeasons(seriesId: number): Promise<void> {
+    await execute(
+      this.db,
+      'UPDATE season SET tmdb_season_number = NULL WHERE series_id = ?',
+      seriesId,
+    );
   }
 }

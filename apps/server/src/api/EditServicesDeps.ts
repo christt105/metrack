@@ -1,6 +1,7 @@
 import type { ImageProvider } from '../artwork/ImageProvider.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MediaKindSources } from '../media/MediaKindSources.js';
+import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import type { MetadataStateRepository } from '../storage/repositories/MetadataStateRepository.js';
 import type { UnlinkedTitleRepository } from '../storage/repositories/UnlinkedTitleRepository.js';
@@ -12,6 +13,7 @@ export interface EditServicesDeps {
   states: MetadataStateRepository;
   images: ImageStore;
   cache: MetadataCache;
+  tmdb?: TmdbClient;
   titleProviders: TitleProviders;
   imageProviders: readonly ImageProvider[];
   now?: () => Date;

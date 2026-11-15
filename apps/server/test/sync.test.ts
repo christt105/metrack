@@ -20,6 +20,7 @@ import { createSyncQueue } from '../src/sync/createSyncQueue.js';
 import { loadSyncConfig } from '../src/sync/loadSyncConfig.js';
 import { PublishQueue } from '../src/publish/PublishQueue.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
+import { emptySeries } from '../src/media/emptyEntities.js';
 import { SyncApplier } from '../src/sync/SyncApplier.js';
 import { SyncService } from '../src/sync/SyncService.js';
 import type { LibrarySource } from '../src/sync/LibrarySource.js';
@@ -377,6 +378,7 @@ async function seedLupin(t: ReturnType<typeof setup>) {
   const series = await t.targets.series.create({
     tmdbId: 96677,
     tvdbId: 375921,
+    tmdbEpisodeGroup: null,
     jellyfinId: null,
     title: 'Lupin',
     originalTitle: null,
@@ -726,6 +728,52 @@ describe('sync with TMDB', () => {
       { type: 'movie', id: movieId },
       { type: 'series', id: seriesId },
     ]);
+    t.db.close();
+  });
+
+  it('asks for a refresh of a TMDB series it adds a season to, so the season gets its provider data', async () => {
+    const t = setup(lupinLibrary, lupinPlays);
+    const linked = await t.targets.series.create({
+      ...emptySeries(),
+      tmdbId: 209867,
+      title: 'Frieren',
+    });
+    const manual = await t.targets.series.create({ ...emptySeries(), title: 'Local' });
+    const season = {
+      seasonId: null,
+      matchedBy: 'new' as const,
+      jellyfinSeasonId: 'jf-season-2',
+      number: 2,
+      tmdbSeasonNumber: null,
+      title: null,
+      firstAirDate: '2026-01-16',
+      episodeCount: 10,
+      status: 'in_progress' as const,
+      startedAt: '2026-01-17',
+      finishedAt: null,
+      watchedEpisodes: 1,
+      completes: false,
+      missingRating: false,
+    };
+    const change = (seriesId: number, tmdbId: number | null) => ({
+      seriesId,
+      jellyfinId: `jf-${seriesId}`,
+      tmdbId,
+      tvdbId: null,
+      title: 'Series',
+      year: null,
+      seasons: [{ ...season, jellyfinSeasonId: `jf-season-${seriesId}` }],
+    });
+    const applier = new SyncApplier(new SqliteTransactionRunner(t.db), t.targets);
+    const { created } = await applier.apply({
+      movies: [],
+      series: [change(linked.id, 209867), change(manual.id, null)],
+      unlinked: [],
+      warnings: [],
+      ignoredPlays: 0,
+      unmatchedTitles: [],
+    });
+    expect(created).toEqual([{ type: 'series', id: linked.id }]);
     t.db.close();
   });
 

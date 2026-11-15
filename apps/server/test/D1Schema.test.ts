@@ -36,12 +36,18 @@ const invitesSql = readFileSync(
   'utf8',
 );
 
+const episodeGroupSql = readFileSync(
+  new URL('../d1/migrations/0006_episode_group.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
   db.exec(connectorScopeSql);
   db.exec(googleLoginSql);
   db.exec(invitesSql);
+  db.exec(episodeGroupSql);
   return db;
 }
 

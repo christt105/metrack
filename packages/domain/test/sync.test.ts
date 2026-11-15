@@ -51,6 +51,7 @@ function series(over: Partial<Series>): Series {
     id: 1,
     tmdbId: null,
     tvdbId: null,
+    tmdbEpisodeGroup: null,
     jellyfinId: null,
     title: 'Series',
     originalTitle: null,

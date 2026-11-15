@@ -19,8 +19,9 @@ import { publicPageProfileMigration } from './0017-public-page-profile.js';
 import { accountDeletionMigration } from './0018-account-deletion.js';
 import { queryIndexesMigration } from './0019-query-indexes.js';
 import { connectorTokenScopeMigration } from './0020-connector-token-scope.js';
-import { invitesMigration } from './0022-invites.js';
 import { googleLoginMigration } from './0021-google-login.js';
+import { invitesMigration } from './0022-invites.js';
+import { episodeGroupMigration } from './0023-episode-group.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -45,4 +46,5 @@ export const migrations: readonly Migration[] = [
   connectorTokenScopeMigration,
   googleLoginMigration,
   invitesMigration,
+  episodeGroupMigration,
 ];

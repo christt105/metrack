@@ -12,6 +12,7 @@ const SCHEMA = [
   '0002_public_render_cache.sql',
   '0004_google_login.sql',
   '0005_invites.sql',
+  '0006_episode_group.sql',
 ].flatMap((file) =>
   readFileSync(new URL(`../../d1/migrations/${file}`, import.meta.url), 'utf8')
     .split(/;\s*\n/)

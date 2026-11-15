@@ -6,6 +6,7 @@ import { registerArtworkRoutes } from './registerArtworkRoutes.js';
 import { registerErrorHandler } from './registerErrorHandler.js';
 import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
+import { registerEpisodeGroupRoutes } from './registerEpisodeGroupRoutes.js';
 import { registerMediaRoutes } from './registerMediaRoutes.js';
 import { bumpContentVersionOnWrite } from './bumpContentVersionOnWrite.js';
 import type { ContentVersions } from '../site/ContentVersions.js';
@@ -147,7 +148,10 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   if (deps.edit) {
     const { editor, catalog, artwork, titleProviders, unlinked, resolver, series, overrides } =
       deps.edit;
-    registerMediaRoutes(routes, editor, catalog);
+    if (deps.edit.episodeGroups) {
+      registerEpisodeGroupRoutes(routes, deps.edit.episodeGroups, editor);
+    }
+    registerMediaRoutes(routes, editor, catalog, deps.metadataCache);
     registerSeasonOverrideRoutes(routes, series, overrides);
     registerArtworkRoutes(routes, artwork, editor);
     registerTitleRoutes(routes, titleProviders, unlinked, resolver);

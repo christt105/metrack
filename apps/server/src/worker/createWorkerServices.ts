@@ -66,7 +66,7 @@ export function createWorkerServices(
     ? new TmdbClient(workerFetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
     : undefined;
   if (tmdb) {
-    registerTmdbMetadata(metadataCache, tmdb, { movies, series });
+    registerTmdbMetadata(metadataCache, tmdb, { movies, series, seasons }, imageStore);
     titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
     titleProviders.register(
       new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore),
@@ -101,6 +101,7 @@ export function createWorkerServices(
     states: repositories.metadataStates,
     images: imageStore,
     cache: metadataCache,
+    ...(tmdb ? { tmdb } : {}),
     titleProviders,
     imageProviders,
   });

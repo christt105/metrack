@@ -19,6 +19,7 @@ import { seriesLifecycle } from '../../src/metadata/seriesLifecycle.js';
 import { SteamGridDbClient } from '../../src/providers/steamgriddb/SteamGridDbClient.js';
 import { TmdbClient } from '../../src/providers/tmdb/TmdbClient.js';
 import { TmdbMovieSource } from '../../src/providers/tmdb/TmdbMovieSource.js';
+import { SeasonRefresher } from '../../src/seasons/SeasonRefresher.js';
 import { TmdbSeriesSource } from '../../src/providers/tmdb/TmdbSeriesSource.js';
 import { PublishQueue } from '../../src/publish/PublishQueue.js';
 import { MigrationRunner } from '../../src/storage/MigrationRunner.js';
@@ -128,7 +129,7 @@ export async function createTestApi(
   });
   cache.register('series', {
     repository: series,
-    source: new TmdbSeriesSource(tmdb),
+    source: new TmdbSeriesSource(tmdb, new SeasonRefresher(tmdb, seasons, store)),
     lifecycle: seriesLifecycle,
   });
   const titleProviders = new TitleProviders();
@@ -161,6 +162,7 @@ export async function createTestApi(
     states,
     images: store,
     cache,
+    tmdb,
     titleProviders,
     imageProviders,
     now: () => NOW,
