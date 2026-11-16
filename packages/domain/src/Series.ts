@@ -1,3 +1,4 @@
+import type { NextEpisode } from './alerts/NextEpisode.js';
 import type { Artwork } from './Artwork.js';
 
 /**
@@ -23,4 +24,8 @@ export interface Series extends Artwork {
   slug: string | null;
   tags: string[];
   review: string | null;
+  /** The next episode the last release check announced; null when there is none or it was never checked. */
+  nextEpisode: NextEpisode | null;
+  /** When the release check last stored `nextEpisode`, as an ISO timestamp; null before the first check. */
+  nextEpisodeCheckedAt: string | null;
 }

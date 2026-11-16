@@ -391,6 +391,8 @@ async function seedLupin(t: ReturnType<typeof setup>) {
     slug: null,
     tags: [],
     review: 'series review',
+    nextEpisode: null,
+    nextEpisodeCheckedAt: null,
     cover: null,
     banner: null,
   });

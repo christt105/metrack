@@ -243,6 +243,56 @@ export const messages = {
     unfollow: 'Stop following',
     following: 'Following',
     releases: (date: string) => `Latest release ${date}`,
+    views: { upcoming: 'Upcoming', calendar: 'Calendar', all: 'All followed' },
+    viewsLabel: 'View',
+    groups: {
+      recent: 'Just out',
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+      week: 'This week',
+    } as Record<string, string>,
+    month: (month: string) =>
+      new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', {
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }),
+    day: (date: string) =>
+      new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'UTC',
+      }),
+    weekday: (date: string) =>
+      new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        timeZone: 'UTC',
+      }),
+    monthShort: (date: string) =>
+      new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', {
+        month: 'short',
+        timeZone: 'UTC',
+      }),
+    weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    episode: (season: number, episode: number) => `S${season} · E${episode}`,
+    premiere: 'Premiere',
+    newSeason: 'New season',
+    relative: (days: number) => {
+      if (days === 0) return 'Today';
+      if (days === 1) return 'Tomorrow';
+      if (days === -1) return 'Yesterday';
+      return days < 0 ? `${-days} days ago` : `In ${days} days`;
+    },
+    upcomingEmpty: 'Nothing with a date is coming up for what you follow.',
+    waitingTitle: 'Nothing announced yet',
+    dataNote:
+      'Next episodes come from the release check, which runs for accounts with release alerts on. Without it, only the date of a new season shows.',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    thisMonth: 'Today',
+    nothingThatDay: 'Nothing that day.',
+    more: (n: number) => `+${n}`,
     noDate: 'No release date',
     kinds: {
       releases_tomorrow: 'Releases tomorrow',

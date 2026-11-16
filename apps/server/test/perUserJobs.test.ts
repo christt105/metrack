@@ -334,7 +334,7 @@ describe('per-user release alerts', () => {
         { number: 1, name, overview: null, airDate: '2021-01-08', episodeCount: 5 },
         { number: 2, name, overview: null, airDate: '2026-10-23', episodeCount: 8 },
       ],
-      nextEpisode: { seasonNumber: 2, episodeNumber: 1, airDate: '2026-10-23' },
+      nextEpisode: { seasonNumber: 2, episodeNumber: 1, airDate: '2026-10-23', name: null },
       flatrateEs: false,
     });
     source.seriesById.set(10, release('Lupin'));

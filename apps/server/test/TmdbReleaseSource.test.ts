@@ -23,7 +23,12 @@ describe('TmdbReleaseSource', () => {
           { season_number: 0, name: 'Specials', air_date: null, episode_count: 1 },
           { season_number: 3, name: '', overview: '', air_date: '2026-10-23', episode_count: 8 },
         ],
-        next_episode_to_air: { season_number: 3, episode_number: 1, air_date: '2026-10-23' },
+        next_episode_to_air: {
+          season_number: 3,
+          episode_number: 1,
+          air_date: '2026-10-23',
+          name: 'The heist',
+        },
         'watch/providers': {
           results: { ES: { flatrate: [{ provider_name: 'Netflix' }] }, US: {} },
         },
@@ -36,11 +41,30 @@ describe('TmdbReleaseSource', () => {
         { number: 0, name: 'Specials', overview: null, airDate: null, episodeCount: 1 },
         { number: 3, name: null, overview: null, airDate: '2026-10-23', episodeCount: 8 },
       ],
-      nextEpisode: { seasonNumber: 3, episodeNumber: 1, airDate: '2026-10-23' },
+      nextEpisode: { seasonNumber: 3, episodeNumber: 1, airDate: '2026-10-23', name: 'The heist' },
       flatrateEs: true,
     });
     const url = new URL(net.calls[0] ?? '');
     expect(url.searchParams.get('append_to_response')).toBe('watch/providers');
+  });
+
+  it('maps a missing or empty episode name to null', async () => {
+    const { source } = sourceFor({
+      [`${BASE}/tv/10`]: {
+        next_episode_to_air: {
+          season_number: 1,
+          episode_number: 2,
+          air_date: '2026-10-23',
+          name: '',
+        },
+      },
+    });
+    expect((await source.series(10)).nextEpisode).toEqual({
+      seasonNumber: 1,
+      episodeNumber: 2,
+      airDate: '2026-10-23',
+      name: null,
+    });
   });
 
   it('ignores buy and rent providers and other regions', async () => {
@@ -140,7 +164,12 @@ describe('TmdbReleaseSource', () => {
 
     it('lists the seasons of the group and numbers the next episode inside it', async () => {
       const { source } = sourceFor(
-        frieren({ season_number: 1, episode_number: 4, air_date: '2026-01-23' }),
+        frieren({
+          season_number: 1,
+          episode_number: 4,
+          air_date: '2026-01-23',
+          name: 'Episode name',
+        }),
       );
       const release = await source.series(10, 'g');
       expect(release.numberOfSeasons).toBe(2);
@@ -152,12 +181,18 @@ describe('TmdbReleaseSource', () => {
         seasonNumber: 2,
         episodeNumber: 2,
         airDate: '2026-01-23',
+        name: 'Episode name',
       });
     });
 
     it('counts an episode the group does not hold as a new season after the last one', async () => {
       const { source } = sourceFor(
-        frieren({ season_number: 1, episode_number: 5, air_date: '2026-04-10' }),
+        frieren({
+          season_number: 1,
+          episode_number: 5,
+          air_date: '2026-04-10',
+          name: 'Episode name',
+        }),
       );
       const release = await source.series(10, 'g');
       expect(release.numberOfSeasons).toBe(3);
@@ -172,6 +207,7 @@ describe('TmdbReleaseSource', () => {
         seasonNumber: 3,
         episodeNumber: 1,
         airDate: '2026-04-10',
+        name: 'Episode name',
       });
     });
 

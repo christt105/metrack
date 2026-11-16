@@ -50,6 +50,8 @@ export const series = (over: Partial<Series> = {}): Series => ({
   slug: 'Show (2019)',
   tags: ['anime'],
   review: null,
+  nextEpisode: null,
+  nextEpisodeCheckedAt: null,
   ...over,
 });
 

@@ -31,7 +31,7 @@ function lupin(overrides: Partial<SeriesRelease> = {}): SeriesRelease {
       { number: 2, name: 'Part 2', overview: null, airDate: '2021-06-11', episodeCount: 5 },
       { number: 3, name: 'Part 3', overview: 'New heist', airDate: '2026-10-23', episodeCount: 8 },
     ],
-    nextEpisode: { seasonNumber: 3, episodeNumber: 1, airDate: '2026-10-23' },
+    nextEpisode: { seasonNumber: 3, episodeNumber: 1, airDate: '2026-10-23', name: null },
     flatrateEs: false,
     ...overrides,
   };
@@ -65,7 +65,7 @@ describe('ReleaseWatcher', () => {
     notifier = new RecordingNotifier();
     clock = new Date('2026-10-22T09:00:00Z');
     watcher = new ReleaseWatcher({
-      store: new HomeReleaseStore({ movies, series, seasons, overrides, alerts }),
+      store: new HomeReleaseStore({ movies, series, seasons, overrides, alerts, now: () => clock }),
       source,
       notifier,
       logger,
@@ -260,6 +260,62 @@ describe('ReleaseWatcher', () => {
     );
     expect((await watcher.tick()).seasonsCreated).toBe(0);
     expect(notifier.sent).toEqual([]);
+  });
+
+  it('stores the next episode on the series, numbered by the local season, and clears it', async () => {
+    expect((await series.get(seriesId))?.nextEpisode).toBeNull();
+    expect((await series.get(seriesId))?.nextEpisodeCheckedAt).toBeNull();
+    source.seriesById.set(
+      10,
+      lupin({
+        nextEpisode: {
+          seasonNumber: 3,
+          episodeNumber: 2,
+          airDate: '2026-10-30',
+          name: 'Chapter 2',
+        },
+      }),
+    );
+    await watcher.tick();
+    expect(await series.get(seriesId)).toMatchObject({
+      nextEpisode: { seasonNumber: 3, episodeNumber: 2, airDate: '2026-10-30', name: 'Chapter 2' },
+      nextEpisodeCheckedAt: '2026-10-22T09:00:00.000Z',
+    });
+
+    at('2026-10-25T09:00:00Z');
+    source.seriesById.set(10, lupin({ nextEpisode: null }));
+    await watcher.tick();
+    expect(await series.get(seriesId)).toMatchObject({
+      nextEpisode: null,
+      nextEpisodeCheckedAt: '2026-10-25T09:00:00.000Z',
+    });
+  });
+
+  it('numbers the next episode by the local season a provider season was linked to', async () => {
+    const local = (await seasons.listBySeries(seriesId)).find((s) => s.number === 2);
+    await seasons.updateCatalog(local?.id ?? 0, { number: 4, tmdbSeasonNumber: 2 });
+    source.seriesById.set(
+      10,
+      lupin({
+        nextEpisode: { seasonNumber: 2, episodeNumber: 9, airDate: '2026-10-30', name: null },
+      }),
+    );
+    await watcher.tick();
+    expect((await series.get(seriesId))?.nextEpisode).toEqual({
+      seasonNumber: 4,
+      episodeNumber: 9,
+      airDate: '2026-10-30',
+      name: null,
+    });
+  });
+
+  it('keeps the next episode when metadata is refreshed from the catalog', async () => {
+    await watcher.tick();
+    await series.updateCatalog(seriesId, { overview: 'New overview' });
+    expect(await series.get(seriesId)).toMatchObject({
+      overview: 'New overview',
+      nextEpisode: { seasonNumber: 3, episodeNumber: 1, airDate: '2026-10-23', name: null },
+    });
   });
 
   it('skips series that are not followed or have no TMDB id', async () => {

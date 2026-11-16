@@ -43,7 +43,7 @@ async function unfollow(): Promise<void> {
     <div class="body">
       <RouterLink :to="to" class="title">{{ entry.title }}</RouterLink>
       <span class="muted">
-        {{ messages.typeLabels[entry.type] }} -
+        {{ messages.typeLabels[entry.type] }} ·
         {{
           entry.releaseDate
             ? messages.watchlist.releases(entry.releaseDate)
@@ -62,9 +62,11 @@ async function unfollow(): Promise<void> {
 .entry {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--outline);
+  gap: var(--s-3);
+  padding: var(--s-2);
+  border: 1px solid var(--outline);
+  border-radius: var(--r-md);
+  background: var(--surface-low);
 }
 
 .poster {
@@ -72,7 +74,7 @@ async function unfollow(): Promise<void> {
   width: 48px;
   aspect-ratio: 2 / 3;
   background: var(--surface-high);
-  border-radius: var(--radius);
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 
@@ -95,8 +97,15 @@ img {
   flex: 1;
   flex-direction: column;
   min-width: 0;
+  font-size: var(--t-small);
 }
+
 .title {
-  font-weight: 700;
+  overflow: hidden;
+  color: var(--on-surface);
+  font-size: 15px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
