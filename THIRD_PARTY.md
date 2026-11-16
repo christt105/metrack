@@ -16,6 +16,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Vendored browser assets
 
+The web app (`apps/web`) ships its text font itself:
+
+- [Host Grotesk](https://github.com/Element-Type/HostGrotesk) (`apps/web/src/assets/fonts`, the latin and latin-ext subsets of the variable font as Google Fonts serves them): SIL Open Font License 1.1, Copyright 2023 The Host Grotesk Project Authors. The license is at https://openfontlicense.org.
+
 The public pages serve two more third-party files themselves, so no request leaves for a CDN:
 
 - [Font Awesome Free](https://fontawesome.com) 6.4.0 (`FONT_AWESOME_CSS`, `FONT_AWESOME_SOLID_WOFF2`, `FONT_AWESOME_BRANDS_WOFF2` under `packages/site/src/assets`, only the solid and brands styles the pages use): icons CC BY 4.0, fonts SIL OFL 1.1, code MIT. Copyright 2023 Fonticons, Inc. The license is at https://fontawesome.com/license/free.

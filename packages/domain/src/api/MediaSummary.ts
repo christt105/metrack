@@ -13,6 +13,8 @@ export interface MediaSummary {
   subtitle: string | null;
   releaseDate: string | null;
   cover: string | null;
+  /** The wide image; a season without one shows its series' banner. Books have none. */
+  banner: string | null;
   status: MediaStatus | null;
   rating: number | null;
   startedAt: string | null;

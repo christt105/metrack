@@ -10,7 +10,8 @@ describe('SearchView', () => {
       .fn()
       .mockRejectedValue(new ApiRequestError('not configured', 501, 'provider_not_configured'));
     const { wrapper } = await mountWithApi(SearchView, { search });
-    await wrapper.find('select').setValue('videogame');
+    const gameChip = wrapper.findAll('.types button').find((b) => b.text() === 'Game');
+    await gameChip?.trigger('click');
     await wrapper.find('input[type="search"]').setValue('Hades');
     await wrapper.find('form[role="search"]').trigger('submit');
     await flushPromises();
