@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
+import AppIcon from './AppIcon.vue';
 import ErrorNotice from './ErrorNotice.vue';
 
 const props = defineProps<{ collection: 'movies' | 'series'; id: number; following: boolean }>();
@@ -35,20 +36,12 @@ async function toggle(): Promise<void> {
       :class="following ? '' : 'primary'"
       :aria-pressed="following"
       :disabled="busy"
+      :title="following ? messages.watchlist.unfollow : undefined"
       @click="toggle"
     >
-      {{ following ? messages.watchlist.unfollow : messages.watchlist.follow }}
+      <AppIcon :name="following ? 'check' : 'bell'" :size="18" />
+      {{ following ? messages.watchlist.following : messages.watchlist.follow }}
     </button>
-    <span v-if="following" class="muted">{{ messages.watchlist.following }}</span>
     <ErrorNotice :error="error" />
   </div>
 </template>
-
-<style scoped>
-.follow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-</style>
