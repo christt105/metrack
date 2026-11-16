@@ -17,6 +17,8 @@ const CLASS_A = new Set([
   'PutBucketCors',
   'PutBucketLifecycleConfiguration',
   'LifecycleStorageTierTransition',
+  'GetBucketSippyConfiguration',
+  'GetBucketNotificationConfiguration',
 ]);
 
 const CLASS_B = new Set([
