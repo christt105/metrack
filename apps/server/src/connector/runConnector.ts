@@ -11,6 +11,8 @@ import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import { CloudBackupJob } from '../cloudbackup/CloudBackupJob.js';
 import { CloudBackupScheduler } from '../cloudbackup/CloudBackupScheduler.js';
 import { createCloudBackup } from '../cloudbackup/createCloudBackup.js';
+import { createCloudflareUsageScheduler } from '../cloudflare-usage/createCloudflareUsageScheduler.js';
+import { loadCloudflareUsageConfig } from '../cloudflare-usage/loadCloudflareUsageConfig.js';
 import { CloudImageCleanupJob } from '../cloudcleanup/CloudImageCleanupJob.js';
 import { createCloudImageCleanup } from '../cloudcleanup/createCloudImageCleanup.js';
 import { CloudClient } from './CloudClient.js';
@@ -26,7 +28,8 @@ import { UserSync } from './UserSync.js';
 
 /**
  * Starts the connector: the webhook endpoint, the queue of pending syncs and the periodic pass over every user.
- * Resolves to a function that stops the HTTP server; the timers do not keep the process alive.
+ * Returns a function that stops the HTTP server and the alert timers; the timers do not keep the process alive.
+ * `env` supplies the Cloudflare usage alert settings.
  */
 export function runConnector(
   config: ConnectorConfig,
@@ -34,6 +37,7 @@ export function runConnector(
   sources: (jellyfinUser: string) => SyncSources,
   logger: Logger,
   tmdb?: TmdbClient,
+  env: Record<string, string | undefined> = process.env,
 ): () => void {
   const cloud = new CloudClient(config.cloudUrl, config.token);
   const notifier = createNotifier(app.ntfy, logger);
@@ -86,6 +90,14 @@ export function runConnector(
     if (config.cloudImageCleanup) logger.info('cloud image cleanup on: after each cloud backup');
   }
   const alertScheduler = startReleaseAlerts(config, cloud, store, tmdb, logger);
+  const usageScheduler = createCloudflareUsageScheduler(env, app.ntfy, config.dataDir, logger);
+  if (usageScheduler) {
+    usageScheduler.start();
+    const usage = loadCloudflareUsageConfig(env);
+    logger.info(
+      `cloudflare usage alerts on: every 15 minutes, warning at ${usage?.warnPercent}% and critical at ${usage?.criticalPercent}% of the free plan, to ${app.ntfy?.url}`,
+    );
+  }
   const server = serve({
     fetch: createConnectorApp({
       secret: config.sync.webhookSecret ? new WebhookSecret(config.sync.webhookSecret) : undefined,
@@ -101,6 +113,7 @@ export function runConnector(
   );
   return () => {
     alertScheduler?.stop();
+    usageScheduler?.stop();
     server.close();
     if ('closeIdleConnections' in server) server.closeIdleConnections();
   };

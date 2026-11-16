@@ -67,6 +67,11 @@ describe('classifyR2Action', () => {
     expect(classifyR2Action('AbortMultipartUpload')).toBe('free');
     expect(classifyR2Action('SomethingNew')).toBe('unknown');
   });
+
+  it('counts the bucket configuration reads R2 reports for every bucket as class A', () => {
+    expect(classifyR2Action('GetBucketSippyConfiguration')).toBe('A');
+    expect(classifyR2Action('GetBucketNotificationConfiguration')).toBe('A');
+  });
 });
 
 describe('loadCloudflareUsageConfig', () => {
