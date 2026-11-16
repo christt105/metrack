@@ -60,12 +60,19 @@ async function add(result: SearchResult): Promise<void> {
 <template>
   <section>
     <h1>{{ messages.search.title }}</h1>
-    <form class="panel form" role="search" @submit.prevent="search">
-      <select v-model="type" :aria-label="messages.list.type">
-        <option v-for="option in SEARCHABLE_TYPES" :key="option" :value="option">
+    <form class="form" role="search" @submit.prevent="search">
+      <div class="types" role="group" :aria-label="messages.list.type">
+        <button
+          v-for="option in SEARCHABLE_TYPES"
+          :key="option"
+          type="button"
+          class="chip"
+          :aria-pressed="type === option"
+          @click="type = option"
+        >
           {{ messages.typeLabels[option] }}
-        </option>
-      </select>
+        </button>
+      </div>
       <input
         v-model="year"
         type="number"
@@ -105,32 +112,62 @@ async function add(result: SearchResult): Promise<void> {
 <style scoped>
 .form {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 110px 1fr;
+  gap: var(--s-3);
+  margin-bottom: var(--s-6);
+}
+
+.types {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+
+.chip {
+  cursor: pointer;
+}
+
+.form button[type='submit'] {
+  grid-column: 1 / -1;
 }
 
 .q {
-  grid-column: 1 / -1;
+  min-height: 52px;
+  font-size: 18px;
+}
+
+.year {
+  min-height: 52px;
 }
 
 .results {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
-  margin-bottom: var(--gap);
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
 }
 
 @media (min-width: 760px) {
   .form {
-    grid-template-columns: 140px 110px 1fr auto;
+    grid-template-columns: 120px 1fr auto;
   }
 
-  .q {
+  .form button[type='submit'] {
     grid-column: auto;
+    min-height: 52px;
+    padding: 0 28px;
   }
 
   .results {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .results {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 </style>

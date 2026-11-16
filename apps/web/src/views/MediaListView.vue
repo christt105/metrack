@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { MediaPage } from '@metrack/domain';
+import ContinueCard from '../components/ContinueCard.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import LibraryFilters from '../components/LibraryFilters.vue';
 import LibraryWelcome from '../components/LibraryWelcome.vue';
@@ -30,6 +31,9 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 
 const cards = computed(() =>
   page.value ? buildCards(page.value.items, filters.value.type, filters.value.sort) : [],
+);
+const inProgress = computed(() =>
+  hasNarrowing(filters.value) ? [] : cards.value.filter((card) => card.status === 'in_progress'),
 );
 
 async function load(): Promise<void> {
@@ -64,19 +68,27 @@ onBeforeUnmount(() => clearTimeout(timer));
 
 <template>
   <section>
-    <h1>{{ messages.nav.library }}</h1>
-    <ErrorNotice :error="error" />
-    <LibraryWelcome v-if="page && !error && libraryEmpty" />
-    <template v-else>
-      <LibraryFilters v-model="filters" />
-      <p v-if="page && !error" class="muted count">
+    <header class="head">
+      <h1>{{ messages.nav.library }}</h1>
+      <p v-if="page && !error && !libraryEmpty" class="count">
         {{ messages.list.count(cards.length) }}
         <template v-if="page.total > page.items.length">
           {{ messages.list.truncated(page.items.length, page.total) }}
         </template>
       </p>
-      <p v-if="loading && !page" class="muted">{{ messages.common.loading }}</p>
-      <p v-else-if="page && cards.length === 0" class="muted">{{ messages.list.empty }}</p>
+    </header>
+    <ErrorNotice :error="error" />
+    <LibraryWelcome v-if="page && !error && libraryEmpty" />
+    <p v-else-if="!page && !error" class="muted">{{ messages.common.loading }}</p>
+    <template v-else-if="page">
+      <section v-if="inProgress.length" class="shelf" aria-labelledby="shelf-progress">
+        <h2 id="shelf-progress">{{ messages.list.inProgressTitle }}</h2>
+        <div class="rail">
+          <ContinueCard v-for="card in inProgress" :key="`progress-${card.key}`" :card="card" />
+        </div>
+      </section>
+      <LibraryFilters v-model="filters" />
+      <p v-if="cards.length === 0 && !loading" class="muted">{{ messages.list.empty }}</p>
       <div class="grid">
         <MediaCard v-for="card in cards" :key="card.key" :card="card" />
       </div>
@@ -85,20 +97,72 @@ onBeforeUnmount(() => clearTimeout(timer));
 </template>
 
 <style scoped>
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.head h1 {
+  margin: 0;
+}
+
 .count {
-  margin: 0 0 12px;
-  font-size: 0.85rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-small);
+}
+
+.shelf {
+  margin-bottom: var(--s-6);
+}
+
+.rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(300px, calc((100% - 2 * var(--s-4)) / 3));
+  gap: var(--s-4);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--gut);
+  scrollbar-width: thin;
+  margin: 0 calc(var(--gut) * -1);
+  padding: 4px var(--gut) var(--s-3);
+}
+
+.rail > * {
+  scroll-snap-align: start;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 18px 14px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s-6) var(--s-4);
 }
 
-@media (min-width: 760px) {
+@media (max-width: 759px) {
+  .rail {
+    grid-auto-columns: 82%;
+    gap: var(--s-3);
+  }
+
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-5) var(--s-3);
+  }
+}
+
+@media (min-width: 480px) and (max-width: 759px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
   }
 }
 </style>

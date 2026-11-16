@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import AuthLayout from '../components/AuthLayout.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
@@ -14,12 +15,12 @@ const signInHref = computed(
 </script>
 
 <template>
-  <section class="invite">
+  <AuthLayout>
     <ErrorNotice :error="error" />
     <p v-if="!preview && !error" class="muted">{{ messages.invites.page.loading }}</p>
     <template v-else-if="preview">
-      <h1>{{ messages.invites.page.title(preview.inviter) }}</h1>
-      <p class="muted">{{ messages.invites.page.lead }}</p>
+      <h1 class="title">{{ messages.invites.page.title(preview.inviter) }}</h1>
+      <p class="lead">{{ messages.landing.lead }}</p>
       <a v-if="preview.status === 'valid'" class="google" :href="signInHref">{{
         messages.invites.page.signIn
       }}</a>
@@ -27,22 +28,37 @@ const signInHref = computed(
         {{ messages.invites.page.problem[preview.status] }}
       </p>
     </template>
-  </section>
+  </AuthLayout>
 </template>
 
 <style scoped>
-.invite {
-  max-width: 420px;
-  margin: 0 auto;
+.title {
+  font-size: clamp(32px, 2.6vw + 16px, 52px);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.lead {
+  max-width: 44ch;
+  margin-bottom: var(--s-6);
+  font-size: 18px;
+  line-height: 1.6;
 }
 
 .google {
-  display: block;
-  margin: 16px 0;
-  padding: 10px 12px;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: var(--r-btn);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 500;
+}
+
+.google:hover {
+  background: var(--primary-hover);
   text-decoration: none;
 }
 </style>

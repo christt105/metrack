@@ -22,6 +22,9 @@ describe('watchlist routes', () => {
       ...emptySeries(),
       title: 'Lupin',
       cover: '/api/images/abc',
+      banner: '/api/images/wide',
+      nextEpisode: { seasonNumber: 2, episodeNumber: 4, airDate: '2026-11-20', name: 'Four' },
+      nextEpisodeCheckedAt: '2026-11-15T10:00:00.000Z',
     });
     await api.seasons.create({
       ...emptySeason(),
@@ -40,13 +43,23 @@ describe('watchlist routes', () => {
     expect((await call('PUT', `/api/watchlist/movies/${movie.id}`)).statusCode).toBe(204);
     expect((await call('PUT', `/api/watchlist/series/${show.id}`)).statusCode).toBe(204);
     expect((await call('GET', '/api/watchlist')).json()).toEqual([
-      { type: 'movie', id: movie.id, title: 'Heat', cover: null, releaseDate: '1995-12-15' },
+      {
+        type: 'movie',
+        id: movie.id,
+        title: 'Heat',
+        cover: null,
+        banner: null,
+        releaseDate: '1995-12-15',
+        nextEpisode: null,
+      },
       {
         type: 'series',
         id: show.id,
         title: 'Lupin',
         cover: '/api/images/abc',
+        banner: '/api/images/wide',
         releaseDate: '2026-10-23',
+        nextEpisode: { seasonNumber: 2, episodeNumber: 4, airDate: '2026-11-20', name: 'Four' },
       },
     ]);
     expect((await api.movies.get(movie.id))?.follow).toBe(true);

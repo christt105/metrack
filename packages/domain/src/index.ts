@@ -119,6 +119,7 @@ export type { AlertSubjectType } from './alerts/AlertSubjectType.js';
 export type { AlertKey } from './alerts/AlertKey.js';
 export type { AlertCandidate } from './alerts/AlertCandidate.js';
 export type { ReleaseAlert } from './alerts/ReleaseAlert.js';
+export type { NextEpisode } from './alerts/NextEpisode.js';
 export type { WatchlistEntry } from './alerts/WatchlistEntry.js';
 export { availabilityWindowDays } from './alerts/availabilityWindowDays.js';
 export { planReleaseAlerts } from './alerts/planReleaseAlerts.js';

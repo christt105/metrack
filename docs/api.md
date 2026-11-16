@@ -75,7 +75,7 @@ One list across every collection, as `MediaPage` (`{ items: MediaSummary[], tota
 - `sort`: `title` (default), `recent`, `rating`, `startedAt`, `finishedAt`, `releaseDate` or `id`. `order`: `asc` (default) or `desc`. Rows missing the sort value always come last. `recent` puts titles in progress first and then orders by the latest day each was started, finished or rewatched, newest first unless `order=asc`; a series takes both from its seasons. The web library uses `recent` by default.
 - `limit` (1 to 1000, default 50) and `offset`.
 
-A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, `status`, `rating`, `startedAt`, `finishedAt`, plus `seriesId` and `seriesTitle` for seasons and `seasonCount` for series, and `pendingReview` (a series is pending when any of its seasons is). A season without its own cover shows the cover of its series.
+A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, `banner`, `status`, `rating`, `startedAt`, `finishedAt`, plus `seriesId` and `seriesTitle` for seasons and `seasonCount` for series, and `pendingReview` (a series is pending when any of its seasons is). A season without its own cover or banner shows the one of its series; books have no banner.
 
 ### Per collection
 
@@ -183,7 +183,7 @@ The release alert routes below follow the same rules, except that the users they
 
 ## Release alerts
 
-- `GET /api/watchlist`: the followed movies and series as `WatchlistEntry[]`, ordered by title. A series shows the first air date of its newest season.
+- `GET /api/watchlist`: the followed movies and series as `WatchlistEntry[]`, ordered by title. Each entry has `type`, `id`, `title`, `cover` and `banner` (image refs or null), `releaseDate` (a series shows the first air date of its newest season) and `nextEpisode`: `{ seasonNumber, episodeNumber, airDate, name }` (`name` may be null) for a series whose last release check announced a dated next episode, otherwise null, and always null for a movie. `seasonNumber` is the local season number when the check linked the provider season to one. The value is stored by the release check, never fetched when the list is read, so it only refreshes for users whose release alerts are checked and is null until the first check after an update.
 - `PUT /api/watchlist/{movies|series}/{id}` and `DELETE /api/watchlist/{movies|series}/{id}`: follow and unfollow (the `follow` field, so a `PATCH` does the same). 204, or 404 for an unknown id.
 - `GET /api/alerts?limit=100`: the alerts already sent as `ReleaseAlert[]`, newest first (`limit` from 1 to 500).
 

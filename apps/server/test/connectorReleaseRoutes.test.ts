@@ -27,7 +27,7 @@ const RELEASE: ReconcileSeasonsRequest['release'] = {
     { number: 1, name: 'One', overview: null, airDate: '2021-01-08', episodeCount: 5 },
     { number: 2, name: 'Two', overview: 'New', airDate: '2026-10-23', episodeCount: 8 },
   ],
-  nextEpisode: { seasonNumber: 2, episodeNumber: 1, airDate: '2026-10-23' },
+  nextEpisode: { seasonNumber: 2, episodeNumber: 1, airDate: '2026-10-23', name: null },
   flatrateEs: false,
 };
 
@@ -207,6 +207,56 @@ describe('POST /api/connector/users/{id}/seasons', () => {
       false,
     ]);
     expect(await scope.run(2, () => repositories.seasons.listBySeries(seriesId))).toHaveLength(2);
+  });
+
+  it('stores the next episode, accepts a release without its name and clears it', async () => {
+    const { createToken, call, scope, repositories } = await harnessWithTopics();
+    const { secret } = await createToken(1, 'connector');
+    const seriesId = await scope.run(2, async () => {
+      const show = await repositories.series.create({
+        ...emptySeries(),
+        tmdbId: 10,
+        title: 'Lupin',
+        follow: true,
+      });
+      return show.id;
+    });
+    const url = '/api/connector/users/2/seasons';
+    const stored = () => scope.run(2, () => repositories.series.get(seriesId));
+
+    const withName = {
+      ...RELEASE,
+      nextEpisode: { seasonNumber: 2, episodeNumber: 3, airDate: '2026-10-30', name: 'Three' },
+    };
+    const first = await call('POST', url, secret, {
+      seriesId,
+      release: withName,
+      today: '2026-10-22',
+    });
+    expect(first.statusCode).toBe(200);
+    const seasonNumber = (await scope.run(2, () => repositories.seasons.listBySeries(seriesId)))[0]
+      ?.number;
+    expect((await stored())?.nextEpisode).toEqual({
+      seasonNumber,
+      episodeNumber: 3,
+      airDate: '2026-10-30',
+      name: 'Three',
+    });
+    expect((await stored())?.nextEpisodeCheckedAt).not.toBeNull();
+
+    const legacy = {
+      ...RELEASE,
+      nextEpisode: { seasonNumber: 2, episodeNumber: 4, airDate: '2026-11-06' },
+    };
+    expect(
+      (await call('POST', url, secret, { seriesId, release: legacy, today: '2026-10-22' }))
+        .statusCode,
+    ).toBe(200);
+    expect((await stored())?.nextEpisode).toMatchObject({ episodeNumber: 4, name: null });
+
+    const none = { ...RELEASE, nextEpisode: null };
+    await call('POST', url, secret, { seriesId, release: none, today: '2026-10-22' });
+    expect((await stored())?.nextEpisode).toBeNull();
   });
 
   it('answers 404 for a series the user does not have and 400 for a malformed body', async () => {

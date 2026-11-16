@@ -43,7 +43,8 @@ watch(
   { immediate: true },
 );
 
-const sections: FieldSection[] = ['tracking', 'metadata', 'ids', 'notes'];
+const sections: FieldSection[] = ['tracking', 'notes', 'metadata', 'ids'];
+const primarySections: FieldSection[] = ['tracking', 'notes'];
 const sectionTitles: Record<FieldSection, string> = {
   tracking: messages.detail.sectionTracking,
   metadata: messages.detail.sectionMetadata,
@@ -115,55 +116,100 @@ async function save(confirm = false): Promise<void> {
 <template>
   <form class="entity-form" @submit.prevent="save()">
     <p v-if="pending" class="pending-notice" role="note">{{ messages.pending.notice }}</p>
-    <fieldset
-      v-for="section in sections"
-      v-show="fieldsOf(section).length > 0 || (section === 'tracking' && tracked)"
-      :key="section"
-      class="panel"
-    >
-      <legend>{{ sectionTitles[section] }}</legend>
-      <div class="grid">
-        <FieldRow
-          v-if="section === 'tracking' && tracked"
-          :id="fieldId('status')"
-          :label="fieldLabel('status')"
-        >
-          <select :id="fieldId('status')" v-model="status">
-            <option v-for="option in options" :key="option" :value="option">
-              {{ messages.statusLabels[option] }}
-            </option>
-          </select>
-        </FieldRow>
-        <FieldRow
-          v-for="schema in fieldsOf(section)"
-          :id="fieldId(schema.key)"
-          :key="schema.key"
-          :label="fieldLabel(schema.key)"
-          :edited="isEdited(schema.key)"
-          :hint="hintFor(schema)"
-          :invalid="invalid?.key === schema.key ? invalid.reason : undefined"
-          :class="{ wide: schema.kind === 'textarea' || schema.kind === 'list' }"
-          @release="release(schema.key)"
-        >
-          <FieldInput
-            :id="fieldId(schema.key)"
-            :kind="schema.kind"
-            :required="schema.required"
-            :model-value="draft[schema.key] ?? ''"
-            @update:model-value="draft[schema.key] = $event"
-          />
-          <a
-            v-if="schema.kind === 'link' && openableLink(draft[schema.key])"
-            class="open-link"
-            :href="openableLink(draft[schema.key]) ?? undefined"
-            target="_blank"
-            rel="noopener noreferrer"
+    <template v-for="section in sections" :key="section">
+      <fieldset
+        v-if="primarySections.includes(section)"
+        v-show="fieldsOf(section).length > 0 || (section === 'tracking' && tracked)"
+        class="panel"
+      >
+        <legend>{{ sectionTitles[section] }}</legend>
+        <div class="grid">
+          <FieldRow
+            v-if="section === 'tracking' && tracked"
+            :id="fieldId('status')"
+            :label="fieldLabel('status')"
           >
-            {{ messages.detail.openLink }}
-          </a>
-        </FieldRow>
-      </div>
-    </fieldset>
+            <select :id="fieldId('status')" v-model="status">
+              <option v-for="option in options" :key="option" :value="option">
+                {{ messages.statusLabels[option] }}
+              </option>
+            </select>
+          </FieldRow>
+          <FieldRow
+            v-for="schema in fieldsOf(section)"
+            :id="fieldId(schema.key)"
+            :key="schema.key"
+            :label="fieldLabel(schema.key)"
+            :edited="isEdited(schema.key)"
+            :hint="hintFor(schema)"
+            :invalid="invalid?.key === schema.key ? invalid.reason : undefined"
+            :class="{ wide: schema.kind === 'textarea' || schema.kind === 'list' }"
+            @release="release(schema.key)"
+          >
+            <FieldInput
+              :id="fieldId(schema.key)"
+              :kind="schema.kind"
+              :required="schema.required"
+              :model-value="draft[schema.key] ?? ''"
+              @update:model-value="draft[schema.key] = $event"
+            />
+            <a
+              v-if="schema.kind === 'link' && openableLink(draft[schema.key])"
+              class="open-link"
+              :href="openableLink(draft[schema.key]) ?? undefined"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ messages.detail.openLink }}
+            </a>
+          </FieldRow>
+        </div>
+      </fieldset>
+      <details v-else v-show="fieldsOf(section).length > 0" class="panel more">
+        <summary>{{ sectionTitles[section] }}</summary>
+        <div class="grid">
+          <FieldRow
+            v-if="section === 'tracking' && tracked"
+            :id="fieldId('status')"
+            :label="fieldLabel('status')"
+          >
+            <select :id="fieldId('status')" v-model="status">
+              <option v-for="option in options" :key="option" :value="option">
+                {{ messages.statusLabels[option] }}
+              </option>
+            </select>
+          </FieldRow>
+          <FieldRow
+            v-for="schema in fieldsOf(section)"
+            :id="fieldId(schema.key)"
+            :key="schema.key"
+            :label="fieldLabel(schema.key)"
+            :edited="isEdited(schema.key)"
+            :hint="hintFor(schema)"
+            :invalid="invalid?.key === schema.key ? invalid.reason : undefined"
+            :class="{ wide: schema.kind === 'textarea' || schema.kind === 'list' }"
+            @release="release(schema.key)"
+          >
+            <FieldInput
+              :id="fieldId(schema.key)"
+              :kind="schema.kind"
+              :required="schema.required"
+              :model-value="draft[schema.key] ?? ''"
+              @update:model-value="draft[schema.key] = $event"
+            />
+            <a
+              v-if="schema.kind === 'link' && openableLink(draft[schema.key])"
+              class="open-link"
+              :href="openableLink(draft[schema.key]) ?? undefined"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ messages.detail.openLink }}
+            </a>
+          </FieldRow>
+        </div>
+      </details>
+    </template>
     <ErrorNotice :error="error" />
     <div class="actions">
       <button type="submit" class="primary" :disabled="saving">
@@ -186,7 +232,19 @@ fieldset {
 
 legend {
   padding: 0 6px;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+fieldset.panel {
+  padding-top: var(--s-3);
+}
+
+.more > summary {
+  font-weight: 500;
+}
+
+.more[open] > summary {
+  margin-bottom: var(--s-4);
 }
 
 .grid {
@@ -197,12 +255,14 @@ legend {
 
 .actions {
   position: sticky;
-  bottom: 0;
+  bottom: var(--tabbar);
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
-  background: var(--surface);
+  padding: 12px 0;
+  background: var(--bg);
+  border-top: 1px solid var(--outline);
 }
 
 .pending-notice {

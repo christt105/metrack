@@ -54,6 +54,8 @@ export function series(overrides: Partial<Series> & { id: number }): Series {
     slug: null,
     tags: [],
     review: null,
+    nextEpisode: null,
+    nextEpisodeCheckedAt: null,
     cover: null,
     banner: null,
     ...overrides,

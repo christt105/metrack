@@ -9,11 +9,12 @@ import { messages } from '../i18n/messages';
 <style scoped>
 .badge {
   display: inline-block;
-  padding: 1px 8px;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--t-label);
+  font-weight: 500;
   color: var(--warning);
-  border: 1px solid var(--warning);
+  border: 1px solid currentColor;
   white-space: nowrap;
 }
 </style>
