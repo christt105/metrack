@@ -44,7 +44,12 @@ describe('creating and reading', () => {
     expect(noTitle.statusCode).toBe(400);
     expect(noTitle.json().code).toBe('validation_error');
     expect((await post('/api/movies', { title: 'x', bogus: 1 })).statusCode).toBe(400);
-    expect((await post('/api/movies', { title: 'x', rating: 11 })).statusCode).toBe(400);
+    expect((await post('/api/movies', { title: 'x', rating: 8 })).statusCode).toBe(400);
+    expect((await post('/api/movies', { title: 'x', rating: 0 })).statusCode).toBe(400);
+    expect((await post('/api/movies', { title: 'x', rating: 5.5 })).statusCode).toBe(400);
+    expect((await post('/api/movies', { title: 'x', rating: 7 })).statusCode).toBe(201);
+    expect((await post('/api/movies', { title: 'y', rating: 1 })).statusCode).toBe(201);
+    expect((await post('/api/movies', { title: 'z', rating: null })).statusCode).toBe(201);
     expect((await post('/api/movies', { title: 'x', status: 'watching' })).statusCode).toBe(400);
     expect((await post('/api/movies', { title: 'x', startedAt: '2026-13-01' })).statusCode).toBe(
       400,
@@ -131,10 +136,20 @@ describe('editing', () => {
     expect(list.items[0]).toMatchObject({ id, pendingReview: false });
   });
 
+  it('accepts only whole ratings from 1 to 7 on edit', async () => {
+    const id = await createMovie();
+    for (const rating of [0, 8, 6.5, 10]) {
+      expect((await patch(`/api/movies/${id}`, { rating })).statusCode).toBe(400);
+    }
+    expect((await patch(`/api/movies/${id}`, { rating: 1 })).statusCode).toBe(200);
+    expect((await patch(`/api/movies/${id}`, { rating: 7 })).json().rating).toBe(7);
+    expect((await patch(`/api/movies/${id}`, { rating: null })).json().rating).toBeNull();
+  });
+
   it('edits tracking fields and ids', async () => {
     const id = await createMovie();
     const response = await patch(`/api/movies/${id}`, {
-      rating: 8.5,
+      rating: 6,
       review: 'Great',
       note: 'obsidian://x',
       tmdbId: 603,
@@ -143,7 +158,7 @@ describe('editing', () => {
       startedAt: '2026-01-01',
     });
     expect(response.json()).toMatchObject({
-      rating: 8.5,
+      rating: 6,
       review: 'Great',
       tmdbId: 603,
       jellyfinId: 'jf',
@@ -270,7 +285,7 @@ describe('edited fields', () => {
     const response = await patch(`/api/movies/${id}`, {
       title: 'The Matrix',
       overview: 'Same',
-      rating: 9,
+      rating: 7,
       tmdbId: 603,
       genres: ['Action'],
     });
@@ -358,14 +373,14 @@ describe('listing', () => {
     await post('/api/movies', {
       title: 'Amélie',
       status: 'completed',
-      rating: 9,
+      rating: 7,
       finishedAt: '2026-01-05',
     });
     await post('/api/movies', { title: 'Zodiac', status: 'planned', releaseDate: '2007-03-02' });
     await post('/api/movies', {
       title: 'Blade Runner',
       originalTitle: 'Blade Runner 2049',
-      rating: 7,
+      rating: 5,
     });
     await post('/api/games', { title: 'Hades', status: 'in_progress' });
     await post('/api/books', { title: 'Dune', authors: ['Frank Herbert'] });

@@ -142,9 +142,9 @@ describe('Worker app over D1 and R2', () => {
     const edited = await app.request(`http://localhost/api/games/${id}`, {
       method: 'PATCH',
       headers: { ...auth, 'content-type': 'application/json' },
-      body: JSON.stringify({ status: 'completed', rating: 8 }),
+      body: JSON.stringify({ status: 'completed', rating: 6 }),
     });
-    expect(await edited.json()).toMatchObject({ status: 'completed', rating: 8 });
+    expect(await edited.json()).toMatchObject({ status: 'completed', rating: 6 });
   });
 
   it('accepts a WebP upload only, always validated and never re-encoded', async () => {

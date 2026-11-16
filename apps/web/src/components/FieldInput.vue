@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { DraftValue } from '../logic/formDraft';
 import type { FieldKind } from '../logic/FieldSchema';
+import RatingPicker from './RatingPicker.vue';
 
 defineProps<{ id: string; kind: FieldKind; required?: boolean }>();
 const model = defineModel<DraftValue>({ required: true });
@@ -10,6 +11,15 @@ const text = computed({
   get: () => String(model.value),
   set: (value: string) => {
     model.value = value;
+  },
+});
+const ratingValue = computed({
+  get: () => {
+    const value = Number(model.value);
+    return model.value === '' || !Number.isFinite(value) ? null : value;
+  },
+  set: (value: number | null) => {
+    model.value = value === null ? '' : String(value);
   },
 });
 const checked = computed({
@@ -34,15 +44,6 @@ const checked = computed({
     inputmode="numeric"
     :required="required"
   />
-  <input
-    v-else-if="kind === 'rating'"
-    :id="id"
-    v-model="text"
-    type="number"
-    min="0"
-    max="10"
-    step="0.5"
-    inputmode="decimal"
-  />
+  <RatingPicker v-else-if="kind === 'rating'" :id="id" v-model="ratingValue" />
   <input v-else :id="id" v-model="text" type="text" :required="required" autocomplete="off" />
 </template>

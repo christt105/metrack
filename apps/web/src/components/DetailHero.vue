@@ -5,8 +5,8 @@ import type { AnyDetail } from '../api/AnyDetail';
 import { messages } from '../i18n/messages';
 import { bannerSources } from '../logic/bannerSources';
 import { readDetailFacts } from '../logic/readDetailFacts';
-import AppIcon from './AppIcon.vue';
 import PendingBadge from './PendingBadge.vue';
+import RatingBadge from './RatingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 
 const props = defineProps<{
@@ -73,10 +73,7 @@ const meta = computed(() =>
         </p>
         <div v-if="status || facts.rating !== null || pending" class="state">
           <StatusBadge v-if="status" :status="status" />
-          <span v-if="facts.rating !== null" class="rating">
-            <AppIcon name="star" :size="16" />
-            {{ messages.hero.rating(facts.rating) }}
-          </span>
+          <RatingBadge v-if="facts.rating !== null" :rating="facts.rating" />
           <PendingBadge v-if="pending" />
         </div>
         <div class="actions">
@@ -84,13 +81,10 @@ const meta = computed(() =>
         </div>
       </div>
     </div>
-    <div v-if="facts.overview || facts.review || facts.genres.length" class="about">
+    <div v-if="facts.overview || $slots.review || facts.genres.length" class="about">
       <div class="text">
         <p v-if="facts.overview" class="overview">{{ facts.overview }}</p>
-        <blockquote v-if="facts.review" class="review">
-          <span class="eyebrow">{{ messages.hero.yourReview }}</span>
-          {{ facts.review }}
-        </blockquote>
+        <slot name="review" />
       </div>
       <dl class="facts">
         <template v-if="facts.genres.length">
@@ -224,17 +218,6 @@ h1 {
   font-size: var(--t-small);
 }
 
-.rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 600;
-}
-
-.rating .icon {
-  color: var(--warning);
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -264,21 +247,6 @@ h1 {
   margin: 0;
   font-size: 17px;
   line-height: 1.7;
-}
-
-.review {
-  margin: var(--s-5) 0 0;
-  padding: var(--s-4) var(--s-5);
-  border-left: 2px solid var(--primary);
-  background: var(--surface-low);
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  font-style: italic;
-  line-height: 1.7;
-  white-space: pre-line;
-}
-
-.review .eyebrow {
-  font-style: normal;
 }
 
 .facts {

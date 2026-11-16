@@ -7,7 +7,7 @@ VALUES (1, 1, 'Sample data for the metrack test Worker.', 'A public page with ma
 INSERT INTO movie (id, title, original_title, release_date, overview, genres, owner_id)
 VALUES (1, 'Sample Movie', 'Sample Movie', '2020-05-01', 'A made-up movie.', '["Drama"]', 1);
 INSERT INTO movie_entry (user_id, movie_id, slug, status, rating, review, finished_at)
-VALUES (1, 1, 'sample-movie', 'completed', 7.5, 'A made-up review.', '2026-01-02');
+VALUES (1, 1, 'sample-movie', 'completed', 6, 'A made-up review.', '2026-01-02');
 
 INSERT INTO series (id, title, original_title, first_air_date, overview, genres, owner_id)
 VALUES (1, 'Sample Series', 'Sample Series', '2021-03-01', 'A made-up series.', '["Comedy"]', 1);

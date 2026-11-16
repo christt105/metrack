@@ -1,4 +1,4 @@
-import { MEDIA_STATUSES, type Collection } from '@metrack/domain';
+import { MEDIA_STATUSES, RATING_MAX, RATING_MIN, type Collection } from '@metrack/domain';
 import {
   DATE_PATTERN,
   nullableDate,
@@ -15,7 +15,7 @@ const tracking: Properties = {
   status: { enum: [...MEDIA_STATUSES] },
   startedAt: nullableDate,
   finishedAt: nullableDate,
-  rating: { type: ['number', 'null'], minimum: 0, maximum: 10 },
+  rating: { type: ['integer', 'null'], minimum: RATING_MIN, maximum: RATING_MAX },
   review: nullableString,
   rewatches: { type: 'array', items: { type: 'string', pattern: DATE_PATTERN } },
   pendingReview: { type: 'boolean' },

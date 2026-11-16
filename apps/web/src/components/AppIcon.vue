@@ -54,6 +54,40 @@ defineProps<{ name: AppIconName; size?: number }>();
         stroke="none"
       />
     </template>
+    <template v-else-if="name === 'crown'">
+      <path d="M4 18.5h16M4.5 17 3.5 8l4.8 4L12 5.5l3.7 6.5 4.8-4-1 9z" />
+    </template>
+    <template v-else-if="name === 'heart'">
+      <path
+        d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z"
+      />
+    </template>
+    <template v-else-if="name === 'thumbsUp'">
+      <path
+        d="M8 10.5V19H4.5v-8.5zM8 10.5l3.2-6.2c1.6 0 2.4 1.2 2 2.7L12.6 9.5h5.3a1.9 1.9 0 0 1 1.9 2.3l-1.2 5.6a2.4 2.4 0 0 1-2.3 1.6H8"
+      />
+    </template>
+    <template v-else-if="name === 'thumbsDown'">
+      <path
+        d="M8 13.5V5H4.5v8.5zM8 13.5l3.2 6.2c1.6 0 2.4-1.2 2-2.7l-.6-2.5h5.3a1.9 1.9 0 0 0 1.9-2.3l-1.2-5.6A2.4 2.4 0 0 0 16.3 4.5H8"
+      />
+    </template>
+    <template v-else-if="name === 'smile'">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M8.5 14c.9 1.4 2.1 2.1 3.5 2.1s2.6-.7 3.5-2.1M9 9.5h.01M15 9.5h.01" />
+    </template>
+    <template v-else-if="name === 'dizzy'">
+      <circle cx="12" cy="12" r="8.5" />
+      <path
+        d="m7.8 8.3 2.4 2.4m0-2.4-2.4 2.4M13.8 8.3l2.4 2.4m0-2.4-2.4 2.4M9 16c1-1.1 2-1.1 3 0s2 1.1 3 0"
+      />
+    </template>
+    <template v-else-if="name === 'skull'">
+      <path
+        d="M12 3.8a7.5 7.5 0 0 0-7.5 7.5c0 2.4 1.1 4 2.9 5v3.4h9.2v-3.4c1.8-1 2.9-2.6 2.9-5A7.5 7.5 0 0 0 12 3.8z"
+      />
+      <path d="M9.2 11.5h.01M14.8 11.5h.01M10.5 19.7v-2.3M13.5 19.7v-2.3" />
+    </template>
     <template v-else-if="name === 'back'">
       <path d="M15 5.5 8.5 12l6.5 6.5" />
     </template>

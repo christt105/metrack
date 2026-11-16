@@ -10,7 +10,9 @@ import EntityForm from '../components/EntityForm.vue';
 import DetailHero from '../components/DetailHero.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import FollowToggle from '../components/FollowToggle.vue';
+import QuickActions from '../components/QuickActions.vue';
 import MetadataRefresh from '../components/MetadataRefresh.vue';
+import ReviewPanel from '../components/ReviewPanel.vue';
 import RewatchList from '../components/RewatchList.vue';
 import SeasonList from '../components/SeasonList.vue';
 import SeasonOrderingPanel from '../components/SeasonOrderingPanel.vue';
@@ -136,10 +138,19 @@ watch(() => [props.collection, props.id], load, { immediate: true });
           :following="detail.follow"
           @changed="setFollowing"
         />
+        <QuickActions
+          v-if="trackedStatus"
+          :collection="collection"
+          :detail="detail"
+          @saved="onSaved"
+        />
         <button type="button" @click="scrollToEdit">
           <AppIcon name="edit" :size="18" />
           {{ messages.hero.edit }}
         </button>
+      </template>
+      <template v-if="trackedStatus" #review>
+        <ReviewPanel :collection="collection" :detail="detail" @saved="onSaved" />
       </template>
     </DetailHero>
 
@@ -153,7 +164,13 @@ watch(() => [props.collection, props.id], load, { immediate: true });
 
     <section id="edit" class="section" aria-labelledby="edit-title">
       <h2 id="edit-title">{{ messages.hero.edit }}</h2>
-      <EntityForm :collection="collection" :detail="detail" @saved="onSaved" @changed="load" />
+      <EntityForm
+        :collection="collection"
+        :detail="detail"
+        :omit="trackedStatus ? ['status', 'rating', 'review'] : []"
+        @saved="onSaved"
+        @changed="load"
+      />
       <RewatchList
         v-if="trackedStatus"
         :id="detail.id"

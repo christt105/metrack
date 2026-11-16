@@ -1,3 +1,5 @@
+import { RATING_MAX, RATING_MIN } from '@metrack/domain';
+import { messages } from '../i18n/messages';
 import type { FieldSchema } from './FieldSchema';
 
 export type DraftValue = string | boolean;
@@ -54,8 +56,8 @@ function fromDraftValue(schema: FieldSchema, value: DraftValue): unknown {
     case 'rating': {
       if (!text) return null;
       const number = Number(text);
-      if (!Number.isFinite(number) || number < 0 || number > 10)
-        throw new DraftError(schema.key, '0 to 10');
+      if (!Number.isInteger(number) || number < RATING_MIN || number > RATING_MAX)
+        throw new DraftError(schema.key, messages.ratingPicker.invalid);
       return number;
     }
     default:
