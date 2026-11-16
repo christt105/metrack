@@ -15,6 +15,8 @@ function setup() {
   mkdirSync(join(dir, 'assets'));
   writeFileSync(join(dir, 'index.html'), '<html>home</html>');
   writeFileSync(join(dir, 'assets', 'app.js'), 'console.log(1)');
+  writeFileSync(join(dir, 'manifest.webmanifest'), '{}');
+  writeFileSync(join(dir, 'sw.js'), 'self.skipWaiting()');
   return buildTestApp({
     appVersion: 'test',
     authenticator: signedInAs(),
@@ -38,6 +40,18 @@ describe('web app files', () => {
     const deep = await app.inject({ method: 'GET', url: '/movies/3' });
     expect(deep.statusCode).toBe(200);
     expect(deep.body).toBe('<html>home</html>');
+  });
+
+  it('serves the manifest and the service worker with their types and no long cache', async () => {
+    const app = setup();
+    const manifest = await app.inject({ method: 'GET', url: '/manifest.webmanifest' });
+    expect(manifest.statusCode).toBe(200);
+    expect(manifest.headers['content-type']).toContain('application/manifest+json');
+    expect(manifest.headers['cache-control']).toBe('public, max-age=0');
+    const worker = await app.inject({ method: 'GET', url: '/sw.js' });
+    expect(worker.statusCode).toBe(200);
+    expect(worker.headers['content-type']).toContain('application/javascript');
+    expect(worker.headers['cache-control']).toBe('public, max-age=0');
   });
 
   it('answers 304 to a matching validator', async () => {

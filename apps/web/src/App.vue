@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppIcon from './components/AppIcon.vue';
 import DeletionBanner from './components/DeletionBanner.vue';
+import OfflineNotice from './components/OfflineNotice.vue';
 import { useSession } from './composables/useSession';
 import { messages } from './i18n/messages';
 import { NAV_ITEMS } from './logic/mainNavItems';
@@ -57,6 +58,7 @@ async function signOut(): Promise<void> {
       </div>
     </div>
   </header>
+  <OfflineNotice />
   <DeletionBanner v-if="session.user.value" />
   <main id="content" :class="bare ? 'bare' : 'page'" tabindex="-1">
     <RouterView />

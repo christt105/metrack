@@ -2,7 +2,7 @@
 
 `apps/server/src/worker` builds the same Hono app as the home server over D1 (`createD1Repositories`) and R2 (`R2ImageBlobStore`), with `IMAGE_ENCODED_BY=client` forced (a Worker cannot run sharp: the browser recodes images to WebP and the Worker only validates them). The web app is served as Static Assets of the same Worker, so the session cookie is same-origin and there is no CORS. `apps/server/wrangler.jsonc` describes (at the top level) the Worker `metrack-test`, its D1 database `metrack-test`, its R2 bucket `metrack-test-images` and its assets. Its one cron trigger, `0 * * * *` (hourly), erases deleted accounts (see Scheduled tick).
 
-API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker first. `/assets/*` is answered from the assets binding, with a JSON 404 (`Cache-Control: no-store`) for a missing file instead of `index.html`. Every other path is answered by the assets, falling back to `index.html` for the web app's routes.
+API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker first. `/assets/*` is answered from the assets binding, with a JSON 404 (`Cache-Control: no-store`) for a missing file instead of `index.html`. Every other path is answered by the assets, falling back to `index.html` for the web app's routes; that includes `/manifest.webmanifest` and `/sw.js` from `apps/web/public`, which the assets serve with `application/manifest+json`, a JavaScript type and revalidation on every load.
 
 ## Run it locally
 
