@@ -28,6 +28,6 @@
   "devDependencies": {
     "@types/pg": "^8.23.1",
     "miniflare": "^4.20260730.0",
-    "wrangler": "^4.160.0"
+    "wrangler": "^4.160.1"
   }
 }
