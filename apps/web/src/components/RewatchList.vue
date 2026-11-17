@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { Collection } from '@metrack/domain';
+import type { Collection, Viewing } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
@@ -9,7 +9,7 @@ import ErrorNotice from './ErrorNotice.vue';
 const props = defineProps<{
   collection: Collection;
   id: number;
-  rewatches: string[];
+  rewatches: Viewing[];
   completed: boolean;
 }>();
 const emit = defineEmits<{ updated: [detail: AnyDetail] }>();
@@ -31,6 +31,11 @@ async function run(action: () => Promise<unknown>): Promise<void> {
   }
 }
 
+function describe(viewing: Viewing): string {
+  if (viewing.finishedAt === null) return `${viewing.startedAt ?? ''} ...`;
+  return viewing.startedAt ? `${viewing.startedAt} - ${viewing.finishedAt}` : viewing.finishedAt;
+}
+
 const add = () => run(() => api.addRewatch(props.collection, props.id, date.value));
 const remove = (value: string) => run(() => api.removeRewatch(props.collection, props.id, value));
 </script>
@@ -39,9 +44,15 @@ const remove = (value: string) => run(() => api.removeRewatch(props.collection, 
   <div>
     <p v-if="rewatches.length === 0" class="muted">{{ messages.rewatches.empty }}</p>
     <ul v-else class="dates">
-      <li v-for="value in rewatches" :key="value">
-        <span>{{ value }}</span>
-        <button type="button" class="small danger" :disabled="busy" @click="remove(value)">
+      <li v-for="viewing in rewatches" :key="`${viewing.startedAt}|${viewing.finishedAt}`">
+        <span>{{ describe(viewing) }}</span>
+        <button
+          v-if="viewing.finishedAt"
+          type="button"
+          class="small danger"
+          :disabled="busy"
+          @click="remove(viewing.finishedAt)"
+        >
           {{ messages.common.remove }}
         </button>
       </li>

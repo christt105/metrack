@@ -56,7 +56,9 @@ describe('quick changes', () => {
       review: 'Great',
       finishedAt: '2026-01-05',
     };
-    expect(watchedTodayChange(done, '2026-02-02').patch).toEqual({ rewatches: ['2026-02-02'] });
+    expect(watchedTodayChange(done, '2026-02-02').patch).toEqual({
+      rewatches: [{ startedAt: null, finishedAt: '2026-02-02' }],
+    });
   });
 
   it('never overwrites the first finish of a completed item', () => {
@@ -65,10 +67,13 @@ describe('quick changes', () => {
       status: 'completed' as const,
       review: 'Great',
       finishedAt: '2026-01-05',
-      rewatches: ['2026-03-01'],
+      rewatches: [{ startedAt: '2026-02-20', finishedAt: '2026-03-01' }],
     };
     expect(watchedTodayChange(done, '2026-02-02').patch).toEqual({
-      rewatches: ['2026-02-02', '2026-03-01'],
+      rewatches: [
+        { startedAt: null, finishedAt: '2026-02-02' },
+        { startedAt: '2026-02-20', finishedAt: '2026-03-01' },
+      ],
     });
     expect(watchedTodayChange(done, '2026-01-05').patch).toEqual({});
     expect(watchedTodayChange(done, '2026-03-01').patch).toEqual({});
