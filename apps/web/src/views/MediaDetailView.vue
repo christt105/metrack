@@ -6,7 +6,6 @@ import type { Collection, Season, SeasonOverride, SeriesDetail } from '@metrack/
 import type { AnyDetail } from '../api/AnyDetail';
 import AppIcon from '../components/AppIcon.vue';
 import ArtworkPanel from '../components/ArtworkPanel.vue';
-import EntityForm from '../components/EntityForm.vue';
 import DetailHero from '../components/DetailHero.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import FollowToggle from '../components/FollowToggle.vue';
@@ -108,10 +107,6 @@ const titleText = computed(() => {
 });
 const eyebrow = computed(() => messages.typeLabels[type.value]);
 
-function scrollToEdit(): void {
-  document.getElementById('edit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 watch(() => [props.collection, props.id], load, { immediate: true });
 </script>
 
@@ -144,10 +139,10 @@ watch(() => [props.collection, props.id], load, { immediate: true });
           :detail="detail"
           @saved="onSaved"
         />
-        <button type="button" @click="scrollToEdit">
+        <RouterLink :to="`/${collection}/${detail.id}/edit`" class="button">
           <AppIcon name="edit" :size="18" />
           {{ messages.hero.edit }}
-        </button>
+        </RouterLink>
       </template>
       <template v-if="trackedStatus" #review>
         <ReviewPanel :collection="collection" :detail="detail" @saved="onSaved" />
@@ -162,28 +157,17 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       @changed="load"
     />
 
-    <section id="edit" class="section" aria-labelledby="edit-title">
-      <h2 id="edit-title">{{ messages.hero.edit }}</h2>
-      <EntityForm
-        :collection="collection"
-        :detail="detail"
-        :omit="trackedStatus ? ['status', 'rating', 'review'] : []"
-        @saved="onSaved"
-        @changed="load"
-      />
-      <RewatchList
-        v-if="trackedStatus"
-        :id="detail.id"
-        :collection="collection"
-        :rewatches="rewatches"
-        :completed="trackedStatus === 'completed'"
-        @updated="onSaved"
-      />
-    </section>
-
     <details class="panel advanced">
       <summary>{{ messages.hero.advanced }}</summary>
       <div class="advanced__body">
+        <RewatchList
+          v-if="trackedStatus"
+          :id="detail.id"
+          :collection="collection"
+          :rewatches="rewatches"
+          :completed="trackedStatus === 'completed'"
+          @updated="onSaved"
+        />
         <MetadataRefresh
           v-if="refreshable"
           :id="detail.id"
@@ -246,11 +230,6 @@ watch(() => [props.collection, props.id], load, { immediate: true });
 .back:hover {
   color: var(--on-surface);
   text-decoration: none;
-}
-
-.section {
-  scroll-margin-top: calc(var(--nav) + var(--s-4));
-  margin-bottom: var(--s-6);
 }
 
 .advanced > summary {

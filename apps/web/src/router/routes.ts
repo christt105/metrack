@@ -2,6 +2,7 @@ import type { RouteRecordRaw } from 'vue-router';
 import InviteView from '../views/InviteView.vue';
 import LoginView from '../views/LoginView.vue';
 import MediaDetailView from '../views/MediaDetailView.vue';
+import MediaEditView from '../views/MediaEditView.vue';
 import MediaListView from '../views/MediaListView.vue';
 import NewMediaView from '../views/NewMediaView.vue';
 import SearchView from '../views/SearchView.vue';
@@ -31,6 +32,13 @@ export const routes: RouteRecordRaw[] = [
     path: '/:collection(movies|series|seasons|games|books)/:id(\\d+)',
     name: 'detail',
     component: MediaDetailView,
+    props: (route) => ({ collection: route.params.collection, id: Number(route.params.id) }),
+  },
+  {
+    path: '/:collection(movies|series|seasons|games|books)/:id(\\d+)/edit',
+    name: 'edit',
+    component: MediaEditView,
+    meta: { focused: true },
     props: (route) => ({ collection: route.params.collection, id: Number(route.params.id) }),
   },
   { path: '/:rest(.*)*', redirect: '/' },

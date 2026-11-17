@@ -13,6 +13,7 @@ const route = useRoute();
 const router = useRouter();
 
 const signedIn = computed(() => Boolean(session.user.value) && !session.needsWelcome.value);
+const focused = computed(() => route.meta.focused === true);
 const bare = computed(() => !session.user.value || route.meta.public === true);
 
 function isCurrent(names: readonly string[]): boolean {
@@ -27,7 +28,7 @@ async function signOut(): Promise<void> {
 
 <template>
   <a class="skip-link" href="#content">{{ messages.shell.skip }}</a>
-  <header v-if="!bare" class="nav">
+  <header v-if="!bare" class="nav" :class="{ focused }">
     <div class="nav__wrap">
       <RouterLink to="/" class="brand" :aria-label="messages.appName">
         <span class="mark" aria-hidden="true"></span>
@@ -63,10 +64,15 @@ async function signOut(): Promise<void> {
   <main id="content" :class="bare ? 'bare' : 'page'" tabindex="-1">
     <RouterView />
   </main>
-  <footer v-if="!bare" class="foot">
+  <footer v-if="!bare" class="foot" :class="{ focused }">
     <a href="/privacy">{{ messages.account.privacy }}</a>
   </footer>
-  <nav v-if="signedIn && !bare" class="tabbar" :aria-label="messages.shell.mainNav">
+  <nav
+    v-if="signedIn && !bare"
+    class="tabbar"
+    :class="{ focused }"
+    :aria-label="messages.shell.mainNav"
+  >
     <RouterLink
       v-for="item in NAV_ITEMS"
       :key="item.to"
@@ -274,6 +280,10 @@ async function signOut(): Promise<void> {
 
   .tab[aria-current='page'] .icon {
     color: var(--primary);
+  }
+
+  .focused {
+    display: none;
   }
 }
 </style>
