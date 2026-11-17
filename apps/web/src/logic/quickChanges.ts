@@ -37,13 +37,24 @@ export function ratingChange(current: QuickTracking, rating: number | null): Qui
 }
 
 /**
- * Records a finish today: completes the item when the status rules allow it, sets the finish date to
- * today and asks for a review when there is none yet.
+ * Records a viewing today. An unfinished item gets today as its finish date and completes when the status
+ * rules allow it. A finished one keeps its first finish: it completes again (the server records the
+ * rewatch) or, when already completed, gains today in its rewatches. Asks for a review when there is none.
  */
 export function watchedTodayChange(current: QuickTracking, today: string): QuickChange {
-  const patch: Record<string, unknown> = { finishedAt: today };
-  if (current.status !== 'completed' && canTransition(current.status, 'completed')) {
+  const patch: Record<string, unknown> = {};
+  const canComplete = current.status !== 'completed' && canTransition(current.status, 'completed');
+  if (current.finishedAt === null) {
+    patch.finishedAt = today;
+    if (canComplete) patch.status = 'completed';
+  } else if (canComplete) {
     patch.status = 'completed';
+  } else if (
+    current.status === 'completed' &&
+    today !== current.finishedAt &&
+    !current.rewatches.includes(today)
+  ) {
+    patch.rewatches = [...current.rewatches, today].sort();
   }
   if (!current.review && !current.pendingReview) patch.pendingReview = true;
   return { patch, undo: snapshot(current) };
