@@ -17,6 +17,9 @@ import type { MediaCatalog } from '../media/MediaCatalog.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import { ApiError } from './ApiError.js';
+import { matchesEtag } from '../site/matchesEtag.js';
+import type { ContentVersions } from '../site/ContentVersions.js';
+import { mediaListEtag } from './mediaListEtag.js';
 import { requireUser } from './requireUser.js';
 import { createBody, idParams, patchBody } from './schemas/mediaSchemas.js';
 
@@ -50,18 +53,30 @@ const dateBody = {
 /**
  * Combined list plus read, create, edit and delete for every entity collection. Normal users may add a season
  * to a series linked to TMDB, and creating one refreshes the series so the season picks up its provider data.
- * Only the owner may pass `forAll` to change a catalog field other users hold too.
+ * Only the owner may pass `forAll` to change a catalog field other users hold too. With content versions the list
+ * carries an ETag and answers 304 to a matching `If-None-Match` without reading the library.
  */
 export function registerMediaRoutes(
   routes: ApiRoutes,
   editor: MediaEditor,
   catalog: MediaCatalog,
   cache?: MetadataCache,
+  versions?: ContentVersions,
 ): void {
   routes.get<{ Querystring: MediaQuery }>(
     '/api/media',
     { schema: { querystring: listQuery } },
-    async (request) => catalog.list(request.query),
+    async (request) => {
+      if (!versions || !request.user) return catalog.list(request.query);
+      const etag = await mediaListEtag(request.user.id, await versions.global(), request.query);
+      const headers = { ETag: etag, 'Cache-Control': 'private, no-cache' };
+      if (matchesEtag(request.headers.get('if-none-match'), etag)) {
+        return new Response(null, { status: 304, headers });
+      }
+      const response = jsonResponse(await catalog.list(request.query));
+      for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+      return response;
+    },
   );
 
   for (const collection of COLLECTIONS) registerCollection(routes, editor, collection, cache);

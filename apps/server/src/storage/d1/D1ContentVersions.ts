@@ -1,4 +1,5 @@
 import type { ContentVersions } from '../../site/ContentVersions.js';
+import type { GlobalContentVersion } from '../../site/GlobalContentVersion.js';
 import type { D1Database } from './D1Database.js';
 import { execute, queryFirst } from './d1Query.js';
 
@@ -16,5 +17,13 @@ export class D1ContentVersions implements ContentVersions {
   async current(userId: number): Promise<number> {
     const row = await queryFirst(this.db, 'SELECT content_version FROM user WHERE id = ?', userId);
     return Number(row?.content_version ?? 0);
+  }
+
+  async global(): Promise<GlobalContentVersion> {
+    const row = await queryFirst(
+      this.db,
+      'SELECT SUM(content_version) AS total, COUNT(*) AS users FROM user',
+    );
+    return { total: Number(row?.total ?? 0), users: Number(row?.users ?? 0) };
   }
 }

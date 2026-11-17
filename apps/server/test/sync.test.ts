@@ -16,6 +16,7 @@ import { JellyfinClient } from '../src/sync/jellyfin/JellyfinClient.js';
 import type { JellyfinItem } from '../src/sync/jellyfin/JellyfinItem.js';
 import { JellyfinLibrarySource } from '../src/sync/jellyfin/JellyfinLibrarySource.js';
 import { PostgresPlaybackSource } from '../src/sync/jellystat/PostgresPlaybackSource.js';
+import { MemoryContentVersions } from '../src/site/MemoryContentVersions.js';
 import { createSyncQueue } from '../src/sync/createSyncQueue.js';
 import { loadSyncConfig } from '../src/sync/loadSyncConfig.js';
 import { PublishQueue } from '../src/publish/PublishQueue.js';
@@ -572,6 +573,7 @@ describe('SyncService', () => {
     };
     const notifier = { notify: async () => true };
     const published = new PublishQueue(async () => 'published', notifier, logger, scheduler);
+    const versions = new MemoryContentVersions();
     const queue = createSyncQueue({
       services: t.services,
       userId: OWNER_ID,
@@ -580,6 +582,7 @@ describe('SyncService', () => {
       scheduler,
       delayMs: 120_000,
       downstream: [ownerQueues(published), undefined],
+      versions,
     });
     const app = buildTestApp({
       appVersion: 'test',
@@ -599,8 +602,10 @@ describe('SyncService', () => {
     }
     expect(scheduler.delays).toEqual([120_000]);
     expect(await t.targets.movies.list()).toEqual([]);
+    expect(await versions.current(OWNER_ID)).toBe(0);
 
     await scheduler.fire();
+    expect(await versions.current(OWNER_ID)).toBe(1);
     expect(await t.targets.movies.list()).toHaveLength(1);
     expect((await t.targets.movies.list())[0]).toMatchObject({ pendingReview: true });
     expect(logs.some((m) => m.includes('1 movies created'))).toBe(true);

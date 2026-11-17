@@ -1,3 +1,4 @@
+import type { ContentVersions } from '../site/ContentVersions.js';
 import type { UserJobContext } from '../users/UserJobContext.js';
 import { UserQueues } from '../users/UserQueues.js';
 import { createSyncQueue } from './createSyncQueue.js';
@@ -9,6 +10,7 @@ export function createUserSyncQueues(
   jobs: UserJobContext,
   delayMs: number,
   downstream: readonly (UserQueues | undefined)[],
+  versions?: ContentVersions,
 ): UserQueues {
   return new UserQueues(
     () => services.users(),
@@ -21,6 +23,7 @@ export function createUserSyncQueues(
         scheduler: jobs.scheduler(userId),
         delayMs,
         downstream,
+        versions,
       }),
   );
 }

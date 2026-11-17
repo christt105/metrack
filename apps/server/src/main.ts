@@ -165,6 +165,8 @@ const edit = createEditServices({
   imageProviders,
 });
 
+const contentVersions = new MemoryContentVersions();
+
 const { config: syncConfig, missing: syncMissing } = loadSyncConfig(process.env);
 const jellystatPool = syncConfig ? openJellystatPool(syncConfig.jellystat, logger) : undefined;
 const syncServices =
@@ -207,10 +209,13 @@ if (mirrored === 0) console.log('The vault mirror is off: no user has a vault fo
 
 const syncQueues =
   syncServices && syncConfig
-    ? createUserSyncQueues(syncServices, jobs, syncConfig.webhookDelayMs, [
-        publishQueues,
-        mirrorQueues,
-      ])
+    ? createUserSyncQueues(
+        syncServices,
+        jobs,
+        syncConfig.webhookDelayMs,
+        [publishQueues, mirrorQueues],
+        contentVersions,
+      )
     : undefined;
 
 const backupService = createBackupService(config, db);
@@ -237,7 +242,6 @@ const cloudflareUsageScheduler = createCloudflareUsageScheduler(
   logger,
 );
 
-const contentVersions = new MemoryContentVersions();
 const connector = new ConnectorService({
   users: repositories.users,
   settings: repositories.settings,

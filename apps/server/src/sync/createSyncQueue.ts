@@ -2,6 +2,7 @@ import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
 import { DEFAULT_QUEUE_OPTIONS, PublishQueue } from '../publish/PublishQueue.js';
 import type { Scheduler } from '../publish/Scheduler.js';
+import type { ContentVersions } from '../site/ContentVersions.js';
 import type { UserQueues } from '../users/UserQueues.js';
 import { describeSyncResult } from './describeSyncResult.js';
 import type { UserSyncServices } from './UserSyncServices.js';
@@ -16,6 +17,8 @@ export interface SyncQueueDeps {
   delayMs: number;
   /** Queues that must run again after a sync wrote something. */
   downstream: readonly (UserQueues | undefined)[];
+  /** Bumped for the user after every run, so cached lists of their library are discarded. */
+  versions?: ContentVersions;
 }
 
 /**
@@ -28,7 +31,7 @@ export function createSyncQueue(deps: SyncQueueDeps): PublishQueue {
     async () => {
       const sync = await deps.services.forUser(deps.userId);
       if (!sync) return 'skipped, no Jellyfin user is set';
-      const { result } = await sync.apply();
+      const { result } = await sync.apply().finally(() => deps.versions?.bump(deps.userId));
       for (const queues of deps.downstream) await queues?.markAllDirty();
       return describeSyncResult(result);
     },
