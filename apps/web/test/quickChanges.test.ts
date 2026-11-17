@@ -56,7 +56,32 @@ describe('quick changes', () => {
       review: 'Great',
       finishedAt: '2026-01-05',
     };
-    expect(watchedTodayChange(done, '2026-02-02').patch).toEqual({ finishedAt: '2026-02-02' });
+    expect(watchedTodayChange(done, '2026-02-02').patch).toEqual({ rewatches: ['2026-02-02'] });
+  });
+
+  it('never overwrites the first finish of a completed item', () => {
+    const done = {
+      ...base,
+      status: 'completed' as const,
+      review: 'Great',
+      finishedAt: '2026-01-05',
+      rewatches: ['2026-03-01'],
+    };
+    expect(watchedTodayChange(done, '2026-02-02').patch).toEqual({
+      rewatches: ['2026-02-02', '2026-03-01'],
+    });
+    expect(watchedTodayChange(done, '2026-01-05').patch).toEqual({});
+    expect(watchedTodayChange(done, '2026-03-01').patch).toEqual({});
+    expect(watchedTodayChange({ ...done, review: null }, '2026-01-05').patch).toEqual({
+      pendingReview: true,
+    });
+  });
+
+  it('completes a rewatch in progress without sending a finish date', () => {
+    const rewatching = { ...base, finishedAt: '2026-01-05', review: 'Great' };
+    const change = watchedTodayChange(rewatching, '2026-02-02');
+    expect(change.patch).toEqual({ status: 'completed' });
+    expect(change.undo).toEqual(snapshot(rewatching));
   });
 
   it('publishes a pending item and restores it as pending', () => {

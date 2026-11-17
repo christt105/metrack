@@ -255,6 +255,59 @@ describe('editing', () => {
     });
   });
 
+  it.each([
+    ['/api/movies', { title: 'Matrix' }],
+    ['/api/games', { title: 'Hades' }],
+  ])('restarts a finished %s without a start date and undoes it exactly', async (url, body) => {
+    const created = await post(url, {
+      ...body,
+      status: 'completed',
+      finishedAt: '2024-05-01',
+      rating: 5,
+      review: 'Great',
+    });
+    expect(created.statusCode).toBe(201);
+    const id = created.json().id;
+    const original = created.json();
+
+    const restarted = await patch(`${url}/${id}`, { status: 'in_progress' });
+    expect(restarted.statusCode).toBe(200);
+    expect(restarted.json()).toMatchObject({
+      status: 'in_progress',
+      startedAt: null,
+      finishedAt: '2024-05-01',
+    });
+
+    const completed = await patch(`${url}/${id}`, { status: 'completed' });
+    expect(completed.json()).toMatchObject({
+      status: 'completed',
+      startedAt: null,
+      finishedAt: '2024-05-01',
+      rewatches: ['2026-03-05'],
+    });
+
+    const undone = await patch(`${url}/${id}`, {
+      restore: true,
+      status: 'completed',
+      startedAt: null,
+      finishedAt: '2024-05-01',
+      rating: 5,
+      review: 'Great',
+      rewatches: [],
+      pendingReview: original.pendingReview,
+    });
+    expect(undone.statusCode).toBe(200);
+    expect(undone.json()).toMatchObject({
+      status: 'completed',
+      startedAt: null,
+      finishedAt: '2024-05-01',
+      rating: 5,
+      review: 'Great',
+      rewatches: [],
+      pendingReview: original.pendingReview,
+    });
+  });
+
   it('rejects a finish date before the start date', async () => {
     const id = await createMovie({ startedAt: '2026-02-01' });
     const response = await patch(`/api/movies/${id}`, { finishedAt: '2026-01-01' });

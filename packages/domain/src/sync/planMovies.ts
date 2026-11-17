@@ -26,7 +26,8 @@ function union(a: readonly string[], b: readonly string[]): string[] {
 
 /**
  * Turns the viewing days of each movie into changes. A movie without a finish date completes on its first
- * viewing; viewings after the recorded finish date become rewatches. Notes and reviews are never touched.
+ * viewing; viewings after the recorded finish date become rewatches, and a movie that is not completed
+ * but already has a finish date keeps it and completes once a later viewing shows up. Notes and reviews are never touched.
  */
 export function planMovies(
   library: readonly LibraryMovie[],
@@ -84,7 +85,7 @@ export function planMovies(
       });
       continue;
     }
-    if (existing.status !== 'completed' || existing.finishedAt === null) {
+    if (existing.finishedAt === null) {
       plan.changes.push({
         ...base,
         action: 'complete',
@@ -99,6 +100,19 @@ export function planMovies(
     const sameViewing = nextDay(finishedAt);
     const later = days.filter((day) => day > sameViewing);
     const rewatches = union(existing.rewatches, later);
+    if (existing.status !== 'completed') {
+      if (later.length > 0) {
+        plan.changes.push({
+          ...base,
+          action: 'complete',
+          startedAt: existing.startedAt,
+          finishedAt,
+          rewatches,
+          missingRating: existing.rating === null,
+        });
+      }
+      continue;
+    }
     if (!sameList(rewatches, existing.rewatches)) {
       plan.changes.push({
         ...base,
