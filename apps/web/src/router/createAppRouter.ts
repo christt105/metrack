@@ -4,5 +4,9 @@ import { routes } from './routes';
 
 /** Builds the app router; tests pass a memory history. */
 export function createAppRouter(history: RouterHistory = createWebHistory()) {
-  return createRouter({ history, routes });
+  return createRouter({
+    history,
+    routes,
+    scrollBehavior: (_to, _from, savedPosition) => savedPosition ?? { top: 0 },
+  });
 }

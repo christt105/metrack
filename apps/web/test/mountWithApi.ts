@@ -4,6 +4,8 @@ import { createMemoryHistory } from 'vue-router';
 import type { ApiClient } from '../src/api/ApiClient';
 import { apiKey } from '../src/api/apiKey';
 import { Session } from '../src/auth/Session';
+import { LibraryCache } from '../src/library/LibraryCache';
+import { libraryCacheKey } from '../src/library/libraryCacheKey';
 import { sessionKey } from '../src/auth/sessionKey';
 import { createAppRouter } from '../src/router/createAppRouter';
 
@@ -25,6 +27,7 @@ export async function mountWithApi(
       provide: {
         [apiKey as symbol]: api,
         [sessionKey as symbol]: new Session(api as ApiClient),
+        [libraryCacheKey as symbol]: new LibraryCache(),
         ...provide,
       },
     },

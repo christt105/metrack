@@ -1,5 +1,8 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { LibraryCache } from '../src/library/LibraryCache';
+import { libraryCacheKey } from '../src/library/libraryCacheKey';
+import { filtersFromQuery, filtersToMediaQuery } from '../src/logic/filterQuery';
 import MediaListView from '../src/views/MediaListView.vue';
 import { mountWithApi } from './mountWithApi';
 
@@ -83,5 +86,32 @@ describe('MediaListView empty states', () => {
     expect(wrapper.text()).toContain('Nothing matches these filters.');
     expect(wrapper.text()).not.toContain('Welcome to metrack');
     expect(wrapper.find('input[type="search"]').exists()).toBe(true);
+  });
+
+  it('paints a cached page at once, without the loading text, and replaces it after revalidating', async () => {
+    const heat = { ...base, type: 'movie', id: 1, title: 'Heat', status: 'completed' };
+    const alien = { ...base, type: 'movie', id: 2, title: 'Alien', status: 'completed' };
+    const cache = new LibraryCache();
+    cache.set(filtersToMediaQuery(filtersFromQuery({})), { total: 1, items: [heat] } as never);
+    let resolve: (value: unknown) => void = () => {};
+    const listMedia = vi.fn().mockReturnValue(new Promise((r) => (resolve = r)));
+    const { wrapper } = await mountWithApi(
+      MediaListView,
+      { listMedia },
+      {},
+      { [libraryCacheKey as symbol]: cache },
+    );
+    expect(wrapper.findAll('.grid .card')).toHaveLength(1);
+    expect(wrapper.text()).toContain('Heat');
+    expect(wrapper.text()).not.toContain('Loading');
+    await flushPromises();
+    expect(listMedia).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).not.toContain('Loading');
+
+    resolve({ total: 1, items: [alien] });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Alien');
+    expect(wrapper.text()).not.toContain('Heat');
+    expect(cache.get(filtersToMediaQuery(filtersFromQuery({})))?.items).toEqual([alien]);
   });
 });

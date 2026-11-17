@@ -8,6 +8,7 @@ import LibraryFilters from '../components/LibraryFilters.vue';
 import LibraryWelcome from '../components/LibraryWelcome.vue';
 import MediaCard from '../components/MediaCard.vue';
 import { useApi } from '../composables/useApi';
+import { useLibraryCache } from '../composables/useLibraryCache';
 import { messages } from '../i18n/messages';
 import { buildCards } from '../logic/buildCards';
 import {
@@ -18,14 +19,16 @@ import {
 } from '../logic/filterQuery';
 
 const api = useApi();
+const cache = useLibraryCache();
 const route = useRoute();
 const router = useRouter();
 
 const filters = ref(filtersFromQuery(route.query));
-const page = ref<MediaPage | null>(null);
+const initial = cache.get(filtersToMediaQuery(filters.value)) ?? null;
+const page = ref<MediaPage | null>(initial);
 const error = ref<unknown>(null);
 const loading = ref(false);
-const libraryEmpty = ref(false);
+const libraryEmpty = ref(initial !== null && initial.total === 0 && !hasNarrowing(filters.value));
 let ticket = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -40,7 +43,9 @@ async function load(): Promise<void> {
   const mine = ++ticket;
   loading.value = true;
   try {
-    const result = await api.listMedia(filtersToMediaQuery(filters.value));
+    const query = filtersToMediaQuery(filters.value);
+    const result = await api.listMedia(query);
+    cache.set(query, result);
     if (mine !== ticket) return;
     page.value = result;
     libraryEmpty.value = result.total === 0 && !hasNarrowing(filters.value);
@@ -57,6 +62,11 @@ watch(
   () => {
     void router.replace({ query: filtersToQuery(filters.value) });
     clearTimeout(timer);
+    const cached = cache.get(filtersToMediaQuery(filters.value));
+    if (cached) {
+      page.value = cached;
+      libraryEmpty.value = cached.total === 0 && !hasNarrowing(filters.value);
+    }
     timer = setTimeout(load, 200);
   },
   { deep: true },

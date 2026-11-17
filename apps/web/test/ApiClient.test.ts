@@ -12,6 +12,30 @@ function recorder(response: Response) {
 }
 
 describe('ApiClient', () => {
+  it('reports successful writes only', async () => {
+    const statuses = [200, 200, 204, 200, 500, 404];
+    const onWritten = vi.fn();
+    const client = new ApiClient(
+      (async () => {
+        const status = statuses.shift() ?? 200;
+        return new Response(status === 204 ? null : '{"error":"x"}', { status });
+      }) as unknown as typeof fetch,
+      undefined,
+      undefined,
+      undefined,
+      onWritten,
+    );
+    await client.listMedia({});
+    expect(onWritten).not.toHaveBeenCalled();
+    await client.patch('movies', 1, { rating: 7 });
+    await client.deleteOverride(1, 2);
+    expect(onWritten).toHaveBeenCalledTimes(2);
+    await client.listMedia({});
+    await expect(client.patch('movies', 1, { rating: 7 })).rejects.toBeInstanceOf(ApiRequestError);
+    await expect(client.deleteOverride(1, 2)).rejects.toBeInstanceOf(ApiRequestError);
+    expect(onWritten).toHaveBeenCalledTimes(2);
+  });
+
   it('builds the list query string without empty values', async () => {
     const { calls, client } = recorder(new Response(JSON.stringify({ items: [], total: 0 })));
     await client.listMedia({ q: 'dan', status: 'completed', limit: 10, type: undefined });

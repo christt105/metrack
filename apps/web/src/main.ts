@@ -2,6 +2,8 @@ import { createApp } from 'vue';
 import { ApiClient } from './api/ApiClient';
 import { apiKey } from './api/apiKey';
 import App from './App.vue';
+import { LibraryCache } from './library/LibraryCache';
+import { libraryCacheKey } from './library/libraryCacheKey';
 import { Connectivity } from './connectivity/Connectivity';
 import { connectivityKey } from './connectivity/connectivityKey';
 import { Session } from './auth/Session';
@@ -12,6 +14,7 @@ import { installAuthGuard } from './router/installAuthGuard';
 import './style.css';
 
 const connectivity = new Connectivity(window, navigator.onLine);
+const libraryCache = new LibraryCache();
 const api = new ApiClient(
   undefined,
   () => {
@@ -21,6 +24,7 @@ const api = new ApiClient(
   },
   undefined,
   (reachable) => connectivity.report(reachable),
+  () => libraryCache.clear(),
 );
 const session = new Session(api);
 const router = createAppRouter();
@@ -29,6 +33,7 @@ installAuthGuard(router, session);
 createApp(App)
   .provide(apiKey, api)
   .provide(sessionKey, session)
+  .provide(libraryCacheKey, libraryCache)
   .provide(connectivityKey, connectivity)
   .use(router)
   .mount('#app');
