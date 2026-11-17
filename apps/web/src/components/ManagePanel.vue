@@ -35,6 +35,11 @@ const trackedStatus = computed(() =>
   isTracked(props.collection) && 'status' in props.detail ? props.detail.status : null,
 );
 const rewatches = computed(() => ('rewatches' in props.detail ? props.detail.rewatches : []));
+const viewingsTitle = computed(() =>
+  props.collection === 'games' || props.collection === 'books'
+    ? messages.manage.viewings
+    : messages.manage.rewatches,
+);
 const hasUnlinkedSeasons = computed(() =>
   (series.value?.seasons ?? []).some((s) => s.number >= 1 && s.tmdbSeasonNumber === null),
 );
@@ -52,7 +57,7 @@ function onArtwork(updated: AnyDetail): void {
     <h2 id="manage-title">{{ messages.manage.title }}</h2>
     <p class="muted intro">{{ messages.manage.intro }}</p>
     <div class="groups">
-      <ManageGroup v-if="trackedStatus" :title="messages.manage.rewatches">
+      <ManageGroup v-if="trackedStatus" :title="viewingsTitle">
         <RewatchList
           :id="detail.id"
           :collection="collection"

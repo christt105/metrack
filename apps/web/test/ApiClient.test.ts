@@ -52,6 +52,17 @@ describe('ApiClient', () => {
     expect(calls[0]?.init?.method).toBe('DELETE');
   });
 
+  it('posts a viewing with an optional start', async () => {
+    const first = recorder(new Response('{}'));
+    await first.client.addRewatch('games', 2, '2026-01-02');
+    const second = recorder(new Response('{}'));
+    await second.client.addRewatch('games', 2, '2026-01-02', '2026-01-01');
+    expect(first.calls[0]?.init?.body).toBe('{"finishedAt":"2026-01-02"}');
+    expect(second.calls[0]?.init?.body).toBe(
+      '{"startedAt":"2026-01-01","finishedAt":"2026-01-02"}',
+    );
+  });
+
   it('turns an error body into an ApiRequestError', async () => {
     const body = { error: 'No such transition', code: 'invalid_transition', details: { x: 1 } };
     const { client } = recorder(new Response(JSON.stringify(body), { status: 409 }));
