@@ -112,6 +112,7 @@ export class MediaEditor {
       }
     }
     for (const [field, value] of Object.entries(rest)) {
+      if (field === 'rewatches') this.validate({ rewatches: value });
       working[field] = field === 'rewatches' ? readViewings(value as unknown[]) : value;
     }
     if ('finishedAt' in rest && !('startedAt' in rest) && current.startedAt === null) {
@@ -290,6 +291,10 @@ export class MediaEditor {
               `rewatches has an invalid date: ${String(date)}`,
             );
           }
+        }
+        const [start, finish] = dates;
+        if (typeof start === 'string' && typeof finish === 'string' && finish < start) {
+          throw ApiError.badRequest('invalid_dates', 'A rewatch cannot finish before it starts');
         }
       }
     }

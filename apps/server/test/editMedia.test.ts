@@ -489,6 +489,15 @@ describe('rewatches', () => {
     expect(restored.json().rewatches).toEqual(viewings);
   });
 
+  it('rejects a rewatch that finishes before it starts', async () => {
+    const id = await createMovie({ status: 'completed', finishedAt: '2026-01-01' });
+    const response = await patch(`/api/movies/${id}`, {
+      rewatches: [{ startedAt: '2026-03-05', finishedAt: '2026-03-01' }],
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().code).toBe('invalid_dates');
+  });
+
   it('has no rewatch routes for series', async () => {
     const series = (await post('/api/series', { title: 'x' })).json();
     expect(
