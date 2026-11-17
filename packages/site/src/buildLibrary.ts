@@ -1,4 +1,13 @@
-import type { Artwork, Book, Movie, Season, Series, Tracking, Videogame } from '@metrack/domain';
+import {
+  finishDates,
+  type Artwork,
+  Book,
+  Movie,
+  Season,
+  Series,
+  Tracking,
+  Videogame,
+} from '@metrack/domain';
 import type { Library } from './Library.js';
 import type { PublicEntry } from './PublicEntry.js';
 import type { SiteInput } from './SiteInput.js';
@@ -32,7 +41,7 @@ function tracked(tracking: Tracking, artwork: Artwork): Partial<PublicEntry> {
     finishedAt: tracking.finishedAt,
     rating: tracking.rating,
     review: tracking.review,
-    rewatches: tracking.rewatches,
+    rewatches: finishDates(tracking.rewatches),
     cover: artwork.cover,
     banner: artwork.banner,
   };

@@ -18,7 +18,7 @@ const library = buildLibrary(
         title: 'Dune <2>',
         status: 'completed',
         finishedAt: '2026-03-05',
-        rewatches: ['2026-06-01'],
+        rewatches: [{ startedAt: null, finishedAt: '2026-06-01' }],
         rating: 7,
         review: 'Una **obra**.\n\n![foto](/api/images/' + HASH_A + ')',
         cover: 'https://image.tmdb.org/t/p/original/dune.jpg',
@@ -195,7 +195,10 @@ describe('renderFeed', () => {
             title: 'Dune',
             status: 'completed',
             finishedAt: '2026-03-05',
-            rewatches: ['2026-06-01', '2026-09-10'],
+            rewatches: [
+              { startedAt: null, finishedAt: '2026-06-01' },
+              { startedAt: null, finishedAt: '2026-09-10' },
+            ],
           }),
           movie({ id: 2, title: 'Alien', status: 'completed', finishedAt: '2026-07-01' }),
         ],
@@ -225,7 +228,7 @@ describe('renderFeed', () => {
             finishedAt: '2020-01-01',
             rewatches: Array.from({ length: FEED_LIMIT + 20 }, (_, i) => {
               const day = new Date(Date.UTC(2021, 0, 1 + i));
-              return day.toISOString().slice(0, 10);
+              return { startedAt: null, finishedAt: day.toISOString().slice(0, 10) };
             }),
           }),
         ],

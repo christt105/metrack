@@ -1,4 +1,4 @@
-import type { Tracking } from '@metrack/domain';
+import { finishDates, type Tracking } from '@metrack/domain';
 import { DateValue } from './renderFrontmatter.js';
 import { statusKey } from './statusKey.js';
 
@@ -8,7 +8,7 @@ export function trackingFields(tracking: Tracking): Record<string, unknown> {
     status: statusKey(tracking.status),
     date: tracking.finishedAt === null ? null : new DateValue(tracking.finishedAt),
     rating: tracking.rating === null ? null : String(tracking.rating),
-    rewatches: tracking.rewatches.map((date) => new DateValue(date)),
+    rewatches: finishDates(tracking.rewatches).map((date) => new DateValue(date)),
     pending_review: tracking.pendingReview || null,
   };
 }
