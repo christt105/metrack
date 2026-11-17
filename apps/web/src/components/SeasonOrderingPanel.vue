@@ -7,6 +7,7 @@ import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import { saveForAll } from '../logic/saveForAll';
 import ErrorNotice from './ErrorNotice.vue';
+import ManageDisclosure from './ManageDisclosure.vue';
 
 const props = defineProps<{ seriesId: number; hasUnlinkedSeasons: boolean }>();
 const emit = defineEmits<{ changed: [] }>();
@@ -40,8 +41,8 @@ async function load(): Promise<void> {
   }
 }
 
-function onToggle(event: Event): void {
-  opened.value = (event.target as HTMLDetailsElement).open;
+function onToggle(open: boolean): void {
+  opened.value = open;
   if (opened.value) void load();
 }
 
@@ -85,10 +86,7 @@ if (props.hasUnlinkedSeasons) void load();
 </script>
 
 <template>
-  <details class="panel" :open="opened" @toggle="onToggle">
-    <summary>
-      <h2>{{ messages.ordering.title }}</h2>
-    </summary>
+  <ManageDisclosure :title="messages.ordering.title" :open="opened" @toggle="onToggle">
     <p class="muted">{{ messages.ordering.description }}</p>
     <p v-if="loading" class="muted">{{ messages.ordering.loading }}</p>
     <template v-if="options">
@@ -112,18 +110,10 @@ if (props.hasUnlinkedSeasons) void load();
       </form>
     </template>
     <ErrorNotice :error="error" />
-  </details>
+  </ManageDisclosure>
 </template>
 
 <style scoped>
-summary {
-  cursor: pointer;
-}
-
-summary h2 {
-  display: inline;
-}
-
 .suggestion {
   padding: 8px 12px;
   border-radius: var(--radius);
