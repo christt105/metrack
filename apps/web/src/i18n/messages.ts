@@ -56,6 +56,7 @@ export const messages = {
     add: 'Add',
     open: 'Open',
     remove: 'Remove',
+    edit: 'Edit',
     loading: 'Loading...',
     retry: 'Retry',
     none: 'None',
@@ -197,6 +198,7 @@ export const messages = {
     title: 'Manage',
     intro: 'Changes in this section apply right away. Nothing here waits for Save.',
     rewatches: 'Rewatches',
+    viewings: 'Viewings',
     images: 'Images',
     imagesHint: 'Choose or upload the cover and banner',
     addSeason: 'Add season',
@@ -267,8 +269,13 @@ export const messages = {
   },
   rewatches: {
     empty: 'No rewatches.',
-    add: 'Add rewatch',
+    add: 'Add viewing',
+    start: 'Start',
+    end: 'End',
     onlyCompleted: 'Only completed items can be rewatched.',
+    added: 'Viewing added',
+    changed: 'Viewing changed',
+    removed: 'Viewing removed',
   },
   overrides: {
     description:

@@ -81,10 +81,10 @@ describe('MediaDetailView', () => {
     expect(groups(seasonView.wrapper)).toEqual(['Rewatches', 'Images', 'Danger zone']);
     const game = await mountDetail('games', { ...movie, id: 8 });
     await flushPromises();
-    expect(groups(game.wrapper)).toEqual(['Rewatches', 'Images', 'Danger zone']);
+    expect(groups(game.wrapper)).toEqual(['Viewings', 'Images', 'Danger zone']);
     const book = await mountDetail('books', { ...movie, id: 9 });
     await flushPromises();
-    expect(groups(book.wrapper)).toEqual(['Rewatches', 'Images', 'Danger zone']);
+    expect(groups(book.wrapper)).toEqual(['Viewings', 'Images', 'Danger zone']);
   });
 
   it('adds a season from the manage section and reloads', async () => {

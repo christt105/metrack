@@ -1,10 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import type { Collection, Viewing } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
+import { todayIso } from '../logic/todayIso';
+import {
+  formIsValid,
+  newestFirst,
+  viewingFromForm,
+  withReplaced,
+  withViewing,
+  withoutViewing,
+} from '../logic/viewingEdits';
 import ErrorNotice from './ErrorNotice.vue';
+import UndoToast from './UndoToast.vue';
+import ViewingRow from './ViewingRow.vue';
+
+const TOAST_MS = 6000;
 
 const props = defineProps<{
   collection: Collection;
@@ -15,15 +28,35 @@ const props = defineProps<{
 const emit = defineEmits<{ updated: [detail: AnyDetail] }>();
 
 const api = useApi();
-const date = ref(new Date().toISOString().slice(0, 10));
+const start = ref('');
+const end = ref(todayIso());
 const busy = ref(false);
 const error = ref<unknown>(null);
+const toast = ref<{ message: string; undo: Viewing[] | null } | null>(null);
+let timer: ReturnType<typeof setTimeout> | undefined;
 
-async function run(action: () => Promise<unknown>): Promise<void> {
+const viewings = computed(() => newestFirst(props.rewatches));
+const canAdd = computed(() => formIsValid(start.value, end.value, true));
+
+function say(message: string, undo: Viewing[] | null): void {
+  clearTimeout(timer);
+  toast.value = { message, undo };
+  timer = setTimeout(dismiss, TOAST_MS);
+}
+
+function dismiss(): void {
+  clearTimeout(timer);
+  toast.value = null;
+}
+
+async function replace(next: Viewing[], message: string, undo: Viewing[] | null): Promise<void> {
+  if (busy.value) return;
   busy.value = true;
   error.value = null;
   try {
-    emit('updated', (await action()) as AnyDetail);
+    const patch = undo === null ? { restore: true, rewatches: next } : { rewatches: next };
+    emit('updated', (await api.patch(props.collection, props.id, patch as never)) as AnyDetail);
+    say(message, undo);
   } catch (cause) {
     error.value = cause;
   } finally {
@@ -31,44 +64,63 @@ async function run(action: () => Promise<unknown>): Promise<void> {
   }
 }
 
-function describe(viewing: Viewing): string {
-  if (viewing.finishedAt === null) return `${viewing.startedAt ?? ''} ...`;
-  return viewing.startedAt ? `${viewing.startedAt} - ${viewing.finishedAt}` : viewing.finishedAt;
+function change(next: Viewing[], message: string): Promise<void> {
+  return replace(next, message, [...props.rewatches]);
 }
 
-const add = () => run(() => api.addRewatch(props.collection, props.id, date.value));
-const remove = (value: string) => run(() => api.removeRewatch(props.collection, props.id, value));
+function undo(): Promise<void> {
+  const previous = toast.value?.undo;
+  dismiss();
+  return previous ? replace(previous, messages.quick.undone, null) : Promise.resolve();
+}
+
+async function add(): Promise<void> {
+  if (!canAdd.value) return;
+  await change(
+    withViewing(props.rewatches, viewingFromForm(start.value, end.value)),
+    messages.rewatches.added,
+  );
+  start.value = '';
+}
+
+onBeforeUnmount(() => clearTimeout(timer));
 </script>
 
 <template>
   <div>
-    <p v-if="rewatches.length === 0" class="muted">{{ messages.rewatches.empty }}</p>
+    <p v-if="viewings.length === 0" class="muted">{{ messages.rewatches.empty }}</p>
     <ul v-else class="dates">
-      <li v-for="viewing in rewatches" :key="`${viewing.startedAt}|${viewing.finishedAt}`">
-        <span>{{ describe(viewing) }}</span>
-        <button
-          v-if="viewing.finishedAt"
-          type="button"
-          class="small danger"
-          :disabled="busy"
-          @click="remove(viewing.finishedAt)"
-        >
-          {{ messages.common.remove }}
-        </button>
-      </li>
-    </ul>
-    <form v-if="completed" class="row" @submit.prevent="add">
-      <input
-        v-model="date"
-        type="date"
-        required
-        class="date"
-        :aria-label="messages.rewatches.add"
+      <ViewingRow
+        v-for="(viewing, index) in viewings"
+        :key="`${viewing.startedAt}|${viewing.finishedAt}`"
+        :viewing="viewing"
+        :busy="busy"
+        @change="change(withReplaced(rewatches, index, $event), messages.rewatches.changed)"
+        @remove="change(withoutViewing(rewatches, index), messages.rewatches.removed)"
       />
-      <button type="submit" :disabled="busy">{{ messages.rewatches.add }}</button>
+    </ul>
+    <form v-if="completed" class="add" @submit.prevent="add">
+      <label>
+        <span>{{ messages.rewatches.start }}</span>
+        <input v-model="start" type="date" />
+      </label>
+      <label>
+        <span>{{ messages.rewatches.end }}</span>
+        <input v-model="end" type="date" required />
+      </label>
+      <button type="submit" :disabled="busy || !canAdd">{{ messages.rewatches.add }}</button>
     </form>
     <p v-else class="muted">{{ messages.rewatches.onlyCompleted }}</p>
     <ErrorNotice :error="error" />
+    <Teleport to="body">
+      <UndoToast
+        v-if="toast"
+        :message="toast.message"
+        :undoable="toast.undo !== null"
+        @undo="undo"
+        @dismiss="dismiss"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -79,17 +131,20 @@ const remove = (value: string) => run(() => api.removeRewatch(props.collection, 
   margin: 0 0 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
-.dates li {
+.add {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: 8px;
 }
 
-.date {
-  width: auto;
+.add label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 140px;
 }
 </style>

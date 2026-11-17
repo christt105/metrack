@@ -208,8 +208,17 @@ export class ApiClient {
     return this.request('DELETE', `/${collection}/${id}/edited/${encodeURIComponent(field)}`);
   }
 
-  addRewatch<C extends Collection>(collection: C, id: number, date: string): Promise<Detail<C>> {
-    return this.request('POST', `/${collection}/${id}/rewatches`, { date });
+  addRewatch<C extends Collection>(
+    collection: C,
+    id: number,
+    finishedAt: string,
+    startedAt: string | null = null,
+  ): Promise<Detail<C>> {
+    return this.request(
+      'POST',
+      `/${collection}/${id}/rewatches`,
+      startedAt === null ? { finishedAt } : { startedAt, finishedAt },
+    );
   }
 
   removeRewatch<C extends Collection>(collection: C, id: number, date: string): Promise<Detail<C>> {
