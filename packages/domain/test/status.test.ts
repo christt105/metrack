@@ -30,10 +30,26 @@ describe('transitionStatus', () => {
     });
   });
 
-  it('allows completing straight from planned using one date for both', () => {
+  it('completes straight from planned without filling the start', () => {
     expect(transitionStatus(planned, 'completed', '2026-03-15')).toMatchObject({
-      startedAt: '2026-03-15',
+      startedAt: null,
       finishedAt: '2026-03-15',
+    });
+  });
+
+  it('restarting a finished item without a start keeps start null and the finish', () => {
+    const done = {
+      ...planned,
+      status: 'completed' as const,
+      startedAt: null,
+      finishedAt: '2024-05-01',
+    };
+    const again = transitionStatus(done, 'in_progress', '2026-05-01');
+    expect(again).toMatchObject({ startedAt: null, finishedAt: '2024-05-01', rewatches: [] });
+    expect(transitionStatus(again, 'completed', '2026-05-09')).toMatchObject({
+      startedAt: null,
+      finishedAt: '2024-05-01',
+      rewatches: ['2026-05-09'],
     });
   });
 
@@ -41,7 +57,7 @@ describe('transitionStatus', () => {
     const done = transitionStatus(planned, 'completed', '2026-03-15');
     expect(transitionStatus(done, 'in_progress', '2026-05-01')).toMatchObject({
       status: 'in_progress',
-      startedAt: '2026-03-15',
+      startedAt: null,
       finishedAt: '2026-03-15',
       rewatches: [],
     });
