@@ -36,6 +36,7 @@ const toast = ref<{ message: string; undo: Viewing[] | null } | null>(null);
 let timer: ReturnType<typeof setTimeout> | undefined;
 
 const viewings = computed(() => newestFirst(props.rewatches));
+const rewatching = computed(() => props.rewatches.some((v) => v.finishedAt === null));
 const canAdd = computed(() => formIsValid(start.value, end.value, true));
 
 function say(message: string, undo: Viewing[] | null): void {
@@ -110,7 +111,7 @@ onBeforeUnmount(() => clearTimeout(timer));
       </label>
       <button type="submit" :disabled="busy || !canAdd">{{ messages.rewatches.add }}</button>
     </form>
-    <p v-else class="muted">{{ messages.rewatches.onlyCompleted }}</p>
+    <p v-else-if="!rewatching" class="muted">{{ messages.rewatches.onlyCompleted }}</p>
     <ErrorNotice :error="error" />
     <Teleport to="body">
       <UndoToast

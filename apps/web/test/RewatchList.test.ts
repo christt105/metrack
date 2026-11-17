@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import RewatchList from '../src/components/RewatchList.vue';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { mountWithApi } from './mountWithApi';
+import { messages } from '../src/i18n/messages';
 
 enableAutoUnmount(afterEach);
 
@@ -12,11 +13,15 @@ const rewatches = [
   { startedAt: '2026-05-01', finishedAt: null },
 ];
 
-async function mountList(patch = vi.fn().mockResolvedValue({}), completed = true) {
+async function mountList(
+  patch = vi.fn().mockResolvedValue({}),
+  completed = true,
+  list = rewatches,
+) {
   const mounted = await mountWithApi(
     RewatchList,
     { patch: patch as never },
-    { collection: 'games', id: 20, rewatches, completed },
+    { collection: 'games', id: 20, rewatches: list, completed },
   );
   return { ...mounted, patch };
 }
@@ -85,5 +90,13 @@ describe('RewatchList', () => {
   it('hides the add form for items that are not completed', async () => {
     const { wrapper } = await mountList(undefined, false);
     expect(wrapper.find('form.add').exists()).toBe(false);
+  });
+
+  it('explains that only completed items take viewings unless one is open', async () => {
+    const open = await mountList(undefined, false);
+    expect(open.wrapper.text()).not.toContain(messages.rewatches.onlyCompleted);
+    open.wrapper.unmount();
+    const closed = await mountList(undefined, false, rewatches.slice(0, 2));
+    expect(closed.wrapper.text()).toContain(messages.rewatches.onlyCompleted);
   });
 });
