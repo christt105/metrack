@@ -191,7 +191,13 @@ describe('movies', () => {
     expect(plan.movies[0]).toMatchObject({ action: 'rewatch', rewatches: ['2026-05-10'] });
     const done = {
       ...EMPTY,
-      movies: [movie({ status: 'completed', finishedAt: '2026-02-01', rewatches: ['2026-05-10'] })],
+      movies: [
+        movie({
+          status: 'completed',
+          finishedAt: '2026-02-01',
+          rewatches: [{ startedAt: null, finishedAt: '2026-05-10' }],
+        }),
+      ],
     };
     expect(run(done, [play('m1', '2026-05-10', 6000)]).movies).toEqual([]);
   });
