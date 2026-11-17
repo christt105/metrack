@@ -17,4 +17,11 @@ export type AppIconName =
   | 'refresh'
   | 'sortAsc'
   | 'sortDesc'
-  | 'trash';
+  | 'trash'
+  | 'crown'
+  | 'heart'
+  | 'thumbsUp'
+  | 'smile'
+  | 'thumbsDown'
+  | 'dizzy'
+  | 'skull';

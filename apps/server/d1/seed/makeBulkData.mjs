@@ -130,7 +130,7 @@ function tracking() {
     status,
     started,
     finished,
-    rating: rated ? int(2, 20) / 2 : null,
+    rating: rated ? int(1, 7) : null,
     review: rated && chance(0.6) ? paragraph() : null,
     rewatches,
     tags: tags(),

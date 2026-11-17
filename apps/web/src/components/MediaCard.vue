@@ -4,8 +4,8 @@ import { sizedImageUrl } from '@metrack/domain';
 import { messages } from '../i18n/messages';
 import type { LibraryCard } from '../logic/buildCards';
 import { detailPath } from '../logic/mediaRoutes';
-import AppIcon from './AppIcon.vue';
 import PendingBadge from './PendingBadge.vue';
+import RatingBadge from './RatingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 
 const props = defineProps<{ card: LibraryCard; eager?: boolean }>();
@@ -34,9 +34,7 @@ const meta = computed(() => {
       />
       <span v-else class="placeholder" aria-hidden="true">{{ card.title.slice(0, 1) }}</span>
       <span v-if="card.rating !== null" class="rating">
-        <AppIcon name="star" :size="12" />
-        <span class="visually-hidden">{{ messages.list.rating }}</span>
-        {{ card.rating }}
+        <RatingBadge :rating="card.rating" compact :size="14" />
       </span>
     </div>
     <div class="body">
@@ -101,10 +99,6 @@ img {
   color: var(--on-surface);
   font-size: var(--t-label);
   font-weight: 600;
-}
-
-.rating .icon {
-  color: var(--warning);
 }
 
 .body {

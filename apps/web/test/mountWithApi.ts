@@ -18,6 +18,7 @@ export async function mountWithApi(
   await router.push('/');
   await router.isReady();
   const wrapper = mount(component, {
+    attachTo: document.body,
     props,
     global: {
       plugins: [router],

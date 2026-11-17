@@ -23,7 +23,7 @@ const movie = {
   status: 'completed',
   startedAt: '2026-01-01',
   finishedAt: '2026-01-02',
-  rating: 8,
+  rating: 5,
   review: null,
   rewatches: [],
   pendingReview: false,
@@ -82,32 +82,32 @@ describe('EntityForm', () => {
   });
 
   it('sends only the changed fields', async () => {
-    const patch = vi.fn().mockResolvedValue({ ...movie, rating: 9 });
+    const patch = vi.fn().mockResolvedValue({ ...movie, rating: 7 });
     const { wrapper } = await mountWithApi(
       EntityForm,
       { patch },
       { collection: 'movies', detail: movie },
     );
-    await wrapper.find('#field-rating').setValue('9');
+    await wrapper.find('#field-rating [data-rating="7"]').trigger('click');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
-    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 }, {});
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 7 }, {});
     expect(wrapper.emitted('saved')).toHaveLength(1);
   });
 
   it('confirms a pending viewing together with the edits', async () => {
     const pending = { ...movie, pendingReview: true } as AnyDetail;
-    const patch = vi.fn().mockResolvedValue({ ...movie, rating: 9 });
+    const patch = vi.fn().mockResolvedValue({ ...movie, rating: 7 });
     const { wrapper } = await mountWithApi(
       EntityForm,
       { patch },
       { collection: 'movies', detail: pending },
     );
     expect(wrapper.find('.pending-notice').exists()).toBe(true);
-    await wrapper.find('#field-rating').setValue('9');
+    await wrapper.find('#field-rating [data-rating="7"]').trigger('click');
     await wrapper.find('.actions button[type="button"]').trigger('click');
     await flushPromises();
-    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9, pendingReview: false }, {});
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 7, pendingReview: false }, {});
   });
 
   it('keeps a pending viewing pending on a plain save', async () => {
@@ -118,10 +118,10 @@ describe('EntityForm', () => {
       { patch },
       { collection: 'movies', detail: pending },
     );
-    await wrapper.find('#field-rating').setValue('9');
+    await wrapper.find('#field-rating [data-rating="7"]').trigger('click');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
-    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 9 }, {});
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: 7 }, {});
   });
 
   it('offers no confirmation for a confirmed viewing', async () => {
@@ -141,25 +141,36 @@ describe('EntityForm', () => {
       { patch },
       { collection: 'movies', detail: movie },
     );
-    await wrapper.find('#field-rating').setValue('3');
+    await wrapper.find('#field-rating [data-rating="3"]').trigger('click');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
     expect(wrapper.find('[role="alert"]').text()).toContain('Status change not allowed');
-    expect((wrapper.find('#field-rating').element as HTMLInputElement).value).toBe('3');
+    expect(wrapper.find('#field-rating [data-rating="3"]').attributes('aria-checked')).toBe('true');
   });
 
-  it('flags an invalid rating without calling the API', async () => {
-    const patch = vi.fn();
+  it('clears the rating with the no rating option', async () => {
+    const patch = vi.fn().mockResolvedValue({ ...movie, rating: null });
     const { wrapper } = await mountWithApi(
       EntityForm,
       { patch },
       { collection: 'movies', detail: movie },
     );
-    await wrapper.find('#field-rating').setValue('12');
+    await wrapper.find('#field-rating [data-rating="none"]').trigger('click');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
-    expect(patch).not.toHaveBeenCalled();
-    expect(wrapper.find('.problem').exists()).toBe(true);
+    expect(patch).toHaveBeenCalledWith('movies', 4, { rating: null }, {});
+  });
+
+  it('leaves out the fields the quick actions own', async () => {
+    const { wrapper } = await mountWithApi(
+      EntityForm,
+      {},
+      { collection: 'movies', detail: movie, omit: ['status', 'rating', 'review'] },
+    );
+    expect(wrapper.find('#field-status').exists()).toBe(false);
+    expect(wrapper.find('#field-rating').exists()).toBe(false);
+    expect(wrapper.find('#field-review').exists()).toBe(false);
+    expect(wrapper.find('#field-startedAt').exists()).toBe(true);
   });
 
   it('links a note that Obsidian or a browser can open', async () => {

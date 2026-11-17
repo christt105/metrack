@@ -16,7 +16,7 @@ const movie = {
   follow: false,
   startedAt: null,
   finishedAt: null,
-  rating: 8,
+  rating: 5,
   review: null,
   note: null,
   slug: null,
@@ -37,12 +37,12 @@ describe('buildPatch', () => {
 
   it('sends only the changed fields with typed values', () => {
     const draft = toDraft(schemas, movie);
-    draft.rating = '9.5';
+    draft.rating = '7';
     draft.genres = 'Crime, Thriller';
     draft.tmdbId = '';
     draft.director = ' Michael Mann ';
     expect(buildPatch(schemas, movie, draft)).toEqual({
-      rating: 9.5,
+      rating: 7,
       genres: ['Crime', 'Thriller'],
       tmdbId: null,
       director: 'Michael Mann',
@@ -57,9 +57,11 @@ describe('buildPatch', () => {
 
   it('rejects an out of range rating and a non integer id', () => {
     const draft = toDraft(schemas, movie);
-    draft.rating = '11';
-    expect(() => buildPatch(schemas, movie, draft)).toThrow(DraftError);
-    draft.rating = '8';
+    for (const bad of ['0', '8', '5.5', '11']) {
+      draft.rating = bad;
+      expect(() => buildPatch(schemas, movie, draft)).toThrow(DraftError);
+    }
+    draft.rating = '6';
     draft.tmdbId = '1.5';
     expect(() => buildPatch(schemas, movie, draft)).toThrow(DraftError);
   });

@@ -7,6 +7,7 @@ import type {
   MediaSortField,
   MediaStatus,
   MediaType,
+  RatingIcon,
   UserSettings,
 } from '@metrack/domain';
 
@@ -102,6 +103,10 @@ export const messages = {
     notice:
       'This viewing was recorded from Jellyfin and stays out of the feeds until you confirm it.',
     confirm: 'Save and confirm',
+    publish: 'Publish without review',
+    saveAndPublish: 'Save and publish',
+    draftHint: 'Pending items stay out of the public page and the feed until you publish them.',
+    published: 'Published without a review',
   },
   detail: {
     sectionIds: 'Identifiers',
@@ -139,15 +144,49 @@ export const messages = {
   seasons: {
     watchedOf: (watched: number, total: number) => `${watched} of ${total} episodes`,
   },
+  ratings: {
+    crown: 'Masterpiece',
+    heart: 'Amazing',
+    thumbsUp: 'Good',
+    smile: 'Decent',
+    thumbsDown: 'Bad',
+    dizzy: 'Terrible',
+    skull: 'Abysmal',
+  } satisfies Record<RatingIcon, string>,
+  ratingPicker: {
+    legend: 'Rating',
+    none: 'No rating',
+    unrated: 'Rate',
+    change: 'Change rating',
+    other: 'Rated',
+    rated: (label: string) => `Rated ${label}`,
+    cleared: 'Rating removed',
+    invalid: 'a level from the list',
+  },
+  quick: {
+    label: 'Quick actions',
+    status: 'Status',
+    watchedToday: 'Watched today',
+    undo: 'Undo',
+    dismiss: 'Dismiss',
+    statusChanged: (label: string) => `Status set to ${label}`,
+    watchedDone: 'Marked as watched today',
+    undone: 'Change undone',
+    reviewSaved: 'Review saved',
+    failed: 'Could not save the change',
+  },
   hero: {
     episodes: (n: number) => (n === 1 ? '1 episode' : `${n} episodes`),
-    rating: (n: number) => `${n}/10`,
     yourReview: 'Your review',
     genres: 'Genres',
     people: 'By',
     platforms: 'Platforms',
     cast: 'Cast',
     edit: 'Edit details',
+    editReview: 'Edit review',
+    addReview: 'Add review',
+    reviewLabel: 'Review',
+    cancel: 'Cancel',
     advanced: 'Images, ordering and more',
   },
   ordering: {
@@ -620,7 +659,7 @@ export const messages = {
     status: 'Status',
     startedAt: 'Started',
     finishedAt: 'Finished',
-    rating: 'Rating (0 to 10)',
+    rating: 'Rating',
     review: 'Review',
   },
 } as const;

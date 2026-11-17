@@ -84,6 +84,9 @@ describe('one user cannot reach what another stored', () => {
     expect((await friend.get(`/api/movies/${id}`)).statusCode).toBe(404);
     expect((await friend.patch(`/api/movies/${id}`, { rating: 1 })).statusCode).toBe(404);
     expect(
+      (await friend.patch(`/api/movies/${id}`, { restore: true, status: 'planned' })).statusCode,
+    ).toBe(404);
+    expect(
       (await friend.post(`/api/movies/${id}/rewatches`, { date: '2026-01-01' })).statusCode,
     ).toBe(404);
     expect((await friend.delete(`/api/movies/${id}/rewatches/2026-01-01`)).statusCode).toBe(404);

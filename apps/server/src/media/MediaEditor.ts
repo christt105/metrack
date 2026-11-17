@@ -16,6 +16,15 @@ import { isIsoDate } from './isIsoDate.js';
 import type { MediaEntity } from './MediaEntity.js';
 import type { MediaKind } from './MediaKind.js';
 
+const TRACKING_FIELDS = [
+  'status',
+  'startedAt',
+  'finishedAt',
+  'rating',
+  'review',
+  'rewatches',
+  'pendingReview',
+];
 const DATE_FIELDS = ['startedAt', 'finishedAt', 'releaseDate', 'firstAirDate'];
 
 function same(a: unknown, b: unknown): boolean {
@@ -68,10 +77,21 @@ export class MediaEditor {
   ): Promise<MediaDetail<MediaEntity>> {
     const kind = this.kinds[collection];
     const current = fieldsOf(await this.require(collection, id));
-    const { status, ...rest } = patch;
+    const { status, restore, ...rest } = patch;
     let working: Record<string, unknown> = { ...current };
 
-    if (typeof status === 'string' && status !== current.status) {
+    if (restore === true) {
+      const foreign = Object.keys(patch).filter(
+        (field) => field !== 'restore' && !TRACKING_FIELDS.includes(field),
+      );
+      if (foreign.length > 0) {
+        throw ApiError.badRequest(
+          'invalid_restore',
+          `restore only sets tracking fields, not ${foreign.join(', ')}`,
+        );
+      }
+      if (typeof status === 'string') working.status = status;
+    } else if (typeof status === 'string' && status !== current.status) {
       try {
         working = {
           ...working,

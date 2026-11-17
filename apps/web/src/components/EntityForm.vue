@@ -16,7 +16,10 @@ import ErrorNotice from './ErrorNotice.vue';
 import FieldInput from './FieldInput.vue';
 import FieldRow from './FieldRow.vue';
 
-const props = defineProps<{ collection: Collection; detail: AnyDetail }>();
+const props = withDefaults(
+  defineProps<{ collection: Collection; detail: AnyDetail; omit?: string[] }>(),
+  { omit: () => [] },
+);
 const emit = defineEmits<{ saved: [detail: AnyDetail]; changed: [] }>();
 
 const api = useApi();
@@ -53,7 +56,9 @@ const sectionTitles: Record<FieldSection, string> = {
 };
 
 function fieldsOf(section: FieldSection): FieldSchema[] {
-  return schemas.value.filter((schema) => schema.section === section);
+  return schemas.value.filter(
+    (schema) => schema.section === section && !props.omit.includes(schema.key),
+  );
 }
 
 function isEdited(key: string): boolean {
@@ -119,13 +124,16 @@ async function save(confirm = false): Promise<void> {
     <template v-for="section in sections" :key="section">
       <fieldset
         v-if="primarySections.includes(section)"
-        v-show="fieldsOf(section).length > 0 || (section === 'tracking' && tracked)"
+        v-show="
+          fieldsOf(section).length > 0 ||
+          (section === 'tracking' && tracked && !omit.includes('status'))
+        "
         class="panel"
       >
         <legend>{{ sectionTitles[section] }}</legend>
         <div class="grid">
           <FieldRow
-            v-if="section === 'tracking' && tracked"
+            v-if="section === 'tracking' && tracked && !omit.includes('status')"
             :id="fieldId('status')"
             :label="fieldLabel('status')"
           >
@@ -169,7 +177,7 @@ async function save(confirm = false): Promise<void> {
         <summary>{{ sectionTitles[section] }}</summary>
         <div class="grid">
           <FieldRow
-            v-if="section === 'tracking' && tracked"
+            v-if="section === 'tracking' && tracked && !omit.includes('status')"
             :id="fieldId('status')"
             :label="fieldLabel('status')"
           >
