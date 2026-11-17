@@ -26,6 +26,8 @@ export { normalizeEpisodeWatches } from './normalizeEpisodeWatches.js';
 export { countWatchedEpisodes } from './countWatchedEpisodes.js';
 export { isEpisodeCatalogStale } from './isEpisodeCatalogStale.js';
 export { isSeasonAiring } from './isSeasonAiring.js';
+export type { EpisodeCatalogMatch } from './EpisodeCatalogMatch.js';
+export { matchEpisodeCatalog } from './matchEpisodeCatalog.js';
 export { numberedEpisodes } from './numberedEpisodes.js';
 export { remapEpisodeWatches } from './remapEpisodeWatches.js';
 export type { SeasonEpisodeItem } from './api/SeasonEpisodeItem.js';

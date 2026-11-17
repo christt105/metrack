@@ -178,8 +178,8 @@ describe('GET /api/seasons/:id/episodes', () => {
     ]);
   });
 
-  it('fetches a missing catalog once, stores it and takes the season episode count from it', async () => {
-    const season = addSeason({ episodeCount: 5 });
+  it('fetches a missing catalog once, stores it and fills a missing season episode count', async () => {
+    const season = addSeason({ episodeCount: null });
     handlers.set(
       `/3/tv/${SERIES_TMDB_ID}/season/1`,
       seasonHandler([tmdbEpisode(11, 1, 'Pilot'), tmdbEpisode(12, 2, 'Second')]),
@@ -207,8 +207,8 @@ describe('GET /api/seasons/:id/episodes', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('bumps the content version only when the stored episode count changed', async () => {
-    const season = addSeason({ episodeCount: 5 });
+  it('bumps the content version only when it fills a missing episode count', async () => {
+    const season = addSeason({ episodeCount: null });
     handlers.set(
       `/3/tv/${SERIES_TMDB_ID}/season/1`,
       seasonHandler([tmdbEpisode(11, 1, 'A'), tmdbEpisode(12, 2, 'B')]),
@@ -230,14 +230,14 @@ describe('GET /api/seasons/:id/episodes', () => {
   });
 
   it('refreshes a catalog that went stale: after a day when airing, after 30 days otherwise', async () => {
-    const airing = addSeason();
+    const airing = addSeason({ episodeCount: 1 });
     api.db
       .prepare(
         'UPDATE series SET next_episode_season = 1, next_episode_number = 3, next_episode_air_date = ? WHERE id = ?',
       )
       .run('2099-01-01', airing.seriesId);
     storeCatalog(airing.id, '2026-03-03T00:00:00.000Z', [compact(1, 11)]);
-    const idle = addSeason({ tmdbId: 777 });
+    const idle = addSeason({ tmdbId: 777, episodeCount: 1 });
     storeCatalog(idle.id, '2026-02-20T00:00:00.000Z', [compact(1, 11)]);
     handlers.set(`/3/tv/${SERIES_TMDB_ID}/season/1`, seasonHandler([tmdbEpisode(11, 1, 'New')]));
     handlers.set('/3/tv/777/season/1', seasonHandler([tmdbEpisode(11, 1, 'New')]));
@@ -361,7 +361,7 @@ describe('GET /api/seasons/:id/episodes', () => {
   });
 
   it('moves every user watches by TMDB id when a refresh renumbers the episodes', async () => {
-    const season = addSeason({ users: [1, 2] });
+    const season = addSeason({ users: [1, 2], episodeCount: 3 });
     storeCatalog(season.id, '2025-01-01T00:00:00.000Z', [
       compact(1, 11),
       compact(2, 12),
@@ -434,5 +434,88 @@ describe('GET /api/seasons/:id/episodes', () => {
     }) as typeof api.db.prepare;
     expect((await owner.get('/api/media')).statusCode).toBe(200);
     expect(statements.filter((sql) => /season_episode/.test(sql))).toEqual([]);
+  });
+
+  describe('against the season episode count the sync stored', () => {
+    const merged = (count: number) =>
+      Array.from({ length: count }, (_, i) =>
+        tmdbEpisode(100 + i, i + 1, `E${i + 1}`, '2024-01-01'),
+      );
+    const countOf = (seasonId: number) =>
+      api.db.prepare('SELECT episode_count FROM season WHERE id = ?').get(seasonId);
+
+    it('keeps the stored count and answers numbers when TMDB merges seasons', async () => {
+      const season = addSeason({ episodeCount: 24 });
+      handlers.set(`/3/tv/${SERIES_TMDB_ID}/season/1`, seasonHandler(merged(60)));
+      const before = await versions.global();
+      const { body } = await episodes(owner, season.id);
+      expect(body).toMatchObject({
+        source: 'numbers',
+        fetchedAt: null,
+        episodeCount: 24,
+        catalogMismatch: { catalogEpisodes: 60 },
+      });
+      expect(body.episodes).toHaveLength(24);
+      expect(body.episodes.every((e) => e.title === null)).toBe(true);
+      expect(countOf(season.id)).toEqual({ episode_count: 24 });
+      expect(await versions.global()).toEqual(before);
+      expect(api.db.prepare('SELECT * FROM season_episodes').all()).toHaveLength(1);
+      await episodes(owner, season.id);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('does not remap watches when the refreshed catalog does not apply', async () => {
+      const season = addSeason({ episodeCount: 2 });
+      storeCatalog(season.id, '2025-01-01T00:00:00.000Z', [compact(1, 11), compact(2, 12)]);
+      storeWatches(1, season.id, { '1': [] });
+      handlers.set(
+        `/3/tv/${SERIES_TMDB_ID}/season/1`,
+        seasonHandler([tmdbEpisode(12, 1, 'B'), tmdbEpisode(11, 2, 'A'), tmdbEpisode(13, 3, 'C')]),
+      );
+      const { body } = await episodes(owner, season.id);
+      expect(body.catalogMismatch).toEqual({ catalogEpisodes: 3 });
+      expect(api.db.prepare('SELECT watched FROM season_episode_entry').get()).toEqual({
+        watched: '{"1":[]}',
+      });
+    });
+
+    it('fills a missing count from the catalog and bumps the content version', async () => {
+      const season = addSeason({ episodeCount: null });
+      handlers.set(`/3/tv/${SERIES_TMDB_ID}/season/1`, seasonHandler(merged(3)));
+      const before = await versions.global();
+      const { body } = await episodes(owner, season.id);
+      expect(body).toMatchObject({ source: 'tmdb', episodeCount: 3, catalogMismatch: null });
+      expect(countOf(season.id)).toEqual({ episode_count: 3 });
+      expect((await versions.global()).total).toBe(before.total + 1);
+    });
+
+    it('lists episodes still to air without changing the count', async () => {
+      const season = addSeason({ episodeCount: 2 });
+      handlers.set(
+        `/3/tv/${SERIES_TMDB_ID}/season/1`,
+        seasonHandler([
+          tmdbEpisode(1, 1, 'A', '2024-01-01'),
+          tmdbEpisode(2, 2, 'B', '2024-01-08'),
+          tmdbEpisode(3, 3, 'C', '2099-01-01'),
+        ]),
+      );
+      const before = await versions.global();
+      const { body } = await episodes(owner, season.id);
+      expect(body).toMatchObject({ source: 'tmdb', episodeCount: 3, catalogMismatch: null });
+      expect(body.episodes.map((e) => e.title)).toEqual(['A', 'B', 'C']);
+      expect(countOf(season.id)).toEqual({ episode_count: 2 });
+      expect(await versions.global()).toEqual(before);
+    });
+
+    it('answers numbers with a mismatch when the catalog is shorter', async () => {
+      const season = addSeason({ episodeCount: 5 });
+      storeCatalog(season.id, NOW.toISOString(), [compact(1, 11), compact(2, 12)]);
+      const { body } = await episodes(owner, season.id);
+      expect(body).toMatchObject({
+        source: 'numbers',
+        episodeCount: 5,
+        catalogMismatch: { catalogEpisodes: 2 },
+      });
+    });
   });
 });

@@ -2,6 +2,7 @@ import {
   countWatchedEpisodes,
   isEpisodeCatalogStale,
   isSeasonAiring,
+  matchEpisodeCatalog,
   numberedEpisodes,
   remapEpisodeWatches,
   type Episode,
@@ -19,7 +20,10 @@ import type { SeasonEpisodesResult } from './SeasonEpisodesResult.js';
  * The episodes of a season and what the user in scope watched of them. The shared catalog is read from its one
  * row and, when it is missing or stale and the series has a TMDB id, fetched again with a single TMDB request and
  * stored. Without a catalog the answer lists bare episode numbers and stores nothing, so the next visit tries
- * again. A refresh that renumbers the episodes moves every user's watches of the season by TMDB id.
+ * again. The catalog never changes a season's stored episode count (the sync owns it, and TMDB may split seasons
+ * differently from Jellyfin); it only fills a missing one. A catalog whose aired episodes do not match the stored
+ * count is still stored but not used: the answer lists bare numbers and reports the mismatch. A refresh that
+ * renumbers the episodes moves every user's watches of the season by TMDB id.
  */
 export class SeasonEpisodesService {
   private readonly now: () => Date;
@@ -34,27 +38,37 @@ export class SeasonEpisodesService {
     const series = await this.deps.series.get(season.seriesId);
     const stored = await this.deps.catalog.get(seasonId);
     let catalog = stored;
+    let storedCount = season.episodeCount;
     let episodeCountChanged = false;
     if (series && series.tmdbId !== null && this.isStale(season, series, stored)) {
       const fetched = await this.fetch(season, series);
       if (fetched) {
         catalog = fetched;
         await this.deps.catalog.put(fetched);
-        if (fetched.episodes.length !== season.episodeCount) {
-          await this.deps.seasons.updateCatalog(seasonId, {
-            episodeCount: fetched.episodes.length,
-          });
+        if (storedCount === null) {
+          storedCount = fetched.episodes.length;
+          await this.deps.seasons.updateCatalog(seasonId, { episodeCount: storedCount });
           episodeCountChanged = true;
         }
-        if (stored) await this.remapUsers(seasonId, stored.episodes, fetched.episodes);
+        if (stored && matchEpisodeCatalog(storedCount, fetched.episodes, this.today()).applies) {
+          await this.remapUsers(seasonId, stored.episodes, fetched.episodes);
+        }
       }
     }
-    const episodes = catalog?.episodes ?? numberedEpisodes(season.episodeCount);
+    const match = catalog
+      ? matchEpisodeCatalog(storedCount, catalog.episodes, this.today())
+      : undefined;
+    const usable = match?.applies ? catalog : undefined;
+    const episodes = usable?.episodes ?? numberedEpisodes(storedCount);
     const watched = await this.deps.watches.get(seasonId);
     return {
-      response: this.respond(season, catalog, episodes, watched),
+      response: this.respond(season, usable, episodes, watched, match?.mismatch ?? null),
       episodeCountChanged,
     };
+  }
+
+  private today(): string {
+    return this.now().toISOString().slice(0, 10);
   }
 
   private isStale(season: Season, series: Series, stored: SeasonEpisodes | undefined): boolean {
@@ -108,6 +122,7 @@ export class SeasonEpisodesService {
     catalog: SeasonEpisodes | undefined,
     episodes: readonly Episode[],
     stored: EpisodeWatches | undefined,
+    catalogMismatch: { catalogEpisodes: number } | null,
   ): SeasonEpisodesResult['response'] {
     const allWatched = stored === undefined && season.status === 'completed';
     const watched = stored ?? {};
@@ -116,6 +131,7 @@ export class SeasonEpisodesService {
       source: catalog?.source ?? 'numbers',
       fetchedAt: catalog?.fetchedAt ?? null,
       episodeCount: episodes.length,
+      catalogMismatch,
       watchedCount: allWatched ? episodes.length : countWatchedEpisodes(watched),
       episodes: episodes.map((episode) => {
         const viewings = watched[String(episode.number)];

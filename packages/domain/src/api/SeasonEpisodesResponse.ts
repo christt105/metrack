@@ -12,4 +12,5 @@ export interface SeasonEpisodesResponse {
   episodeCount: number;
   watchedCount: number;
   episodes: SeasonEpisodeItem[];
+  catalogMismatch: { catalogEpisodes: number } | null;
 }

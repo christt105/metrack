@@ -3,6 +3,7 @@ import {
   countWatchedEpisodes,
   isEpisodeCatalogStale,
   isSeasonAiring,
+  matchEpisodeCatalog,
   normalizeEpisodeWatches,
   numberedEpisodes,
   remapEpisodeWatches,
@@ -129,5 +130,45 @@ describe('remapEpisodeWatches', () => {
   it('leaves watches alone when nothing moved', () => {
     const same = [episode(1, 10), episode(2, 20)];
     expect(remapEpisodeWatches(same, same, { '2': [viewing] })).toEqual({ '2': [viewing] });
+  });
+});
+
+describe('matchEpisodeCatalog', () => {
+  const today = '2026-11-17';
+  const aired = (count: number): Episode[] =>
+    Array.from({ length: count }, (_, i) => episode(i + 1, i + 1, '2026-01-01'));
+
+  it('applies when the aired episodes equal the stored count', () => {
+    expect(matchEpisodeCatalog(12, aired(12), today)).toEqual({ applies: true, mismatch: null });
+  });
+
+  it('applies without a stored count', () => {
+    expect(matchEpisodeCatalog(null, aired(60), today).applies).toBe(true);
+  });
+
+  it('applies when the catalog is longer only by episodes still to air or without a date', () => {
+    const list = [...aired(10), episode(11, 11, '2026-12-01'), episode(12, 12, null)];
+    expect(matchEpisodeCatalog(11, list, today)).toEqual({ applies: true, mismatch: null });
+    expect(
+      matchEpisodeCatalog(10, [...aired(10), episode(11, 11, '2026-12-01')], today).applies,
+    ).toBe(true);
+  });
+
+  it('does not apply when TMDB merges seasons: 60 aired against 24', () => {
+    expect(matchEpisodeCatalog(24, aired(60), today)).toEqual({
+      applies: false,
+      mismatch: { catalogEpisodes: 60 },
+    });
+  });
+
+  it('does not apply when the catalog is shorter', () => {
+    expect(matchEpisodeCatalog(24, aired(12), today)).toEqual({
+      applies: false,
+      mismatch: { catalogEpisodes: 12 },
+    });
+  });
+
+  it('counts an episode that airs today as aired', () => {
+    expect(matchEpisodeCatalog(1, [episode(1, 1, today)], today).applies).toBe(true);
   });
 });
