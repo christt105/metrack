@@ -274,6 +274,86 @@ describe('POST /api/connector/users/{id}/sync', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it('serves finish dates to a connector and merges its date strings into stored viewings', async () => {
+    const { createToken, call, syncBody, scope, repositories } = await connectorHarness();
+    const { secret } = await createToken(1, 'connector');
+    const movie = await scope.run(2, () =>
+      repositories.movies.create({
+        ...emptyMovie(),
+        tmdbId: 603,
+        title: 'M',
+        status: 'completed',
+        finishedAt: '2026-01-01',
+        rewatches: [
+          { startedAt: '2026-02-01', finishedAt: '2026-02-03' },
+          { startedAt: '2026-03-01', finishedAt: null },
+        ],
+      }),
+    );
+    const state = (
+      await call('GET', '/api/connector/users/2/sync-state', secret)
+    ).json<ConnectorSyncState>();
+    expect(state.state.movies[0]?.rewatches).toEqual(['2026-02-03']);
+
+    const response = await call(
+      'POST',
+      '/api/connector/users/2/sync',
+      secret,
+      syncBody(state.contentVersion, {
+        movies: [
+          {
+            ...MATRIX,
+            action: 'rewatch',
+            movieId: movie.id,
+            finishedAt: '2026-01-01',
+            rewatches: ['2026-02-03', '2026-05-05'],
+          },
+        ],
+      }),
+    );
+    expect(response.statusCode).toBe(200);
+    const stored = await scope.run(2, () => repositories.movies.get(movie.id));
+    expect(stored?.rewatches).toEqual([
+      { startedAt: '2026-02-01', finishedAt: '2026-02-03' },
+      { startedAt: '2026-03-01', finishedAt: '2026-05-05' },
+    ]);
+  });
+
+  it('adds closed viewings for dates it does not have and accepts viewing objects', async () => {
+    const { createToken, call, syncBody, scope, repositories } = await connectorHarness();
+    const { secret } = await createToken(1, 'connector');
+    const movie = await scope.run(2, () =>
+      repositories.movies.create({
+        ...emptyMovie(),
+        tmdbId: 603,
+        title: 'M',
+        status: 'completed',
+        finishedAt: '2026-01-01',
+        rewatches: [{ startedAt: '2026-02-01', finishedAt: '2026-02-03' }],
+      }),
+    );
+    const change = {
+      ...MATRIX,
+      action: 'rewatch',
+      movieId: movie.id,
+      finishedAt: '2026-01-01',
+    };
+    const body = syncBody(await versionOf(call, secret, 2), {
+      movies: [
+        {
+          ...change,
+          rewatches: [{ startedAt: null, finishedAt: '2026-02-03' }, '2026-04-04'],
+        },
+      ],
+    } as never);
+    expect((await call('POST', '/api/connector/users/2/sync', secret, body)).statusCode).toBe(200);
+    const stored = await scope.run(2, () => repositories.movies.get(movie.id));
+    expect(stored?.rewatches).toEqual([
+      { startedAt: '2026-02-01', finishedAt: '2026-02-03' },
+      { startedAt: null, finishedAt: '2026-04-04' },
+    ]);
+  });
+
   it('applies a plan naming titles the user has, checking only those', async () => {
     const { createToken, call, syncBody, scope, repositories } = await connectorHarness();
     const { secret } = await createToken(1, 'connector');

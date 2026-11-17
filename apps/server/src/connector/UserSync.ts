@@ -1,4 +1,10 @@
-import { planSync, type ConnectorUser, type EntityRef, type SyncPlan } from '@metrack/domain';
+import {
+  fromWireSyncState,
+  planSync,
+  type ConnectorUser,
+  type EntityRef,
+  type SyncPlan,
+} from '@metrack/domain';
 import type { Logger } from '../notify/Logger.js';
 import type { SyncSources } from '../sync/SyncSources.js';
 import { CloudClient } from './CloudClient.js';
@@ -35,7 +41,7 @@ export class UserSync {
         movies,
         series,
         plays,
-        state,
+        state: fromWireSyncState(state),
         today: this.now().toISOString().slice(0, 10),
         timeZone: this.timeZone,
       });

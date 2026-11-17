@@ -1,9 +1,19 @@
-import type { MediaStatus, Tracking } from '@metrack/domain';
+import {
+  normalizeViewings,
+  readViewings,
+  type MediaStatus,
+  type Tracking,
+  type Viewing,
+} from '@metrack/domain';
 import type { Row } from './Row.js';
 import type { RowValues } from './RowValues.js';
 
 export function parseList(value: unknown): string[] {
   return JSON.parse(String(value)) as string[];
+}
+
+export function parseViewings(value: unknown): Viewing[] {
+  return readViewings(JSON.parse(String(value)) as unknown[]);
 }
 
 export function text(value: unknown): string | null {
@@ -21,7 +31,7 @@ export function trackingFromRow(row: Row): Tracking {
     finishedAt: text(row.finished_at),
     rating: num(row.rating),
     review: text(row.review),
-    rewatches: parseList(row.rewatches),
+    rewatches: parseViewings(row.rewatches),
     pendingReview: Number(row.pending_review) === 1,
   };
 }
@@ -33,7 +43,7 @@ export function trackingToRow(tracking: Tracking): RowValues {
     finished_at: tracking.finishedAt,
     rating: tracking.rating,
     review: tracking.review,
-    rewatches: JSON.stringify(tracking.rewatches),
+    rewatches: JSON.stringify(normalizeViewings(tracking.rewatches)),
     pending_review: tracking.pendingReview ? 1 : 0,
   };
 }

@@ -17,6 +17,7 @@ import type { MediaCatalog } from '../media/MediaCatalog.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import { ApiError } from './ApiError.js';
+import { DATE_PATTERN, nullableDate } from './schemas/fieldTypes.js';
 import { matchesEtag } from '../site/matchesEtag.js';
 import type { ContentVersions } from '../site/ContentVersions.js';
 import { mediaListEtag } from './mediaListEtag.js';
@@ -45,8 +46,11 @@ const patchQuery = {
 
 const dateBody = {
   type: 'object',
-  properties: { date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' } },
-  required: ['date'],
+  properties: {
+    date: { type: 'string', pattern: DATE_PATTERN },
+    startedAt: nullableDate,
+    finishedAt: { type: 'string', pattern: DATE_PATTERN },
+  },
   additionalProperties: false,
 } as const;
 
@@ -182,8 +186,17 @@ function registerCollection(
   routes.post<{ Params: { id: number }; Body: RewatchRequest }>(
     `${base}/:id/rewatches`,
     { schema: { params: idParams, body: dateBody } },
-    async (request) =>
-      jsonResponse(await editor.addRewatch(collection, request.params.id, request.body.date), 201),
+    async (request) => {
+      const { date, finishedAt, startedAt } = request.body;
+      const finish = finishedAt ?? date;
+      if (finish === undefined) {
+        throw ApiError.badRequest('invalid_date', 'A rewatch needs date or finishedAt');
+      }
+      return jsonResponse(
+        await editor.addRewatch(collection, request.params.id, finish, startedAt ?? null),
+        201,
+      );
+    },
   );
 
   routes.delete<{ Params: { id: number; date: string } }>(

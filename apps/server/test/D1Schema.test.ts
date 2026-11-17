@@ -46,6 +46,11 @@ const nextEpisodeSql = readFileSync(
   'utf8',
 );
 
+const rewatchViewingsSql = readFileSync(
+  new URL('../d1/migrations/0008_rewatch_viewings.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -54,6 +59,7 @@ function fromSql(): DatabaseSync {
   db.exec(invitesSql);
   db.exec(episodeGroupSql);
   db.exec(nextEpisodeSql);
+  db.exec(rewatchViewingsSql);
   return db;
 }
 

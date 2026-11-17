@@ -1,5 +1,6 @@
 import { MEDIA_STATUSES } from '@metrack/domain';
-import { DATE_PATTERN, nullableDate, nullableInteger, nullableString } from './fieldTypes.js';
+import { nullableDate, nullableInteger, nullableString } from './fieldTypes.js';
+import { viewingItem } from './viewingItem.js';
 
 const id = { type: 'integer', minimum: 1 } as const;
 const nullableId = { type: ['integer', 'null'], minimum: 1 } as const;
@@ -14,7 +15,7 @@ const movie = {
     title: text,
     startedAt: nullableDate,
     finishedAt: nullableDate,
-    rewatches: { type: 'array', items: { type: 'string', pattern: DATE_PATTERN } },
+    rewatches: { type: 'array', items: viewingItem },
   },
   required: ['movieId', 'jellyfinId', 'tmdbId', 'title', 'startedAt', 'finishedAt', 'rewatches'],
 } as const;

@@ -8,6 +8,10 @@ import {
   type EntityRef,
   type MediaType,
   type RefreshResult,
+  type SyncPlan,
+  readViewings,
+  finishDates,
+  toWireSyncState,
 } from '@metrack/domain';
 import type { AlertUser } from '../alerts/AlertUser.js';
 import type { FollowedTitle } from '../alerts/FollowedTitle.js';
@@ -48,7 +52,7 @@ export class ConnectorService {
   state(userId: number): Promise<ConnectorSyncState> {
     return this.deps.scope.run(userId, async () => ({
       contentVersion: await this.deps.versions.current(userId),
-      state: await loadSyncState(this.deps.targets),
+      state: toWireSyncState(await loadSyncState(this.deps.targets)),
       unfetched: await this.unfetched(),
     }));
   }
@@ -61,9 +65,10 @@ export class ConnectorService {
           'The library changed since the plan was computed, read it again',
         );
       }
-      assertPlanOwned(request.plan, await loadPlanTitles(request.plan, this.deps.targets));
+      const plan = withFinishDates(request.plan);
+      assertPlanOwned(plan, await loadPlanTitles(plan, this.deps.targets));
       try {
-        return await this.deps.applier.apply(request.plan);
+        return await this.deps.applier.apply(plan);
       } finally {
         await this.deps.versions.bump(userId);
       }
@@ -173,4 +178,11 @@ function followed(
           },
         ],
   );
+}
+
+function withFinishDates(plan: SyncPlan): SyncPlan {
+  return {
+    ...plan,
+    movies: plan.movies.map((m) => ({ ...m, rewatches: finishDates(readViewings(m.rewatches)) })),
+  };
 }

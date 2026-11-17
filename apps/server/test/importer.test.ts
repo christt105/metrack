@@ -98,7 +98,7 @@ describe('buildImportPlan', () => {
       status: 'completed',
       finishedAt: '2024-03-05',
       rating: 7,
-      rewatches: ['2025-01-02'],
+      rewatches: [{ startedAt: null, finishedAt: '2025-01-02' }],
       review: 'Great film.',
       overview: null,
       startedAt: null,

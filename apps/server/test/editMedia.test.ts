@@ -251,7 +251,7 @@ describe('editing', () => {
     expect(completed.json()).toMatchObject({
       status: 'completed',
       finishedAt: '2026-01-10',
-      rewatches: ['2026-03-05'],
+      rewatches: [{ startedAt: '2026-03-05', finishedAt: '2026-03-05' }],
     });
   });
 
@@ -283,7 +283,7 @@ describe('editing', () => {
       status: 'completed',
       startedAt: null,
       finishedAt: '2024-05-01',
-      rewatches: ['2026-03-05'],
+      rewatches: [{ startedAt: '2026-03-05', finishedAt: '2026-03-05' }],
     });
 
     const undone = await patch(`${url}/${id}`, {
@@ -430,13 +430,16 @@ describe('rewatches', () => {
     await post(`/api/movies/${id}/rewatches`, { date: '2026-02-01' });
     await post(`/api/movies/${id}/rewatches`, { date: '2026-01-01' });
     const last = await post(`/api/movies/${id}/rewatches`, { date: '2026-01-01' });
-    expect(last.json().rewatches).toEqual(['2026-01-01', '2026-02-01']);
+    expect(last.json().rewatches).toEqual([
+      { startedAt: null, finishedAt: '2026-01-01' },
+      { startedAt: null, finishedAt: '2026-02-01' },
+    ]);
 
     const removed = await api.app.inject({
       method: 'DELETE',
       url: `/api/movies/${id}/rewatches/2026-01-01`,
     });
-    expect(removed.json().rewatches).toEqual(['2026-02-01']);
+    expect(removed.json().rewatches).toEqual([{ startedAt: null, finishedAt: '2026-02-01' }]);
     expect(
       (await api.app.inject({ method: 'DELETE', url: `/api/movies/${id}/rewatches/2020-01-01` }))
         .statusCode,
@@ -448,8 +451,42 @@ describe('rewatches', () => {
     expect(
       (await patch(`/api/movies/${id}`, { rewatches: ['2026-02-02', '2026-01-01'] })).json()
         .rewatches,
-    ).toEqual(['2026-01-01', '2026-02-02']);
+    ).toEqual([
+      { startedAt: null, finishedAt: '2026-01-01' },
+      { startedAt: null, finishedAt: '2026-02-02' },
+    ]);
     expect((await patch(`/api/movies/${id}`, { rewatches: ['2026-02-31'] })).statusCode).toBe(400);
+    expect(
+      (
+        await patch(`/api/movies/${id}`, {
+          rewatches: [{ startedAt: '2026-02-31', finishedAt: '2026-03-01' }],
+        })
+      ).statusCode,
+    ).toBe(400);
+  });
+
+  it('accepts viewing objects, records a start and restores the list exactly', async () => {
+    const id = await createMovie({ status: 'completed', finishedAt: '2026-01-01' });
+    const viewings = [
+      { startedAt: '2026-02-01', finishedAt: '2026-02-03' },
+      { startedAt: null, finishedAt: '2026-04-01' },
+      { startedAt: '2026-05-01', finishedAt: null },
+    ];
+    const set = await patch(`/api/movies/${id}`, { rewatches: [...viewings].reverse() });
+    expect(set.json().rewatches).toEqual(viewings);
+    const added = await post(`/api/movies/${id}/rewatches`, {
+      startedAt: '2026-06-01',
+      finishedAt: '2026-06-02',
+    });
+    expect(added.statusCode).toBe(201);
+    expect(added.json().rewatches).toContainEqual({
+      startedAt: '2026-06-01',
+      finishedAt: '2026-06-02',
+    });
+    const bad = await post(`/api/movies/${id}/rewatches`, {});
+    expect(bad.statusCode).toBe(400);
+    const restored = await patch(`/api/movies/${id}`, { restore: true, rewatches: viewings });
+    expect(restored.json().rewatches).toEqual(viewings);
   });
 
   it('has no rewatch routes for series', async () => {
