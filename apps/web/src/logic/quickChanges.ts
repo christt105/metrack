@@ -13,26 +13,27 @@ export interface QuickTracking {
   pendingReview: boolean;
 }
 
-function revertStatus(from: MediaStatus, to: MediaStatus): boolean {
-  return from === to || canTransition(from, to);
-}
-
-/** Moves to another status. Undo is only offered when the status rules allow the way back. */
-export function statusChange(current: QuickTracking, next: MediaStatus): QuickChange {
-  const undo: Record<string, unknown> = {
+function snapshot(current: QuickTracking): Record<string, unknown> {
+  return {
+    restore: true,
+    status: current.status,
     startedAt: current.startedAt,
     finishedAt: current.finishedAt,
+    rating: current.rating,
+    review: current.review,
     rewatches: current.rewatches,
+    pendingReview: current.pendingReview,
   };
-  return {
-    patch: { status: next },
-    undo: revertStatus(next, current.status) ? { ...undo, status: current.status } : null,
-  };
+}
+
+/** Moves to another status. */
+export function statusChange(current: QuickTracking, next: MediaStatus): QuickChange {
+  return { patch: { status: next }, undo: snapshot(current) };
 }
 
 /** Sets the rating, or clears it with null. */
 export function ratingChange(current: QuickTracking, rating: number | null): QuickChange {
-  return { patch: { rating }, undo: { rating: current.rating } };
+  return { patch: { rating }, undo: snapshot(current) };
 }
 
 /**
@@ -41,24 +42,20 @@ export function ratingChange(current: QuickTracking, rating: number | null): Qui
  */
 export function watchedTodayChange(current: QuickTracking, today: string): QuickChange {
   const patch: Record<string, unknown> = { finishedAt: today };
-  const completes = current.status !== 'completed' && canTransition(current.status, 'completed');
-  if (completes) patch.status = 'completed';
-  if (!current.review && !current.pendingReview) patch.pendingReview = true;
-  const undo: Record<string, unknown> = {
-    startedAt: current.startedAt,
-    finishedAt: current.finishedAt,
-    rewatches: current.rewatches,
-    pendingReview: current.pendingReview,
-  };
-  if (completes) {
-    if (!revertStatus('completed', current.status)) return { patch, undo: null };
-    undo.status = current.status;
+  if (current.status !== 'completed' && canTransition(current.status, 'completed')) {
+    patch.status = 'completed';
   }
-  return { patch, undo };
+  if (!current.review && !current.pendingReview) patch.pendingReview = true;
+  return { patch, undo: snapshot(current) };
+}
+
+/** Publishes a pending item as it is, without a review. */
+export function publishChange(current: QuickTracking): QuickChange {
+  return { patch: { pendingReview: false }, undo: snapshot(current) };
 }
 
 /** Saves the review text, blank meaning none. */
 export function reviewChange(current: QuickTracking, text: string): QuickChange {
   const review = text.trim() === '' ? null : text.trim();
-  return { patch: { review }, undo: { review: current.review } };
+  return { patch: { review }, undo: snapshot(current) };
 }

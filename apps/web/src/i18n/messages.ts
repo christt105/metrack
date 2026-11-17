@@ -103,6 +103,10 @@ export const messages = {
     notice:
       'This viewing was recorded from Jellyfin and stays out of the feeds until you confirm it.',
     confirm: 'Save and confirm',
+    publish: 'Publish without review',
+    saveAndPublish: 'Save and publish',
+    draftHint: 'Pending items stay out of the public page and the feed until you publish them.',
+    published: 'Published without a review',
   },
   detail: {
     sectionIds: 'Identifiers',

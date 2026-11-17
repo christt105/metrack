@@ -7,6 +7,7 @@ import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import type { QuickChange } from '../logic/QuickChange';
 import {
+  publishChange,
   ratingChange,
   statusChange,
   watchedTodayChange,
@@ -37,6 +38,7 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 const tracking = computed(() => props.detail as unknown as QuickTracking);
 const options = computed(() => statusOptions(tracking.value.status));
 const rating = computed(() => tracking.value.rating);
+const pending = computed(() => tracking.value.pendingReview);
 
 async function send(patch: Record<string, unknown>): Promise<void> {
   const updated = await saveForAll(
@@ -108,6 +110,10 @@ function onRating(value: number | null): void {
   );
 }
 
+function publish(): void {
+  void apply(publishChange(tracking.value), messages.pending.published);
+}
+
 function watchedToday(): void {
   void apply(watchedTodayChange(tracking.value, todayIso()), messages.quick.watchedDone);
 }
@@ -139,6 +145,16 @@ onBeforeUnmount(() => clearTimeout(timer));
       <AppIcon name="check" :size="18" />
       {{ messages.quick.watchedToday }}
     </button>
+    <button
+      v-if="pending"
+      type="button"
+      :disabled="busy"
+      :title="messages.pending.draftHint"
+      @click="publish"
+    >
+      {{ messages.pending.publish }}
+    </button>
+    <p v-if="pending" class="pending-hint">{{ messages.pending.draftHint }}</p>
     <RatingPicker
       v-if="pickerOpen"
       class="picker"
@@ -164,6 +180,13 @@ onBeforeUnmount(() => clearTimeout(timer));
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2) var(--s-3);
+}
+
+.pending-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-small);
 }
 
 .picker {

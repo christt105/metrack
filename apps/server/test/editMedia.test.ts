@@ -136,6 +136,45 @@ describe('editing', () => {
     expect(list.items[0]).toMatchObject({ id, pendingReview: false });
   });
 
+  it('restores a tracking snapshot without the transition rules', async () => {
+    const id = await createMovie({ status: 'completed', finishedAt: '2026-01-02' });
+    const blocked = await patch(`/api/movies/${id}`, { status: 'planned' });
+    expect(blocked.statusCode).toBe(409);
+    const restored = await patch(`/api/movies/${id}`, {
+      restore: true,
+      status: 'planned',
+      startedAt: null,
+      finishedAt: null,
+      rating: null,
+      rewatches: [],
+      pendingReview: true,
+    });
+    expect(restored.statusCode).toBe(200);
+    expect(restored.json()).toMatchObject({
+      status: 'planned',
+      startedAt: null,
+      finishedAt: null,
+      pendingReview: true,
+    });
+  });
+
+  it('keeps validating a restore and limits it to tracking fields', async () => {
+    const id = await createMovie();
+    const badOrder = await patch(`/api/movies/${id}`, {
+      restore: true,
+      startedAt: '2026-02-01',
+      finishedAt: '2026-01-01',
+    });
+    expect(badOrder.statusCode).toBe(400);
+    expect((await patch(`/api/movies/${id}`, { restore: true, rating: 9 })).statusCode).toBe(400);
+    expect(
+      (await patch(`/api/movies/${id}`, { restore: true, finishedAt: '2026-13-01' })).statusCode,
+    ).toBe(400);
+    const foreign = await patch(`/api/movies/${id}`, { restore: true, title: 'Other' });
+    expect(foreign.statusCode).toBe(400);
+    expect(foreign.json().code).toBe('invalid_restore');
+  });
+
   it('accepts only whole ratings from 1 to 7 on edit', async () => {
     const id = await createMovie();
     for (const rating of [0, 8, 6.5, 10]) {

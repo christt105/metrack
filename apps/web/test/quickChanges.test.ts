@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  publishChange,
   ratingChange,
   reviewChange,
   statusChange,
@@ -17,23 +18,25 @@ const base: QuickTracking = {
   pendingReview: false,
 };
 
+const snapshot = (tracking: QuickTracking) => ({ restore: true, ...tracking });
+
 describe('quick changes', () => {
-  it('changes the status and undoes it when the rules allow the way back', () => {
+  it('changes the status and always carries a full restore snapshot', () => {
     const change = statusChange(base, 'paused');
     expect(change.patch).toEqual({ status: 'paused' });
-    expect(change.undo).toMatchObject({ status: 'in_progress', startedAt: '2026-01-01' });
+    expect(change.undo).toEqual(snapshot(base));
   });
 
-  it('offers no undo when the status rules forbid the way back', () => {
-    expect(statusChange({ ...base, status: 'planned' }, 'completed').undo).toBeNull();
+  it('restores even where the status rules forbid the way back', () => {
+    const planned = { ...base, status: 'planned' as const, startedAt: null };
+    expect(statusChange(planned, 'completed').undo).toEqual(snapshot(planned));
+    expect(watchedTodayChange(planned, '2026-02-02').undo).toEqual(snapshot(planned));
   });
 
   it('sets and clears the rating, restoring the previous one', () => {
-    expect(ratingChange({ ...base, rating: 3 }, 6)).toEqual({
-      patch: { rating: 6 },
-      undo: { rating: 3 },
-    });
-    expect(ratingChange({ ...base, rating: 3 }, null).patch).toEqual({ rating: null });
+    const rated = { ...base, rating: 3 };
+    expect(ratingChange(rated, 6)).toEqual({ patch: { rating: 6 }, undo: snapshot(rated) });
+    expect(ratingChange(rated, null).patch).toEqual({ rating: null });
   });
 
   it('records watching today, completes the item and asks for a review', () => {
@@ -43,30 +46,31 @@ describe('quick changes', () => {
       status: 'completed',
       pendingReview: true,
     });
-    expect(change.undo).toMatchObject({
-      status: 'in_progress',
-      finishedAt: null,
-      pendingReview: false,
-    });
+    expect(change.undo).toEqual(snapshot(base));
   });
 
   it('keeps a written review out of the pending queue and a completed status as it is', () => {
-    const change = watchedTodayChange(
-      { ...base, status: 'completed', review: 'Great', finishedAt: '2026-01-05' },
-      '2026-02-02',
-    );
-    expect(change.patch).toEqual({ finishedAt: '2026-02-02' });
-    expect(change.undo).toMatchObject({ finishedAt: '2026-01-05' });
+    const done = {
+      ...base,
+      status: 'completed' as const,
+      review: 'Great',
+      finishedAt: '2026-01-05',
+    };
+    expect(watchedTodayChange(done, '2026-02-02').patch).toEqual({ finishedAt: '2026-02-02' });
   });
 
-  it('has no undo for watching today from a planned item', () => {
-    expect(watchedTodayChange({ ...base, status: 'planned' }, '2026-02-02').undo).toBeNull();
+  it('publishes a pending item and restores it as pending', () => {
+    const pending = { ...base, pendingReview: true };
+    const change = publishChange(pending);
+    expect(change.patch).toEqual({ pendingReview: false });
+    expect(change.undo).toMatchObject({ restore: true, pendingReview: true });
   });
 
   it('trims the review and turns a blank one into none', () => {
-    expect(reviewChange({ ...base, review: 'Old' }, '  New  ')).toEqual({
+    const reviewed = { ...base, review: 'Old' };
+    expect(reviewChange(reviewed, '  New  ')).toEqual({
       patch: { review: 'New' },
-      undo: { review: 'Old' },
+      undo: snapshot(reviewed),
     });
     expect(reviewChange(base, '  ').patch).toEqual({ review: null });
   });

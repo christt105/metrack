@@ -18,6 +18,7 @@ const text = ref('');
 const saving = ref(false);
 const error = ref<unknown>(null);
 
+const pending = computed(() => 'pendingReview' in props.detail && props.detail.pendingReview);
 const review = computed(() => ('review' in props.detail ? props.detail.review : null));
 
 function edit(): void {
@@ -31,13 +32,19 @@ function cancel(): void {
   error.value = null;
 }
 
-async function save(): Promise<void> {
+async function save(publish = false): Promise<void> {
   saving.value = true;
   error.value = null;
   const next = text.value.trim() === '' ? null : text.value.trim();
   try {
     const updated = await saveForAll(
-      (options) => api.patch(props.collection, props.detail.id, { review: next } as never, options),
+      (options) =>
+        api.patch(
+          props.collection,
+          props.detail.id,
+          (publish ? { review: next, pendingReview: false } : { review: next }) as never,
+          options,
+        ),
       session?.user.value?.role === 'owner',
       () => window.confirm(messages.detail.confirmForAll),
     );
@@ -57,8 +64,24 @@ async function save(): Promise<void> {
       <label class="eyebrow" for="review-text">{{ messages.hero.reviewLabel }}</label>
       <textarea id="review-text" v-model="text" rows="6" :disabled="saving" />
       <ErrorNotice :error="error" />
+      <p v-if="pending" class="muted">{{ messages.pending.draftHint }}</p>
       <div class="row">
-        <button type="button" class="primary" :disabled="saving" @click="save">
+        <button
+          v-if="pending"
+          type="button"
+          class="primary publish"
+          :disabled="saving"
+          @click="save(true)"
+        >
+          {{ saving ? messages.common.saving : messages.pending.saveAndPublish }}
+        </button>
+        <button
+          type="button"
+          :class="{ primary: !pending }"
+          class="save"
+          :disabled="saving"
+          @click="save(false)"
+        >
           {{ saving ? messages.common.saving : messages.common.save }}
         </button>
         <button type="button" :disabled="saving" @click="cancel">{{ messages.hero.cancel }}</button>

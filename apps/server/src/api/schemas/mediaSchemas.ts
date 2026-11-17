@@ -10,7 +10,7 @@ export const idParams = {
 export function patchBody(collection: Collection): object {
   return {
     type: 'object',
-    properties: MEDIA_PROPERTIES[collection],
+    properties: { ...MEDIA_PROPERTIES[collection], restore: { type: 'boolean' } },
     additionalProperties: false,
     minProperties: 1,
   };

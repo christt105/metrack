@@ -46,7 +46,7 @@ describe('QuickActions', () => {
     expect(patch).toHaveBeenLastCalledWith(
       'movies',
       4,
-      expect.objectContaining({ status: 'in_progress', startedAt: '2026-01-01' }),
+      expect.objectContaining({ restore: true, status: 'in_progress', startedAt: '2026-01-01' }),
       {},
     );
     expect(document.body.querySelector('[role="status"]')?.textContent).toContain('Change undone');
@@ -65,7 +65,12 @@ describe('QuickActions', () => {
     expect(document.body.querySelector('[role="status"]')?.textContent).toContain('Rated Amazing');
     (document.body.querySelector('.undo') as HTMLElement).click();
     await flushPromises();
-    expect(patch).toHaveBeenLastCalledWith('movies', 4, { rating: 3 }, {});
+    expect(patch).toHaveBeenLastCalledWith(
+      'movies',
+      4,
+      expect.objectContaining({ restore: true, rating: 3, status: 'in_progress' }),
+      {},
+    );
   });
 
   it('marks watched today with the local date', async () => {
@@ -106,5 +111,53 @@ describe('QuickActions', () => {
     vi.advanceTimersByTime(6100);
     await flushPromises();
     expect(!!document.body.querySelector('.toast')).toBe(false);
+  });
+
+  it('offers undo after watched today from planned and restores the snapshot', async () => {
+    const planned = { ...movie, status: 'planned', startedAt: null, rating: null } as AnyDetail;
+    const patch = vi.fn().mockResolvedValue({ ...planned, status: 'completed' });
+    const { wrapper } = await mountActions(patch, planned);
+    const button = wrapper.findAll('button').find((b) => b.text() === 'Watched today');
+    await button?.trigger('click');
+    await flushPromises();
+    (document.body.querySelector('.undo') as HTMLElement).click();
+    await flushPromises();
+    expect(patch).toHaveBeenLastCalledWith(
+      'movies',
+      4,
+      expect.objectContaining({
+        restore: true,
+        status: 'planned',
+        startedAt: null,
+        finishedAt: null,
+        rewatches: [],
+        pendingReview: false,
+      }),
+      {},
+    );
+  });
+
+  it('publishes a pending item without a review and can undo it', async () => {
+    const pending = { ...movie, pendingReview: true } as AnyDetail;
+    const patch = vi.fn().mockResolvedValue({ ...pending, pendingReview: false });
+    const { wrapper } = await mountActions(patch, pending);
+    expect(wrapper.text()).toContain('stay out of the public page');
+    const button = wrapper.findAll('button').find((b) => b.text() === 'Publish without review');
+    await button?.trigger('click');
+    await flushPromises();
+    expect(patch).toHaveBeenCalledWith('movies', 4, { pendingReview: false }, {});
+    (document.body.querySelector('.undo') as HTMLElement).click();
+    await flushPromises();
+    expect(patch).toHaveBeenLastCalledWith(
+      'movies',
+      4,
+      expect.objectContaining({ restore: true, pendingReview: true }),
+      {},
+    );
+  });
+
+  it('offers no publish button when the item is not pending', async () => {
+    const { wrapper } = await mountActions(vi.fn());
+    expect(wrapper.text()).not.toContain('Publish without review');
   });
 });
