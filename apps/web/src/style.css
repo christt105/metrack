@@ -257,7 +257,8 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
-button {
+button,
+a.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -276,7 +277,8 @@ button {
     transform var(--m-out) var(--ease);
 }
 
-button:hover:not(:disabled) {
+button:hover:not(:disabled),
+a.button:hover {
   background: var(--surface-highest);
   border-color: var(--outline-strong);
   transition-duration: var(--m-in);

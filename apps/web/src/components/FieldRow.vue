@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { messages } from '../i18n/messages';
 
-defineProps<{ id: string; label: string; edited?: boolean; hint?: string; invalid?: string }>();
+defineProps<{
+  id: string;
+  label: string;
+  edited?: boolean;
+  released?: boolean;
+  hint?: string;
+  invalid?: string;
+}>();
 defineEmits<{ release: [] }>();
 </script>
 
@@ -17,14 +24,16 @@ defineEmits<{ release: [] }>();
     <div class="below">
       <small v-if="hint" class="muted">{{ hint }}</small>
       <small v-if="invalid" class="problem">{{ invalid }}</small>
+      <small v-if="released" class="muted">{{ messages.detail.releasePending }}</small>
       <button
         v-if="edited"
         type="button"
         class="small"
+        :aria-pressed="released === true"
         :title="messages.detail.releaseHint"
         @click="$emit('release')"
       >
-        {{ messages.detail.release }}
+        {{ released ? messages.detail.releaseUndo : messages.detail.release }}
       </button>
     </div>
   </div>

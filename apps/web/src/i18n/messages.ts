@@ -102,17 +102,27 @@ export const messages = {
     hint: 'Recorded from Jellyfin. It stays out of the feeds until you confirm it.',
     notice:
       'This viewing was recorded from Jellyfin and stays out of the feeds until you confirm it.',
-    confirm: 'Save and confirm',
     publish: 'Publish without review',
     saveAndPublish: 'Save and publish',
     draftHint: 'Pending items stay out of the public page and the feed until you publish them.',
     published: 'Published without a review',
   },
-  detail: {
+  edit: {
+    title: (name: string) => `Edit ${name}`,
+    back: 'Back to details',
+    sectionTracking: 'Your tracking',
+    sectionNotes: 'Your notes',
+    sectionMetadata: 'Title details',
     sectionIds: 'Identifiers',
-    sectionMetadata: 'Metadata',
-    sectionTracking: 'Tracking',
-    sectionNotes: 'Notes',
+    pendingLabel: 'Pending review',
+    pendingHelp:
+      'While checked, this entry stays off the RSS feed and the public page. Uncheck it to publish.',
+    noChanges: 'No changes',
+    changes: (n: number) => (n === 1 ? '1 change' : `${n} changes`),
+    barLabel: 'Unsaved changes',
+    leaveConfirm: 'You have unsaved changes. Leave without saving?',
+  },
+  detail: {
     sectionArtwork: 'Images',
     sectionRewatches: 'Rewatches',
     sectionSeasons: 'Seasons',
@@ -121,7 +131,9 @@ export const messages = {
     edited: 'Edited by hand',
     editedHint: 'A metadata refresh will not overwrite this field.',
     release: 'Release',
+    releaseUndo: 'Keep edited',
     releaseHint: 'Let the next refresh overwrite this field',
+    releasePending: 'Will be released when you save.',
     refresh: 'Refresh metadata',
     refreshing: 'Refreshing...',
     refreshOutcome: {
