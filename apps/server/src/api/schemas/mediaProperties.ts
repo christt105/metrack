@@ -1,6 +1,5 @@
 import { MEDIA_STATUSES, RATING_MAX, RATING_MIN, type Collection } from '@metrack/domain';
 import {
-  DATE_PATTERN,
   nullableDate,
   nullableInteger,
   nullableSlug,
@@ -8,6 +7,7 @@ import {
   stringList,
   title,
 } from './fieldTypes.js';
+import { viewingItem } from './viewingItem.js';
 
 type Properties = Record<string, object>;
 
@@ -17,7 +17,7 @@ const tracking: Properties = {
   finishedAt: nullableDate,
   rating: { type: ['integer', 'null'], minimum: RATING_MIN, maximum: RATING_MAX },
   review: nullableString,
-  rewatches: { type: 'array', items: { type: 'string', pattern: DATE_PATTERN } },
+  rewatches: { type: 'array', items: viewingItem },
   pendingReview: { type: 'boolean' },
 };
 

@@ -1,4 +1,4 @@
-import type { SyncState } from '../sync/SyncState.js';
+import type { WireSyncState } from './WireSyncState.js';
 import type { EntityRef } from './EntityRef.js';
 
 /**
@@ -7,6 +7,6 @@ import type { EntityRef } from './EntityRef.js';
  */
 export interface ConnectorSyncState {
   contentVersion: number;
-  state: SyncState;
+  state: WireSyncState;
   unfetched: EntityRef[];
 }

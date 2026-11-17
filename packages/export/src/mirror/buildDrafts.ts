@@ -1,4 +1,12 @@
-import type { Book, Movie, Season, Series, Tracking, Videogame } from '@metrack/domain';
+import {
+  finishDates,
+  type Book,
+  Movie,
+  Season,
+  Series,
+  Tracking,
+  Videogame,
+} from '@metrack/domain';
 import { dateField } from '../dateField.js';
 import type { ExportInput } from '../ExportInput.js';
 import { inlineSeasonOf } from '../inlineSeasonOf.js';
@@ -32,7 +40,7 @@ function tracking(t: Pick<Tracking, 'status' | 'finishedAt' | 'rewatches'>) {
     date: always('date', dateField(t.finishedAt)),
     rewatches: always(
       'rewatches',
-      t.rewatches.flatMap((date) => dateField(date) ?? []),
+      finishDates(t.rewatches).flatMap((date) => dateField(date) ?? []),
     ),
     status: always('status', statusLabel(t.status)),
   };

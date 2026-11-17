@@ -1,3 +1,4 @@
+import { finishDates } from '../finishDates.js';
 import type { Movie } from '../Movie.js';
 import type { LibraryMovie } from './LibraryMovie.js';
 import type { MovieChange } from './MovieChange.js';
@@ -27,7 +28,7 @@ function union(a: readonly string[], b: readonly string[]): string[] {
 /**
  * Turns the viewing days of each movie into changes. A movie without a finish date completes on its first
  * viewing; viewings after the recorded finish date become rewatches, and a movie that is not completed
- * but already has a finish date keeps it and completes once a later viewing shows up. Notes and reviews are never touched.
+ * but already has a finish date keeps it and completes once a later viewing shows up. Notes and reviews are never touched. `rewatches` of a change are finish dates, which the applier merges into the stored viewings.
  */
 export function planMovies(
   library: readonly LibraryMovie[],
@@ -59,6 +60,7 @@ export function planMovies(
       }
       continue;
     }
+    const known = finishDates(existing?.rewatches ?? []);
     const base = {
       movieId: existing?.id ?? null,
       jellyfinId: movie.jellyfinId,
@@ -91,7 +93,7 @@ export function planMovies(
         action: 'complete',
         startedAt: existing.startedAt ?? first,
         finishedAt: first,
-        rewatches: union(existing.rewatches, days.slice(1)),
+        rewatches: union(known, days.slice(1)),
         missingRating: existing.rating === null,
       });
       continue;
@@ -99,7 +101,7 @@ export function planMovies(
     const finishedAt = existing.finishedAt;
     const sameViewing = nextDay(finishedAt);
     const later = days.filter((day) => day > sameViewing);
-    const rewatches = union(existing.rewatches, later);
+    const rewatches = union(known, later);
     if (existing.status !== 'completed') {
       if (later.length > 0) {
         plan.changes.push({
@@ -113,7 +115,7 @@ export function planMovies(
       }
       continue;
     }
-    if (!sameList(rewatches, existing.rewatches)) {
+    if (!sameList(rewatches, known)) {
       plan.changes.push({
         ...base,
         action: 'rewatch',

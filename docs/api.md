@@ -97,16 +97,16 @@ The tracking fields are `status`, `startedAt`, `finishedAt`, `rating`, `review`,
 
 ### Editing rules
 
-- `status` follows the domain transition rules (`canTransition`). A forbidden move answers 409 `invalid_transition` and changes nothing. Entering `in_progress` sets `startedAt` when empty and keeps `finishedAt`; entering `completed` sets `startedAt` when empty and `finishedAt` to today, unless the item was already finished, in which case `finishedAt` keeps the first finish and today is added to `rewatches` (when it is a later day). Dates sent in the same request win over those automatic dates, and a request that sends `finishedAt` without `startedAt` leaves an empty start date empty instead of filling it with today. Sending the current status changes nothing.
+- `status` follows the domain transition rules (`canTransition`). A forbidden move answers 409 `invalid_transition` and changes nothing. Entering `in_progress` sets `startedAt` when empty and keeps `finishedAt`; entering `completed` sets `startedAt` when empty and `finishedAt` to today, unless the item was already finished, in which case `finishedAt` keeps the first finish. Leaving `completed` for `in_progress` opens a viewing `{ startedAt: today, finishedAt: null }` in `rewatches`; completing again closes it with today (on the finish day itself it is dropped instead), and without an open viewing a later day is added as a viewing without a start. Pausing keeps the open viewing, planning or dropping discards it. Dates sent in the same request win over those automatic dates, and a request that sends `finishedAt` without `startedAt` leaves an empty start date empty instead of filling it with today. Sending the current status changes nothing.
 - `finishedAt` before `startedAt` answers 400 `invalid_dates`.
-- `rewatches` sent in a patch replaces the whole list (sorted, without duplicates). Prefer the two routes below to add or remove one.
+- `rewatches` is a list of viewings `{ "startedAt": "YYYY-MM-DD" | null, "finishedAt": "YYYY-MM-DD" | null }`, the viewings after the first (the first lives in `startedAt` and `finishedAt`). Sent in a patch it replaces the whole list, and each item may also be a plain date string (a closed viewing without a start). The server normalizes it: closed viewings sorted by finish then start, duplicates removed, at most one open viewing (no finish), always last. Responses always carry objects. Prefer the two routes below to add or remove one.
 - Metadata fields are marked as hand-edited when a patch actually changes them: `title`, `originalTitle`, `releaseDate`, `firstAirDate`, `overview`, `genres`, `cast`, `director` (movies and series), `developer`, `platforms` (games), `authors`, `publisher`, `pageCount` (books), `episodeCount` (seasons). Sending a form with unchanged values does not mark anything. Ids, tracking, `note`, `tags`, `slug` and `follow` are never marked. Choosing or removing an image marks `cover` or `banner`.
 - Every title is stored as a catalog row (what providers describe: ids, metadata, default cover and banner) plus a personal entry (tracking, `note`, `tags`, `slug`, `follow`, `jellyfinId`, review). A hand edit of a metadata field or an image is kept in the entry and shown over the catalog; a refresh only updates the catalog, and `DELETE .../edited/{field}` drops the hand edit so the catalog value shows again.
 
 ### Rewatches (not for series)
 
-- `POST /api/{collection}/{id}/rewatches` with `{ "date": "YYYY-MM-DD" }` (`RewatchRequest`): adds a viewing. Only completed items can be rewatched, otherwise 409 `invalid_rewatch`. Answers 201 with the detail.
-- `DELETE /api/{collection}/{id}/rewatches/{date}`: removes it, 404 if there is no rewatch on that date.
+- `POST /api/{collection}/{id}/rewatches` with `{ "date": "YYYY-MM-DD" }` or `{ "startedAt"?: "YYYY-MM-DD" | null, "finishedAt": "YYYY-MM-DD" }` (`RewatchRequest`): adds a closed viewing. Only completed items can be rewatched, otherwise 409 `invalid_rewatch`. Answers 201 with the detail.
+- `DELETE /api/{collection}/{id}/rewatches/{date}`: removes the closed viewing that finished on that date, 404 if there is none.
 
 ### Season overrides
 

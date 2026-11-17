@@ -106,7 +106,7 @@ describe.each(backends)('$name repositories', (backend) => {
       finishedAt: '2026-03-15',
       rating: 6,
       review: 'Tough.',
-      rewatches: ['2026-08-01'],
+      rewatches: [{ startedAt: null, finishedAt: '2026-08-01' }],
     };
 
     it('round-trips every field', async () => {

@@ -26,7 +26,7 @@ describe('buildExport', () => {
           status: 'completed',
           finishedAt: '2024-03-05',
           rating: 7,
-          rewatches: ['2025-01-02'],
+          rewatches: [{ startedAt: null, finishedAt: '2025-01-02' }],
           review: 'Great, see [[Alpha (2020)]].',
           cover: cover.ref,
           banner: banner.ref,

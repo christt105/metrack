@@ -1,10 +1,12 @@
 import {
   addRewatch,
+  readViewings,
   transitionStatus,
   type Collection,
   type ImageKind,
   type MediaDetail,
   type Tracking,
+  type Viewing,
 } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
 import { imageRef } from '../images/imageRef.js';
@@ -64,6 +66,7 @@ export class MediaEditor {
     const kind = this.kinds[collection];
     const values = { ...kind.defaults(), ...input };
     this.validate(values);
+    if (Array.isArray(values.rewatches)) values.rewatches = readViewings(values.rewatches);
     await kind.checkReferences?.(values);
     const created = await kind.repository.create(values);
     return this.describe(collection, created);
@@ -109,7 +112,8 @@ export class MediaEditor {
       }
     }
     for (const [field, value] of Object.entries(rest)) {
-      working[field] = field === 'rewatches' ? [...new Set(value as string[])].sort() : value;
+      if (field === 'rewatches') this.validate({ rewatches: value });
+      working[field] = field === 'rewatches' ? readViewings(value as unknown[]) : value;
     }
     if ('finishedAt' in rest && !('startedAt' in rest) && current.startedAt === null) {
       working.startedAt = null;
@@ -145,13 +149,20 @@ export class MediaEditor {
     collection: Collection,
     id: number,
     date: string,
+    startedAt: string | null = null,
   ): Promise<MediaDetail<MediaEntity>> {
     const kind = this.trackable(collection);
     if (!isIsoDate(date)) throw ApiError.badRequest('invalid_date', `Not a valid date: ${date}`);
+    if (startedAt !== null && !isIsoDate(startedAt)) {
+      throw ApiError.badRequest('invalid_date', `Not a valid date: ${startedAt}`);
+    }
+    if (startedAt !== null && startedAt > date) {
+      throw ApiError.badRequest('invalid_dates', 'finishedAt cannot be before startedAt');
+    }
     const current = fieldsOf(await this.require(collection, id)) as unknown as Tracking;
     let next: Tracking;
     try {
-      next = addRewatch(current, date);
+      next = addRewatch(current, date, startedAt);
     } catch (error) {
       throw ApiError.conflict(
         'invalid_rewatch',
@@ -171,8 +182,10 @@ export class MediaEditor {
   ): Promise<MediaDetail<MediaEntity>> {
     const kind = this.trackable(collection);
     const current = fieldsOf(await this.require(collection, id)) as unknown as Tracking;
-    if (!current.rewatches.includes(date)) throw ApiError.notFound('No rewatch on that date');
-    const rewatches = current.rewatches.filter((d) => d !== date);
+    if (!current.rewatches.some((v) => v.finishedAt === date)) {
+      throw ApiError.notFound('No rewatch on that date');
+    }
+    const rewatches = current.rewatches.filter((v) => v.finishedAt !== date);
     return this.describe(collection, await kind.repository.update(id, { rewatches }));
   }
 
@@ -266,12 +279,22 @@ export class MediaEditor {
     }
     const rewatches = values.rewatches;
     if (Array.isArray(rewatches)) {
-      for (const date of rewatches) {
-        if (typeof date !== 'string' || !isIsoDate(date)) {
-          throw ApiError.badRequest(
-            'invalid_date',
-            `rewatches has an invalid date: ${String(date)}`,
-          );
+      for (const item of rewatches) {
+        const dates =
+          typeof item === 'object' && item !== null
+            ? [(item as Viewing).startedAt, (item as Viewing).finishedAt]
+            : [item];
+        for (const date of dates) {
+          if (date !== null && (typeof date !== 'string' || !isIsoDate(date))) {
+            throw ApiError.badRequest(
+              'invalid_date',
+              `rewatches has an invalid date: ${String(date)}`,
+            );
+          }
+        }
+        const [start, finish] = dates;
+        if (typeof start === 'string' && typeof finish === 'string' && finish < start) {
+          throw ApiError.badRequest('invalid_dates', 'A rewatch cannot finish before it starts');
         }
       }
     }

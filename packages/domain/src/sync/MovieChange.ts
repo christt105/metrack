@@ -8,6 +8,7 @@ export interface MovieChange {
   year: number | null;
   startedAt: string | null;
   finishedAt: string | null;
+  /** Finish dates of every closed viewing after the first, as plain dates so older connectors keep working. */
   rewatches: string[];
   missingRating: boolean;
 }

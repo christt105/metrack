@@ -43,7 +43,7 @@ describe('buildVaultMirror', () => {
             finishedAt: '2026-10-25',
             startedAt: '2026-10-24',
             rating: 5,
-            rewatches: ['2026-10-26'],
+            rewatches: [{ startedAt: null, finishedAt: '2026-10-26' }],
             cover: REF,
             review: 'Loved it.',
           }),

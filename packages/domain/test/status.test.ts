@@ -45,11 +45,15 @@ describe('transitionStatus', () => {
       finishedAt: '2024-05-01',
     };
     const again = transitionStatus(done, 'in_progress', '2026-05-01');
-    expect(again).toMatchObject({ startedAt: null, finishedAt: '2024-05-01', rewatches: [] });
+    expect(again).toMatchObject({
+      startedAt: null,
+      finishedAt: '2024-05-01',
+      rewatches: [{ startedAt: '2026-05-01', finishedAt: null }],
+    });
     expect(transitionStatus(again, 'completed', '2026-05-09')).toMatchObject({
       startedAt: null,
       finishedAt: '2024-05-01',
-      rewatches: ['2026-05-09'],
+      rewatches: [{ startedAt: '2026-05-01', finishedAt: '2026-05-09' }],
     });
   });
 
@@ -59,7 +63,7 @@ describe('transitionStatus', () => {
       status: 'in_progress',
       startedAt: null,
       finishedAt: '2026-03-15',
-      rewatches: [],
+      rewatches: [{ startedAt: '2026-05-01', finishedAt: null }],
     });
   });
 
@@ -69,14 +73,37 @@ describe('transitionStatus', () => {
     expect(transitionStatus(again, 'completed', '2026-05-09')).toMatchObject({
       status: 'completed',
       finishedAt: '2026-03-15',
-      rewatches: ['2026-05-09'],
+      rewatches: [{ startedAt: '2026-05-01', finishedAt: '2026-05-09' }],
     });
     const paused = transitionStatus(again, 'paused', '2026-05-02');
-    const earlier = { ...paused, rewatches: ['2026-06-01'] };
+    expect(paused.rewatches).toEqual([{ startedAt: '2026-05-01', finishedAt: null }]);
+    const earlier = {
+      ...paused,
+      rewatches: [{ startedAt: null, finishedAt: '2026-06-01' }, ...paused.rewatches],
+    };
     expect(transitionStatus(earlier, 'completed', '2026-04-20').rewatches).toEqual([
-      '2026-04-20',
-      '2026-06-01',
+      { startedAt: null, finishedAt: '2026-04-20' },
+      { startedAt: null, finishedAt: '2026-06-01' },
     ]);
+  });
+
+  it('records a viewing without a start when there is no open one', () => {
+    const paused = {
+      ...planned,
+      status: 'paused' as const,
+      finishedAt: '2026-03-15',
+    };
+    expect(transitionStatus(paused, 'completed', '2026-05-09').rewatches).toEqual([
+      { startedAt: null, finishedAt: '2026-05-09' },
+    ]);
+  });
+
+  it('discards the open viewing when planned or dropped and keeps it when paused', () => {
+    const done = { ...planned, status: 'completed' as const, finishedAt: '2026-03-15' };
+    const again = transitionStatus(done, 'in_progress', '2026-05-01');
+    expect(transitionStatus(again, 'paused', '2026-05-02').rewatches).toHaveLength(1);
+    expect(transitionStatus(again, 'planned', '2026-05-02').rewatches).toEqual([]);
+    expect(transitionStatus(again, 'dropped', '2026-05-02').rewatches).toEqual([]);
   });
 
   it('does not record a rewatch when completed again on the finish day', () => {
@@ -99,8 +126,14 @@ describe('addRewatch', () => {
   it('only works on completed items and keeps dates sorted and unique', () => {
     const done = transitionStatus(planned, 'completed', '2026-03-15');
     const again = addRewatch(addRewatch(done, '2026-05-01'), '2026-04-01');
-    expect(again.rewatches).toEqual(['2026-04-01', '2026-05-01']);
+    expect(again.rewatches).toEqual([
+      { startedAt: null, finishedAt: '2026-04-01' },
+      { startedAt: null, finishedAt: '2026-05-01' },
+    ]);
     expect(addRewatch(again, '2026-04-01').rewatches).toHaveLength(2);
+    expect(addRewatch(done, '2026-05-02', '2026-05-01').rewatches).toEqual([
+      { startedAt: '2026-05-01', finishedAt: '2026-05-02' },
+    ]);
     expect(() => addRewatch(planned, '2026-04-01')).toThrow();
   });
 });

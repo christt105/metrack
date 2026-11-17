@@ -1,4 +1,4 @@
-import type { Tracking } from '@metrack/domain';
+import { viewingsFromDates, type Tracking } from '@metrack/domain';
 import { parseDate } from './parseDate.js';
 import { parseRating } from './parseRating.js';
 import { parseStatus } from './parseStatus.js';
@@ -37,7 +37,7 @@ export function readTracking(note: VaultNote, issues: IssueLog): Tracking {
     finishedAt: finished.value,
     rating: rating.value,
     review: review === '' ? null : review,
-    rewatches,
+    rewatches: viewingsFromDates(rewatches),
     pendingReview: false,
   };
 }

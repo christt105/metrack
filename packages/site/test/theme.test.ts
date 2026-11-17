@@ -20,7 +20,7 @@ const library = buildLibrary(
         title: 'Dune',
         status: 'completed',
         finishedAt: '2025-03-05',
-        rewatches: ['2026-06-01'],
+        rewatches: [{ startedAt: null, finishedAt: '2026-06-01' }],
         rating: 7,
         tags: ['cine'],
         banner: 'https://image.tmdb.org/t/p/original/banner.jpg',

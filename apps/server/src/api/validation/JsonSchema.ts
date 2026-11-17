@@ -14,4 +14,5 @@ export interface JsonSchema {
   required?: readonly string[];
   additionalProperties?: boolean;
   minProperties?: number;
+  anyOf?: readonly JsonSchema[];
 }

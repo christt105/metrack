@@ -1,12 +1,14 @@
-import type {
-  EntityRef,
-  Season,
-  SeasonChange,
-  Series,
-  SyncApplyResult,
-  SyncPlan,
+import {
+  viewingsFromDates,
+  type EntityRef,
+  type Season,
+  type SeasonChange,
+  type Series,
+  type SyncApplyResult,
+  type SyncPlan,
 } from '@metrack/domain';
 import { emptyMovie, emptySeason, emptySeries } from '../media/emptyEntities.js';
+import { mergeMovieViewings } from './mergeMovieViewings.js';
 import { SharedCatalogError } from '../storage/SharedCatalogError.js';
 import type { TransactionRunner } from '../storage/repositories/TransactionRunner.js';
 import type { SyncApplyOutcome } from './SyncApplyOutcome.js';
@@ -54,13 +56,13 @@ export class SyncApplier {
         status: 'completed' as const,
         startedAt: change.startedAt,
         finishedAt: change.finishedAt,
-        rewatches: change.rewatches,
         pendingReview: true,
       };
       if (change.movieId === null) {
         const movie = await movies.create({
           ...emptyMovie(),
           ...tracking,
+          rewatches: viewingsFromDates(change.rewatches),
           tmdbId: change.tmdbId,
           jellyfinId: change.jellyfinId,
           title: change.title,
@@ -68,7 +70,12 @@ export class SyncApplier {
         created.push({ type: 'movie', id: movie.id });
         result.moviesCreated += 1;
       } else {
-        await movies.update(change.movieId, { ...tracking, jellyfinId: change.jellyfinId });
+        const stored = await movies.get(change.movieId);
+        await movies.update(change.movieId, {
+          ...tracking,
+          rewatches: mergeMovieViewings(stored?.rewatches ?? [], change.rewatches),
+          jellyfinId: change.jellyfinId,
+        });
         result.moviesUpdated += 1;
       }
     }

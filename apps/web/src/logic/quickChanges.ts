@@ -1,5 +1,5 @@
-import { canTransition } from '@metrack/domain';
-import type { MediaStatus } from '@metrack/domain';
+import { canTransition, normalizeViewings } from '@metrack/domain';
+import type { MediaStatus, Viewing } from '@metrack/domain';
 import type { QuickChange } from './QuickChange';
 
 /** The tracking fields the quick actions read and restore. */
@@ -9,7 +9,7 @@ export interface QuickTracking {
   finishedAt: string | null;
   rating: number | null;
   review: string | null;
-  rewatches: string[];
+  rewatches: Viewing[];
   pendingReview: boolean;
 }
 
@@ -39,7 +39,7 @@ export function ratingChange(current: QuickTracking, rating: number | null): Qui
 /**
  * Records a viewing today. An unfinished item gets today as its finish date and completes when the status
  * rules allow it. A finished one keeps its first finish: it completes again (the server records the
- * rewatch) or, when already completed, gains today in its rewatches. Asks for a review when there is none.
+ * rewatch) or, when already completed, gains a viewing finished today in its rewatches. Asks for a review when there is none.
  */
 export function watchedTodayChange(current: QuickTracking, today: string): QuickChange {
   const patch: Record<string, unknown> = {};
@@ -52,9 +52,12 @@ export function watchedTodayChange(current: QuickTracking, today: string): Quick
   } else if (
     current.status === 'completed' &&
     today !== current.finishedAt &&
-    !current.rewatches.includes(today)
+    !current.rewatches.some((v) => v.finishedAt === today)
   ) {
-    patch.rewatches = [...current.rewatches, today].sort();
+    patch.rewatches = normalizeViewings([
+      ...current.rewatches,
+      { startedAt: null, finishedAt: today },
+    ]);
   }
   if (!current.review && !current.pendingReview) patch.pendingReview = true;
   return { patch, undo: snapshot(current) };

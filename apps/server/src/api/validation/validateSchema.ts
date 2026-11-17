@@ -32,6 +32,13 @@ function validateNode(
   schemaPath: string,
 ): SchemaResult {
   let value = input;
+  if (schema.anyOf !== undefined) {
+    for (const option of schema.anyOf) {
+      const result = validateNode(option, structuredClone(input), instancePath, schemaPath);
+      if (!result.violation) return result;
+    }
+    return fail(instancePath, `${schemaPath}/anyOf`, 'anyOf', {}, 'must match a schema in anyOf');
+  }
   if (schema.type !== undefined) {
     const types = typeof schema.type === 'string' ? [schema.type] : schema.type;
     const coerced = coerceType(types, value);

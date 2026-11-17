@@ -23,6 +23,7 @@ import { googleLoginMigration } from './0021-google-login.js';
 import { invitesMigration } from './0022-invites.js';
 import { episodeGroupMigration } from './0023-episode-group.js';
 import { nextEpisodeMigration } from './0024-next-episode.js';
+import { rewatchViewingsMigration } from './0025-rewatch-viewings.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -49,4 +50,5 @@ export const migrations: readonly Migration[] = [
   invitesMigration,
   episodeGroupMigration,
   nextEpisodeMigration,
+  rewatchViewingsMigration,
 ];
