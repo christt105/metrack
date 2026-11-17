@@ -87,7 +87,7 @@ if (props.hasUnlinkedSeasons) void load();
 <template>
   <details class="panel" :open="opened" @toggle="onToggle">
     <summary>
-      <h2>{{ messages.ordering.title }}</h2>
+      <h3>{{ messages.ordering.title }}</h3>
     </summary>
     <p class="muted">{{ messages.ordering.description }}</p>
     <p v-if="loading" class="muted">{{ messages.ordering.loading }}</p>
@@ -120,7 +120,7 @@ summary {
   cursor: pointer;
 }
 
-summary h2 {
+summary h3 {
   display: inline;
 }
 

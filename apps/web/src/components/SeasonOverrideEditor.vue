@@ -51,8 +51,7 @@ const remove = (override: SeasonOverride) =>
 </script>
 
 <template>
-  <section class="panel">
-    <h2>{{ messages.detail.sectionOverrides }}</h2>
+  <div>
     <p class="muted">{{ messages.overrides.description }}</p>
     <p v-if="overrides.length === 0" class="muted">{{ messages.overrides.empty }}</p>
     <ul class="list">
@@ -89,7 +88,7 @@ const remove = (override: SeasonOverride) =>
       <button type="submit" :disabled="busy">{{ messages.overrides.save }}</button>
     </form>
     <ErrorNotice :error="error" />
-  </section>
+  </div>
 </template>
 
 <style scoped>

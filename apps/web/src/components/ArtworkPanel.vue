@@ -44,8 +44,7 @@ async function clear(kind: ImageKind): Promise<void> {
 </script>
 
 <template>
-  <section class="panel">
-    <h2>{{ messages.detail.sectionArtwork }}</h2>
+  <div>
     <div class="slots">
       <div v-for="kind in kinds" :key="kind" class="slot" :class="kind">
         <div class="preview">
@@ -89,7 +88,7 @@ async function clear(kind: ImageKind): Promise<void> {
       @close="picking = null"
     />
     <ErrorNotice :error="error" />
-  </section>
+  </div>
 </template>
 
 <style scoped>

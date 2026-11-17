@@ -36,8 +36,7 @@ const remove = (value: string) => run(() => api.removeRewatch(props.collection, 
 </script>
 
 <template>
-  <section class="panel">
-    <h2>{{ messages.detail.sectionRewatches }}</h2>
+  <div>
     <p v-if="rewatches.length === 0" class="muted">{{ messages.rewatches.empty }}</p>
     <ul v-else class="dates">
       <li v-for="value in rewatches" :key="value">
@@ -59,7 +58,7 @@ const remove = (value: string) => run(() => api.removeRewatch(props.collection, 
     </form>
     <p v-else class="muted">{{ messages.rewatches.onlyCompleted }}</p>
     <ErrorNotice :error="error" />
-  </section>
+  </div>
 </template>
 
 <style scoped>

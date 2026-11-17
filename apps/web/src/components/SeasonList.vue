@@ -1,24 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { sizedImageUrl, type Season } from '@metrack/domain';
-import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import { seasonWatched } from '../logic/seasonWatched';
-import ErrorNotice from './ErrorNotice.vue';
 import PendingBadge from './PendingBadge.vue';
 import SeasonProgress from './SeasonProgress.vue';
 import StatusBadge from './StatusBadge.vue';
 
-const props = defineProps<{ seriesId: number; seasons: Season[]; seriesCover?: string | null }>();
-const emit = defineEmits<{ changed: [] }>();
-
-const api = useApi();
-const number = ref('');
-const error = ref<unknown>(null);
-const busy = ref(false);
-const nextNumber = computed(() =>
-  String(props.seasons.reduce((max, season) => Math.max(max, season.number), 0) + 1),
-);
+const props = defineProps<{ seasons: Season[]; seriesCover?: string | null }>();
 
 function label(season: Season): string {
   return `${messages.typeLabels.season} ${season.number}`;
@@ -26,23 +14,6 @@ function label(season: Season): string {
 
 function coverOf(season: Season): string | null {
   return season.cover ?? props.seriesCover ?? null;
-}
-
-async function add(): Promise<void> {
-  busy.value = true;
-  error.value = null;
-  try {
-    await api.create('seasons', {
-      seriesId: props.seriesId,
-      number: Number(number.value || nextNumber.value),
-    });
-    number.value = '';
-    emit('changed');
-  } catch (cause) {
-    error.value = cause;
-  } finally {
-    busy.value = false;
-  }
 }
 </script>
 
@@ -80,19 +51,6 @@ async function add(): Promise<void> {
         </RouterLink>
       </li>
     </ul>
-    <form class="add" @submit.prevent="add">
-      <input
-        v-model="number"
-        type="number"
-        min="0"
-        step="1"
-        class="number"
-        :placeholder="nextNumber"
-        :aria-label="messages.detail.seasonNumber"
-      />
-      <button type="submit" :disabled="busy">{{ messages.detail.addSeason }}</button>
-    </form>
-    <ErrorNotice :error="error" />
   </section>
 </template>
 
@@ -182,15 +140,6 @@ async function add(): Promise<void> {
 
 .body :deep(.progress) {
   margin-top: auto;
-}
-
-.add {
-  display: flex;
-  gap: var(--s-2);
-}
-
-.number {
-  width: 110px;
 }
 
 @media (hover: hover) and (pointer: fine) {

@@ -61,7 +61,6 @@ export const messages = {
     none: 'None',
     any: 'Any',
     back: 'Back',
-    confirmDelete: 'Delete this item for good?',
   },
   errors: {
     network: 'The service cannot be reached.',
@@ -123,10 +122,7 @@ export const messages = {
     leaveConfirm: 'You have unsaved changes. Leave without saving?',
   },
   detail: {
-    sectionArtwork: 'Images',
-    sectionRewatches: 'Rewatches',
     sectionSeasons: 'Seasons',
-    sectionOverrides: 'Season overrides',
     confirmForAll: 'This changes it for every user who has this series. Continue?',
     edited: 'Edited by hand',
     editedHint: 'A metadata refresh will not overwrite this field.',
@@ -148,9 +144,6 @@ export const messages = {
     singleSeasonNote: 'This series has a single season, shown as one card in the library.',
     seasonOf: 'Season of',
     noSeasons: 'No seasons yet.',
-    addSeason: 'Add season',
-    seasonNumber: 'Season number',
-    deleteItem: 'Delete',
     openLink: 'Open',
   },
   seasons: {
@@ -199,10 +192,29 @@ export const messages = {
     addReview: 'Add review',
     reviewLabel: 'Review',
     cancel: 'Cancel',
-    advanced: 'Images, ordering and more',
+  },
+  manage: {
+    title: 'Manage',
+    intro: 'Changes in this section apply right away. Nothing here waits for Save.',
+    rewatches: 'Rewatches',
+    images: 'Images',
+    imagesHint: 'Choose or upload the cover and banner',
+    addSeason: 'Add season',
+    seasonNumber: 'Season number',
+    addSeasonButton: 'Add season now',
+    seasonSettings: 'Season settings',
+    seasonSettingsHint: 'Rename, renumber or link seasons to Jellyfin',
+    metadata: 'Metadata',
+    dangerZone: 'Danger zone',
+    delete: (title: string) => `Delete ${title}…`,
+    deleteWarning: (series: boolean) =>
+      series
+        ? 'This permanently deletes the series with its seasons, your tracking, review and rewatches. It cannot be undone.'
+        : 'This permanently deletes the entry with your tracking, review and rewatches. It cannot be undone.',
+    deleteConfirm: 'Delete permanently',
   },
   ordering: {
-    title: 'Season ordering',
+    title: 'Season order',
     description:
       'How the seasons of this series are numbered. TMDB can split a series into seasons differently from its regular seasons, for example to match the library.',
     regular: 'TMDB seasons',
