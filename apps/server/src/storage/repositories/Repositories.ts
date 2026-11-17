@@ -7,6 +7,8 @@ import type { InviteRepository } from './InviteRepository.js';
 import type { MetadataStateRepository } from './MetadataStateRepository.js';
 import type { MovieRepository } from './MovieRepository.js';
 import type { ReleaseAlertRepository } from './ReleaseAlertRepository.js';
+import type { EpisodeWatchRepository } from './EpisodeWatchRepository.js';
+import type { SeasonEpisodesRepository } from './SeasonEpisodesRepository.js';
 import type { SeasonOverrideRepository } from './SeasonOverrideRepository.js';
 import type { SeasonRepository } from './SeasonRepository.js';
 import type { SessionRepository } from './SessionRepository.js';
@@ -25,6 +27,8 @@ export interface Repositories {
   videogames: VideogameRepository;
   books: BookRepository;
   overrides: SeasonOverrideRepository;
+  seasonEpisodes: SeasonEpisodesRepository;
+  episodeWatches: EpisodeWatchRepository;
   unlinked: UnlinkedTitleRepository;
   releaseAlerts: ReleaseAlertRepository;
   metadataStates: MetadataStateRepository;

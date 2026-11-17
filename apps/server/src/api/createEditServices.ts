@@ -3,6 +3,7 @@ import { buildMediaKinds } from '../media/buildMediaKinds.js';
 import { MediaCatalog } from '../media/MediaCatalog.js';
 import { MediaEditor } from '../media/MediaEditor.js';
 import { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
+import { SeasonEpisodesService } from '../seasons/SeasonEpisodesService.js';
 import { UnlinkedResolver } from '../titles/UnlinkedResolver.js';
 import type { EditServices } from './EditServices.js';
 import type { EditServicesDeps } from './EditServicesDeps.js';
@@ -20,6 +21,14 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     series: sources.series,
     overrides: sources.overrides,
     unlinked: deps.unlinked,
+    seasonEpisodes: new SeasonEpisodesService({
+      seasons: sources.seasons,
+      series: sources.series,
+      catalog: deps.seasonEpisodes,
+      watches: deps.episodeWatches,
+      ...(deps.tmdb ? { tmdb: deps.tmdb } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
+    }),
     ...(deps.tmdb
       ? {
           episodeGroups: new EpisodeGroupService(

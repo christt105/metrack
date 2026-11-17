@@ -406,6 +406,7 @@ async function seedLupin(t: ReturnType<typeof setup>) {
     overview: null,
     firstAirDate: '2026-10-23',
     episodeCount: 8,
+    watchedCount: 0,
     slug: null,
     tags: [],
     cover: null,

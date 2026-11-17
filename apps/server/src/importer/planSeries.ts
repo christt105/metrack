@@ -60,6 +60,7 @@ export function planImplicitSeason(
       overview: null,
       firstAirDate: series.firstAirDate,
       episodeCount: null,
+      watchedCount: 0,
       cover: null,
       banner: null,
       slug: null,

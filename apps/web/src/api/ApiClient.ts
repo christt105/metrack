@@ -1,4 +1,5 @@
 import type {
+  SeasonEpisodesResponse,
   AccountDeletion,
   AccountStatus,
   AddTitleRequest,
@@ -185,6 +186,10 @@ export class ApiClient {
   ): Promise<Detail<C>> {
     const query = options.forAll ? '?forAll=true' : '';
     return this.request('PATCH', `/${collection}/${id}${query}`, patch);
+  }
+
+  seasonEpisodes(seasonId: number): Promise<SeasonEpisodesResponse> {
+    return this.request('GET', `/seasons/${seasonId}/episodes`);
   }
 
   episodeGroups(seriesId: number): Promise<EpisodeGroupOptions> {

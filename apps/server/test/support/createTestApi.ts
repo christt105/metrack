@@ -11,6 +11,7 @@ import type { FetchFn } from '../../src/http/FetchFn.js';
 import { createImageStore } from '../../src/images/createImageStore.js';
 import type { ImageStore } from '../../src/images/ImageStore.js';
 import type { ImageStoreOptions } from '../../src/images/ImageStoreOptions.js';
+import type { ContentVersions } from '../../src/site/ContentVersions.js';
 import { testUrlGuard } from './testUrlGuard.js';
 import { MetadataCache } from '../../src/metadata/MetadataCache.js';
 import { SqliteMetadataStateRepository } from '../../src/storage/sqlite/SqliteMetadataStateRepository.js';
@@ -31,6 +32,8 @@ import { SqliteMovieRepository } from '../../src/storage/sqlite/SqliteMovieRepos
 import type { MovieRepository } from '../../src/storage/repositories/MovieRepository.js';
 import { SqliteReleaseAlertRepository } from '../../src/storage/sqlite/SqliteReleaseAlertRepository.js';
 import type { ReleaseAlertRepository } from '../../src/storage/repositories/ReleaseAlertRepository.js';
+import { SqliteEpisodeWatchRepository } from '../../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
+import { SqliteSeasonEpisodesRepository } from '../../src/storage/sqlite/SqliteSeasonEpisodesRepository.js';
 import { SqliteSeasonOverrideRepository } from '../../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../../src/storage/sqlite/SqliteSeasonRepository.js';
 import type { SeasonRepository } from '../../src/storage/repositories/SeasonRepository.js';
@@ -97,6 +100,8 @@ export interface TestApiOptions {
   images?: ImageStoreOptions;
   /** The configured `PUBLIC_URL`; defaults to none. */
   publicUrl?: string;
+  /** Counted when set; the library list and the public pages revalidate by it. */
+  contentVersions?: ContentVersions;
 }
 
 export async function createTestApi(
@@ -163,6 +168,8 @@ export async function createTestApi(
     images: store,
     cache,
     tmdb,
+    seasonEpisodes: new SqliteSeasonEpisodesRepository(db),
+    episodeWatches: new SqliteEpisodeWatchRepository(db, scope),
     titleProviders,
     imageProviders,
     now: () => NOW,
@@ -192,6 +199,7 @@ export async function createTestApi(
     metadataCache: cache,
     publishQueues: ownerQueues(queue),
     edit,
+    ...(options.contentVersions ? { contentVersions: options.contentVersions } : {}),
     watch: { watchlist: new WatchlistService(edit.editor, movies, series, seasons), alerts },
     account: {
       serverZip: true,
@@ -208,6 +216,7 @@ export async function createTestApi(
           videogames,
           books,
           overrides,
+          episodeWatches: new SqliteEpisodeWatchRepository(db, scope),
           unlinked,
           releaseAlerts: alerts,
           images: store,

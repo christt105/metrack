@@ -114,6 +114,18 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.seasons.get(season.id);
   await owner.seasons.getMany([season.id]);
   await owner.seasons.list();
+  await owner.seasonEpisodes.put({
+    seasonId: season.id,
+    episodes: [],
+    source: 'tmdb',
+    fetchedAt: 'now',
+  });
+  await owner.seasonEpisodes.get(season.id);
+  await owner.episodeWatches.set(season.id, { '1': [] });
+  await owner.episodeWatches.get(season.id);
+  await owner.episodeWatches.list();
+  await owner.episodeWatches.listForSeason(season.id);
+  await owner.episodeWatches.replace(1, season.id, {});
   await owner.overrides.set({
     seriesId: series.id,
     tmdbSeasonNumber: 1,

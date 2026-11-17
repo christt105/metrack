@@ -41,6 +41,7 @@ beforeAll(async () => {
       ...statements('../d1/migrations/0001_schema.sql'),
       ...statements('../d1/migrations/0002_public_render_cache.sql'),
       ...statements('../d1/migrations/0005_invites.sql'),
+      ...statements('../d1/migrations/0009_season_episodes.sql'),
     ].map((sql) => DB.prepare(sql)),
   );
   const spy = {

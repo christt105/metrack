@@ -11,6 +11,8 @@ import { D1MetadataStateRepository } from './D1MetadataStateRepository.js';
 import { D1MovieRepository } from './D1MovieRepository.js';
 import { D1PublicProfileRepository } from './D1PublicProfileRepository.js';
 import { D1ReleaseAlertRepository } from './D1ReleaseAlertRepository.js';
+import { D1EpisodeWatchRepository } from './D1EpisodeWatchRepository.js';
+import { D1SeasonEpisodesRepository } from './D1SeasonEpisodesRepository.js';
 import { D1SeasonOverrideRepository } from './D1SeasonOverrideRepository.js';
 import { D1SeasonRepository } from './D1SeasonRepository.js';
 import { D1SeriesRepository } from './D1SeriesRepository.js';
@@ -30,6 +32,8 @@ export function createD1Repositories(db: D1Database, scope: UserScope): Reposito
     videogames: new D1VideogameRepository(db, scope),
     books: new D1BookRepository(db, scope),
     overrides: new D1SeasonOverrideRepository(db, scope),
+    seasonEpisodes: new D1SeasonEpisodesRepository(db),
+    episodeWatches: new D1EpisodeWatchRepository(db, scope),
     unlinked: new D1UnlinkedTitleRepository(db, scope),
     releaseAlerts: new D1ReleaseAlertRepository(db, scope),
     metadataStates: new D1MetadataStateRepository(db, scope),

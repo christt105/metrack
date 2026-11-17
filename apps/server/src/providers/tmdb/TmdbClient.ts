@@ -1,5 +1,6 @@
 import type { FetchFn } from '../../http/FetchFn.js';
 import { getJson, type QueryParams } from '../../http/getJson.js';
+import { getJsonCapped } from '../../http/getJsonCapped.js';
 import type { TmdbReleaseResponse } from './TmdbReleaseResponse.js';
 import type { TmdbImagesResponse } from './TmdbImagesResponse.js';
 import type { TmdbSearchResponse } from './TmdbSearchResponse.js';
@@ -7,11 +8,14 @@ import type { TmdbClientOptions } from './TmdbClientOptions.js';
 import type { TmdbEpisodeGroup } from './TmdbEpisodeGroup.js';
 import type { TmdbEpisodeGroupList } from './TmdbEpisodeGroupList.js';
 import type { TmdbFindResponse } from './TmdbFindResponse.js';
+import type { TmdbSeasonResponse } from './TmdbSeasonResponse.js';
 import type { TmdbTitleResponse } from './TmdbTitleResponse.js';
 
 const BASE = 'https://api.themoviedb.org/3';
 export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
 export const TMDB_IMAGE_HOST = 'image.tmdb.org';
+/** The largest season document read; the median is 60 KB and a few with crew and guest stars pass 1 MB. */
+export const TMDB_SEASON_MAX_BYTES = 1_000_000;
 
 export class TmdbClient {
   constructor(
@@ -51,6 +55,13 @@ export class TmdbClient {
   /** One episode group with its seasons and their episodes. */
   episodeGroup(groupId: string): Promise<TmdbEpisodeGroup> {
     return this.get(`/tv/episode_group/${encodeURIComponent(groupId)}`, {
+      language: this.options.language,
+    });
+  }
+
+  /** One regular season with its episodes. Refuses (`ResponseTooLargeError`) a document over 1 MB without parsing it. */
+  season(tvId: number, seasonNumber: number): Promise<TmdbSeasonResponse> {
+    return this.getCapped(`/tv/${tvId}/season/${seasonNumber}`, TMDB_SEASON_MAX_BYTES, {
       language: this.options.language,
     });
   }
@@ -96,6 +107,16 @@ export class TmdbClient {
       language: this.options.language,
       append_to_response: 'credits',
     });
+  }
+
+  private getCapped<T>(path: string, maxBytes: number, params: QueryParams): Promise<T> {
+    const key = this.options.apiKey.replace(/^Bearer\s+/i, '');
+    if (key.length > 40) {
+      return getJsonCapped<T>(this.fetchFn, `${BASE}${path}`, maxBytes, params, {
+        Authorization: `Bearer ${key}`,
+      });
+    }
+    return getJsonCapped<T>(this.fetchFn, `${BASE}${path}`, maxBytes, { ...params, api_key: key });
   }
 
   private get<T>(path: string, params: QueryParams): Promise<T> {

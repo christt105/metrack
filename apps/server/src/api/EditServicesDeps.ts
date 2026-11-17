@@ -3,6 +3,8 @@ import type { ImageStore } from '../images/ImageStore.js';
 import type { MediaKindSources } from '../media/MediaKindSources.js';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
+import type { EpisodeWatchRepository } from '../storage/repositories/EpisodeWatchRepository.js';
+import type { SeasonEpisodesRepository } from '../storage/repositories/SeasonEpisodesRepository.js';
 import type { MetadataStateRepository } from '../storage/repositories/MetadataStateRepository.js';
 import type { UnlinkedTitleRepository } from '../storage/repositories/UnlinkedTitleRepository.js';
 import type { TitleProviders } from '../titles/TitleProviders.js';
@@ -14,6 +16,8 @@ export interface EditServicesDeps {
   images: ImageStore;
   cache: MetadataCache;
   tmdb?: TmdbClient;
+  seasonEpisodes: SeasonEpisodesRepository;
+  episodeWatches: EpisodeWatchRepository;
   titleProviders: TitleProviders;
   imageProviders: readonly ImageProvider[];
   now?: () => Date;

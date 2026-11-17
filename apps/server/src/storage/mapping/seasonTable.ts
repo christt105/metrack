@@ -15,6 +15,7 @@ const ENTRY_COLUMNS = [
   'review',
   'rewatches',
   'pending_review',
+  'watched_count',
 ];
 
 function seasonToRow(s: Omit<Season, 'id'>): RowValues {
@@ -27,6 +28,7 @@ function seasonToRow(s: Omit<Season, 'id'>): RowValues {
     overview: s.overview,
     first_air_date: s.firstAirDate,
     episode_count: s.episodeCount,
+    watched_count: s.watchedCount,
     cover: s.cover,
     banner: s.banner,
     slug: s.slug,
@@ -46,6 +48,7 @@ function seasonFromRow(row: Row): Season {
     overview: text(row.overview),
     firstAirDate: text(row.first_air_date),
     episodeCount: num(row.episode_count),
+    watchedCount: Number(row.watched_count ?? 0),
     cover: text(row.cover),
     banner: text(row.banner),
     slug: text(row.slug),

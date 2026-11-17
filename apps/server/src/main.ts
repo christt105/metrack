@@ -161,6 +161,8 @@ const edit = createEditServices({
   images: imageStore,
   cache: metadataCache,
   ...(tmdb ? { tmdb } : {}),
+  seasonEpisodes: repositories.seasonEpisodes,
+  episodeWatches: repositories.episodeWatches,
   titleProviders,
   imageProviders,
 });

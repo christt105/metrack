@@ -1,6 +1,7 @@
 import type { ImageStore } from '../images/ImageStore.js';
 import type { ApiTokenRepository } from '../storage/repositories/ApiTokenRepository.js';
 import type { BookRepository } from '../storage/repositories/BookRepository.js';
+import type { EpisodeWatchRepository } from '../storage/repositories/EpisodeWatchRepository.js';
 import type { InviteRepository } from '../storage/repositories/InviteRepository.js';
 import type { MovieRepository } from '../storage/repositories/MovieRepository.js';
 import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
@@ -26,6 +27,7 @@ export interface AccountExporterDeps {
   videogames: VideogameRepository;
   books: BookRepository;
   overrides: SeasonOverrideRepository;
+  episodeWatches: EpisodeWatchRepository;
   unlinked: UnlinkedTitleRepository;
   releaseAlerts: ReleaseAlertRepository;
   images: ImageStore;

@@ -72,6 +72,7 @@ export function season(overrides: Partial<Season> & { id: number; seriesId: numb
     overview: null,
     firstAirDate: null,
     episodeCount: null,
+    watchedCount: 0,
     slug: null,
     tags: [],
     cover: null,
