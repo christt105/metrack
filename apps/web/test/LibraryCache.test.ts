@@ -4,13 +4,11 @@ import { LibraryCache } from '../src/library/LibraryCache';
 const page = (total: number) => ({ total, items: [] });
 
 describe('LibraryCache', () => {
-  it('returns what was stored and forgets it on clear', () => {
+  it('returns what was stored', () => {
     const cache = new LibraryCache();
     expect(cache.get({ q: 'a' })).toBeUndefined();
     cache.set({ q: 'a' }, page(1));
     expect(cache.get({ q: 'a' })?.total).toBe(1);
-    cache.clear();
-    expect(cache.get({ q: 'a' })).toBeUndefined();
   });
 
   it('keys by content, not by property order or undefined values', () => {

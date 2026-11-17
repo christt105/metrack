@@ -61,7 +61,6 @@ type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDet
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
  * `onUnauthenticated` runs when a call outside `/auth` is refused for lack of a session.
- * `onWritten` runs after any non-GET/HEAD request that succeeded.
  */
 export class ApiClient {
   constructor(
@@ -69,7 +68,6 @@ export class ApiClient {
     private readonly onUnauthenticated: () => void = () => {},
     private readonly recode: (file: Blob, maxSide: number) => Promise<Blob> = recodeToWebp,
     private readonly onReachable: (reachable: boolean) => void = () => {},
-    private readonly onWritten: () => void = () => {},
   ) {}
 
   private settings: Promise<ImageSettings> | undefined;
@@ -104,7 +102,6 @@ export class ApiClient {
       if (response.status === 401 && !path.startsWith('/auth/')) this.onUnauthenticated();
       throw await this.toError(response);
     }
-    if (response.ok && method !== 'GET' && method !== 'HEAD') this.onWritten();
     if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
   }

@@ -24,7 +24,6 @@ const api = new ApiClient(
   },
   undefined,
   (reachable) => connectivity.report(reachable),
-  () => libraryCache.clear(),
 );
 const session = new Session(api);
 const router = createAppRouter();

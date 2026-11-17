@@ -26,10 +26,6 @@ export class LibraryCache {
     }
   }
 
-  clear(): void {
-    this.pages.clear();
-  }
-
   private keyOf(query: MediaQuery): string {
     const entries = Object.entries(query)
       .filter(([, value]) => value !== undefined)
