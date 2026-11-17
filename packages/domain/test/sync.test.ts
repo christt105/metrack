@@ -196,6 +196,28 @@ describe('movies', () => {
     expect(run(done, [play('m1', '2026-05-10', 6000)]).movies).toEqual([]);
   });
 
+  it('keeps the finish of a rewatch in progress and completes it on a later viewing', () => {
+    for (const status of ['in_progress', 'paused'] as const) {
+      const state = {
+        ...EMPTY,
+        movies: [movie({ status, finishedAt: '2024-02-01', startedAt: null, rating: 7 })],
+      };
+      expect(run(state, [play('m1', '2024-02-01', 6000)]).movies).toEqual([]);
+      const [change] = run(state, [
+        play('m1', '2024-02-01', 6000),
+        play('m1', '2026-05-10', 6000),
+      ]).movies;
+      expect(change).toMatchObject({
+        action: 'complete',
+        movieId: 1,
+        startedAt: null,
+        finishedAt: '2024-02-01',
+        rewatches: ['2026-05-10'],
+        missingRating: false,
+      });
+    }
+  });
+
   it('treats a viewing past midnight as the recorded one', () => {
     const state = { ...EMPTY, movies: [movie({ status: 'completed', finishedAt: '2026-02-01' })] };
     expect(run(state, [play('m1', '2026-02-02', 6000)]).movies).toEqual([]);
