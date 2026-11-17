@@ -61,14 +61,19 @@ export function registerMediaRoutes(
   editor: MediaEditor,
   catalog: MediaCatalog,
   cache?: MetadataCache,
-  versions?: ContentVersions,
+  list?: { versions: ContentVersions; appVersion: string },
 ): void {
   routes.get<{ Querystring: MediaQuery }>(
     '/api/media',
     { schema: { querystring: listQuery } },
     async (request) => {
-      if (!versions || !request.user) return catalog.list(request.query);
-      const etag = await mediaListEtag(request.user.id, await versions.global(), request.query);
+      if (!list || !request.user) return catalog.list(request.query);
+      const etag = await mediaListEtag(
+        list.appVersion,
+        request.user.id,
+        await list.versions.global(),
+        request.query,
+      );
       const headers = { ETag: etag, 'Cache-Control': 'private, no-cache' };
       if (matchesEtag(request.headers.get('if-none-match'), etag)) {
         return new Response(null, { status: 304, headers });

@@ -137,6 +137,22 @@ describe('GET /api/media validator', () => {
     );
   });
 
+  it('changes with the app version', async () => {
+    const before = await etagOf(OWNER);
+    const spy = { prepare: (sql: string) => DB.prepare(sql), batch: (l: never[]) => DB.batch(l) };
+    const next = createWorkerApp({
+      DB: spy,
+      IMAGES: await miniflare.getR2Bucket('IMAGES'),
+      IMAGE_ENCODED_BY: 'server',
+      APP_VERSION: 'v-next',
+    } as unknown as WorkerEnv);
+    const response = await next.request(`${BASE}/api/media`, {
+      headers: { authorization: `Bearer ${OWNER}`, 'if-none-match': before },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('etag')).not.toBe(before);
+  });
+
   it('treats a default parameter like an omitted one', async () => {
     expect(await etagOf(OWNER, '?sort=title&order=asc&limit=50&offset=0')).toBe(
       await etagOf(OWNER),

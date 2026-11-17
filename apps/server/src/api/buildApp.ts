@@ -151,7 +151,13 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
     if (deps.edit.episodeGroups) {
       registerEpisodeGroupRoutes(routes, deps.edit.episodeGroups, editor);
     }
-    registerMediaRoutes(routes, editor, catalog, deps.metadataCache, deps.contentVersions);
+    registerMediaRoutes(
+      routes,
+      editor,
+      catalog,
+      deps.metadataCache,
+      deps.contentVersions && { versions: deps.contentVersions, appVersion: deps.appVersion },
+    );
     registerSeasonOverrideRoutes(routes, series, overrides);
     registerArtworkRoutes(routes, artwork, editor);
     registerTitleRoutes(routes, titleProviders, unlinked, resolver);
