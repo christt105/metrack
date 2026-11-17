@@ -295,6 +295,12 @@ async function main(): Promise<void> {
     for (const [name, visits] of Object.entries(profile)) {
       const result = results.get(name);
       if (!result) continue;
+      if (name.startsWith('owner') && result.revalidated?.status === 304) {
+        const cold = Math.min(visits, writesPerDay);
+        reads += cold * result.cold.read + (visits - cold) * result.revalidated.read;
+        writes += cold * result.cold.written + (visits - cold) * result.revalidated.written;
+        continue;
+      }
       if (name.startsWith('owner')) {
         reads += visits * result.cold.read;
         writes += visits * result.cold.written;
