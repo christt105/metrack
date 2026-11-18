@@ -20,10 +20,5 @@ export function patchBody(collection: Collection): object {
 export function createBody(collection: Collection): object {
   const properties: Record<string, object> = { ...MEDIA_PROPERTIES[collection] };
   const required = ['title'];
-  if (collection === 'seasons') {
-    properties.seriesId = { type: 'integer', minimum: 1 };
-    properties.title = { type: ['string', 'null'] };
-    required.splice(0, 1, 'seriesId', 'number');
-  }
   return { type: 'object', properties, required, additionalProperties: false };
 }

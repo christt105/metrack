@@ -67,7 +67,6 @@ describe('MediaDetailView', () => {
     await flushPromises();
     expect(groups(wrapper)).toEqual([
       'Images',
-      'Add season',
       'Season order',
       'Season settings',
       'Metadata',
@@ -87,17 +86,10 @@ describe('MediaDetailView', () => {
     expect(groups(book.wrapper)).toEqual(['Viewings', 'Images', 'Danger zone']);
   });
 
-  it('adds a season from the manage section and reloads', async () => {
-    const create = vi.fn().mockResolvedValue({});
-    const getDetail = vi.fn().mockResolvedValue(series);
-    const { wrapper } = await mountDetail('series', series, { create, getDetail });
+  it('offers no way to add a season by hand', async () => {
+    const { wrapper } = await mountDetail('series', series);
     await flushPromises();
-    expect(wrapper.find('.seasons-section form').exists()).toBe(false);
-    await wrapper.find('.manage input[type="number"]').setValue('3');
-    await wrapper.find('.manage form button[type="submit"]').trigger('submit');
-    await flushPromises();
-    expect(create).toHaveBeenCalledWith('seasons', { seriesId: 7, number: 3 });
-    expect(getDetail.mock.calls.length).toBeGreaterThan(1);
+    expect(wrapper.text()).not.toContain('Add season');
   });
 
   it('needs two steps to delete and redirects to the library', async () => {

@@ -80,7 +80,7 @@ A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, 
 ### Per collection
 
 - `GET /api/{collection}/{id}`: the entity as `MediaDetail<T>`, which adds `editedFields` (fields a refresh will not overwrite) and `fetchedAt`. A series answers `SeriesDetail`: it also carries `seasons` (ordered by number) and `overrides`.
-- `POST /api/{collection}`: creates an entity and answers 201 with its detail. The body is `CreateInput`: any entity field except `id`, `cover` and `banner`. `title` is required, except for seasons, which require `seriesId` (an existing series, else `invalid_reference`) and `number`. Status defaults to `planned`.
+- `POST /api/{collection}`: creates an entity and answers 201 with its detail. The body is `CreateInput`: any entity field except `id`, `cover` and `banner`. `title` is required. Status defaults to `planned`. There is no collection route for seasons: a season is never created by hand, it comes from the series' TMDB ordering (a refresh, switching the ordering, the release watcher) or from the Jellyfin sync, and `POST /api/seasons` answers 404.
 - `PATCH /api/{collection}/{id}`: edits any subset of the fields (`EditablePatch`) and answers the new detail. At least one field is required. See the rules below.
 - `DELETE /api/{collection}/{id}`: 204. Deleting a series deletes its seasons. Image files stay in the store until `POST /api/images/cleanup`.
 - `DELETE /api/{collection}/{id}/edited/{field}`: stops protecting a hand-edited field, so the next refresh may overwrite it. 404 if the field is not marked.

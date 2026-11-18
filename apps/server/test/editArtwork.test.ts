@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { insertSeason } from './support/insertSeason.js';
 import { createTestApi, type TestApi } from './support/createTestApi.js';
 import { pathFetch } from './support/pathFetch.js';
 import { png, solidImage } from './support/sampleImages.js';
@@ -112,13 +113,7 @@ describe('image candidates', () => {
         payload: { title: 'Lupin', tmdbId: 1 },
       })
     ).json();
-    const season = (
-      await api.app.inject({
-        method: 'POST',
-        url: '/api/seasons',
-        payload: { seriesId: series.id, number: 4, tmdbSeasonNumber: 2 },
-      })
-    ).json();
+    const season = await insertSeason(api, series.id, { number: 4, tmdbSeasonNumber: 2 });
     const covers = (await call('GET', `/api/seasons/${season.id}/images/cover`)).json();
     expect(covers.candidates.map((c: { url: string }) => c.url)).toEqual([
       `${IMG}/s2.jpg`,
@@ -138,13 +133,7 @@ describe('image candidates', () => {
       })
     ).json();
     await api.series.updateCatalog(series.id, { tmdbEpisodeGroup: 'g1' });
-    const season = (
-      await api.app.inject({
-        method: 'POST',
-        url: '/api/seasons',
-        payload: { seriesId: series.id, number: 2, tmdbSeasonNumber: 2 },
-      })
-    ).json();
+    const season = await insertSeason(api, series.id, { number: 2, tmdbSeasonNumber: 2 });
     const covers = (await call('GET', `/api/seasons/${season.id}/images/cover`)).json();
     expect(covers.candidates.map((c: { url: string }) => c.url)).toEqual([
       `${IMG}/s1.jpg`,
@@ -160,13 +149,7 @@ describe('image candidates', () => {
         payload: { title: 'Lupin', tmdbId: 1 },
       })
     ).json();
-    const season = (
-      await api.app.inject({
-        method: 'POST',
-        url: '/api/seasons',
-        payload: { seriesId: series.id, number: 9 },
-      })
-    ).json();
+    const season = await insertSeason(api, series.id, { number: 9 });
     const covers = (await call('GET', `/api/seasons/${season.id}/images/cover`)).json();
     expect(covers.candidates.map((c: { url: string }) => c.url)).toEqual([`${IMG}/series.jpg`]);
   });

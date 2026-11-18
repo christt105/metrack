@@ -5,7 +5,6 @@ import type { Collection, Season, SeasonOverride, SeriesDetail } from '@metrack/
 import type { AnyDetail } from '../api/AnyDetail';
 import { messages } from '../i18n/messages';
 import { isTracked } from '../logic/fieldSchemas';
-import AddSeasonForm from './AddSeasonForm.vue';
 import ArtworkPanel from './ArtworkPanel.vue';
 import DeleteEntry from './DeleteEntry.vue';
 import ManageDisclosure from './ManageDisclosure.vue';
@@ -74,9 +73,6 @@ function onArtwork(updated: AnyDetail): void {
           @updated="onArtwork"
         />
       </ManageDisclosure>
-      <ManageGroup v-if="series" :title="messages.manage.addSeason">
-        <AddSeasonForm :series-id="series.id" :seasons="series.seasons" @changed="emit('load')" />
-      </ManageGroup>
       <SeasonOrderingPanel
         v-if="series && series.tmdbId !== null"
         :series-id="series.id"

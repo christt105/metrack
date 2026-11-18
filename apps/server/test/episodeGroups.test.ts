@@ -3,6 +3,7 @@ import type { Season, Series } from '@metrack/domain';
 import type { Authenticator } from '../src/auth/Authenticator.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
+import { insertSeason } from './support/insertSeason.js';
 import { createTestApi, type TestApi } from './support/createTestApi.js';
 import { pathFetch } from './support/pathFetch.js';
 import {
@@ -24,6 +25,7 @@ let api: TestApi;
 let users: SqliteUserRepository;
 let routes: Record<string, object>;
 let net: ReturnType<typeof pathFetch>;
+let scope: AsyncUserScope;
 
 const byHeader: Authenticator = {
   userFor: async (headers) => users.get(Number(headers.get('x-test-user'))),
@@ -39,8 +41,9 @@ beforeEach(async () => {
     [`${TMDB}/tv/episode_group/${DANDADAN_SEASONS_GROUP}`]: danDaDanSeasonsGroup(),
   };
   net = pathFetch(routes);
+  scope = new AsyncUserScope();
   api = await createTestApi(net.fetch, {
-    scope: new AsyncUserScope(),
+    scope,
     authenticator: byHeader,
   });
   users = new SqliteUserRepository(api.db);
@@ -70,6 +73,16 @@ async function addSeries(client: ReturnType<typeof as>, tmdbId: number): Promise
   return response.json().id;
 }
 
+async function addSeason(
+  client: ReturnType<typeof as>,
+  userId: number,
+  seriesId: number,
+  fields: Parameters<typeof insertSeason>[2],
+): Promise<void> {
+  await insertSeason(api, seriesId, fields, { scope, userId });
+  await client.post(`/api/metadata/series/${seriesId}/refresh`, {});
+}
+
 async function seriesOf(client: ReturnType<typeof as>, id: number) {
   return (await client.get(`/api/series/${id}`)).json() as Series & { seasons: Season[] };
 }
@@ -79,19 +92,16 @@ describe('seasons that follow a TMDB episode group', () => {
     const seriesId = (
       await owner.post('/api/series', { title: 'Frieren', tmdbId: FRIEREN_ID })
     ).json().id;
-    await owner.post('/api/seasons', {
-      seriesId,
+    await addSeason(owner, 1, seriesId, {
       number: 1,
       firstAirDate: '2023-09-29',
       episodeCount: 38,
     });
-    const created = await owner.post('/api/seasons', {
-      seriesId,
+    await addSeason(owner, 1, seriesId, {
       number: 2,
       firstAirDate: '2026-01-16',
       episodeCount: 10,
     });
-    expect(created.statusCode).toBe(201);
 
     const series = await seriesOf(owner, seriesId);
     expect(series.tmdbEpisodeGroup).toBe(FRIEREN_SEASONS_GROUP);
@@ -101,15 +111,13 @@ describe('seasons that follow a TMDB episode group', () => {
       [1, 1, 'Season 1', 28],
       [2, 2, null, 10],
     ]);
-    expect(created.json().tmdbSeasonNumber).toBe(2);
   });
 
-  it('lets a normal user add season 2 of a series TMDB knows as one season, with Jellyfin out of the picture', async () => {
+  it('finds the group when a season TMDB does not know as a regular one is stored, with Jellyfin out of the picture', async () => {
     const seriesId = await addSeries(normal, DANDADAN_ID);
     expect((await seriesOf(normal, seriesId)).seasons).toHaveLength(1);
 
-    const created = await normal.post('/api/seasons', { seriesId, number: 2 });
-    expect(created.statusCode).toBe(201);
+    await addSeason(normal, 2, seriesId, { number: 2 });
 
     const series = await seriesOf(normal, seriesId);
     expect(series.tmdbEpisodeGroup).toBe(DANDADAN_SEASONS_GROUP);
@@ -123,7 +131,7 @@ describe('seasons that follow a TMDB episode group', () => {
   it('applies the group to a series other users have too, as provider data', async () => {
     const seriesId = await addSeries(other, DANDADAN_ID);
     expect(await addSeries(normal, DANDADAN_ID)).toBe(seriesId);
-    await normal.post('/api/seasons', { seriesId, number: 2 });
+    await addSeason(normal, 2, seriesId, { number: 2 });
     expect((await seriesOf(other, seriesId)).tmdbEpisodeGroup).toBe(DANDADAN_SEASONS_GROUP);
   });
 
@@ -141,7 +149,7 @@ describe('seasons that follow a TMDB episode group', () => {
       ).statusCode,
     ).toBe(204);
 
-    await normal.post('/api/seasons', { seriesId, number: 2 });
+    await addSeason(normal, 2, seriesId, { number: 2 });
     expect((await seriesOf(other, seriesId)).seasons[0]?.tmdbSeasonNumber).toBeNull();
 
     await other.post(`/api/metadata/series/${seriesId}/refresh`, {});
@@ -159,7 +167,7 @@ describe('seasons that follow a TMDB episode group', () => {
     };
     routes[`${TMDB}/tv/episode_group/second`] = danDaDanSeasonsGroup();
     const seriesId = await addSeries(normal, DANDADAN_ID);
-    await normal.post('/api/seasons', { seriesId, number: 2 });
+    await addSeason(normal, 2, seriesId, { number: 2 });
 
     const series = await seriesOf(normal, seriesId);
     expect(series.tmdbEpisodeGroup).toBeNull();
@@ -186,7 +194,7 @@ describe('seasons that follow a TMDB episode group', () => {
     const seriesId = (
       await owner.post('/api/series', { title: 'Frieren', tmdbId: FRIEREN_ID })
     ).json().id;
-    await owner.post('/api/seasons', { seriesId, number: 2, firstAirDate: '2026-01-16' });
+    await addSeason(owner, 1, seriesId, { number: 2, firstAirDate: '2026-01-16' });
     expect((await seriesOf(owner, seriesId)).tmdbEpisodeGroup).toBeNull();
 
     routes[`${TMDB}/tv/episode_group/${FRIEREN_SEASONS_GROUP}`] = frierenSeasonsGroup();
@@ -241,7 +249,7 @@ describe('changing the season ordering', () => {
 
   it('lets a user change it when nobody else has the series, and relinks the seasons', async () => {
     const seriesId = await addSeries(normal, FRIEREN_ID);
-    await normal.post('/api/seasons', { seriesId, number: 2, firstAirDate: '2026-01-16' });
+    await addSeason(normal, 2, seriesId, { number: 2, firstAirDate: '2026-01-16' });
     expect((await seriesOf(normal, seriesId)).tmdbEpisodeGroup).toBe(FRIEREN_SEASONS_GROUP);
 
     const cleared = await normal.put(`/api/series/${seriesId}/season-ordering`, {
@@ -342,7 +350,7 @@ describe('reorganizing the seasons when the ordering changes', () => {
 
   async function dandadanWithSpecialSeason(): Promise<{ seriesId: number; extra: Season }> {
     const seriesId = await dandadanOnRegular();
-    expect((await normal.post('/api/seasons', { seriesId, number: 5 })).statusCode).toBe(201);
+    await addSeason(normal, 2, seriesId, { number: 5 });
     const series = await seriesOf(normal, seriesId);
     expect(series.tmdbEpisodeGroup).toBeNull();
     return { seriesId, extra: series.seasons[1] as Season };
@@ -435,7 +443,7 @@ describe('reorganizing the seasons when the ordering changes', () => {
 
   it('keeps it when another user has data in it', async () => {
     const seriesId = await addSeries(owner, DANDADAN_ID);
-    expect((await owner.post('/api/seasons', { seriesId, number: 5 })).statusCode).toBe(201);
+    await addSeason(owner, 1, seriesId, { number: 5 });
     const extra = (await seriesOf(owner, seriesId)).seasons[1] as Season;
     api.db.prepare('INSERT INTO series_entry (user_id, series_id) VALUES (2, ?)').run(seriesId);
     api.db
@@ -473,18 +481,12 @@ describe('editing shared catalog fields as the owner', () => {
   });
 });
 
-describe('adding seasons', () => {
-  it('lets a normal user add a season to a series linked to TMDB but not to one without it', async () => {
-    const linked = await addSeries(normal, DANDADAN_ID);
-    const local = (await owner.post('/api/series', { title: 'Local', tvdbId: 5 })).json().id;
-    api.db.prepare('INSERT INTO series_entry (user_id, series_id) VALUES (2, ?)').run(local);
-
-    expect((await normal.post('/api/seasons', { seriesId: linked, number: 7 })).statusCode).toBe(
-      201,
-    );
-    const refused = await normal.post('/api/seasons', { seriesId: local, number: 1 });
-    expect(refused.statusCode).toBe(403);
-    expect(refused.json().code).toBe('trusted_only');
+describe('adding seasons by hand', () => {
+  it('has no route to add a season by hand for anyone', async () => {
+    const seriesId = await addSeries(normal, DANDADAN_ID);
+    expect((await normal.post('/api/seasons', { seriesId, number: 7 })).statusCode).toBe(404);
+    expect((await owner.post('/api/seasons', { seriesId, number: 7 })).statusCode).toBe(404);
+    expect((await seriesOf(normal, seriesId)).seasons).toHaveLength(1);
   });
 
   it('keeps refusing normal users the other hand-added items', async () => {
