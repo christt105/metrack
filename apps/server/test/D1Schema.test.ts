@@ -61,6 +61,16 @@ const refillSql = readFileSync(
   'utf8',
 );
 
+const dropSeasonOverrideSql = readFileSync(
+  new URL('../d1/migrations/0011_drop_season_override.sql', import.meta.url),
+  'utf8',
+);
+
+const unmatchedEpisodesSql = readFileSync(
+  new URL('../d1/migrations/0012_unmatched_episodes.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -72,6 +82,8 @@ function fromSql(): DatabaseSync {
   db.exec(rewatchViewingsSql);
   db.exec(seasonEpisodesSql);
   db.exec(refillSql);
+  db.exec(dropSeasonOverrideSql);
+  db.exec(unmatchedEpisodesSql);
   return db;
 }
 

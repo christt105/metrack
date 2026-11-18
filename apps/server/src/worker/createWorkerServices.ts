@@ -40,7 +40,7 @@ export function createWorkerServices(
   const logger = { info: console.log, error: console.error };
   const scope = new AsyncUserScope();
   const repositories = createD1Repositories(env.DB, scope);
-  const { movies, series, seasons, videogames, books, overrides, unlinked } = repositories;
+  const { movies, series, seasons, videogames, books, unlinked } = repositories;
 
   const imageStore = new ImageStore(
     repositories.images,
@@ -101,7 +101,14 @@ export function createWorkerServices(
   );
 
   const edit = createEditServices({
-    sources: { movies, series, seasons, videogames, books, overrides },
+    sources: {
+      movies,
+      series,
+      seasons,
+      videogames,
+      books,
+      episodeWatches: repositories.episodeWatches,
+    },
     unlinked,
     states: repositories.metadataStates,
     images: imageStore,

@@ -1,12 +1,10 @@
 import {
-  applySeasonOverrides,
   availabilityWindowDays,
   matchSeasonsByAirDate,
   type Season,
   type SeasonSource,
 } from '@metrack/domain';
 import { emptySeason } from '../media/emptyEntities.js';
-import type { SeasonOverrideRepository } from '../storage/repositories/SeasonOverrideRepository.js';
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
 import type { SeasonRepository } from '../storage/repositories/SeasonRepository.js';
 import type { ReconciledSeason } from './ReconciledSeason.js';
@@ -34,11 +32,10 @@ export async function reconcileSeasons(
   repositories: {
     series: SeriesRepository;
     seasons: SeasonRepository;
-    overrides: SeasonOverrideRepository;
   },
   now: () => Date = () => new Date(),
 ): Promise<ReconciledSeason[]> {
-  const { series, seasons, overrides } = repositories;
+  const { series, seasons } = repositories;
   const next = release.nextEpisode;
   const announced = release.seasons
     .filter(
@@ -59,8 +56,6 @@ export async function reconcileSeasons(
     episodeCount: s.episodeCount ?? 0,
     ...(s.name === null ? {} : { title: s.name }),
   }));
-  const corrected = applySeasonOverrides(providerSeasons, await overrides.listBySeries(seriesId));
-
   const local = await seasons.listBySeries(seriesId);
   const result: ReconciledSeason[] = [];
   const unlinkedLocal: Season[] = [];
@@ -93,7 +88,7 @@ export async function reconcileSeasons(
       episodeCount: l.episodeCount ?? 0,
     })),
     pending.flatMap((index) => {
-      const source = corrected[index];
+      const source = providerSeasons[index];
       return source ? [{ ...source, number: index }] : [];
     }),
   );
@@ -114,7 +109,7 @@ export async function reconcileSeasons(
   const taken = new Set(local.map((l) => l.number));
   for (const index of pending) {
     const provider = announced[index];
-    const source = corrected[index];
+    const source = providerSeasons[index];
     if (!provider || !source || matchedPending.has(index) || provider.airDate < cutoff) continue;
     const number = taken.has(source.number) ? Math.max(0, ...taken) + 1 : source.number;
     taken.add(number);

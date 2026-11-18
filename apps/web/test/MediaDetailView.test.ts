@@ -41,7 +41,6 @@ describe('MediaDetailView', () => {
     tmdbId: 20,
     title: 'Dark',
     seasons: [{ id: 70, number: 1, tmdbSeasonNumber: 1, status: 'planned', rating: null }],
-    overrides: [],
   };
   const season = { ...movie, id: 70, seriesId: 7, number: 1, title: null };
   const groups = (wrapper: { findAll: (s: string) => { text: () => string }[] }) =>
@@ -65,13 +64,7 @@ describe('MediaDetailView', () => {
   it('lists the manage groups of a series in order', async () => {
     const { wrapper } = await mountDetail('series', series);
     await flushPromises();
-    expect(groups(wrapper)).toEqual([
-      'Images',
-      'Season order',
-      'Season settings',
-      'Metadata',
-      'Danger zone',
-    ]);
+    expect(groups(wrapper)).toEqual(['Images', 'Season order', 'Metadata', 'Danger zone']);
   });
 
   it('lists the manage groups of a season, a game and a book', async () => {
@@ -119,5 +112,48 @@ describe('MediaDetailView', () => {
     await wrapper.find('.danger-zone button.danger').trigger('click');
     await flushPromises();
     expect(router.currentRoute.value.fullPath).toBe('/series/7');
+  });
+
+  describe('unmatched episodes', () => {
+    const lost = [
+      { code: 'episode_unmatched', season: 1, number: 2, name: 'Pilot' },
+      { code: 'episode_unmatched', season: 2, number: 1, name: null },
+    ];
+
+    it('warns on the series page about every season', async () => {
+      const { wrapper } = await mountDetail('series', { ...series, unmatched: lost });
+      await flushPromises();
+      const banner = wrapper.find('.unmatched');
+      expect(banner.text()).toContain('2 watched episodes could not be recorded');
+      expect(banner.findAll('a').map((a) => a.attributes('href'))).toEqual([
+        'https://www.themoviedb.org/tv/20/season/1',
+        'https://www.themoviedb.org/tv/20',
+      ]);
+    });
+
+    it('warns on the season page only about its own season', async () => {
+      const getDetail = vi
+        .fn()
+        .mockImplementation(async (collection: string) =>
+          collection === 'series' ? series : season,
+        );
+      const seasonEpisodes = vi.fn().mockResolvedValue({
+        seasonId: 70,
+        source: 'tmdb',
+        fetchedAt: null,
+        complete: true,
+        datesDerived: false,
+        episodeCount: 0,
+        watchedCount: 0,
+        skippedCount: 0,
+        episodes: [],
+        unmatched: lost,
+      });
+      const { wrapper } = await mountDetail('seasons', season, { getDetail, seasonEpisodes });
+      await flushPromises();
+      const banner = wrapper.find('.unmatched');
+      expect(banner.text()).toContain('1 watched episode could not be recorded');
+      expect(banner.find('a').attributes('href')).toBe('https://www.themoviedb.org/tv/20/season/1');
+    });
   });
 });

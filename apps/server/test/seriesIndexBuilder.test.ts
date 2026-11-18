@@ -94,7 +94,6 @@ function library(tvdbIds: (number | null)[]): LibrarySeries {
 const state = (group: string | null = null): SyncState => ({
   movies: [],
   seasons: [],
-  overrides: [],
   unlinked: [],
   series: [
     {
@@ -292,6 +291,63 @@ describe('SeriesIndexBuilder', () => {
     });
     expect(again.settled.size).toBe(0);
     expect(again.indexes.has('js')).toBe(true);
+  });
+
+  it('settles an episode recorded under the TMDB id Jellyfin gives, without any TheTVDB id', async () => {
+    const series = library([null]);
+    series.seasons[0]!.episodes[0]!.tmdbId = 6701926;
+    const day = '2026-11-18';
+    const recorded = {
+      ...input(series, ['e1']),
+      state: {
+        ...state(),
+        watches: [
+          {
+            seriesId: 1,
+            watched: { '6701926': [{ startedAt: day, finishedAt: day }] },
+          },
+        ],
+      },
+    };
+    const net = pathFetch(routes());
+    const { settled } = await builder(net).build(recorded);
+    expect(net.calls).toEqual([]);
+    expect([...settled]).toEqual(['js']);
+  });
+
+  it('asks /find only about episodes whose Jellyfin TMDB id the ordering does not have', async () => {
+    const series = library([11516722, 5555]);
+    series.seasons[0]!.episodes[0]!.tmdbId = 6701926;
+    series.seasons[0]!.episodes[1]!.tmdbId = 424242;
+    const net = pathFetch(routes());
+    await builder(net).build(input(series, ['e1', 'e2']));
+    expect(finds(net)).toEqual([expect.stringContaining('/find/5555')]);
+  });
+
+  it('does not settle a series with an episode still to be collapsed to its dated viewing', async () => {
+    const series = library([null]);
+    series.seasons[0]!.episodes[0]!.tmdbId = 6701926;
+    const day = '2026-11-18';
+    const collapsible = {
+      ...input(series, ['e1']),
+      state: {
+        ...state(),
+        watches: [
+          {
+            seriesId: 1,
+            watched: {
+              '6701926': [
+                { startedAt: null, finishedAt: null },
+                { startedAt: day, finishedAt: day },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    const { settled, indexes } = await builder(pathFetch(routes())).build(collapsible);
+    expect(settled.size).toBe(0);
+    expect(indexes.has('js')).toBe(true);
   });
 
   it('does nothing for a series without watched episodes', async () => {

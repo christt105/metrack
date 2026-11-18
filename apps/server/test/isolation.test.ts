@@ -106,7 +106,7 @@ describe('one user cannot reach what another stored', () => {
     expect((await owner.get('/api/media')).json().total).toBe(1);
   });
 
-  it('keeps the unlinked inbox, the watchlist and season overrides per user', async () => {
+  it('keeps the unlinked inbox, and the watchlist per user', async () => {
     await scope.run(OWNER_ID, () =>
       api.unlinked.create({
         mediaType: 'movie',
@@ -124,18 +124,7 @@ describe('one user cannot reach what another stored', () => {
     const added = await owner.post('/api/titles', { type: 'series', externalId: '1' });
     const seriesId = added.json().id;
     expect((await owner.put(`/api/watchlist/series/${seriesId}`)).statusCode).toBe(204);
-    expect(
-      (
-        await owner.put(`/api/series/${seriesId}/overrides/2`, {
-          number: 5,
-          title: null,
-          jellyfinSeasonId: null,
-        })
-      ).statusCode,
-    ).toBe(200);
     expect((await friend.get('/api/watchlist')).json()).toEqual([]);
-    expect((await friend.get(`/api/series/${seriesId}/overrides`)).statusCode).toBe(404);
-    expect((await friend.delete(`/api/series/${seriesId}/overrides/2`)).statusCode).toBe(404);
     expect((await owner.get('/api/watchlist')).json()).toHaveLength(1);
   });
 

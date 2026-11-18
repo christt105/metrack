@@ -140,6 +140,12 @@ function storeWatches(userId: number, seriesId: number, watched: object): void {
     .run(userId, seriesId, JSON.stringify(watched));
 }
 
+function storeWatchesUpdate(userId: number, seriesId: number, watched: object): void {
+  api.db
+    .prepare('UPDATE series_episode_entry SET watched = ? WHERE user_id = ? AND series_id = ?')
+    .run(JSON.stringify(watched), userId, seriesId);
+}
+
 const watchedRows = () =>
   api.db
     .prepare('SELECT user_id, watched FROM series_episode_entry ORDER BY user_id')
@@ -312,6 +318,102 @@ describe('GET /api/seasons/:id/episodes', () => {
       .prepare('UPDATE season_episodes SET fetched_at = ? WHERE season_id = ?')
       .run('2026-01-01T00:00:00.000Z', idle.id);
     expect((await episodes(owner, idle.id)).body.episodes[0]?.title).toBe('New');
+  });
+
+  describe('a premiere in the refreshed catalog', () => {
+    const entryOf = (userId: number, seasonId: number) =>
+      api.db
+        .prepare(
+          'SELECT status, finished_at, started_at FROM season_entry WHERE user_id = ? AND season_id = ?',
+        )
+        .get(userId, seasonId);
+
+    function completedSeason() {
+      const season = addSeason({ status: 'completed', users: [1, 2], watchedCount: 2 });
+      api.db
+        .prepare("UPDATE season_entry SET started_at = '2026-01-01', finished_at = '2026-02-01'")
+        .run();
+      storeCatalog(season.id, '2025-01-01T00:00:00.000Z', [compact(1, 11), compact(2, 12)]);
+      storeWatches(1, season.seriesId, { '11': [viewing], '12': [viewing] });
+      storeWatches(2, season.seriesId, { '11': [viewing], '12': [viewing] });
+      return season;
+    }
+
+    it('sends the completed entries of every user with episode watches back to in progress', async () => {
+      const season = completedSeason();
+      handlers.set(
+        `/3/tv/${SERIES_TMDB_ID}/season/1`,
+        seasonHandler([
+          tmdbEpisode(11, 1, 'A'),
+          tmdbEpisode(12, 2, 'B'),
+          tmdbEpisode(13, 3, 'C', '2026-03-01'),
+        ]),
+      );
+      await episodes(owner, season.id);
+      expect(entryOf(1, season.id)).toMatchObject({
+        status: 'in_progress',
+        finished_at: null,
+        started_at: '2026-01-01',
+      });
+      expect(entryOf(2, season.id)).toMatchObject({ status: 'in_progress', finished_at: null });
+    });
+
+    it('leaves a user who watched or skipped the new episode alone', async () => {
+      const season = completedSeason();
+      storeWatchesUpdate(2, season.seriesId, { '11': [viewing], '12': [viewing], '13': [viewing] });
+      handlers.set(
+        `/3/tv/${SERIES_TMDB_ID}/season/1`,
+        seasonHandler([
+          tmdbEpisode(11, 1, 'A'),
+          tmdbEpisode(12, 2, 'B'),
+          tmdbEpisode(13, 3, 'C', '2026-03-01'),
+        ]),
+      );
+      await episodes(owner, season.id);
+      expect(entryOf(1, season.id)).toMatchObject({ status: 'in_progress' });
+      expect(entryOf(2, season.id)).toMatchObject({
+        status: 'completed',
+        finished_at: '2026-02-01',
+      });
+    });
+
+    it('leaves alone an episode that has not aired and a user with no episode watches', async () => {
+      const season = completedSeason();
+      api.db.prepare('DELETE FROM series_episode_entry WHERE user_id = 2').run();
+      handlers.set(
+        `/3/tv/${SERIES_TMDB_ID}/season/1`,
+        seasonHandler([
+          tmdbEpisode(11, 1, 'A'),
+          tmdbEpisode(12, 2, 'B'),
+          tmdbEpisode(13, 3, 'C', '2026-09-01'),
+        ]),
+      );
+      await episodes(owner, season.id);
+      expect(entryOf(1, season.id)).toMatchObject({ status: 'completed' });
+      handlers.set(
+        `/3/tv/${SERIES_TMDB_ID}/season/1`,
+        seasonHandler([
+          tmdbEpisode(11, 1, 'A'),
+          tmdbEpisode(12, 2, 'B'),
+          tmdbEpisode(13, 3, 'C', '2026-03-01'),
+        ]),
+      );
+      api.db.prepare("UPDATE season_episodes SET fetched_at = '2025-01-01T00:00:00.000Z'").run();
+      await episodes(owner, season.id);
+      expect(entryOf(2, season.id)).toMatchObject({ status: 'completed' });
+      expect(entryOf(1, season.id)).toMatchObject({ status: 'in_progress' });
+    });
+  });
+
+  it('answers with the unmatched episodes of the series for the user', async () => {
+    const season = addSeason();
+    storeCatalog(season.id, NOW.toISOString(), [compact(1, 11), compact(2, 12)]);
+    const lost = [{ code: 'episode_unmatched', season: 1, number: 2, name: 'Pilot' }];
+    api.db
+      .prepare('INSERT INTO series_episode_entry (user_id, series_id, unmatched) VALUES (?, ?, ?)')
+      .run(1, season.seriesId, JSON.stringify(lost));
+    expect((await episodes(owner, season.id)).body.unmatched).toEqual(lost);
+    expect((await episodes(normal, season.id)).body.unmatched ?? []).toEqual([]);
   });
 
   it('serves the stale catalog when the refresh fails', async () => {

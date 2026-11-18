@@ -4,7 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 
-const d1Sql = ['0009_season_episodes.sql', '0010_season_episodes_refill.sql']
+const d1Sql = [
+  '0009_season_episodes.sql',
+  '0010_season_episodes_refill.sql',
+  '0012_unmatched_episodes.sql',
+]
   .map((file) => readFileSync(new URL(`../d1/migrations/${file}`, import.meta.url), 'utf8'))
   .join('\n');
 
@@ -55,6 +59,7 @@ describe('the season episodes migration', () => {
       'series_id',
       'watched',
       'skipped',
+      'unmatched',
     ]);
     expect(columns(db, 'season_episode_entry')).toEqual([]);
     db.exec(

@@ -59,7 +59,6 @@ export const messages = {
     remove: 'Remove',
     edit: 'Edit',
     loading: 'Loading...',
-    retry: 'Retry',
     none: 'None',
     any: 'Any',
     back: 'Back',
@@ -77,7 +76,6 @@ export const messages = {
     allTypes: 'All',
     rating: 'Rating',
     inProgressTitle: 'In progress',
-    allTitle: 'Everything',
     toggleOrder: 'Reverse the order',
     type: 'Type',
     status: 'Status',
@@ -149,6 +147,16 @@ export const messages = {
     seasonOf: 'Season of',
     noSeasons: 'No seasons yet.',
     openLink: 'Open',
+  },
+  unmatched: {
+    title: (count: number) =>
+      `${count} watched episode${count === 1 ? '' : 's'} could not be recorded`,
+    hint: 'The sync could not match them to TMDB episodes, so they are not marked as watched. Fix their data on TMDB or in Jellyfin and the next sync picks them up.',
+    season: (number: number) => `Season ${number}`,
+    episode: (number: number | null, name: string | null) =>
+      [number === null ? 'Episode ?' : `E${number}`, name].filter(Boolean).join(' '),
+    otherSeries: 'belongs to another TMDB series',
+    openSeason: 'Open on TMDB',
   },
   seasons: {
     watchedOf: (watched: number, total: number) => `${watched} of ${total} episodes`,
@@ -226,7 +234,6 @@ export const messages = {
     statusChanged: (label: string) => `Status set to ${label}`,
     watchedDone: 'Marked as watched today',
     undone: 'Change undone',
-    reviewSaved: 'Review saved',
     failed: 'Could not save the change',
   },
   hero: {
@@ -249,8 +256,6 @@ export const messages = {
     viewings: 'Viewings',
     images: 'Images',
     imagesHint: 'Choose or upload the cover and banner',
-    seasonSettings: 'Season settings',
-    seasonSettingsHint: 'Rename, renumber or link seasons to Jellyfin',
     metadata: 'Metadata',
     dangerZone: 'Danger zone',
     delete: (title: string) => `Delete ${title}…`,
@@ -322,16 +327,6 @@ export const messages = {
     changed: 'Viewing changed',
     removed: 'Viewing removed',
   },
-  overrides: {
-    description:
-      'Corrections for a TMDB season: the number, the title and the Jellyfin season it maps to.',
-    tmdbSeasonNumber: 'TMDB season',
-    number: 'Number',
-    title: 'Title',
-    jellyfinSeasonId: 'Jellyfin season id',
-    empty: 'No overrides.',
-    save: 'Save override',
-  },
   search: {
     title: 'Find a title',
     placeholder: 'Title',
@@ -351,7 +346,6 @@ export const messages = {
   },
   watchlist: {
     title: 'Following',
-    followedTitle: 'Followed titles',
     followedEmpty: 'Nothing is followed yet. Use the follow button on a movie or series.',
     alertsTitle: 'Sent alerts',
     alertsEmpty: 'No alert has been sent yet.',
@@ -421,7 +415,6 @@ export const messages = {
     empty: 'The inbox is empty.',
     dismiss: 'Dismiss',
     resolve: 'Resolve',
-    assign: 'Assign ids',
     needsIds: 'Enter at least one id.',
     seasonHint: 'A season cannot be resolved by id: link its series instead.',
     resolved: 'Resolved.',

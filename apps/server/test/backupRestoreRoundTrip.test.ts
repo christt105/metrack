@@ -12,7 +12,6 @@ import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository
 import { SqliteEpisodeWatchRepository } from '../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
 import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
 import { SqliteSeasonEpisodesRepository } from '../src/storage/sqlite/SqliteSeasonEpisodesRepository.js';
-import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
 import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
 import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
@@ -126,13 +125,6 @@ describe('backup and restore of the whole data directory', () => {
       [],
       ['s1e3'],
     );
-    await new SqliteSeasonOverrideRepository(db, OWNER_SCOPE).set({
-      seriesId: series.id,
-      tmdbSeasonNumber: 1,
-      number: 2,
-      title: 'Part 2',
-      jellyfinSeasonId: 'jf-s2',
-    });
     await new SqliteMovieRepository(db, OWNER_SCOPE).create({
       tmdbId: 10,
       jellyfinId: null,

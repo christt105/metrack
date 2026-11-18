@@ -35,8 +35,6 @@ import type {
   SyncApplyResult,
   SyncPlan,
   SearchableType,
-  SeasonOverride,
-  SeasonOverrideInput,
   SeriesDetail,
   ReleaseAlert,
   UnlinkedTitle,
@@ -172,7 +170,7 @@ export class ApiClient {
     return this.request('GET', `/${collection}/${id}`);
   }
 
-  create<C extends Collection>(
+  create<C extends Exclude<Collection, 'seasons'>>(
     collection: C,
     input: Partial<CreateInput<EntityOf[C], never>>,
   ): Promise<Detail<C>> {
@@ -237,18 +235,6 @@ export class ApiClient {
 
   removeRewatch<C extends Collection>(collection: C, id: number, date: string): Promise<Detail<C>> {
     return this.request('DELETE', `/${collection}/${id}/rewatches/${encodeURIComponent(date)}`);
-  }
-
-  putOverride(
-    seriesId: number,
-    tmdbSeasonNumber: number,
-    input: SeasonOverrideInput,
-  ): Promise<SeasonOverride> {
-    return this.request('PUT', `/series/${seriesId}/overrides/${tmdbSeasonNumber}`, input);
-  }
-
-  deleteOverride(seriesId: number, tmdbSeasonNumber: number): Promise<void> {
-    return this.request('DELETE', `/series/${seriesId}/overrides/${tmdbSeasonNumber}`);
   }
 
   refreshMetadata(type: MediaType, id: number): Promise<RefreshResult> {

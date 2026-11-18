@@ -79,7 +79,6 @@ export async function connectorHarness(options: { metadata?: boolean } = {}) {
     movies: repositories.movies,
     series: repositories.series,
     seasons: repositories.seasons,
-    overrides: repositories.overrides,
     unlinked: repositories.unlinked,
     episodeWatches: repositories.episodeWatches,
   };

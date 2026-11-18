@@ -111,7 +111,7 @@ function play(itemId: string, day: string, seconds = 1500): PlayRecord {
   return { itemId, playedAt: `${day}T20:00:00Z`, watchedSeconds: seconds };
 }
 
-const EMPTY: SyncState = { movies: [], series: [], seasons: [], overrides: [], unlinked: [] };
+const EMPTY: SyncState = { movies: [], series: [], seasons: [], unlinked: [] };
 const BASE = { today: '2026-10-25', timeZone: 'Europe/Madrid' };
 
 const libraryMovie: LibraryMovie = {
@@ -368,21 +368,6 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
     expect(plan.series[0]?.seasons.map((s) => s.seasonId)).toEqual([72]);
   });
 
-  it('honours a season override that points at the Jellyfin season', () => {
-    const noDates: SyncState = {
-      ...stored,
-      seasons: stored.seasons.map((s) => (s.id === 72 ? { ...s, firstAirDate: null } : s)),
-      overrides: [
-        { seriesId: 7, tmdbSeasonNumber: 3, number: 4, title: null, jellyfinSeasonId: 'sn4' },
-      ],
-    };
-    expect(run([play('l1', '2026-10-24')], noDates).series[0]?.seasons[0]).toMatchObject({
-      seasonId: 72,
-      matchedBy: 'override',
-      number: 4,
-    });
-  });
-
   it('is idempotent once the plan has been applied', () => {
     const applied: SyncState = {
       ...stored,
@@ -564,7 +549,7 @@ describe('Dan Da Dan: one TMDB season of 24 episodes, two in Jellyfin', () => {
     expect(plan.unlinked).toEqual([expect.objectContaining({ mediaType: 'series', plays: 1 })]);
   });
 
-  it('keeps the status and dates of a completed season whose plays predate its finish', () => {
+  it('derives the dates of a completed season from plays that predate its finish and keeps its status', () => {
     const done: SyncState = {
       ...stored,
       seasons: [
@@ -590,7 +575,14 @@ describe('Dan Da Dan: one TMDB season of 24 episodes, two in Jellyfin', () => {
       plays: first.map((e) => play(e.jellyfinId, '2024-11-20')),
       state: done,
     });
-    expect(plan.series[0]?.seasons).toEqual([]);
+    expect(plan.series[0]?.seasons).toEqual([
+      expect.objectContaining({
+        status: 'completed',
+        startedAt: '2024-11-20',
+        finishedAt: '2024-11-20',
+        completes: false,
+      }),
+    ]);
     expect(plan.series[0]?.watches).toBeDefined();
     expect(Object.keys(plan.series[0]?.watches ?? {})).toHaveLength(12);
   });

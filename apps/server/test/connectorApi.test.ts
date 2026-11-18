@@ -119,9 +119,9 @@ describe('/api/connector/users/{id}', () => {
       movies: [],
       series: [],
       seasons: [],
-      overrides: [],
       unlinked: [],
       watches: [],
+      overrides: [],
     });
     expect(body.unfetched).toEqual([]);
   });

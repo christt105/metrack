@@ -28,7 +28,6 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     titleProviders: deps.titleProviders,
     resolver: new UnlinkedResolver(deps.unlinked, editor, deps.titleProviders, deps.cache),
     series: sources.series,
-    overrides: sources.overrides,
     unlinked: deps.unlinked,
     seasonEpisodes,
     ...(deps.tmdb

@@ -52,7 +52,7 @@ async function listCalls(
     seasons: counting(repositories.seasons, calls, 'seasons'),
     videogames: counting(repositories.videogames, calls, 'videogames'),
     books: counting(repositories.books, calls, 'books'),
-    overrides: counting(repositories.overrides, calls, 'overrides'),
+    episodeWatches: repositories.episodeWatches,
   };
   const page = await new MediaCatalog(buildMediaKinds(sources)).list(query);
   expect(page.total).toBeGreaterThan(0);

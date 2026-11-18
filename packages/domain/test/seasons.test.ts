@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applySeasonOverrides, matchSeasonsByAirDate } from '../src/index.js';
-import type { SeasonOverride, SeasonSource } from '../src/index.js';
+import { matchSeasonsByAirDate } from '../src/index.js';
+import type { SeasonSource } from '../src/index.js';
 
 const lupinTmdb: SeasonSource[] = [
   { number: 1, firstAirDate: '2021-01-08', episodeCount: 10 },
@@ -17,25 +17,6 @@ describe('Lupin: season 3 in TMDB is season 4 in TVDB and Jellyfin', () => {
     expect(result.matched[0]?.fallback.number).toBe(3);
     expect(result.unmatchedPreferred).toEqual([]);
     expect(result.unmatchedFallback.map((s) => s.number)).toEqual([1, 2]);
-  });
-
-  it('season_override renumbers the TMDB season to the Jellyfin number', () => {
-    const overrides: SeasonOverride[] = [
-      { seriesId: 1, tmdbSeasonNumber: 3, number: 4, title: null, jellyfinSeasonId: null },
-    ];
-    const corrected = applySeasonOverrides(lupinTmdb, overrides);
-    expect(corrected.map((s) => s.number)).toEqual([1, 2, 4]);
-    expect(lupinTmdb[2]?.number).toBe(3);
-  });
-
-  it('applies an override title and leaves other fields alone', () => {
-    const overrides: SeasonOverride[] = [
-      { seriesId: 1, tmdbSeasonNumber: 3, number: null, title: 'Part 3', jellyfinSeasonId: 'abc' },
-    ];
-    expect(applySeasonOverrides(lupinTmdb, overrides)[2]).toEqual({
-      ...lupinTmdb[2],
-      title: 'Part 3',
-    });
   });
 });
 

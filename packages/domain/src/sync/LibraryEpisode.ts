@@ -2,6 +2,8 @@
 export interface LibraryEpisode {
   jellyfinId: string;
   number: number | null;
+  /** The episode's name, for messages. */
+  name?: string | null;
   airDate: string | null;
   runtimeSeconds: number | null;
   available: boolean;
@@ -9,4 +11,6 @@ export interface LibraryEpisode {
   played?: boolean;
   /** TheTVDB id of the episode, when the media server has one. */
   tvdbId?: number | null;
+  /** TMDB id of the episode, when the media server has one. */
+  tmdbId?: number | null;
 }

@@ -65,9 +65,6 @@ export class AccountExporter {
       });
     }
     const series = await deps.series.list();
-    const seasonOverrides = (
-      await Promise.all(series.map((entry) => deps.overrides.listBySeries(entry.id)))
-    ).flat();
     const seasons = await deps.seasons.list();
     const episodeWatches = (await deps.episodeWatches.list()).map((row) => ({
       seriesId: row.seriesId,
@@ -88,7 +85,6 @@ export class AccountExporter {
       seasons,
       videogames: await deps.videogames.list(),
       books: await deps.books.list(),
-      seasonOverrides,
       episodeWatches,
       unlinkedTitles: await deps.unlinked.list(),
       releaseAlerts: await deps.releaseAlerts.list(),

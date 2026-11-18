@@ -53,6 +53,18 @@ const season = {
   ],
 } as const;
 
+const unmatchedEpisode = {
+  type: 'object',
+  properties: {
+    code: { enum: ['episode_unmatched', 'episode_other_series'] },
+    season: { type: 'integer', minimum: 0 },
+    number: nullableInteger,
+    name: { type: ['string', 'null'], maxLength: 1000 },
+    tmdbSeriesId: { type: 'integer', minimum: 1 },
+  },
+  required: ['code', 'season', 'number', 'name'],
+} as const;
+
 const series = {
   type: 'object',
   properties: {
@@ -64,6 +76,7 @@ const series = {
     seasons: { type: 'array', items: season },
     watches: { type: 'object' },
     skipped: { type: 'array', items: { type: 'string' } },
+    unmatched: { type: 'array', maxItems: 500, items: unmatchedEpisode },
   },
   required: ['seriesId', 'jellyfinId', 'tmdbId', 'tvdbId', 'title', 'seasons'],
 } as const;

@@ -1,11 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  applySeasonOverrides,
-  matchSeasonsByAirDate,
   transitionStatus,
   type Movie,
   type Season,
-  type SeasonSource,
   type Series,
   type Tracking,
 } from '@metrack/domain';
@@ -281,62 +278,6 @@ describe.each(backends)('$name repositories', (backend) => {
       const s = await series.create(newSeries({ title: 'Abandonados', tmdbId: 324050 }));
       await seasons.create(newSeason(s.id, 1, { episodeCount: 4 }));
       expect(await seasons.listBySeries(s.id)).toHaveLength(1);
-    });
-  });
-
-  describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
-    it('links the stored season through season_override and date matching', async () => {
-      const series = repos.series;
-      const seasons = repos.seasons;
-      const overrides = repos.overrides;
-      const lupin = await series.create(newSeries({ title: 'Lupin', tmdbId: 1, tvdbId: 375921 }));
-      await seasons.create(
-        newSeason(lupin.id, 3, {
-          tmdbSeasonNumber: 3,
-          firstAirDate: '2026-10-23',
-          episodeCount: 8,
-        }),
-      );
-
-      await overrides.set({
-        seriesId: lupin.id,
-        tmdbSeasonNumber: 3,
-        number: 4,
-        title: null,
-        jellyfinSeasonId: 'jf-s4',
-      });
-      await overrides.set({
-        seriesId: lupin.id,
-        tmdbSeasonNumber: 3,
-        number: 4,
-        title: 'Part 3',
-        jellyfinSeasonId: 'jf-s4',
-      });
-      expect(await overrides.listBySeries(lupin.id)).toEqual([
-        {
-          seriesId: lupin.id,
-          tmdbSeasonNumber: 3,
-          number: 4,
-          title: 'Part 3',
-          jellyfinSeasonId: 'jf-s4',
-        },
-      ]);
-      expect(await overrides.list()).toEqual(await overrides.listBySeries(lupin.id));
-
-      const tmdb: SeasonSource[] = (await seasons.listBySeries(lupin.id)).map((s) => ({
-        number: s.tmdbSeasonNumber ?? s.number,
-        firstAirDate: s.firstAirDate ?? '',
-        episodeCount: s.episodeCount ?? 0,
-      }));
-      const jellyfin: SeasonSource[] = [{ number: 4, firstAirDate: '2026-10-23', episodeCount: 3 }];
-      expect(matchSeasonsByAirDate(jellyfin, tmdb).matched).toHaveLength(1);
-      expect(applySeasonOverrides(tmdb, await overrides.listBySeries(lupin.id))[0]).toMatchObject({
-        number: 4,
-        title: 'Part 3',
-      });
-
-      expect(await overrides.delete(lupin.id, 3)).toBe(true);
-      expect(await overrides.listBySeries(lupin.id)).toEqual([]);
     });
   });
 

@@ -9,7 +9,6 @@ import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
 import { SqliteEpisodeWatchRepository } from '../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
 import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
-import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
 import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
 import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
@@ -145,8 +144,10 @@ describe('JellyfinLibrarySource', () => {
     return [
       {
         Id: 'e1',
+        Name: 'Pilot',
         SeasonId: 'sn4',
         IndexNumber: 1,
+        ProviderIds: { Tmdb: '6044217', Tvdb: '11024520' },
         PremiereDate: '2026-10-23T16:31:00.0000000Z',
         RunTimeTicks: 1500 * TICKS,
       },
@@ -197,7 +198,9 @@ describe('JellyfinLibrarySource', () => {
                 runtimeSeconds: 1500,
                 available: true,
                 played: false,
-                tvdbId: null,
+                name: 'Pilot',
+                tmdbId: 6044217,
+                tvdbId: 11024520,
               },
               {
                 jellyfinId: 'e2',
@@ -206,6 +209,8 @@ describe('JellyfinLibrarySource', () => {
                 runtimeSeconds: null,
                 available: false,
                 played: false,
+                name: null,
+                tmdbId: null,
                 tvdbId: null,
               },
             ],
@@ -317,7 +322,6 @@ function setup(library: LibrarySource, plays: PlaybackSource) {
     movies: new SqliteMovieRepository(db, OWNER_SCOPE),
     series: new SqliteSeriesRepository(db, OWNER_SCOPE),
     seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
-    overrides: new SqliteSeasonOverrideRepository(db, OWNER_SCOPE),
     unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
     episodeWatches: new SqliteEpisodeWatchRepository(db, OWNER_SCOPE),
   };

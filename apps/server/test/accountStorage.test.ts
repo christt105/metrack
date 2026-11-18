@@ -185,13 +185,6 @@ describe.each(backends)('$name: accounts and settings', (backend) => {
     const kept = await repos.series.create({ ...emptySeries(), tmdbId: 4, title: 'Kept' });
     await bob.series.create({ ...emptySeries(), tmdbId: 4, title: 'Kept' });
     await repos.series.create({ ...emptySeries(), tmdbId: 5, title: 'Season only' });
-    await bob.overrides.set({
-      seriesId: series.id,
-      tmdbSeasonNumber: 1,
-      number: null,
-      title: null,
-      jellyfinSeasonId: null,
-    });
     await bob.unlinked.create({
       mediaType: 'movie',
       title: 'U',
@@ -226,7 +219,7 @@ describe.each(backends)('$name: accounts and settings', (backend) => {
     ).toEqual({
       owner_id: 1,
     });
-    for (const table of ['season', 'season_override', 'unlinked_title', 'session', 'image_owner']) {
+    for (const table of ['season', 'unlinked_title', 'session', 'image_owner']) {
       expect(await count(harness, table), table).toBe(0);
     }
     expect(await count(harness, 'movie_entry')).toBe(1);

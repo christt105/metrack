@@ -1,5 +1,4 @@
 import {
-  mergeEpisodeWatches,
   normalizeEpisodeWatches,
   normalizeViewings,
   readViewings,
@@ -118,6 +117,9 @@ export class SyncApplier {
       if (change.watches || change.skipped) {
         await this.mergeWatches(seriesId, change.watches ?? {}, change.skipped);
       }
+      if (change.unmatched) {
+        await this.targets.episodeWatches.setUnmatched(seriesId, change.unmatched);
+      }
       if (seasonAdded && !created.some((r) => r.type === 'series' && r.id === seriesId)) {
         if (((await series.get(seriesId))?.tmdbId ?? null) !== null) {
           created.push({ type: 'series', id: seriesId });
@@ -153,7 +155,7 @@ export class SyncApplier {
   ): Promise<void> {
     const watches = this.targets.episodeWatches;
     const stored = await watches.get(seriesId);
-    const merged = mergeEpisodeWatches(stored ?? {}, normalizeEpisodeWatches(incoming));
+    const merged = { ...stored, ...normalizeEpisodeWatches(incoming) };
     const skipChanged = skipped !== undefined;
     if (stored === undefined || skipChanged || !sameEpisodeWatches(stored, merged)) {
       await watches.set(seriesId, merged, [], skipChanged ? skipped : undefined);

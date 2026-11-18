@@ -18,7 +18,6 @@ import { ApiRoutes } from './ApiRoutes.js';
 import type { ApiEnv } from './ApiEnv.js';
 import type { StaticFiles } from '../web/StaticFiles.js';
 import { registerPublishRoutes } from './registerPublishRoutes.js';
-import { registerSeasonOverrideRoutes } from './registerSeasonOverrideRoutes.js';
 import { registerSyncRoutes } from './registerSyncRoutes.js';
 import { registerWatchlistRoutes } from './registerWatchlistRoutes.js';
 import { registerTitleRoutes } from './registerTitleRoutes.js';
@@ -147,8 +146,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   if (deps.imageStore) registerImageRoutes(routes, deps.imageStore);
   if (deps.metadataCache) registerMetadataRoutes(routes, deps.metadataCache, deps.edit?.editor);
   if (deps.edit) {
-    const { editor, catalog, artwork, titleProviders, unlinked, resolver, series, overrides } =
-      deps.edit;
+    const { editor, catalog, artwork, titleProviders, unlinked, resolver } = deps.edit;
     if (deps.edit.episodeGroups) {
       registerEpisodeGroupRoutes(routes, deps.edit.episodeGroups, editor);
     }
@@ -159,7 +157,6 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       catalog,
       deps.contentVersions && { versions: deps.contentVersions, appVersion: deps.appVersion },
     );
-    registerSeasonOverrideRoutes(routes, series, overrides);
     registerArtworkRoutes(routes, artwork, editor);
     registerTitleRoutes(routes, titleProviders, unlinked, resolver);
   }

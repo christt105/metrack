@@ -7,12 +7,14 @@ export async function loadSyncState(targets: SyncTargets): Promise<SyncState> {
     movies: await targets.movies.list(),
     series: await targets.series.list(),
     seasons: await targets.seasons.list(),
-    overrides: await targets.overrides.list(),
     unlinked: await targets.unlinked.list(),
-    watches: (await targets.episodeWatches.list()).map(({ seriesId, watched, skipped }) => ({
-      seriesId,
-      watched,
-      skipped,
-    })),
+    watches: (await targets.episodeWatches.list()).map(
+      ({ seriesId, watched, skipped, unmatched }) => ({
+        seriesId,
+        watched,
+        skipped,
+        unmatched,
+      }),
+    ),
   };
 }
