@@ -3,7 +3,7 @@ import type { Season } from '../Season.js';
 import type { SeasonOverride } from '../SeasonOverride.js';
 import type { Series } from '../Series.js';
 import type { UnlinkedTitle } from '../UnlinkedTitle.js';
-import type { SeasonWatches } from './SeasonWatches.js';
+import type { SeriesWatches } from './SeriesWatches.js';
 
 /** What the database already holds, as far as the sync is concerned. */
 export interface SyncState {
@@ -12,6 +12,6 @@ export interface SyncState {
   seasons: readonly Season[];
   overrides: readonly SeasonOverride[];
   unlinked: readonly UnlinkedTitle[];
-  /** The watched episodes of the seasons that have a row; absent from connectors that predate episode tracking. */
-  watches?: readonly SeasonWatches[];
+  /** The watched episodes of the series that have a row; absent from connectors that predate episode tracking. */
+  watches?: readonly SeriesWatches[];
 }

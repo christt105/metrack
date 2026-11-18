@@ -25,6 +25,7 @@ import { episodeGroupMigration } from './0023-episode-group.js';
 import { nextEpisodeMigration } from './0024-next-episode.js';
 import { rewatchViewingsMigration } from './0025-rewatch-viewings.js';
 import { seasonEpisodesMigration } from './0026-season-episodes.js';
+import { seasonEpisodesRefillMigration } from './0027-season-episodes-refill.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -53,4 +54,5 @@ export const migrations: readonly Migration[] = [
   nextEpisodeMigration,
   rewatchViewingsMigration,
   seasonEpisodesMigration,
+  seasonEpisodesRefillMigration,
 ];

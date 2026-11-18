@@ -395,11 +395,15 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
               episodeCount: 3,
               status: 'in_progress' as const,
               startedAt: '2026-10-24',
+              watchedCount: 1,
             }
           : s,
       ),
       watches: [
-        { seasonId: 72, watched: { '1': [{ startedAt: null, finishedAt: '2026-10-24' }] } },
+        {
+          seriesId: 7,
+          watched: { s4e1: [{ startedAt: '2026-10-24', finishedAt: '2026-10-24' }] },
+        },
       ],
     };
     expect(run([play('l1', '2026-10-24')], applied).series).toEqual([]);
@@ -418,11 +422,15 @@ describe('Lupin: season 3 in TMDB is season 4 in Jellyfin', () => {
               episodeCount: 3,
               status: 'in_progress' as const,
               startedAt: '2026-10-24',
+              watchedCount: 1,
             }
           : s,
       ),
       watches: [
-        { seasonId: 72, watched: { '1': [{ startedAt: null, finishedAt: '2026-10-24' }] } },
+        {
+          seriesId: 7,
+          watched: { s4e1: [{ startedAt: '2026-10-24', finishedAt: '2026-10-24' }] },
+        },
       ],
     };
     expect(run([play('l1', '2026-10-24')], applied).series).toEqual([]);
@@ -569,6 +577,7 @@ describe('Dan Da Dan: one TMDB season of 24 episodes, two in Jellyfin', () => {
           status: 'completed',
           startedAt: '2024-11-01',
           finishedAt: '2024-12-01',
+          watchedCount: 12,
           rating: 9,
         }),
       ],
@@ -580,14 +589,8 @@ describe('Dan Da Dan: one TMDB season of 24 episodes, two in Jellyfin', () => {
       plays: first.map((e) => play(e.jellyfinId, '2024-11-20')),
       state: done,
     });
-    const [change] = plan.series.flatMap((s) => s.seasons);
-    expect(change).toMatchObject({
-      status: 'completed',
-      startedAt: '2024-11-01',
-      finishedAt: '2024-12-01',
-      completes: false,
-    });
-    expect(change?.rewatches).toBeUndefined();
-    expect(Object.keys(change?.watches ?? {})).toHaveLength(12);
+    expect(plan.series[0]?.seasons).toEqual([]);
+    expect(plan.series[0]?.watches).toBeDefined();
+    expect(Object.keys(plan.series[0]?.watches ?? {})).toHaveLength(12);
   });
 });

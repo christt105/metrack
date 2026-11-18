@@ -98,6 +98,33 @@ describe('planSeasonRefresh', () => {
     expect(plan.unlinked.map((s) => s.id)).toEqual([2]);
   });
 
+  it('lists the provider seasons no stored season was linked to', () => {
+    const jujutsu: ProviderSeason[] = [
+      provider({ number: 1, firstAirDate: '2020-10-03', episodeCount: 24 }),
+      provider({ number: 2, firstAirDate: '2023-07-06', episodeCount: 23 }),
+      provider({ number: 3, firstAirDate: '2024-10-31', episodeCount: 12 }),
+    ];
+    const plan = planSeasonRefresh(
+      [season({ id: 1, number: 1, firstAirDate: '2020-10-03', episodeCount: 59 })],
+      jujutsu,
+      true,
+    );
+    expect(plan.updates[0]?.fields).toMatchObject({ tmdbSeasonNumber: 1, episodeCount: 24 });
+    expect(plan.unmatched.map((p) => p.number)).toEqual([2, 3]);
+    expect(plan.unlinked).toEqual([]);
+  });
+
+  it('lists no unmatched seasons when every provider season is linked', () => {
+    const plan = planSeasonRefresh(
+      [
+        season({ id: 1, number: 1, tmdbSeasonNumber: 1 }),
+        season({ id: 2, number: 2, tmdbSeasonNumber: 2 }),
+      ],
+      frierenGroup,
+    );
+    expect(plan.unmatched).toEqual([]);
+  });
+
   it('offers the poster only to seasons without a cover', () => {
     const posters = [provider({ number: 1, posterUrl: 'https://image.tmdb.org/p.jpg' })];
     const without = planSeasonRefresh([season({ id: 1, tmdbSeasonNumber: 1 })], posters);

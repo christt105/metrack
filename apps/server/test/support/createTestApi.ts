@@ -124,6 +124,7 @@ export async function createTestApi(
     urlGuard: testUrlGuard,
     ...options.images,
   });
+  const seasonEpisodes = new SqliteSeasonEpisodesRepository(db);
   const states = new SqliteMetadataStateRepository(db, scope);
   const cache = new MetadataCache(states, store, undefined, () => NOW);
   const tmdb = new TmdbClient(fetchFn, { apiKey: 'key', language: 'es-ES' });
@@ -134,7 +135,7 @@ export async function createTestApi(
   });
   cache.register('series', {
     repository: series,
-    source: new TmdbSeriesSource(tmdb, new SeasonRefresher(tmdb, seasons, store)),
+    source: new TmdbSeriesSource(tmdb, new SeasonRefresher(tmdb, seasons, store, seasonEpisodes)),
     lifecycle: seriesLifecycle,
   });
   const titleProviders = new TitleProviders();
@@ -168,7 +169,7 @@ export async function createTestApi(
     images: store,
     cache,
     tmdb,
-    seasonEpisodes: new SqliteSeasonEpisodesRepository(db),
+    seasonEpisodes,
     episodeWatches: new SqliteEpisodeWatchRepository(db, scope),
     titleProviders,
     imageProviders,

@@ -156,10 +156,13 @@ async function main(): Promise<void> {
     }
 
     const seasonRow = await raw
-      .prepare('SELECT season_id FROM season_entry WHERE user_id = ? ORDER BY season_id LIMIT 1')
+      .prepare(
+        'SELECT e.season_id, s.series_id FROM season_entry e JOIN season s ON s.id = e.season_id WHERE e.user_id = ? ORDER BY e.season_id LIMIT 1',
+      )
       .bind(USER_ID)
       .first();
     const seasonId = Number((seasonRow as { season_id: number } | null)?.season_id);
+    const seriesId = Number((seasonRow as { series_id: number } | null)?.series_id);
     if (!Number.isInteger(seasonId)) throw new Error('The measure data has no season for the user');
     const episodes = Array.from({ length: 24 }, (_, index) => ({
       number: index + 1,
@@ -168,11 +171,12 @@ async function main(): Promise<void> {
       runtime: 24,
       tmdbId: 100_000 + index,
       overview: 'A made-up synopsis that is about as long as the ones TMDB sends.'.repeat(3),
+      stillPath: `/still${index}.jpg`,
     }));
     const watched = Object.fromEntries(
       episodes
         .slice(0, 12)
-        .map((e) => [String(e.number), [{ startedAt: null, finishedAt: '2026-01-01' }]]),
+        .map((e) => [String(e.tmdbId), [{ startedAt: null, finishedAt: '2026-01-01' }]]),
     );
     await raw.batch([
       raw
@@ -181,9 +185,16 @@ async function main(): Promise<void> {
         )
         .bind(seasonId, JSON.stringify(episodes), 'tmdb', new Date().toISOString()),
       raw
-        .prepare('INSERT INTO season_episode_entry (user_id, season_id, watched) VALUES (?, ?, ?)')
-        .bind(USER_ID, seasonId, JSON.stringify(watched)),
+        .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (?, ?, ?)')
+        .bind(USER_ID, seriesId, JSON.stringify(watched)),
     ]);
+
+    await raw
+      .prepare(
+        "INSERT OR IGNORE INTO series_episode_entry (user_id, series_id, watched) SELECT DISTINCT ?, series_id, '{}' FROM season",
+      )
+      .bind(USER_ID)
+      .run();
 
     await raw
       .prepare(
@@ -256,7 +267,7 @@ async function main(): Promise<void> {
         method: 'PATCH',
         path: `/api/seasons/${seasonId}/episodes`,
         owner: true,
-        body: { op: 'mark', numbers: [13], date: '2026-02-02' },
+        body: { op: 'mark', keys: ['100012'], date: '2026-02-02' },
       },
       {
         name: 'owner GET connector sync-state',

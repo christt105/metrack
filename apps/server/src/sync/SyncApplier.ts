@@ -1,11 +1,10 @@
 import {
-  countWatchedEpisodes,
-  materializeEpisodeWatches,
   mergeEpisodeWatches,
   normalizeEpisodeWatches,
   normalizeViewings,
   readViewings,
   sameEpisodeWatches,
+  type EpisodeWatches,
   viewingsFromDates,
   type EntityRef,
   type Season,
@@ -101,30 +100,22 @@ export class SyncApplier {
       for (const season of change.seasons) {
         if (season.seasonId === null) {
           seasonAdded = true;
-          const watched = mergeEpisodeWatches(
-            season.status === 'completed' ? materializeEpisodeWatches(season.episodeCount) : {},
-            normalizeEpisodeWatches(season.watches),
-          );
-          const added = await seasons.create({
+          await seasons.create({
             ...emptySeason(),
             ...seasonFields(season),
             seriesId,
             pendingReview: season.completes,
             rewatches: readViewings(season.rewatches ?? []),
-            watchedCount: season.watches
-              ? countWatchedEpisodes(watched)
-              : season.status === 'completed'
-                ? season.episodeCount
-                : 0,
+            watchedCount:
+              season.watchedEpisodes ?? (season.status === 'completed' ? season.episodeCount : 0),
           });
-          if (season.watches) await this.targets.episodeWatches.set(added.id, watched);
           result.seasonsCreated += 1;
         } else {
           await this.updateSeason(season.seasonId, season);
-          await this.mergeWatches(season.seasonId, season);
           result.seasonsUpdated += 1;
         }
       }
+      if (change.watches) await this.mergeWatches(seriesId, change.watches);
       if (seasonAdded && !created.some((r) => r.type === 'series' && r.id === seriesId)) {
         if (((await series.get(seriesId))?.tmdbId ?? null) !== null) {
           created.push({ type: 'series', id: seriesId });
@@ -153,15 +144,13 @@ export class SyncApplier {
     }
   }
 
-  private async mergeWatches(id: number, change: SeasonChange): Promise<void> {
-    if (!change.watches) return;
+  private async mergeWatches(seriesId: number, incoming: EpisodeWatches): Promise<void> {
     const watches = this.targets.episodeWatches;
-    const stored = await watches.get(id);
-    const base =
-      stored ??
-      (change.status === 'completed' ? materializeEpisodeWatches(change.episodeCount) : {});
-    const merged = mergeEpisodeWatches(base, normalizeEpisodeWatches(change.watches));
-    if (stored === undefined || !sameEpisodeWatches(stored, merged)) await watches.set(id, merged);
+    const stored = await watches.get(seriesId);
+    const merged = mergeEpisodeWatches(stored ?? {}, normalizeEpisodeWatches(incoming));
+    if (stored === undefined || !sameEpisodeWatches(stored, merged)) {
+      await watches.set(seriesId, merged);
+    }
   }
 
   private async personalExtras(id: number, change: SeasonChange): Promise<Partial<Season>> {
@@ -173,10 +162,11 @@ export class SyncApplier {
         ...readViewings(change.rewatches),
       ]);
     }
-    if (!change.watches && change.status === 'completed') {
-      if ((await this.targets.episodeWatches.get(id)) === undefined) {
-        extras.watchedCount = change.episodeCount;
-      }
+    if (change.watchedEpisodes !== undefined) {
+      extras.watchedCount = change.watchedEpisodes;
+    } else if (change.status === 'completed') {
+      const stored = await this.targets.seasons.get(id);
+      extras.watchedCount = Math.max(stored?.watchedCount ?? 0, change.episodeCount);
     }
     return extras;
   }

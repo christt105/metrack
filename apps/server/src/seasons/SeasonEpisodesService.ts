@@ -1,76 +1,89 @@
 import {
   applyEpisodeOperation,
   countWatchedEpisodes,
-  deriveSeasonTracking,
-  materializeEpisodeWatches,
-  sameEpisodeWatches,
-  type EpisodeOperation,
-  type SeasonEpisodesUpdateResponse,
-  type SeasonTracking,
+  episodeKey,
+  hasEpisodeDates,
+  idEpisodeWatches,
   isEpisodeCatalogStale,
   isSeasonAiring,
-  matchEpisodeCatalog,
   numberedEpisodes,
-  remapEpisodeWatches,
   type Episode,
+  type EpisodeOperation,
   type EpisodeWatches,
+  type SeasonEpisodesUpdateResponse,
+  type SeasonTracking,
   type Season,
   type SeasonEpisodes,
   type Series,
 } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
-import { mapGroupSeasonEpisodes, mapSeasonEpisodes } from '../providers/tmdb/mapSeasonEpisodes.js';
+import { ResponseTooLargeError } from '../http/ResponseTooLargeError.js';
+import {
+  mapGroupSeasonEpisodes,
+  mapSeasonEpisode,
+  mapSeasonEpisodes,
+} from '../providers/tmdb/mapSeasonEpisodes.js';
 import type { SeasonEpisodesDeps } from './SeasonEpisodesDeps.js';
 import type { SeasonEpisodesResult } from './SeasonEpisodesResult.js';
+import { SeriesWatchTracker } from './SeriesWatchTracker.js';
+
+/** How many single episodes one request fetches for a season too large to read whole. */
+export const EPISODE_CHUNK_SIZE = 15;
 
 /**
  * The episodes of a season and what the user in scope watched of them. The shared catalog is read from its one
- * row and, when it is missing or stale and the series has a TMDB id, fetched again with a single TMDB request and
- * stored. Without a catalog the answer lists bare episode numbers and stores nothing, so the next visit tries
- * again. The catalog never changes a season's stored episode count (the sync owns it, and TMDB may split seasons
- * differently from Jellyfin); it only fills a missing one. A catalog whose aired episodes do not match the stored
- * count is still stored but not used: the answer lists bare numbers and reports the mismatch. A refresh that
- * renumbers the episodes moves every user's watches of the season by TMDB id.
+ * row and, when it is missing, stale or still being filled in, and the series has a TMDB id, fetched from TMDB
+ * following the series' ordering: one request for the season of its episode group, one for a regular season, or,
+ * when a regular season is over 1 MB, a chunk of single episodes per call until it is complete. A complete
+ * catalog sets the season's episode count. Without a catalog the answer lists bare episode numbers and stores
+ * nothing, so the next visit tries again. When the catalog has TMDB ids, the user's watches of the season that
+ * were stored under numbering keys move to the ids. A complete catalog that went stale and is over 1 MB is
+ * refetched in chunks kept apart (`refill`) while the old one is still served. Changing the watches of an episode
+ * writes them with the season entries of the whole series (see `SeriesWatchTracker`).
  */
 export class SeasonEpisodesService {
   private readonly now: () => Date;
+  private readonly tracker: SeriesWatchTracker;
 
   constructor(private readonly deps: SeasonEpisodesDeps) {
     this.now = deps.now ?? (() => new Date());
+    this.tracker = new SeriesWatchTracker({
+      seasons: deps.seasons,
+      catalog: deps.catalog,
+      watches: deps.watches,
+      ...(deps.now ? { now: deps.now } : {}),
+    });
   }
 
   async get(seasonId: number): Promise<SeasonEpisodesResult> {
-    const loaded = await this.load(seasonId);
+    const loaded = await this.resolve(seasonId);
+    const { season, catalog, episodes } = loaded;
+    const stored = await this.deps.watches.get(season.seriesId);
+    const watched = await this.withIds(season, catalog, episodes, stored);
     return {
-      response: this.respond(
-        loaded.season,
-        loaded.usable,
-        loaded.episodes,
-        loaded.watched,
-        loaded.mismatch,
-      ),
+      response: this.respond(season, catalog, episodes, watched),
       episodeCountChanged: loaded.episodeCountChanged,
     };
   }
 
   /**
-   * Applies one operation to the user's watches of the season and moves the season's tracking along (see
-   * `deriveSeasonTracking`), writing both in one atomic step. A completed season without stored watches counts as
-   * all watched, so its row is created first. Removing episodes never changes the status or the dates: undoing a
-   * mark with `unmark` restores the watches exactly, but a status the mark changed stays.
+   * Applies one operation to the user's watches of the series and moves the season entries along (see
+   * `deriveSeriesTracking`), writing both in one atomic step. The keys must be episodes of the season. A completed
+   * season that records none of its episodes counts as all watched, so its episodes are written first. Removing
+   * episodes never changes a status; only the dates follow what remains.
    */
   async update(
     seasonId: number,
     operation: EpisodeOperation,
   ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
-    const loaded = await this.load(seasonId);
-    const { season, usable, episodes, watched, mismatch } = loaded;
-    const numbers = new Set(episodes.map((episode) => episode.number));
-    for (const number of operation.op === 'setViewings' ? [operation.number] : operation.numbers) {
-      if (!numbers.has(number)) {
+    const loaded = await this.resolve(seasonId);
+    const { season, catalog, episodes } = loaded;
+    const keys = new Set(episodes.map((episode) => episodeKey(episode, season.number)));
+    for (const key of operation.op === 'setViewings' ? [operation.key] : operation.keys) {
+      if (!keys.has(key)) {
         throw ApiError.badRequest(
           'episode_out_of_range',
-          `Episode ${number} is not one of the ${episodes.length} episodes of this season`,
+          `Episode ${key} is not one of the ${episodes.length} episodes of this season`,
         );
       }
     }
@@ -84,91 +97,80 @@ export class SeasonEpisodesService {
         }
       }
     }
-    const base =
-      watched ?? (season.status === 'completed' ? materializeEpisodeWatches(episodes.length) : {});
-    const next = applyEpisodeOperation(base, operation);
-    const before: SeasonTracking = {
+    const state = await this.tracker.load(season.seriesId, new Map([[season.id, episodes]]));
+    const moved = state.watches
+      ? idEpisodeWatches(episodes, season.number, state.watches)
+      : undefined;
+    const { watches, updates } = await this.tracker.change(
+      season.seriesId,
+      { ...state, watches: moved },
+      (base) => applyEpisodeOperation(base, operation),
+      operation.op === 'unmark',
+    );
+    const own = updates.find((update) => update.seasonId === season.id);
+    const tracking: SeasonTracking = own?.tracking ?? {
       status: season.status,
       startedAt: season.startedAt,
       finishedAt: season.finishedAt,
       rewatches: season.rewatches,
     };
-    const derived =
-      operation.op === 'unmark'
-        ? before
-        : deriveSeasonTracking({
-            tracking: before,
-            episodes: episodes.map(({ number, airDate }) => ({ number, airDate })),
-            watches: next,
-            baseline: base,
-            today: this.today(),
-          });
-    const tracking: SeasonTracking = {
-      status: derived.status,
-      startedAt: derived.startedAt,
-      finishedAt: derived.finishedAt,
-      rewatches: derived.rewatches,
-    };
-    const trackingChanged = JSON.stringify(tracking) !== JSON.stringify(before);
-    const watchesChanged = !sameEpisodeWatches(base, next);
-    if (watchesChanged || trackingChanged) {
-      await this.deps.watches.set(seasonId, next, trackingChanged ? tracking : undefined);
-    }
-    const stored = watchesChanged || trackingChanged ? next : watched;
     return {
       response: {
-        ...this.respond(season, usable, episodes, stored, mismatch),
+        ...this.respond(
+          { ...season, ...tracking, watchedCount: own?.watchedCount ?? season.watchedCount },
+          catalog,
+          episodes,
+          watches,
+        ),
         tracking,
       },
       episodeCountChanged: loaded.episodeCountChanged,
     };
   }
 
-  private async load(seasonId: number) {
+  /**
+   * Fetches the catalogs of the series' seasons that have none or are stale, then derives the user's season
+   * entries again from their watches. A season whose catalog cannot be had keeps its entry as it is.
+   */
+  async recomputeSeries(seriesId: number): Promise<void> {
+    for (const season of await this.deps.seasons.listBySeries(seriesId)) {
+      await this.resolve(season.id).catch(() => undefined);
+    }
+    await this.tracker.recompute(seriesId);
+  }
+
+  private async resolve(seasonId: number) {
     const season = await this.deps.seasons.get(seasonId);
     if (!season) throw ApiError.notFound();
     const series = await this.deps.series.get(season.seriesId);
-    const stored = await this.deps.catalog.get(seasonId);
-    let catalog = stored;
-    let storedCount = season.episodeCount;
+    let catalog = await this.deps.catalog.get(seasonId);
     let episodeCountChanged = false;
-    if (series && series.tmdbId !== null && this.isStale(season, series, stored)) {
-      const fetched = await this.fetch(season, series);
+    if (series && series.tmdbId !== null && this.needsFetch(season, series, catalog)) {
+      const fetched = await this.fetch(season, series, catalog);
       if (fetched) {
         catalog = fetched;
         await this.deps.catalog.put(fetched);
-        if (storedCount === null) {
-          storedCount = fetched.episodes.length;
-          await this.deps.seasons.updateCatalog(seasonId, { episodeCount: storedCount });
+        if (
+          fetched.complete &&
+          fetched.refill === undefined &&
+          season.episodeCount !== fetched.episodes.length
+        ) {
+          await this.deps.seasons.updateCatalog(seasonId, {
+            episodeCount: fetched.episodes.length,
+          });
           episodeCountChanged = true;
-        }
-        if (stored && matchEpisodeCatalog(storedCount, fetched.episodes, this.today()).applies) {
-          await this.remapUsers(seasonId, stored.episodes, fetched.episodes);
         }
       }
     }
-    const match = catalog
-      ? matchEpisodeCatalog(storedCount, catalog.episodes, this.today())
-      : undefined;
-    const usable = match?.applies ? catalog : undefined;
-    const episodes = usable?.episodes ?? numberedEpisodes(storedCount);
-    const watched = await this.deps.watches.get(seasonId);
-    return {
-      season,
-      usable,
-      episodes,
-      watched,
-      mismatch: match?.mismatch ?? null,
-      episodeCountChanged,
-    };
+    const episodes =
+      catalog && catalog.episodes.length > 0
+        ? catalog.episodes
+        : numberedEpisodes(season.episodeCount);
+    return { season, catalog, episodes, episodeCountChanged };
   }
 
-  private today(): string {
-    return this.now().toISOString().slice(0, 10);
-  }
-
-  private isStale(season: Season, series: Series, stored: SeasonEpisodes | undefined): boolean {
-    if (!stored) return true;
+  private needsFetch(season: Season, series: Series, stored: SeasonEpisodes | undefined): boolean {
+    if (!stored || !stored.complete || stored.refill !== undefined) return true;
     const airing = isSeasonAiring(
       series.nextEpisode,
       season.tmdbSeasonNumber ?? season.number,
@@ -178,39 +180,80 @@ export class SeasonEpisodesService {
     return isEpisodeCatalogStale(stored.fetchedAt, this.now(), airing);
   }
 
-  private async fetch(season: Season, series: Series): Promise<SeasonEpisodes | undefined> {
+  private async fetch(
+    season: Season,
+    series: Series,
+    stored: SeasonEpisodes | undefined,
+  ): Promise<SeasonEpisodes | undefined> {
     const { tmdb } = this.deps;
     if (!tmdb || series.tmdbId === null) return undefined;
-    const seasonNumber = season.tmdbSeasonNumber ?? season.number;
+    const providerNumber = season.tmdbSeasonNumber ?? season.number;
+    const catalog = (episodes: Episode[], complete: boolean): SeasonEpisodes => ({
+      seasonId: season.id,
+      episodes,
+      source: 'tmdb',
+      fetchedAt: this.now().toISOString(),
+      complete,
+    });
     try {
-      const episodes =
-        series.tmdbEpisodeGroup !== null
-          ? mapGroupSeasonEpisodes(await tmdb.episodeGroup(series.tmdbEpisodeGroup), seasonNumber)
-          : mapSeasonEpisodes(await tmdb.season(series.tmdbId, seasonNumber));
-      if (!episodes || episodes.length === 0) return undefined;
-      return {
-        seasonId: season.id,
-        episodes,
-        source: 'tmdb',
-        fetchedAt: this.now().toISOString(),
-      };
+      if (series.tmdbEpisodeGroup !== null) {
+        const group = await tmdb.episodeGroup(series.tmdbEpisodeGroup);
+        const episodes = mapGroupSeasonEpisodes(group, providerNumber);
+        return episodes && episodes.length > 0 ? catalog(episodes, true) : undefined;
+      }
+      const continuing = stored !== undefined && (!stored.complete || stored.refill !== undefined);
+      if (!continuing) {
+        try {
+          const episodes = mapSeasonEpisodes(await tmdb.season(series.tmdbId, providerNumber));
+          return episodes.length > 0 ? catalog(episodes, true) : undefined;
+        } catch (error) {
+          if (!(error instanceof ResponseTooLargeError)) throw error;
+        }
+      }
+      const have =
+        stored === undefined ? [] : stored.complete ? (stored.refill ?? []) : stored.episodes;
+      const chunk = await this.fetchChunk(series.tmdbId, providerNumber, season.episodeCount, have);
+      if (!chunk) return undefined;
+      if (chunk.complete) return catalog(chunk.episodes, true);
+      if (stored?.complete) return { ...stored, refill: chunk.episodes };
+      return catalog(chunk.episodes, false);
     } catch {
       return undefined;
     }
   }
 
-  private async remapUsers(
-    seasonId: number,
-    before: readonly Episode[],
-    after: readonly Episode[],
-  ): Promise<void> {
-    if (!renumbered(before, after)) return;
-    for (const row of await this.deps.watches.listForSeason(seasonId)) {
-      const moved = remapEpisodeWatches(before, after, row.watched);
-      if (JSON.stringify(moved) !== JSON.stringify(row.watched)) {
-        await this.deps.watches.replace(row.userId, seasonId, moved);
-      }
-    }
+  private async fetchChunk(
+    tmdbId: number,
+    providerNumber: number,
+    count: number | null,
+    have: readonly Episode[],
+  ): Promise<{ episodes: Episode[]; complete: boolean } | undefined> {
+    const { tmdb } = this.deps;
+    if (!tmdb || count === null || count <= 0) return undefined;
+    const from = Math.max(0, ...have.map((e) => e.number)) + 1;
+    const last = Math.min(from + EPISODE_CHUNK_SIZE - 1, count);
+    const numbers = Array.from({ length: Math.max(0, last - from + 1) }, (_, i) => from + i);
+    const results = await Promise.allSettled(
+      numbers.map((n) => tmdb.seasonEpisode(tmdbId, providerNumber, n)),
+    );
+    const fetched = results.flatMap((r) =>
+      r.status === 'fulfilled' ? [mapSeasonEpisode(r.value)] : [],
+    );
+    if (fetched.length === 0) return undefined;
+    const episodes = [...have, ...fetched].sort((a, b) => a.number - b.number);
+    return { episodes, complete: last >= count };
+  }
+
+  private async withIds(
+    season: Season,
+    catalog: SeasonEpisodes | undefined,
+    episodes: readonly Episode[],
+    stored: EpisodeWatches | undefined,
+  ): Promise<EpisodeWatches | undefined> {
+    if (!stored || !catalog) return stored;
+    const moved = idEpisodeWatches(episodes, season.number, stored);
+    if (moved !== stored) await this.deps.watches.set(season.seriesId, moved);
+    return moved;
   }
 
   private respond(
@@ -218,36 +261,37 @@ export class SeasonEpisodesService {
     catalog: SeasonEpisodes | undefined,
     episodes: readonly Episode[],
     stored: EpisodeWatches | undefined,
-    catalogMismatch: { catalogEpisodes: number } | null,
   ): SeasonEpisodesResult['response'] {
-    const allWatched = stored === undefined && season.status === 'completed';
     const watched = stored ?? {};
+    const counted = countWatchedEpisodes(episodes, season.number, watched);
+    const allWatched = counted === 0 && season.status === 'completed' && season.watchedCount > 0;
     return {
       seasonId: season.id,
       source: catalog?.source ?? 'numbers',
       fetchedAt: catalog?.fetchedAt ?? null,
+      complete: catalog?.complete ?? true,
       episodeCount: episodes.length,
-      catalogMismatch,
-      watchedCount: allWatched ? episodes.length : countWatchedEpisodes(watched),
+      watchedCount: allWatched ? episodes.length : counted,
+      datesDerived: hasEpisodeDates(
+        episodes.map((episode) => episodeKey(episode, season.number)),
+        watched,
+      ),
       episodes: episodes.map((episode) => {
-        const viewings = watched[String(episode.number)];
+        const key = episodeKey(episode, season.number);
+        const viewings = watched[key];
         return {
+          key,
           number: episode.number,
+          tmdbId: episode.tmdbId,
           title: episode.title,
           airDate: episode.airDate,
           runtime: episode.runtime,
           overview: episode.overview,
+          stillPath: episode.stillPath,
           watched: allWatched || viewings !== undefined,
           viewings: viewings ?? [],
         };
       }),
     };
   }
-}
-
-function renumbered(before: readonly Episode[], after: readonly Episode[]): boolean {
-  const numberOf = new Map(after.flatMap((e) => (e.tmdbId === null ? [] : [[e.tmdbId, e.number]])));
-  return before.some(
-    (e) => e.tmdbId !== null && numberOf.get(e.tmdbId) !== e.number && numberOf.has(e.tmdbId),
-  );
 }

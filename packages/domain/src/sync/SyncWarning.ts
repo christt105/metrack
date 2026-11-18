@@ -3,7 +3,8 @@ export type SyncWarningCode =
   | 'season_number_conflict'
   | 'episode_count_mismatch'
   | 'specials_ignored'
-  | 'episode_without_number';
+  | 'episode_without_number'
+  | 'episode_unmatched';
 
 export interface SyncWarning {
   code: SyncWarningCode;

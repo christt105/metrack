@@ -18,6 +18,7 @@ function toEpisode(item: JellyfinItem): LibraryEpisode {
     runtimeSeconds: ticksToSeconds(item.RunTimeTicks),
     available: item.LocationType !== 'Virtual',
     played: item.UserData?.Played === true,
+    tvdbId: providerId(item, 'Tvdb'),
   };
 }
 

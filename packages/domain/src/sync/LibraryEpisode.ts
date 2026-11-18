@@ -7,4 +7,6 @@ export interface LibraryEpisode {
   available: boolean;
   /** Whether the tracked account has the episode marked as played. */
   played?: boolean;
+  /** TheTVDB id of the episode, when the media server has one. */
+  tvdbId?: number | null;
 }

@@ -2,17 +2,18 @@ CREATE TABLE season_episodes (
   season_id INTEGER PRIMARY KEY REFERENCES season (id) ON DELETE CASCADE,
   episodes TEXT NOT NULL DEFAULT '[]',
   source TEXT NOT NULL CHECK (source IN ('tmdb','jellyfin')),
-  fetched_at TEXT NOT NULL
+  fetched_at TEXT NOT NULL,
+  complete INTEGER NOT NULL DEFAULT 1 CHECK (complete IN (0, 1))
 );
 
-CREATE TABLE season_episode_entry (
+CREATE TABLE series_episode_entry (
   user_id INTEGER NOT NULL REFERENCES user (id) ON DELETE CASCADE,
-  season_id INTEGER NOT NULL REFERENCES season (id) ON DELETE CASCADE,
+  series_id INTEGER NOT NULL REFERENCES series (id) ON DELETE CASCADE,
   watched TEXT NOT NULL DEFAULT '{}',
-  PRIMARY KEY (user_id, season_id)
+  PRIMARY KEY (user_id, series_id)
 );
 
-CREATE INDEX season_episode_entry_season ON season_episode_entry (season_id);
+CREATE INDEX series_episode_entry_series ON series_episode_entry (series_id);
 
 ALTER TABLE season_entry ADD COLUMN watched_count INTEGER NOT NULL DEFAULT 0;
 

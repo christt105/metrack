@@ -4,10 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 
-const d1Sql = readFileSync(
-  new URL('../d1/migrations/0009_season_episodes.sql', import.meta.url),
-  'utf8',
-);
+const d1Sql = ['0009_season_episodes.sql', '0010_season_episodes_refill.sql']
+  .map((file) => readFileSync(new URL(`../d1/migrations/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 
 function legacyDatabase(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
@@ -30,7 +29,35 @@ const counts = (db: DatabaseSync): number[] =>
     .all()
     .map((row) => Number(row.watched_count));
 
+const columns = (db: DatabaseSync, table: string): string[] =>
+  db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all()
+    .map((row) => String(row.name));
+
 describe('the season episodes migration', () => {
+  it.each([
+    ['TypeScript', (db: DatabaseSync) => new MigrationRunner(db, migrations).run()],
+    ['D1 SQL', (db: DatabaseSync) => db.exec(d1Sql)],
+  ])('creates the catalog and the per-series watches in the %s migration', (_name, apply) => {
+    const db = legacyDatabase();
+    apply(db);
+    expect(columns(db, 'season_episodes')).toEqual([
+      'season_id',
+      'episodes',
+      'source',
+      'fetched_at',
+      'complete',
+      'refill',
+    ]);
+    expect(columns(db, 'series_episode_entry')).toEqual(['user_id', 'series_id', 'watched']);
+    expect(columns(db, 'season_episode_entry')).toEqual([]);
+    db.exec(
+      "INSERT INTO season_episodes (season_id, source, fetched_at) VALUES (1, 'tmdb', 'now')",
+    );
+    expect(db.prepare('SELECT complete FROM season_episodes').get()).toEqual({ complete: 1 });
+  });
+
   it('counts every episode of a completed season as watched and none of the others', () => {
     const db = legacyDatabase();
     new MigrationRunner(db, migrations).run();

@@ -1,8 +1,8 @@
 import type { EpisodeWatches } from '@metrack/domain';
 
-/** The episodes one user watched of one season. */
+/** The episodes one user watched of one series. */
 export interface StoredEpisodeWatches {
   userId: number;
-  seasonId: number;
+  seriesId: number;
   watched: EpisodeWatches;
 }
