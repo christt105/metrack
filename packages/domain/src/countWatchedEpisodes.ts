@@ -1,6 +1,12 @@
+import type { Episode } from './Episode.js';
 import type { EpisodeWatches } from './EpisodeWatches.js';
+import { episodeKey } from './episodeKey.js';
 
-/** How many distinct episodes are watched. */
-export function countWatchedEpisodes(watches: EpisodeWatches): number {
-  return Object.keys(watches).length;
+/** How many of the season's episodes are watched; `seasonNumber` is the season's metrack number. */
+export function countWatchedEpisodes(
+  episodes: readonly Episode[],
+  seasonNumber: number,
+  watches: EpisodeWatches,
+): number {
+  return episodes.filter((episode) => episodeKey(episode, seasonNumber) in watches).length;
 }

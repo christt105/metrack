@@ -8,6 +8,7 @@ import type { TmdbClientOptions } from './TmdbClientOptions.js';
 import type { TmdbEpisodeGroup } from './TmdbEpisodeGroup.js';
 import type { TmdbEpisodeGroupList } from './TmdbEpisodeGroupList.js';
 import type { TmdbFindResponse } from './TmdbFindResponse.js';
+import type { TmdbSeasonEpisode } from './TmdbSeasonEpisode.js';
 import type { TmdbSeasonResponse } from './TmdbSeasonResponse.js';
 import type { TmdbTitleResponse } from './TmdbTitleResponse.js';
 
@@ -16,6 +17,7 @@ export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
 export const TMDB_IMAGE_HOST = 'image.tmdb.org';
 /** The largest season document read; the median is 60 KB and a few with crew and guest stars pass 1 MB. */
 export const TMDB_SEASON_MAX_BYTES = 1_000_000;
+const MAX_APPENDED_SEASONS = 20;
 
 export class TmdbClient {
   constructor(
@@ -66,12 +68,57 @@ export class TmdbClient {
     });
   }
 
+  /** One episode of a regular season, for seasons too large to read whole. */
+  seasonEpisode(
+    tvId: number,
+    seasonNumber: number,
+    episodeNumber: number,
+  ): Promise<TmdbSeasonEpisode> {
+    return this.get(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`, {
+      language: this.options.language,
+    });
+  }
+
   /** The TMDB id of the series TheTVDB knows by `tvdbId`, or null when TMDB has no match. */
   async seriesIdForTvdb(tvdbId: number): Promise<number | null> {
     const found = await this.get<TmdbFindResponse>(`/find/${tvdbId}`, {
       external_source: 'tvdb_id',
     });
     return found.tv_results[0]?.id ?? null;
+  }
+
+  /** The TMDB id of the episode TheTVDB knows by `tvdbId`, or null when TMDB has no match. */
+  async episodeIdForTvdb(tvdbId: number): Promise<number | null> {
+    const found = await this.get<TmdbFindResponse>(`/find/${tvdbId}`, {
+      external_source: 'tvdb_id',
+    });
+    return found.tv_episode_results?.[0]?.id ?? null;
+  }
+
+  /**
+   * Several regular seasons of a series with their episodes in one request (TMDB appends up to 20 sub-requests to
+   * a title); the documents are not capped, so this is for callers that have no CPU limit. A season TMDB does not
+   * return is absent from the result.
+   */
+  async seasonsOf(
+    tvId: number,
+    seasonNumbers: readonly number[],
+  ): Promise<Map<number, TmdbSeasonResponse>> {
+    const seasons = new Map<number, TmdbSeasonResponse>();
+    for (let from = 0; from < seasonNumbers.length; from += MAX_APPENDED_SEASONS) {
+      const numbers = seasonNumbers.slice(from, from + MAX_APPENDED_SEASONS);
+      const response = await this.get<Record<string, unknown>>(`/tv/${tvId}`, {
+        language: this.options.language,
+        append_to_response: numbers.map((n) => `season/${n}`).join(','),
+      });
+      for (const number of numbers) {
+        const season = response[`season/${number}`];
+        if (typeof season === 'object' && season !== null) {
+          seasons.set(number, season as TmdbSeasonResponse);
+        }
+      }
+    }
+    return seasons;
   }
 
   /** Title search. `year` narrows by release year (first air year for TV). */

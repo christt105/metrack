@@ -10,5 +10,6 @@ export function numberedEpisodes(count: number | null): Episode[] {
     runtime: null,
     tmdbId: null,
     overview: null,
+    stillPath: null,
   }));
 }

@@ -9,8 +9,11 @@ export interface SeasonEpisodesResponse {
   seasonId: number;
   source: EpisodeSource | 'numbers';
   fetchedAt: string | null;
+  /** False while the catalog of a very large season is still being filled in; ask again for the rest. */
+  complete: boolean;
   episodeCount: number;
   watchedCount: number;
+  /** Whether the season's dates follow its episodes' viewings, so they are not edited by hand. */
+  datesDerived: boolean;
   episodes: SeasonEpisodeItem[];
-  catalogMismatch: { catalogEpisodes: number } | null;
 }

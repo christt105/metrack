@@ -19,6 +19,7 @@ export function parseEpisodes(value: unknown): Episode[] {
         runtime: num(e.runtime),
         tmdbId: num(e.tmdbId),
         overview: text(e.overview),
+        stillPath: text(e.stillPath),
       },
     ];
   });
@@ -30,9 +31,20 @@ export function seasonEpisodesFromRow(row: Row): SeasonEpisodes {
     episodes: parseEpisodes(row.episodes),
     source: String(row.source) as EpisodeSource,
     fetchedAt: String(row.fetched_at),
+    complete: Number(row.complete) !== 0,
+    ...(typeof row.refill === 'string' ? { refill: parseEpisodes(row.refill) } : {}),
   };
 }
 
-export function seasonEpisodesToRow(catalog: SeasonEpisodes): [number, string, string, string] {
-  return [catalog.seasonId, JSON.stringify(catalog.episodes), catalog.source, catalog.fetchedAt];
+export function seasonEpisodesToRow(
+  catalog: SeasonEpisodes,
+): [number, string, string, string, number, string | null] {
+  return [
+    catalog.seasonId,
+    JSON.stringify(catalog.episodes),
+    catalog.source,
+    catalog.fetchedAt,
+    catalog.complete ? 1 : 0,
+    catalog.refill ? JSON.stringify(catalog.refill) : null,
+  ];
 }

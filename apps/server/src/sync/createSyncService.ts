@@ -22,17 +22,26 @@ export function createSyncService(
   targets: SyncTargets,
   tmdb?: { client: TmdbClient; metadata: MetadataCache },
   fetchFn: FetchFn = fetch,
+  dataDir?: string,
 ): SyncService {
-  const { library, playback } = createSyncSources(
+  const { library, playback, indexes } = createSyncSources(
     config,
     jellyfinUser,
     pool,
     tmdb?.client,
     fetchFn,
+    dataDir,
   );
-  return new SyncService(library, playback, targets, new SyncApplier(transactions, targets), {
-    timeZone: config.timeZone,
-    refreshCreated:
-      tmdb && ((ref) => tmdb.metadata.refresh(ref.type, ref.id, true, { pinStored: false })),
-  });
+  return new SyncService(
+    library,
+    playback,
+    indexes,
+    targets,
+    new SyncApplier(transactions, targets),
+    {
+      timeZone: config.timeZone,
+      refreshCreated:
+        tmdb && ((ref) => tmdb.metadata.refresh(ref.type, ref.id, true, { pinStored: false })),
+    },
+  );
 }

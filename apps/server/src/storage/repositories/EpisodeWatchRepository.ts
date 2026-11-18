@@ -1,24 +1,28 @@
-import type { EpisodeWatches, SeasonTracking } from '@metrack/domain';
+import type { EpisodeWatches, SeasonEntryUpdate } from '@metrack/domain';
 import type { StoredEpisodeWatches } from './StoredEpisodeWatches.js';
 
-/** What users watched of each season, one row per season and user. */
+/** What users watched of each series, keyed by episode, one row per series and user. */
 export interface EpisodeWatchRepository {
-  /** The watches of the user in scope for the season, or undefined when the user has no row for it. */
-  get(seasonId: number): Promise<EpisodeWatches | undefined>;
-  /** Every row of the user in scope, ordered by season. */
+  /** The watches of the user in scope for the series, or undefined when the user has no row for it. */
+  get(seriesId: number): Promise<EpisodeWatches | undefined>;
+  /** Every row of the user in scope, ordered by series. */
   list(): Promise<StoredEpisodeWatches[]>;
   /**
-   * Stores the watches of the user in scope and keeps the `watchedCount` of their season entry in step. With
-   * `tracking`, the season entry's status, dates and rewatches are written in the same atomic step.
+   * Stores the watches of the user in scope. `seasons` are the season entries of the series that change with
+   * them (`watched_count`, and the status, dates and rewatches), written in the same atomic step.
    */
-  set(seasonId: number, watched: EpisodeWatches, tracking?: SeasonTracking): Promise<void>;
-  /** The rows of every user for the season; not scoped. */
-  listForSeason(seasonId: number): Promise<StoredEpisodeWatches[]>;
+  set(
+    seriesId: number,
+    watched: EpisodeWatches,
+    seasons?: readonly SeasonEntryUpdate[],
+  ): Promise<void>;
+  /** The rows of every user for the series; not scoped. */
+  listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]>;
   /** Like `set`, for a given user; not scoped. */
   replace(
     userId: number,
-    seasonId: number,
+    seriesId: number,
     watched: EpisodeWatches,
-    tracking?: SeasonTracking,
+    seasons?: readonly SeasonEntryUpdate[],
   ): Promise<void>;
 }

@@ -1,4 +1,4 @@
-/** One episode of `GET /tv/{id}/season/{n}`; crew and guest stars are not read. */
+/** One episode of `GET /tv/{id}/season/{n}` or `GET /tv/{id}/season/{n}/episode/{e}`; crew and guest stars are not read. */
 export interface TmdbSeasonEpisode {
   id?: number;
   episode_number: number;
@@ -6,4 +6,5 @@ export interface TmdbSeasonEpisode {
   air_date?: string | null;
   runtime?: number | null;
   overview?: string;
+  still_path?: string | null;
 }

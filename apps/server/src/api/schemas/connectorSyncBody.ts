@@ -24,7 +24,7 @@ const season = {
   type: 'object',
   properties: {
     seasonId: nullableId,
-    jellyfinSeasonId: text,
+    jellyfinSeasonId: { type: ['string', 'null'], minLength: 1, maxLength: 1000 },
     number: { type: 'integer', minimum: 0 },
     tmdbSeasonNumber: nullableInteger,
     title: nullableString,
@@ -34,7 +34,7 @@ const season = {
     startedAt: nullableDate,
     finishedAt: nullableDate,
     completes: { type: 'boolean' },
-    watches: { type: 'object' },
+    watchedEpisodes: { type: 'integer', minimum: 0 },
     rewatches: { type: 'array', items: viewingItem },
   },
   required: [
@@ -61,6 +61,7 @@ const series = {
     tvdbId: nullableInteger,
     title: text,
     seasons: { type: 'array', items: season },
+    watches: { type: 'object' },
   },
   required: ['seriesId', 'jellyfinId', 'tmdbId', 'tvdbId', 'title', 'seasons'],
 } as const;

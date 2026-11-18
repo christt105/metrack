@@ -1,5 +1,4 @@
-import { collectWatchDays } from './collectWatchDays.js';
-import { makeDateOf } from './makeDateOf.js';
+import { collectSyncWatchDays } from './collectSyncWatchDays.js';
 import { planMovies } from './planMovies.js';
 import { planSeries } from './planSeries.js';
 import type { SyncInput } from './SyncInput.js';
@@ -10,29 +9,16 @@ import type { SyncPlan } from './SyncPlan.js';
  * Pure: it reads nothing and writes nothing.
  */
 export function planSync(input: SyncInput): SyncPlan {
-  const runtimes = new Map<string, number | null>();
-  for (const movie of input.movies) runtimes.set(movie.jellyfinId, movie.runtimeSeconds);
-  for (const series of input.series) {
-    for (const season of series.seasons) {
-      for (const episode of season.episodes)
-        runtimes.set(episode.jellyfinId, episode.runtimeSeconds);
-    }
-  }
-  const played = new Set<string>();
-  for (const movie of input.movies) if (movie.played) played.add(movie.jellyfinId);
-  for (const series of input.series) {
-    for (const season of series.seasons) {
-      for (const episode of season.episodes) if (episode.played) played.add(episode.jellyfinId);
-    }
-  }
-  const { days, playCount, ignored, unmatched } = collectWatchDays(
-    input.plays,
-    runtimes,
-    makeDateOf(input.timeZone),
-    played,
-  );
+  const { days, playCount, ignored, unmatched } = collectSyncWatchDays(input);
   const movies = planMovies(input.movies, days, playCount, input.state);
-  const series = planSeries(input.series, days, playCount, input.state, input.today);
+  const series = planSeries(
+    input.series,
+    days,
+    playCount,
+    input.state,
+    input.today,
+    input.indexes ?? new Map(),
+  );
   return {
     movies: movies.changes,
     series: series.changes,

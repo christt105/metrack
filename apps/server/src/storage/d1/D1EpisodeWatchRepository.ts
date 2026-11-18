@@ -1,16 +1,8 @@
-import {
-  countWatchedEpisodes,
-  normalizeViewings,
-  type EpisodeWatches,
-  type SeasonTracking,
-} from '@metrack/domain';
+import type { EpisodeWatches, SeasonEntryUpdate } from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
 import { episodeWatchesFromRow } from '../mapping/episodeWatchesFromRow.js';
-import {
-  UPDATE_TRACKING_SQL,
-  UPDATE_WATCHED_COUNT_SQL,
-  UPSERT_WATCHES_SQL,
-} from '../mapping/episodeWatchesSql.js';
+import { UPDATE_TRACKING_SQL, UPSERT_WATCHES_SQL } from '../mapping/episodeWatchesSql.js';
+import { seasonEntryUpdateParams } from '../mapping/seasonEntryUpdateParams.js';
 import type { EpisodeWatchRepository } from '../repositories/EpisodeWatchRepository.js';
 import type { StoredEpisodeWatches } from '../repositories/StoredEpisodeWatches.js';
 import type { D1Database } from './D1Database.js';
@@ -22,12 +14,12 @@ export class D1EpisodeWatchRepository implements EpisodeWatchRepository {
     private readonly scope: UserScope,
   ) {}
 
-  async get(seasonId: number): Promise<EpisodeWatches | undefined> {
+  async get(seriesId: number): Promise<EpisodeWatches | undefined> {
     const row = await queryFirst(
       this.db,
-      'SELECT * FROM season_episode_entry WHERE user_id = ? AND season_id = ?',
+      'SELECT * FROM series_episode_entry WHERE user_id = ? AND series_id = ?',
       this.scope.userId(),
-      seasonId,
+      seriesId,
     );
     return row ? episodeWatchesFromRow(row).watched : undefined;
   }
@@ -35,45 +27,40 @@ export class D1EpisodeWatchRepository implements EpisodeWatchRepository {
   async list(): Promise<StoredEpisodeWatches[]> {
     const rows = await queryAll(
       this.db,
-      'SELECT * FROM season_episode_entry WHERE user_id = ? ORDER BY season_id',
+      'SELECT * FROM series_episode_entry WHERE user_id = ? ORDER BY series_id',
       this.scope.userId(),
     );
     return rows.map(episodeWatchesFromRow);
   }
 
-  async set(seasonId: number, watched: EpisodeWatches, tracking?: SeasonTracking): Promise<void> {
-    await this.replace(this.scope.userId(), seasonId, watched, tracking);
+  async set(
+    seriesId: number,
+    watched: EpisodeWatches,
+    seasons: readonly SeasonEntryUpdate[] = [],
+  ): Promise<void> {
+    await this.replace(this.scope.userId(), seriesId, watched, seasons);
   }
 
-  async listForSeason(seasonId: number): Promise<StoredEpisodeWatches[]> {
+  async listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]> {
     const rows = await queryAll(
       this.db,
-      'SELECT * FROM season_episode_entry WHERE season_id = ? ORDER BY user_id',
-      seasonId,
+      'SELECT * FROM series_episode_entry WHERE series_id = ? ORDER BY user_id',
+      seriesId,
     );
     return rows.map(episodeWatchesFromRow);
   }
 
   async replace(
     userId: number,
-    seasonId: number,
+    seriesId: number,
     watched: EpisodeWatches,
-    tracking?: SeasonTracking,
+    seasons: readonly SeasonEntryUpdate[] = [],
   ): Promise<void> {
-    const count = countWatchedEpisodes(watched);
     await this.db.batch([
-      statement(this.db, UPSERT_WATCHES_SQL, [userId, seasonId, JSON.stringify(watched)]),
-      tracking
-        ? statement(this.db, UPDATE_TRACKING_SQL, [
-            count,
-            tracking.status,
-            tracking.startedAt,
-            tracking.finishedAt,
-            JSON.stringify(normalizeViewings(tracking.rewatches)),
-            userId,
-            seasonId,
-          ])
-        : statement(this.db, UPDATE_WATCHED_COUNT_SQL, [count, userId, seasonId]),
+      statement(this.db, UPSERT_WATCHES_SQL, [userId, seriesId, JSON.stringify(watched)]),
+      ...seasons.map((update) =>
+        statement(this.db, UPDATE_TRACKING_SQL, seasonEntryUpdateParams(userId, update)),
+      ),
     ]);
   }
 }

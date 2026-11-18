@@ -3,15 +3,16 @@ import {
   countWatchedEpisodes,
   isEpisodeCatalogStale,
   isSeasonAiring,
-  matchEpisodeCatalog,
   normalizeEpisodeWatches,
   numberedEpisodes,
-  remapEpisodeWatches,
+  episodeKey,
+  idEpisodeWatches,
+  parseEpisodeKey,
   type Episode,
 } from '../src/index.js';
 
 function episode(number: number, tmdbId: number | null, airDate: string | null = null): Episode {
-  return { number, title: null, airDate, runtime: null, tmdbId, overview: null };
+  return { number, title: null, airDate, runtime: null, tmdbId, overview: null, stillPath: null };
 }
 
 describe('normalizeEpisodeWatches', () => {
@@ -32,10 +33,11 @@ describe('normalizeEpisodeWatches', () => {
 
   it('drops bad keys and treats non-list values as watched without a date', () => {
     expect(
-      normalizeEpisodeWatches({ '0': [], '-1': [], a: [], '03': [], '4': 'x', '5': null }),
+      normalizeEpisodeWatches({ '0': [], '-1': [], a: [], '03': [], '4': 'x', '5': null, s1e2: 1 }),
     ).toEqual({
       '4': [],
       '5': [],
+      s1e2: [],
     });
   });
 
@@ -47,10 +49,17 @@ describe('normalizeEpisodeWatches', () => {
 });
 
 describe('countWatchedEpisodes', () => {
-  it('counts keys', () => {
-    expect(countWatchedEpisodes({})).toBe(0);
+  const catalog = [episode(1, 10), episode(2, 20), episode(3, null)];
+
+  it('counts the episodes of the season that have a key', () => {
+    expect(countWatchedEpisodes(catalog, 2, {})).toBe(0);
     expect(
-      countWatchedEpisodes({ '1': [], '3': [{ startedAt: null, finishedAt: '2026-01-01' }] }),
+      countWatchedEpisodes(catalog, 2, {
+        '10': [],
+        s2e3: [{ startedAt: null, finishedAt: '2026-01-01' }],
+        '999': [],
+        s1e3: [],
+      }),
     ).toBe(2);
   });
 });
@@ -106,69 +115,52 @@ describe('numberedEpisodes', () => {
   });
 });
 
-describe('remapEpisodeWatches', () => {
-  const viewing = { startedAt: null, finishedAt: '2026-01-01' };
-
-  it('moves watches to the number the same TMDB id has now', () => {
-    const before = [episode(1, 10), episode(2, 20), episode(3, 30)];
-    const after = [episode(1, 30), episode(2, 10), episode(3, 20)];
-    expect(remapEpisodeWatches(before, after, { '1': [viewing], '3': [] })).toEqual({
-      '2': [viewing],
-      '1': [],
-    });
+describe('episodeKey and parseEpisodeKey', () => {
+  it('uses the TMDB id when there is one', () => {
+    expect(episodeKey(episode(3, 6701926), 1)).toBe('6701926');
   });
 
-  it('keeps keys that have no match', () => {
-    const before = [episode(1, 10), episode(2, null)];
-    const after = [episode(1, 99), episode(2, 10)];
-    expect(remapEpisodeWatches(before, after, { '1': [viewing], '2': [], '7': [] })).toEqual({
-      '2': [viewing],
-      '7': [],
-    });
+  it('falls back to the season and episode numbers', () => {
+    expect(episodeKey(episode(3, null), 2)).toBe('s2e3');
+    expect(episodeKey(episode(1, null), 0)).toBe('s0e1');
   });
 
-  it('leaves watches alone when nothing moved', () => {
-    const same = [episode(1, 10), episode(2, 20)];
-    expect(remapEpisodeWatches(same, same, { '2': [viewing] })).toEqual({ '2': [viewing] });
+  it('parses what it builds', () => {
+    expect(parseEpisodeKey('6701926')).toEqual({ kind: 'tmdb', tmdbId: 6701926 });
+    expect(parseEpisodeKey('s2e3')).toEqual({ kind: 'number', seasonNumber: 2, episodeNumber: 3 });
+  });
+
+  it('rejects anything else', () => {
+    for (const key of ['', '0', '-1', '03', 'a', 's2', 'e3', 's2e0', 's-1e1', 's2e3x', '1.5']) {
+      expect(parseEpisodeKey(key)).toBeNull();
+    }
   });
 });
 
-describe('matchEpisodeCatalog', () => {
-  const today = '2026-11-17';
-  const aired = (count: number): Episode[] =>
-    Array.from({ length: count }, (_, i) => episode(i + 1, i + 1, '2026-01-01'));
+describe('idEpisodeWatches', () => {
+  const viewing = { startedAt: null, finishedAt: '2026-01-01' };
+  const catalog = [episode(1, 10), episode(2, 20), episode(3, null)];
 
-  it('applies when the aired episodes equal the stored count', () => {
-    expect(matchEpisodeCatalog(12, aired(12), today)).toEqual({ applies: true, mismatch: null });
-  });
-
-  it('applies without a stored count', () => {
-    expect(matchEpisodeCatalog(null, aired(60), today).applies).toBe(true);
-  });
-
-  it('applies when the catalog is longer only by episodes still to air or without a date', () => {
-    const list = [...aired(10), episode(11, 11, '2026-12-01'), episode(12, 12, null)];
-    expect(matchEpisodeCatalog(11, list, today)).toEqual({ applies: true, mismatch: null });
-    expect(
-      matchEpisodeCatalog(10, [...aired(10), episode(11, 11, '2026-12-01')], today).applies,
-    ).toBe(true);
-  });
-
-  it('does not apply when TMDB merges seasons: 60 aired against 24', () => {
-    expect(matchEpisodeCatalog(24, aired(60), today)).toEqual({
-      applies: false,
-      mismatch: { catalogEpisodes: 60 },
+  it('moves numbering keys of the season to the ids of the same numbers', () => {
+    expect(idEpisodeWatches(catalog, 2, { s2e1: [viewing], s2e2: [] })).toEqual({
+      '10': [viewing],
+      '20': [],
     });
   });
 
-  it('does not apply when the catalog is shorter', () => {
-    expect(matchEpisodeCatalog(24, aired(12), today)).toEqual({
-      applies: false,
-      mismatch: { catalogEpisodes: 12 },
+  it('leaves other seasons, episodes without an id and unknown numbers alone', () => {
+    const watches = { s1e1: [viewing], s2e3: [], s2e9: [], '99': [] };
+    expect(idEpisodeWatches(catalog, 2, watches)).toBe(watches);
+  });
+
+  it('keeps the existing watches of an id when both keys exist', () => {
+    expect(idEpisodeWatches(catalog, 1, { s1e1: [], '10': [viewing] })).toEqual({
+      '10': [viewing],
     });
   });
 
-  it('counts an episode that airs today as aired', () => {
-    expect(matchEpisodeCatalog(1, [episode(1, 1, today)], today).applies).toBe(true);
+  it('returns the same object when nothing moves', () => {
+    const watches = { '10': [viewing] };
+    expect(idEpisodeWatches(catalog, 1, watches)).toBe(watches);
   });
 });

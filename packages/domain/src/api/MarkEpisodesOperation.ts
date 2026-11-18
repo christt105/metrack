@@ -1,6 +1,6 @@
-/** Adds a viewing finished on `date` to each episode; a null date marks them watched on an unknown date. */
+/** Adds a viewing that starts and ends on `date` to each episode; a null date marks them watched on an unknown date. */
 export interface MarkEpisodesOperation {
   op: 'mark';
-  numbers: number[];
+  keys: string[];
   date: string | null;
 }

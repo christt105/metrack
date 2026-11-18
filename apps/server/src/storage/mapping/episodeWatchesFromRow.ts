@@ -5,7 +5,7 @@ import type { StoredEpisodeWatches } from '../repositories/StoredEpisodeWatches.
 export function episodeWatchesFromRow(row: Row): StoredEpisodeWatches {
   return {
     userId: Number(row.user_id),
-    seasonId: Number(row.season_id),
+    seriesId: Number(row.series_id),
     watched: normalizeEpisodeWatches(JSON.parse(String(row.watched))),
   };
 }
