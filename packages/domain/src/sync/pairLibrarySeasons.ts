@@ -1,5 +1,4 @@
 import type { Season } from '../Season.js';
-import type { SeasonOverride } from '../SeasonOverride.js';
 import { matchSeasonsByAirDate } from '../matchSeasonsByAirDate.js';
 import type { LibrarySeason } from './LibrarySeason.js';
 import type { SeasonMatchKind } from './SeasonMatchKind.js';
@@ -12,14 +11,12 @@ export interface SeasonPair {
 }
 
 /**
- * Pairs the library seasons of one series with its stored seasons. Order: the stored Jellyfin id, a manual
- * `season_override`, the date of the first episode, and finally the plain number for stored seasons that
+ * Pairs the library seasons of one series with its stored seasons. Order: the stored Jellyfin id, the date of the first episode, and finally the plain number for stored seasons that
  * have no air date. The library numbering is the authority, so the match never relies on numbers when dates exist.
  */
 export function pairLibrarySeasons(
   library: readonly LibrarySeason[],
   stored: readonly Season[],
-  overrides: readonly SeasonOverride[],
 ): SeasonPair[] {
   const pairs = new Map<string, SeasonPair>();
   const usedStored = new Set<number>();
@@ -33,13 +30,6 @@ export function pairLibrarySeasons(
   for (const season of library) {
     const row = stored.find((s) => s.jellyfinId === season.jellyfinId);
     if (row) claim(season, row, 'jellyfin_id');
-  }
-  for (const season of pending()) {
-    const override = overrides.find((o) => o.jellyfinSeasonId === season.jellyfinId);
-    const row = override
-      ? free().find((s) => (s.tmdbSeasonNumber ?? s.number) === override.tmdbSeasonNumber)
-      : undefined;
-    if (row) claim(season, row, 'override');
   }
 
   const dated = pending().flatMap((season) => {

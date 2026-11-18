@@ -12,5 +12,6 @@ export function toWireSyncState(state: SyncState): WireSyncState {
       rewatches: finishDates(s.rewatches),
       viewings: s.rewatches,
     })),
+    overrides: [],
   };
 }

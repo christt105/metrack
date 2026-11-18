@@ -6,7 +6,6 @@ import type {
   PublicPage,
   ReleaseAlert,
   Season,
-  SeasonOverride,
   Series,
   UnlinkedTitle,
   UserSettings,
@@ -45,7 +44,6 @@ export interface AccountExport {
   seasons: Season[];
   videogames: Videogame[];
   books: Book[];
-  seasonOverrides: SeasonOverride[];
   /** The episodes watched in each series that has a per-episode record; series without one are not listed. */
   episodeWatches: ExportedEpisodeWatches[];
   unlinkedTitles: UnlinkedTitle[];

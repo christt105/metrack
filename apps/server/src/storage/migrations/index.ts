@@ -26,6 +26,7 @@ import { nextEpisodeMigration } from './0024-next-episode.js';
 import { rewatchViewingsMigration } from './0025-rewatch-viewings.js';
 import { seasonEpisodesMigration } from './0026-season-episodes.js';
 import { seasonEpisodesRefillMigration } from './0027-season-episodes-refill.js';
+import { dropSeasonOverrideMigration } from './0028-drop-season-override.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -55,4 +56,5 @@ export const migrations: readonly Migration[] = [
   rewatchViewingsMigration,
   seasonEpisodesMigration,
   seasonEpisodesRefillMigration,
+  dropSeasonOverrideMigration,
 ];

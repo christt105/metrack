@@ -6,7 +6,6 @@ import type { InviteRepository } from '../storage/repositories/InviteRepository.
 import type { MovieRepository } from '../storage/repositories/MovieRepository.js';
 import type { PublicProfileRepository } from '../storage/repositories/PublicProfileRepository.js';
 import type { ReleaseAlertRepository } from '../storage/repositories/ReleaseAlertRepository.js';
-import type { SeasonOverrideRepository } from '../storage/repositories/SeasonOverrideRepository.js';
 import type { SeasonRepository } from '../storage/repositories/SeasonRepository.js';
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
 import type { UnlinkedTitleRepository } from '../storage/repositories/UnlinkedTitleRepository.js';
@@ -26,7 +25,6 @@ export interface AccountExporterDeps {
   seasons: SeasonRepository;
   videogames: VideogameRepository;
   books: BookRepository;
-  overrides: SeasonOverrideRepository;
   episodeWatches: EpisodeWatchRepository;
   unlinked: UnlinkedTitleRepository;
   releaseAlerts: ReleaseAlertRepository;

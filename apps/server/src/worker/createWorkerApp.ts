@@ -40,7 +40,6 @@ export function createWorkerApp(
     movies,
     series,
     seasons,
-    overrides: repositories.overrides,
     unlinked: repositories.unlinked,
     episodeWatches: repositories.episodeWatches,
   };

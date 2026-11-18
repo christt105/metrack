@@ -1,7 +1,6 @@
 import { episodeKey } from '../episodeKey.js';
 import type { EpisodeWatches } from '../EpisodeWatches.js';
 import type { Season } from '../Season.js';
-import type { SeasonOverride } from '../SeasonOverride.js';
 import { addWatchDays } from './addWatchDays.js';
 import type { LibrarySeason } from './LibrarySeason.js';
 import { pairLibrarySeasons } from './pairLibrarySeasons.js';
@@ -23,14 +22,12 @@ export function draftNumberedSeasons(
   title: string,
   watchedSeasons: readonly LibrarySeason[],
   storedSeasons: readonly Season[],
-  overrides: readonly SeasonOverride[],
   watchDays: ReadonlyMap<string, string[]>,
 ): SeriesDrafts {
   const result: SeriesDrafts = { drafts: [], incoming: {} as EpisodeWatches, warnings: [] };
   const pairs = pairLibrarySeasons(
     watchedSeasons.filter((s) => s.number > 0),
     storedSeasons,
-    overrides,
   );
   if (watchedSeasons.some((s) => s.number === 0)) {
     result.warnings.push({
@@ -47,7 +44,7 @@ export function draftNumberedSeasons(
       result.warnings.push({
         code: 'season_number_conflict',
         title,
-        message: `Library season ${pair.library.number} has no matching stored season, but number ${pair.library.number} is already used by another one. Add a season override to pair them.`,
+        message: `Library season ${pair.library.number} has no matching stored season, but number ${pair.library.number} is already used by another one.`,
       });
       continue;
     }

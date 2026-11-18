@@ -141,16 +141,6 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.episodeWatches.list();
   await owner.episodeWatches.listForSeries(series.id);
   await owner.episodeWatches.replace(1, series.id, {}, [], ['1']);
-  await owner.overrides.set({
-    seriesId: series.id,
-    tmdbSeasonNumber: 1,
-    number: 1,
-    title: null,
-    jellyfinSeasonId: null,
-  });
-  await owner.overrides.listBySeries(series.id);
-  await owner.overrides.list();
-  await owner.overrides.delete(series.id, 1);
 
   const game = await owner.videogames.create({ ...emptyBookLike(), igdbId: 4 });
   await owner.videogames.findByIgdbId(4);
@@ -228,13 +218,6 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.series.override(second.id, { title: 'V' });
   await owner.series.overriddenFields(second.id);
   await owner.series.clearOverride(second.id, 'title');
-  await owner.overrides.set({
-    seriesId: second.id,
-    tmdbSeasonNumber: 1,
-    number: 1,
-    title: null,
-    jellyfinSeasonId: null,
-  });
   await owner.videogames.get(game.id);
   await owner.videogames.getMany([game.id]);
   await owner.videogames.update(game.id, { rating: 4 });

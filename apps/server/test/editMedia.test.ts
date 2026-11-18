@@ -323,7 +323,7 @@ describe('editing', () => {
     });
   });
 
-  it('edits season numbers and the series season overrides', async () => {
+  it('edits season numbers', async () => {
     const series = (await post('/api/series', { title: 'Lupin' })).json();
     const season = await insertSeason(api, series.id, { number: 3 });
     expect(
@@ -332,33 +332,6 @@ describe('editing', () => {
       number: 4,
       tmdbSeasonNumber: 3,
     });
-
-    const put = await api.app.inject({
-      method: 'PUT',
-      url: `/api/series/${series.id}/overrides/3`,
-      payload: { number: 4, title: 'Part 4' },
-    });
-    expect(put.json()).toEqual({
-      seriesId: series.id,
-      tmdbSeasonNumber: 3,
-      number: 4,
-      title: 'Part 4',
-      jellyfinSeasonId: null,
-    });
-    const list = await api.app.inject({ method: 'GET', url: `/api/series/${series.id}/overrides` });
-    expect(list.json()).toHaveLength(1);
-    expect(
-      (await api.app.inject({ method: 'DELETE', url: `/api/series/${series.id}/overrides/3` }))
-        .statusCode,
-    ).toBe(204);
-    expect(
-      (await api.app.inject({ method: 'DELETE', url: `/api/series/${series.id}/overrides/3` }))
-        .statusCode,
-    ).toBe(404);
-    expect(
-      (await api.app.inject({ method: 'PUT', url: '/api/series/99/overrides/1', payload: {} }))
-        .statusCode,
-    ).toBe(404);
   });
 });
 

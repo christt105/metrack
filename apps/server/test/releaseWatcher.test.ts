@@ -9,8 +9,6 @@ import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieReposito
 import type { MovieRepository } from '../src/storage/repositories/MovieRepository.js';
 import { SqliteReleaseAlertRepository } from '../src/storage/sqlite/SqliteReleaseAlertRepository.js';
 import type { ReleaseAlertRepository } from '../src/storage/repositories/ReleaseAlertRepository.js';
-import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
-import type { SeasonOverrideRepository } from '../src/storage/repositories/SeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
 import type { SeasonRepository } from '../src/storage/repositories/SeasonRepository.js';
 import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
@@ -42,7 +40,6 @@ describe('ReleaseWatcher', () => {
   let movies: MovieRepository;
   let series: SeriesRepository;
   let seasons: SeasonRepository;
-  let overrides: SeasonOverrideRepository;
   let alerts: ReleaseAlertRepository;
   let source: FakeReleaseSource;
   let notifier: RecordingNotifier;
@@ -59,13 +56,12 @@ describe('ReleaseWatcher', () => {
     movies = new SqliteMovieRepository(db, OWNER_SCOPE);
     series = new SqliteSeriesRepository(db, OWNER_SCOPE);
     seasons = new SqliteSeasonRepository(db, OWNER_SCOPE);
-    overrides = new SqliteSeasonOverrideRepository(db, OWNER_SCOPE);
     alerts = new SqliteReleaseAlertRepository(db, OWNER_SCOPE);
     source = new FakeReleaseSource();
     notifier = new RecordingNotifier();
     clock = new Date('2026-10-22T09:00:00Z');
     watcher = new ReleaseWatcher({
-      store: new HomeReleaseStore({ movies, series, seasons, overrides, alerts, now: () => clock }),
+      store: new HomeReleaseStore({ movies, series, seasons, alerts, now: () => clock }),
       source,
       notifier,
       logger,
@@ -194,19 +190,6 @@ describe('ReleaseWatcher', () => {
       [2, 2],
       [4, 3],
     ]);
-    expect(notifier.sent[0]?.title).toBe('Lupin, season 4');
-  });
-
-  it('uses a season override for the number of the new season', async () => {
-    await overrides.set({
-      seriesId,
-      tmdbSeasonNumber: 3,
-      number: 4,
-      title: null,
-      jellyfinSeasonId: null,
-    });
-    await watcher.tick();
-    expect((await seasons.listBySeries(seriesId)).map((s) => s.number)).toEqual([1, 2, 4]);
     expect(notifier.sent[0]?.title).toBe('Lupin, season 4');
   });
 

@@ -9,7 +9,6 @@ import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
 import { SqliteEpisodeWatchRepository } from '../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
 import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
-import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
 import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
 import { SqliteUnlinkedTitleRepository } from '../src/storage/sqlite/SqliteUnlinkedTitleRepository.js';
@@ -317,7 +316,6 @@ function setup(library: LibrarySource, plays: PlaybackSource) {
     movies: new SqliteMovieRepository(db, OWNER_SCOPE),
     series: new SqliteSeriesRepository(db, OWNER_SCOPE),
     seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
-    overrides: new SqliteSeasonOverrideRepository(db, OWNER_SCOPE),
     unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
     episodeWatches: new SqliteEpisodeWatchRepository(db, OWNER_SCOPE),
   };
