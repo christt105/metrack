@@ -5,4 +5,6 @@ export interface SeriesWatchState {
   seasons: SeriesSeasonInput[];
   /** Undefined when the user has no watches row for the series. */
   watches: EpisodeWatches | undefined;
+  /** The keys of the episodes the user skipped. */
+  skipped: string[];
 }

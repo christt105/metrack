@@ -27,6 +27,7 @@ function season(
     seasonId,
     tracking: planned,
     watchedCount: 0,
+    skippedCount: 0,
     episodes: keys.map((key): ExpectedEpisode => ({ key, airDate: '2025-01-01' })),
     ...over,
   };
@@ -134,6 +135,7 @@ describe('deriveSeriesTracking', () => {
       {
         seasonId: 1,
         watchedCount: 2,
+        skippedCount: 0,
         completes: true,
         tracking: {
           status: 'completed',
@@ -145,6 +147,7 @@ describe('deriveSeriesTracking', () => {
       {
         seasonId: 2,
         watchedCount: 1,
+        skippedCount: 0,
         completes: false,
         tracking: {
           status: 'in_progress',
@@ -201,6 +204,7 @@ describe('deriveSeriesTracking', () => {
     ).toEqual([]);
     expect(deriveSeriesTracking({ seasons, watches: { z: [] }, today: TODAY })[0]).toMatchObject({
       watchedCount: 0,
+      skippedCount: 0,
     });
   });
 
@@ -211,5 +215,23 @@ describe('deriveSeriesTracking', () => {
     expect(materializeCompletedSeasons(seasons, { a: [view('2026-01-01')] })).toEqual({
       a: [view('2026-01-01')],
     });
+  });
+
+  it('counts skipped episodes of each season and completes with them', () => {
+    const updates = deriveSeriesTracking({
+      seasons: [season(1, ['a', 'b', 'c'])],
+      watches: { a: [view('2026-03-01')], c: [view('2026-03-03')] },
+      skipped: ['b', 'zzz'],
+      today: TODAY,
+    });
+    expect(updates).toEqual([
+      expect.objectContaining({
+        seasonId: 1,
+        watchedCount: 2,
+        skippedCount: 1,
+        completes: true,
+        tracking: expect.objectContaining({ status: 'completed', finishedAt: '2026-03-03' }),
+      }),
+    ]);
   });
 });

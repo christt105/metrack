@@ -17,6 +17,8 @@ export interface Season extends Tracking, Artwork {
   episodeCount: number | null;
   /** Distinct episodes the user has watched; a completed season without stored watches counts as all of them. */
   watchedCount: number;
+  /** Episodes the user skipped: not watched, but not owed for the season to be complete. */
+  skippedCount: number;
   slug: string | null;
   tags: string[];
 }

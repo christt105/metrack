@@ -12,4 +12,6 @@ export interface SeriesChange {
   seasons: SeasonChange[];
   /** The watched episodes of the series merged with the stored ones; present only when they change. */
   watches?: EpisodeWatches;
+  /** The series' skipped episode keys once the played ones are taken out; present only when they change. */
+  skipped?: string[];
 }

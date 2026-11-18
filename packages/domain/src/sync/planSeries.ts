@@ -27,6 +27,9 @@ export function planSeries(
 ): SeriesPlan {
   const plan: SeriesPlan = { changes: [], unlinked: [], warnings: [] };
   const storedWatches = new Map((state.watches ?? []).map((row) => [row.seriesId, row.watched]));
+  const storedSkipped = new Map(
+    (state.watches ?? []).map((row) => [row.seriesId, row.skipped ?? []]),
+  );
   for (const item of library) {
     if (settled.has(item.jellyfinId)) continue;
     const watchedSeasons = item.seasons.filter((season) =>
@@ -63,11 +66,16 @@ export function planSeries(
         ? draftOrderedSeasons(item.title, watchedSeasons, storedSeasons, watchDays, index)
         : draftNumberedSeasons(item.title, watchedSeasons, storedSeasons, overrides, watchDays);
     plan.warnings.push(...drafted.warnings);
-    const { changes: seasons, watches } = planSeasonChanges(
+    const {
+      changes: seasons,
+      watches,
+      skipped,
+    } = planSeasonChanges(
       drafted.drafts,
       drafted.incoming,
       existing ? storedWatches.get(existing.id) : undefined,
       today,
+      existing ? storedSkipped.get(existing.id) : undefined,
     );
     for (const change of seasons) {
       const stored = storedSeasons.find((s) => s.id === change.seasonId);
@@ -88,7 +96,7 @@ export function planSeries(
       existing !== undefined &&
       (existing.jellyfinId === null ||
         (existing.tmdbId === null && (item.tmdbId !== null || item.tvdbId !== null)));
-    if (seasons.length === 0 && !watches && !needsLink) continue;
+    if (seasons.length === 0 && !watches && !skipped && !needsLink) continue;
     plan.changes.push({
       seriesId: existing?.id ?? null,
       jellyfinId: item.jellyfinId,
@@ -98,6 +106,7 @@ export function planSeries(
       year: item.year,
       seasons,
       ...(watches ? { watches } : {}),
+      ...(skipped ? { skipped } : {}),
     });
   }
   return plan;

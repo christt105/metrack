@@ -68,6 +68,7 @@ export function emptySeason(): Omit<Season, 'id'> {
     firstAirDate: null,
     episodeCount: null,
     watchedCount: 0,
+    skippedCount: 0,
     slug: null,
     tags: [],
     cover: null,

@@ -4,6 +4,7 @@ import {
   materializeCompletedSeasons,
   sameEpisodeWatches,
   type Episode,
+  type EpisodeState,
   type EpisodeWatches,
   type SeasonEntryUpdate,
 } from '@metrack/domain';
@@ -50,6 +51,7 @@ export class SeriesWatchTracker {
               rewatches: season.rewatches,
             },
             watchedCount: season.watchedCount,
+            skippedCount: season.skippedCount,
             episodes: episodes.map((episode) => ({
               key: episodeKey(episode, season.number),
               airDate: episode.airDate,
@@ -58,35 +60,47 @@ export class SeriesWatchTracker {
         ];
       }),
       watches: await this.deps.watches.get(seriesId),
+      skipped: await this.deps.watches.getSkipped(seriesId),
     };
   }
 
   /**
-   * Applies `edit` to the series' watches (completed seasons that record none of their episodes count as all
-   * watched first) and writes them with the season entries that follow. `datesOnly` leaves statuses and rewatches
-   * alone, for removing episodes. Returns the watches after the change and the entries that changed.
+   * Applies `edit` to what the user recorded of the series (completed seasons that record none of their episodes
+   * count as all watched first, except the skipped ones) and writes the watches and skipped keys with the season
+   * entries that follow. `datesOnly` leaves statuses and rewatches alone, for removing episodes. Returns the state
+   * after the change and the entries that changed.
    */
   async change(
     seriesId: number,
     state: SeriesWatchState,
-    edit: (base: EpisodeWatches) => EpisodeWatches,
+    edit: (base: EpisodeState) => EpisodeState,
     datesOnly = false,
-  ): Promise<{ watches: EpisodeWatches; updates: SeasonEntryUpdate[] }> {
-    const base = materializeCompletedSeasons(state.seasons, state.watches ?? {});
-    const watches = edit(base);
+  ): Promise<{ watches: EpisodeWatches; skipped: string[]; updates: SeasonEntryUpdate[] }> {
+    const base = materializeCompletedSeasons(
+      state.seasons,
+      state.watches ?? {},
+      new Set(state.skipped),
+    );
+    const next = edit({ watches: base, skipped: state.skipped });
+    const skipped = [...next.skipped];
     const updates = deriveSeriesTracking({
       seasons: state.seasons,
-      watches,
+      watches: next.watches,
+      skipped,
       baseline: base,
       today: this.now().toISOString().slice(0, 10),
       datesOnly,
     });
     const changed =
       state.watches === undefined
-        ? Object.keys(watches).length > 0
-        : !sameEpisodeWatches(state.watches, watches);
-    if (changed || updates.length > 0) await this.deps.watches.set(seriesId, watches, updates);
-    return { watches, updates };
+        ? Object.keys(next.watches).length > 0
+        : !sameEpisodeWatches(state.watches, next.watches);
+    const skipChanged =
+      JSON.stringify([...state.skipped].sort()) !== JSON.stringify([...skipped].sort());
+    if (changed || skipChanged || updates.length > 0) {
+      await this.deps.watches.set(seriesId, next.watches, updates, skipped);
+    }
+    return { watches: next.watches, skipped, updates };
   }
 
   /** Derives every known season entry of the series again from the user's watches, leaving the watches as they are. */
@@ -96,6 +110,7 @@ export class SeriesWatchTracker {
     const updates = deriveSeriesTracking({
       seasons: state.seasons,
       watches: state.watches,
+      skipped: state.skipped,
       baseline: state.watches,
       today: this.now().toISOString().slice(0, 10),
       keepUnrecorded: true,

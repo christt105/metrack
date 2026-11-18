@@ -43,10 +43,13 @@ beforeEach(async () => {
       .run(user, seasonId);
   }
   api.db
-    .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (2, ?, ?)')
+    .prepare(
+      'INSERT INTO series_episode_entry (user_id, series_id, watched, skipped) VALUES (2, ?, ?, ?)',
+    )
     .run(
       seriesId,
       JSON.stringify({ '202': [{ startedAt: '2026-01-01', finishedAt: '2026-01-02' }] }),
+      JSON.stringify(['203']),
     );
   api.db
     .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (3, ?, ?)')
@@ -71,6 +74,7 @@ describe('the account export', () => {
       {
         seriesId,
         watched: { '202': [{ startedAt: '2026-01-01', finishedAt: '2026-01-02' }] },
+        skipped: ['203'],
       },
     ]);
   });
@@ -81,7 +85,9 @@ describe('the account export', () => {
       url: '/api/account/export/data',
       headers: { 'x-test-user': '3' },
     });
-    expect(response.json().episodeWatches).toMatchObject([{ seriesId, watched: { s4e1: [] } }]);
+    expect(response.json().episodeWatches).toMatchObject([
+      { seriesId, watched: { s4e1: [] }, skipped: [] },
+    ]);
   });
 });
 

@@ -26,6 +26,7 @@ export function planSeason(
       firstAirDate: readDescriptiveDate(note, 'release_date', issues),
       episodeCount: null,
       watchedCount: 0,
+      skippedCount: 0,
       cover: null,
       banner: null,
       slug: readSlug(note),

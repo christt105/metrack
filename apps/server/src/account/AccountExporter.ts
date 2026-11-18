@@ -72,6 +72,7 @@ export class AccountExporter {
     const episodeWatches = (await deps.episodeWatches.list()).map((row) => ({
       seriesId: row.seriesId,
       watched: row.watched,
+      skipped: row.skipped,
     }));
     const settings = await deps.settings.get(userId);
     return {

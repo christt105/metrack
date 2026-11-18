@@ -93,6 +93,7 @@ describe('backup and restore of the whole data directory', () => {
       firstAirDate: null,
       episodeCount: 5,
       watchedCount: 0,
+      skippedCount: 0,
       cover: null,
       banner: null,
       slug: null,
@@ -116,10 +117,15 @@ describe('backup and restore of the whole data directory', () => {
       fetchedAt: '2026-03-05T12:00:00.000Z',
       complete: false,
     });
-    await new SqliteEpisodeWatchRepository(db, OWNER_SCOPE).set(series.id, {
-      '11': [{ startedAt: null, finishedAt: '2026-03-01' }],
-      s1e2: [],
-    });
+    await new SqliteEpisodeWatchRepository(db, OWNER_SCOPE).set(
+      series.id,
+      {
+        '11': [{ startedAt: null, finishedAt: '2026-03-01' }],
+        s1e2: [],
+      },
+      [],
+      ['s1e3'],
+    );
     await new SqliteSeasonOverrideRepository(db, OWNER_SCOPE).set({
       seriesId: series.id,
       tmdbSeasonNumber: 1,

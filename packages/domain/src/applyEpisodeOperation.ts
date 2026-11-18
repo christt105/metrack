@@ -4,7 +4,7 @@ import { mergeEpisodeWatches } from './mergeEpisodeWatches.js';
 import { normalizeViewings } from './normalizeViewings.js';
 
 /**
- * Applies one operation to the watches and returns the result; the input is not changed. Keys are not checked
+ * Applies one operation to the watches (`skip` and `unskip` do not touch them, see `applyEpisodeChange`) and returns the result; the input is not changed. Keys are not checked
  * against the season, and viewings are taken as given (see `normalizeViewings`). Marking on a date adds a viewing
  * that starts and ends that day.
  */
@@ -27,5 +27,8 @@ export function applyEpisodeOperation(
     }
     case 'setViewings':
       return { ...watches, [operation.key]: normalizeViewings(operation.viewings) };
+    case 'skip':
+    case 'unskip':
+      return watches;
   }
 }

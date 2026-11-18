@@ -13,6 +13,7 @@ export interface SeasonEpisodesResponse {
   complete: boolean;
   episodeCount: number;
   watchedCount: number;
+  skippedCount: number;
   /** Whether the season's dates follow its episodes' viewings, so they are not edited by hand. */
   datesDerived: boolean;
   episodes: SeasonEpisodeItem[];

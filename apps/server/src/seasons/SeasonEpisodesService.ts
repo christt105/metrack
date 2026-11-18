@@ -1,5 +1,5 @@
 import {
-  applyEpisodeOperation,
+  applyEpisodeChange,
   countWatchedEpisodes,
   episodeKey,
   hasEpisodeDates,
@@ -7,6 +7,7 @@ import {
   isEpisodeCatalogStale,
   isSeasonAiring,
   numberedEpisodes,
+  skipBlockers,
   type Episode,
   type EpisodeOperation,
   type EpisodeWatches,
@@ -60,8 +61,9 @@ export class SeasonEpisodesService {
     const { season, catalog, episodes } = loaded;
     const stored = await this.deps.watches.get(season.seriesId);
     const watched = await this.withIds(season, catalog, episodes, stored);
+    const skipped = new Set(await this.deps.watches.getSkipped(season.seriesId));
     return {
-      response: this.respond(season, catalog, episodes, watched),
+      response: this.respond(season, catalog, episodes, watched, skipped),
       episodeCountChanged: loaded.episodeCountChanged,
     };
   }
@@ -97,14 +99,24 @@ export class SeasonEpisodesService {
         }
       }
     }
+    if (operation.op === 'skip') {
+      const watches = (await this.deps.watches.get(season.seriesId)) ?? {};
+      const blocked = skipBlockers(watches, operation.keys);
+      if (blocked.length > 0) {
+        throw ApiError.badRequest(
+          'episode_has_viewings',
+          `Episode ${blocked.join(', ')} has dated viewings, so it cannot be skipped`,
+        );
+      }
+    }
     const state = await this.tracker.load(season.seriesId, new Map([[season.id, episodes]]));
     const moved = state.watches
       ? idEpisodeWatches(episodes, season.number, state.watches)
       : undefined;
-    const { watches, updates } = await this.tracker.change(
+    const { watches, skipped, updates } = await this.tracker.change(
       season.seriesId,
       { ...state, watches: moved },
-      (base) => applyEpisodeOperation(base, operation),
+      (base) => applyEpisodeChange(base, operation),
       operation.op === 'unmark',
     );
     const own = updates.find((update) => update.seasonId === season.id);
@@ -117,10 +129,16 @@ export class SeasonEpisodesService {
     return {
       response: {
         ...this.respond(
-          { ...season, ...tracking, watchedCount: own?.watchedCount ?? season.watchedCount },
+          {
+            ...season,
+            ...tracking,
+            watchedCount: own?.watchedCount ?? season.watchedCount,
+            skippedCount: own?.skippedCount ?? season.skippedCount,
+          },
           catalog,
           episodes,
           watches,
+          new Set(skipped),
         ),
         tracking,
       },
@@ -261,9 +279,13 @@ export class SeasonEpisodesService {
     catalog: SeasonEpisodes | undefined,
     episodes: readonly Episode[],
     stored: EpisodeWatches | undefined,
+    skipped: ReadonlySet<string>,
   ): SeasonEpisodesResult['response'] {
     const watched = stored ?? {};
     const counted = countWatchedEpisodes(episodes, season.number, watched);
+    const skippedCount = episodes.filter((episode) =>
+      skipped.has(episodeKey(episode, season.number)),
+    ).length;
     const allWatched = counted === 0 && season.status === 'completed' && season.watchedCount > 0;
     return {
       seasonId: season.id,
@@ -271,7 +293,8 @@ export class SeasonEpisodesService {
       fetchedAt: catalog?.fetchedAt ?? null,
       complete: catalog?.complete ?? true,
       episodeCount: episodes.length,
-      watchedCount: allWatched ? episodes.length : counted,
+      watchedCount: allWatched ? episodes.length - skippedCount : counted,
+      skippedCount,
       datesDerived: hasEpisodeDates(
         episodes.map((episode) => episodeKey(episode, season.number)),
         watched,
@@ -288,7 +311,8 @@ export class SeasonEpisodesService {
           runtime: episode.runtime,
           overview: episode.overview,
           stillPath: episode.stillPath,
-          watched: allWatched || viewings !== undefined,
+          watched: (allWatched && !skipped.has(key)) || viewings !== undefined,
+          skipped: skipped.has(key),
           viewings: viewings ?? [],
         };
       }),

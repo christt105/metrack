@@ -50,7 +50,12 @@ describe('the season episodes migration', () => {
       'complete',
       'refill',
     ]);
-    expect(columns(db, 'series_episode_entry')).toEqual(['user_id', 'series_id', 'watched']);
+    expect(columns(db, 'series_episode_entry')).toEqual([
+      'user_id',
+      'series_id',
+      'watched',
+      'skipped',
+    ]);
     expect(columns(db, 'season_episode_entry')).toEqual([]);
     db.exec(
       "INSERT INTO season_episodes (season_id, source, fetched_at) VALUES (1, 'tmdb', 'now')",
