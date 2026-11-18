@@ -34,6 +34,8 @@ const season = {
     startedAt: nullableDate,
     finishedAt: nullableDate,
     completes: { type: 'boolean' },
+    watches: { type: 'object' },
+    rewatches: { type: 'array', items: viewingItem },
   },
   required: [
     'seasonId',

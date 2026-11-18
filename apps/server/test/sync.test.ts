@@ -7,6 +7,7 @@ import type { FetchFn } from '../src/http/FetchFn.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
+import { SqliteEpisodeWatchRepository } from '../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
 import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
 import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
@@ -316,6 +317,7 @@ function setup(library: LibrarySource, plays: PlaybackSource) {
     seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
     overrides: new SqliteSeasonOverrideRepository(db, OWNER_SCOPE),
     unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
+    episodeWatches: new SqliteEpisodeWatchRepository(db, OWNER_SCOPE),
   };
   const service = new SyncService(
     library,
@@ -457,7 +459,13 @@ describe('SyncService', () => {
       finishedAt: '2026-10-26',
       rating: 9,
       review: 'season review',
+      watchedCount: 3,
     });
+    expect(Object.keys((await t.targets.episodeWatches.get(season.id)) ?? {})).toEqual([
+      '1',
+      '2',
+      '3',
+    ]);
     expect(await t.targets.series.get(series.id)).toMatchObject({
       jellyfinId: 's1',
       note: 'my note',

@@ -1,8 +1,17 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { countWatchedEpisodes, type EpisodeWatches } from '@metrack/domain';
+import {
+  countWatchedEpisodes,
+  normalizeViewings,
+  type EpisodeWatches,
+  type SeasonTracking,
+} from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
 import { episodeWatchesFromRow } from '../mapping/episodeWatchesFromRow.js';
-import { UPDATE_WATCHED_COUNT_SQL, UPSERT_WATCHES_SQL } from '../mapping/episodeWatchesSql.js';
+import {
+  UPDATE_TRACKING_SQL,
+  UPDATE_WATCHED_COUNT_SQL,
+  UPSERT_WATCHES_SQL,
+} from '../mapping/episodeWatchesSql.js';
 import type { EpisodeWatchRepository } from '../repositories/EpisodeWatchRepository.js';
 import type { StoredEpisodeWatches } from '../repositories/StoredEpisodeWatches.js';
 
@@ -26,8 +35,8 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
       .map(episodeWatchesFromRow);
   }
 
-  async set(seasonId: number, watched: EpisodeWatches): Promise<void> {
-    await this.replace(this.scope.userId(), seasonId, watched);
+  async set(seasonId: number, watched: EpisodeWatches, tracking?: SeasonTracking): Promise<void> {
+    await this.replace(this.scope.userId(), seasonId, watched, tracking);
   }
 
   async listForSeason(seasonId: number): Promise<StoredEpisodeWatches[]> {
@@ -37,8 +46,36 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
       .map(episodeWatchesFromRow);
   }
 
-  async replace(userId: number, seasonId: number, watched: EpisodeWatches): Promise<void> {
-    this.db.prepare(UPSERT_WATCHES_SQL).run(userId, seasonId, JSON.stringify(watched));
-    this.db.prepare(UPDATE_WATCHED_COUNT_SQL).run(countWatchedEpisodes(watched), userId, seasonId);
+  async replace(
+    userId: number,
+    seasonId: number,
+    watched: EpisodeWatches,
+    tracking?: SeasonTracking,
+  ): Promise<void> {
+    const own = !this.db.isTransaction;
+    if (own) this.db.exec('BEGIN');
+    try {
+      this.db.prepare(UPSERT_WATCHES_SQL).run(userId, seasonId, JSON.stringify(watched));
+      const count = countWatchedEpisodes(watched);
+      if (tracking) {
+        this.db
+          .prepare(UPDATE_TRACKING_SQL)
+          .run(
+            count,
+            tracking.status,
+            tracking.startedAt,
+            tracking.finishedAt,
+            JSON.stringify(normalizeViewings(tracking.rewatches)),
+            userId,
+            seasonId,
+          );
+      } else {
+        this.db.prepare(UPDATE_WATCHED_COUNT_SQL).run(count, userId, seasonId);
+      }
+      if (own) this.db.exec('COMMIT');
+    } catch (error) {
+      if (own) this.db.exec('ROLLBACK');
+      throw error;
+    }
   }
 }

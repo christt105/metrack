@@ -30,6 +30,8 @@ const DEFAULT_PROFILE: Record<string, number> = {
   'owner GET title detail': 40,
   'owner GET series detail': 10,
   'owner GET season episodes': 40,
+  'owner PATCH season episodes': 20,
+  'owner GET connector sync-state': 20,
   'owner GET /api/account': 5,
   'owner GET /api/settings': 10,
   'owner PATCH title': 15,
@@ -183,6 +185,13 @@ async function main(): Promise<void> {
         .bind(USER_ID, seasonId, JSON.stringify(watched)),
     ]);
 
+    await raw
+      .prepare(
+        "INSERT INTO user_setting (user_id, jellyfin_user) VALUES (?, 'measure') ON CONFLICT (user_id) DO UPDATE SET jellyfin_user = 'measure'",
+      )
+      .bind(USER_ID)
+      .run();
+
     const meter: Counters = { read: 0, written: 0, queries: 0 };
     const app = createWorkerApp({
       DB: meterOf(raw, meter),
@@ -240,6 +249,19 @@ async function main(): Promise<void> {
         name: 'owner GET season episodes',
         method: 'GET',
         path: `/api/seasons/${seasonId}/episodes`,
+        owner: true,
+      },
+      {
+        name: 'owner PATCH season episodes',
+        method: 'PATCH',
+        path: `/api/seasons/${seasonId}/episodes`,
+        owner: true,
+        body: { op: 'mark', numbers: [13], date: '2026-02-02' },
+      },
+      {
+        name: 'owner GET connector sync-state',
+        method: 'GET',
+        path: `/api/connector/users/${USER_ID}/sync-state`,
         owner: true,
       },
       {

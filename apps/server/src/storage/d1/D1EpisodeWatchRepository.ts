@@ -1,7 +1,16 @@
-import { countWatchedEpisodes, type EpisodeWatches } from '@metrack/domain';
+import {
+  countWatchedEpisodes,
+  normalizeViewings,
+  type EpisodeWatches,
+  type SeasonTracking,
+} from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
 import { episodeWatchesFromRow } from '../mapping/episodeWatchesFromRow.js';
-import { UPDATE_WATCHED_COUNT_SQL, UPSERT_WATCHES_SQL } from '../mapping/episodeWatchesSql.js';
+import {
+  UPDATE_TRACKING_SQL,
+  UPDATE_WATCHED_COUNT_SQL,
+  UPSERT_WATCHES_SQL,
+} from '../mapping/episodeWatchesSql.js';
 import type { EpisodeWatchRepository } from '../repositories/EpisodeWatchRepository.js';
 import type { StoredEpisodeWatches } from '../repositories/StoredEpisodeWatches.js';
 import type { D1Database } from './D1Database.js';
@@ -32,8 +41,8 @@ export class D1EpisodeWatchRepository implements EpisodeWatchRepository {
     return rows.map(episodeWatchesFromRow);
   }
 
-  async set(seasonId: number, watched: EpisodeWatches): Promise<void> {
-    await this.replace(this.scope.userId(), seasonId, watched);
+  async set(seasonId: number, watched: EpisodeWatches, tracking?: SeasonTracking): Promise<void> {
+    await this.replace(this.scope.userId(), seasonId, watched, tracking);
   }
 
   async listForSeason(seasonId: number): Promise<StoredEpisodeWatches[]> {
@@ -45,14 +54,26 @@ export class D1EpisodeWatchRepository implements EpisodeWatchRepository {
     return rows.map(episodeWatchesFromRow);
   }
 
-  async replace(userId: number, seasonId: number, watched: EpisodeWatches): Promise<void> {
+  async replace(
+    userId: number,
+    seasonId: number,
+    watched: EpisodeWatches,
+    tracking?: SeasonTracking,
+  ): Promise<void> {
+    const count = countWatchedEpisodes(watched);
     await this.db.batch([
       statement(this.db, UPSERT_WATCHES_SQL, [userId, seasonId, JSON.stringify(watched)]),
-      statement(this.db, UPDATE_WATCHED_COUNT_SQL, [
-        countWatchedEpisodes(watched),
-        userId,
-        seasonId,
-      ]),
+      tracking
+        ? statement(this.db, UPDATE_TRACKING_SQL, [
+            count,
+            tracking.status,
+            tracking.startedAt,
+            tracking.finishedAt,
+            JSON.stringify(normalizeViewings(tracking.rewatches)),
+            userId,
+            seasonId,
+          ])
+        : statement(this.db, UPDATE_WATCHED_COUNT_SQL, [count, userId, seasonId]),
     ]);
   }
 }

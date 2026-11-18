@@ -1,5 +1,12 @@
 import {
+  applyEpisodeOperation,
   countWatchedEpisodes,
+  deriveSeasonTracking,
+  materializeEpisodeWatches,
+  sameEpisodeWatches,
+  type EpisodeOperation,
+  type SeasonEpisodesUpdateResponse,
+  type SeasonTracking,
   isEpisodeCatalogStale,
   isSeasonAiring,
   matchEpisodeCatalog,
@@ -33,6 +40,90 @@ export class SeasonEpisodesService {
   }
 
   async get(seasonId: number): Promise<SeasonEpisodesResult> {
+    const loaded = await this.load(seasonId);
+    return {
+      response: this.respond(
+        loaded.season,
+        loaded.usable,
+        loaded.episodes,
+        loaded.watched,
+        loaded.mismatch,
+      ),
+      episodeCountChanged: loaded.episodeCountChanged,
+    };
+  }
+
+  /**
+   * Applies one operation to the user's watches of the season and moves the season's tracking along (see
+   * `deriveSeasonTracking`), writing both in one atomic step. A completed season without stored watches counts as
+   * all watched, so its row is created first. Removing episodes never changes the status or the dates: undoing a
+   * mark with `unmark` restores the watches exactly, but a status the mark changed stays.
+   */
+  async update(
+    seasonId: number,
+    operation: EpisodeOperation,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const loaded = await this.load(seasonId);
+    const { season, usable, episodes, watched, mismatch } = loaded;
+    const numbers = new Set(episodes.map((episode) => episode.number));
+    for (const number of operation.op === 'setViewings' ? [operation.number] : operation.numbers) {
+      if (!numbers.has(number)) {
+        throw ApiError.badRequest(
+          'episode_out_of_range',
+          `Episode ${number} is not one of the ${episodes.length} episodes of this season`,
+        );
+      }
+    }
+    if (operation.op === 'setViewings') {
+      for (const viewing of operation.viewings) {
+        if (viewing.finishedAt === null || (viewing.startedAt ?? '') > viewing.finishedAt) {
+          throw ApiError.badRequest(
+            'invalid_viewing',
+            'An episode viewing needs a finish date that is not before its start',
+          );
+        }
+      }
+    }
+    const base =
+      watched ?? (season.status === 'completed' ? materializeEpisodeWatches(episodes.length) : {});
+    const next = applyEpisodeOperation(base, operation);
+    const before: SeasonTracking = {
+      status: season.status,
+      startedAt: season.startedAt,
+      finishedAt: season.finishedAt,
+      rewatches: season.rewatches,
+    };
+    const derived =
+      operation.op === 'unmark'
+        ? before
+        : deriveSeasonTracking({
+            tracking: before,
+            episodes: episodes.map(({ number, airDate }) => ({ number, airDate })),
+            watches: next,
+            today: this.today(),
+          });
+    const tracking: SeasonTracking = {
+      status: derived.status,
+      startedAt: derived.startedAt,
+      finishedAt: derived.finishedAt,
+      rewatches: derived.rewatches,
+    };
+    const trackingChanged = JSON.stringify(tracking) !== JSON.stringify(before);
+    const watchesChanged = !sameEpisodeWatches(base, next);
+    if (watchesChanged || trackingChanged) {
+      await this.deps.watches.set(seasonId, next, trackingChanged ? tracking : undefined);
+    }
+    const stored = watchesChanged || trackingChanged ? next : watched;
+    return {
+      response: {
+        ...this.respond(season, usable, episodes, stored, mismatch),
+        tracking,
+      },
+      episodeCountChanged: loaded.episodeCountChanged,
+    };
+  }
+
+  private async load(seasonId: number) {
     const season = await this.deps.seasons.get(seasonId);
     if (!season) throw ApiError.notFound();
     const series = await this.deps.series.get(season.seriesId);
@@ -62,7 +153,11 @@ export class SeasonEpisodesService {
     const episodes = usable?.episodes ?? numberedEpisodes(storedCount);
     const watched = await this.deps.watches.get(seasonId);
     return {
-      response: this.respond(season, usable, episodes, watched, match?.mismatch ?? null),
+      season,
+      usable,
+      episodes,
+      watched,
+      mismatch: match?.mismatch ?? null,
       episodeCountChanged,
     };
   }

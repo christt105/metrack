@@ -23,6 +23,7 @@ export function planSeries(
   today: string,
 ): SeriesPlan {
   const plan: SeriesPlan = { changes: [], unlinked: [], warnings: [] };
+  const storedWatches = new Map((state.watches ?? []).map((row) => [row.seasonId, row.watched]));
   for (const item of library) {
     const watchedSeasons = item.seasons.filter((season) =>
       season.episodes.some((episode) => watchDays.has(episode.jellyfinId)),
@@ -83,7 +84,18 @@ export function planSeries(
       const change = planSeasonChange(pair.library, pair.stored, pair.matchedBy, {
         watchDays,
         today,
+        watches: pair.stored ? storedWatches.get(pair.stored.id) : undefined,
       });
+      const unnumbered = pair.library.episodes.filter(
+        (episode) => episode.number === null && watchDays.has(episode.jellyfinId),
+      ).length;
+      if (unnumbered > 0) {
+        plan.warnings.push({
+          code: 'episode_without_number',
+          title: item.title,
+          message: `Season ${pair.library.number} has ${unnumbered} watched episode${unnumbered === 1 ? '' : 's'} without a number in the library, so ${unnumbered === 1 ? 'it was' : 'they were'} not recorded as watched.`,
+        });
+      }
       if (!change) continue;
       if (
         pair.stored?.episodeCount != null &&

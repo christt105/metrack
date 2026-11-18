@@ -179,7 +179,14 @@ const syncServices =
           jellyfinUser,
           jellystatPool,
           repositories.transactions,
-          { movies, series, seasons, overrides, unlinked },
+          {
+            movies,
+            series,
+            seasons,
+            overrides,
+            unlinked,
+            episodeWatches: repositories.episodeWatches,
+          },
           tmdb && { client: tmdb, metadata: metadataCache },
         ),
       )
@@ -247,13 +254,21 @@ const cloudflareUsageScheduler = createCloudflareUsageScheduler(
 const connector = new ConnectorService({
   users: repositories.users,
   settings: repositories.settings,
-  targets: { movies, series, seasons, overrides, unlinked },
+  targets: {
+    movies,
+    series,
+    seasons,
+    overrides,
+    unlinked,
+    episodeWatches: repositories.episodeWatches,
+  },
   applier: new SyncApplier(repositories.transactions, {
     movies,
     series,
     seasons,
     overrides,
     unlinked,
+    episodeWatches: repositories.episodeWatches,
   }),
   versions: contentVersions,
   alerts: releaseAlerts,
