@@ -18,6 +18,8 @@ export type AppIconName =
   | 'sortAsc'
   | 'sortDesc'
   | 'trash'
+  | 'skipForward'
+  | 'externalLink'
   | 'crown'
   | 'heart'
   | 'thumbsUp'

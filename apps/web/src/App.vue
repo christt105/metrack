@@ -14,6 +14,10 @@ const router = useRouter();
 
 const signedIn = computed(() => Boolean(session.user.value) && !session.needsWelcome.value);
 const focused = computed(() => route.meta.focused === true);
+const publicUrl = computed(() => {
+  const page = session.publicPage.value;
+  return page?.enabled && page.handle ? `/u/${page.handle}/` : null;
+});
 const bare = computed(() => !session.user.value || route.meta.public === true);
 
 function isCurrent(names: readonly string[]): boolean {
@@ -47,6 +51,17 @@ async function signOut(): Promise<void> {
       </nav>
       <div v-if="session.user.value" class="account">
         <span class="account__name">{{ session.user.value.name }}</span>
+        <a
+          v-if="publicUrl"
+          class="icon-link"
+          :href="publicUrl"
+          target="_blank"
+          rel="noopener"
+          :aria-label="messages.shell.publicPage"
+          :title="messages.shell.publicPage"
+        >
+          <AppIcon name="externalLink" :size="20" />
+        </a>
         <button
           type="button"
           class="ghost icon-button"
@@ -196,6 +211,21 @@ async function signOut(): Promise<void> {
 .icon-button {
   width: 44px;
   padding: 0;
+}
+
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+}
+
+.icon-link:hover {
+  color: var(--on-surface);
+  text-decoration: none;
 }
 
 .page {

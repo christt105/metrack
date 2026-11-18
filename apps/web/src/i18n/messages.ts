@@ -32,6 +32,7 @@ export const messages = {
   shell: {
     skip: 'Skip to content',
     mainNav: 'Main',
+    publicPage: 'Open your public page',
   },
   login: {
     title: 'Sign in',
