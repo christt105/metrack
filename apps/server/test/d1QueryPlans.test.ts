@@ -124,7 +124,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.seasonEpisodes.get(season.id);
   await owner.seasonEpisodes.listForSeries(series.id);
   await owner.seasonEpisodes.deleteForSeries(series.id);
-  await owner.seasons.hasPersonalData(season.id);
+  await owner.seasons.hasPersonalData(season.id, ['1']);
   const spare = await owner.seasons.create({ ...emptySeason(), seriesId: series.id, number: 9 });
   await owner.seasons.deleteForAll(spare.id);
   await owner.episodeWatches.set(series.id, { '1': [] }, [
@@ -305,6 +305,11 @@ function emptyBookLike() {
  * of them on a request path. Everything else must search an index.
  */
 const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
+  {
+    sql: /^SELECT 1 FROM season_entry e WHERE e\.season_id = \? AND \( e\.rating IS NOT NULL/,
+    scan: /^SCAN (k|json_each) VIRTUAL TABLE/,
+    why: 'the watched keys and the key list of one season are expanded in memory',
+  },
   {
     sql: /^SELECT id, created_at FROM user$/,
     scan: /^SCAN user/,

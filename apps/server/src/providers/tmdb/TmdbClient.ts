@@ -7,6 +7,7 @@ import type { TmdbSearchResponse } from './TmdbSearchResponse.js';
 import type { TmdbClientOptions } from './TmdbClientOptions.js';
 import type { TmdbEpisodeGroup } from './TmdbEpisodeGroup.js';
 import type { TmdbEpisodeGroupList } from './TmdbEpisodeGroupList.js';
+import type { TmdbEpisodeMatch } from './TmdbEpisodeMatch.js';
 import type { TmdbFindResponse } from './TmdbFindResponse.js';
 import type { TmdbSeasonEpisode } from './TmdbSeasonEpisode.js';
 import type { TmdbSeasonResponse } from './TmdbSeasonResponse.js';
@@ -87,12 +88,13 @@ export class TmdbClient {
     return found.tv_results[0]?.id ?? null;
   }
 
-  /** The TMDB id of the episode TheTVDB knows by `tvdbId`, or null when TMDB has no match. */
-  async episodeIdForTvdb(tvdbId: number): Promise<number | null> {
+  /** The TMDB episode TheTVDB knows by `tvdbId`, or null when TMDB has no match. */
+  async episodeForTvdb(tvdbId: number): Promise<TmdbEpisodeMatch | null> {
     const found = await this.get<TmdbFindResponse>(`/find/${tvdbId}`, {
       external_source: 'tvdb_id',
     });
-    return found.tv_episode_results?.[0]?.id ?? null;
+    const episode = found.tv_episode_results?.[0];
+    return episode ? { id: episode.id, showId: episode.show_id ?? null } : null;
   }
 
   /**

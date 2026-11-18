@@ -13,13 +13,15 @@ export interface OrderedMatches {
   matches: OrderedMatch[];
   /** Watched episodes no TMDB episode of the ordering could be found for. */
   unmatched: number;
+  /** Watched episodes TMDB places in another series, by that series' TMDB id; never matched, not even by air date. */
+  foreign: Map<number, { showName: string; count: number }>;
 }
 
 /**
  * Finds the TMDB episode of the series' ordering each watched episode of the library is. The TheTVDB id of the
  * episode comes first. An episode without one, or whose id TMDB does not know, is matched by its air date, only
  * when exactly one episode of the ordering aired that day. An episode whose id TMDB knows but the ordering lacks
- * is not matched.
+ * is not matched. An episode whose id TMDB places in another series is never matched.
  */
 export function matchOrderedEpisodes(
   seasons: readonly LibrarySeason[],
@@ -32,10 +34,22 @@ export function matchOrderedEpisodes(
     if (episode.airDate === null) continue;
     byDate.set(episode.airDate, [...(byDate.get(episode.airDate) ?? []), episode]);
   }
-  const result: OrderedMatches = { matches: [], unmatched: 0 };
+  const result: OrderedMatches = { matches: [], unmatched: 0, foreign: new Map() };
   for (const library of seasons) {
     for (const episode of library.episodes) {
       if (!watched(episode)) continue;
+      const other =
+        episode.tvdbId === null || episode.tvdbId === undefined
+          ? undefined
+          : index.foreignEpisodes[String(episode.tvdbId)];
+      if (other !== undefined) {
+        const known = result.foreign.get(other.showId);
+        result.foreign.set(other.showId, {
+          showName: other.showName,
+          count: (known?.count ?? 0) + 1,
+        });
+        continue;
+      }
       const tmdbId =
         episode.tvdbId === null || episode.tvdbId === undefined
           ? undefined

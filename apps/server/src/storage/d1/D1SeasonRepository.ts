@@ -24,8 +24,15 @@ export class D1SeasonRepository extends D1TableRepository<Season> implements Sea
     );
   }
 
-  async hasPersonalData(seasonId: number): Promise<boolean> {
-    return (await queryFirst(this.db, SEASON_PERSONAL_DATA_SQL, seasonId)) !== undefined;
+  async hasPersonalData(seasonId: number, episodeKeys: readonly string[]): Promise<boolean> {
+    return (
+      (await queryFirst(
+        this.db,
+        SEASON_PERSONAL_DATA_SQL,
+        seasonId,
+        JSON.stringify(episodeKeys),
+      )) !== undefined
+    );
   }
 
   async deleteForAll(seasonId: number): Promise<void> {

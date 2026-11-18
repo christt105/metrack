@@ -1,4 +1,5 @@
 import {
+  episodeKey,
   pickSeasonsGroup,
   planSeasonRefresh,
   type SeasonRefreshPlan,
@@ -23,7 +24,7 @@ import { loadSeasonsGroups } from './loadSeasonsGroups.js';
  * group that has it, which is returned so the caller records it. Provider failures leave the seasons as they were.
  * When the series changes its ordering (`reorganize`, or the automatic group) the seasons of the new ordering that
  * have no row are created, the stored ones are relinked by number, and a stored season the ordering lacks is deleted
- * when no user entered anything in it and kept unlinked otherwise.
+ * unless a user's entry holds something their recorded episodes cannot reproduce, in which case it is kept unlinked.
  */
 export class SeasonRefresher {
   constructor(
@@ -83,7 +84,7 @@ export class SeasonRefresher {
 
   /**
    * Makes the stored seasons of the series follow `provider`, its new ordering: relinks them by number, creates
-   * the missing ones, removes the ones nobody entered anything in and drops every cached episode catalog.
+   * the missing ones, removes the ones whose entries the episodes can reproduce and drops every cached episode catalog.
    */
   async reorganize(series: Series, provider: readonly ProviderSeason[]): Promise<void> {
     const stored = await this.seasons.listBySeries(series.id);
@@ -96,7 +97,9 @@ export class SeasonRefresher {
     await this.applyUpdates(plan.updates);
     const taken = new Set(stored.map((season) => season.number));
     for (const season of plan.unlinked) {
-      if (await this.seasons.hasPersonalData(season.id)) continue;
+      const catalog = await this.catalogs.get(season.id);
+      const keys = (catalog?.episodes ?? []).map((episode) => episodeKey(episode, season.number));
+      if (await this.seasons.hasPersonalData(season.id, keys)) continue;
       await this.seasons.deleteForAll(season.id);
       taken.delete(season.number);
     }
