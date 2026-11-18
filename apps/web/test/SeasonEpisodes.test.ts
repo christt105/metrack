@@ -19,6 +19,7 @@ const item = (number: number, patch: Partial<SeasonEpisodeItem> = {}): SeasonEpi
   overview: `About ${number}`,
   stillPath: null,
   watched: false,
+  skipped: false,
   viewings: [],
   ...patch,
 });
@@ -33,6 +34,7 @@ const response = (
   datesDerived: false,
   episodeCount: episodes.length,
   watchedCount: episodes.filter((e) => e.watched).length,
+  skippedCount: episodes.filter((e) => e.skipped).length,
   episodes,
   ...patch,
 });
@@ -140,17 +142,195 @@ describe('SeasonEpisodes', () => {
     expect(update).toHaveBeenCalledWith(50, { op: 'mark', keys: ['k2', 'k3'], date: today });
   });
 
-  it('marks every aired episode, with or without a date', async () => {
-    const episodes = [item(1), item(2), item(3, { airDate: '2999-01-01' })];
+  it('offers no undated mark buttons', async () => {
+    const { wrapper } = await mountList([item(1), item(2)]);
+    expect(wrapper.text()).not.toContain('without a date');
+    await wrapper.find('li.episode button.text').trigger('click');
+    expect(wrapper.text()).not.toContain('no date');
+  });
+
+  it('marks today every aired episode that is neither watched nor skipped', async () => {
+    const episodes = [
+      item(1, { watched: true, viewings: [viewing] }),
+      item(2),
+      item(3, { skipped: true }),
+      item(4, { airDate: '2999-01-01' }),
+      item(5),
+    ];
     const update = vi.fn().mockResolvedValue({ ...response(episodes), tracking: tracking() });
     const { wrapper } = await mountList(episodes, { updateSeasonEpisodes: update });
-    const [all, undated] = wrapper.findAll('.actions button');
-    await all!.trigger('click');
+    await wrapper.find('.actions button').trigger('click');
     await flushPromises();
-    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k1', 'k2'], date: today });
-    await undated!.trigger('click');
+    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k2', 'k5'], date: today });
+  });
+
+  it('adds a viewing of today to every aired episode that is not skipped when all are watched', async () => {
+    const episodes = [
+      item(1, { watched: true, viewings: [viewing] }),
+      item(2, { skipped: true }),
+      item(3, { watched: true, viewings: [] }),
+    ];
+    const update = vi.fn().mockResolvedValue({ ...response(episodes), tracking: tracking() });
+    const { wrapper } = await mountList(episodes, { updateSeasonEpisodes: update });
+    await wrapper.find('.actions button').trigger('click');
     await flushPromises();
-    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k1', 'k2'], date: null });
+    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k1', 'k3'], date: today });
+  });
+
+  it('shows skipped episodes dimmed with a label, and counts them in the progress', async () => {
+    const { wrapper } = await mountList([
+      item(1, { watched: true, viewings: [viewing] }),
+      item(2, { skipped: true }),
+      item(3, { skipped: true }),
+    ]);
+    const [first, second] = wrapper.findAll('li.episode');
+    expect(first!.classes()).not.toContain('skipped');
+    expect(second!.classes()).toContain('skipped');
+    expect(second!.text()).toContain('Skipped');
+    expect(wrapper.text()).toContain('3 of 3 episodes · 2 skipped');
+  });
+
+  it('skips from the expanded row and undoes it', async () => {
+    const update = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...response([item(1, { skipped: true }), item(2)]),
+        tracking: tracking(),
+      })
+      .mockResolvedValueOnce({ ...response([item(1), item(2)]), tracking: tracking() });
+    const { wrapper } = await mountList([item(1), item(2)], { updateSeasonEpisodes: update });
+    await wrapper.find('li.episode button.text').trigger('click');
+    const skip = wrapper
+      .findAll('li.episode')[0]!
+      .findAll('.body button')
+      .find((b) => b.text() === 'Skip');
+    await skip!.trigger('click');
+    await flushPromises();
+    expect(update).toHaveBeenCalledWith(50, { op: 'skip', keys: ['k1'] });
+    (document.body.querySelector('.toast .undo') as HTMLElement).click();
+    await flushPromises();
+    expect(update).toHaveBeenLastCalledWith(50, { op: 'unskip', keys: ['k1'] });
+  });
+
+  it('does not offer to skip an episode with a dated viewing, and unskips a skipped one', async () => {
+    const update = vi.fn().mockResolvedValue({ ...response([item(1)]), tracking: tracking() });
+    const { wrapper } = await mountList(
+      [item(1, { watched: true, viewings: [viewing] }), item(2, { skipped: true })],
+      { updateSeasonEpisodes: update },
+    );
+    const [dated, skipped] = wrapper.findAll('li.episode');
+    await dated!.find('button.text').trigger('click');
+    expect(dated!.findAll('.body button').map((b) => b.text())).not.toContain('Skip');
+    await skipped!.find('button.text').trigger('click');
+    const unskip = skipped!.findAll('.body button').find((b) => b.text() === 'Unskip');
+    await unskip!.trigger('click');
+    await flushPromises();
+    expect(update).toHaveBeenCalledWith(50, { op: 'unskip', keys: ['k2'] });
+  });
+
+  it('watching a skipped episode from its check marks it today', async () => {
+    const update = vi.fn().mockResolvedValue({ ...response([item(1)]), tracking: tracking() });
+    const { wrapper } = await mountList([item(1, { skipped: true })], {
+      updateSeasonEpisodes: update,
+    });
+    await wrapper.find('li.episode button.check').trigger('click');
+    await flushPromises();
+    expect(update).toHaveBeenCalledWith(50, { op: 'mark', keys: ['k1'], date: today });
+  });
+
+  describe('with an open rewatch', () => {
+    const start = '2026-05-01';
+    const before = { startedAt: '2026-01-01', finishedAt: '2026-01-01' };
+    const during = { startedAt: '2026-05-02', finishedAt: '2026-05-02' };
+    const open = [{ startedAt: start, finishedAt: null }];
+    const episodes = [
+      item(1, { watched: true, viewings: [before, during] }),
+      item(2, { watched: true, viewings: [before] }),
+      item(3, { skipped: true }),
+    ];
+
+    async function mountRewatch(update: ReturnType<typeof vi.fn>) {
+      const mounted = await mountWithApi(
+        SeasonEpisodes,
+        {
+          seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)),
+          updateSeasonEpisodes: update,
+        } as never,
+        { seasonId: 50, seriesId: 7, status: 'completed', rewatches: open },
+      );
+      await flushPromises();
+      return mounted;
+    }
+
+    it('shows the rewatch progress, counting skipped episodes as done', async () => {
+      const { wrapper } = await mountRewatch(vi.fn());
+      expect(wrapper.text()).toContain('Rewatch: 2 of 3');
+      const [first, second] = wrapper.findAll('li.episode');
+      expect(first!.find('button.check').classes()).toContain('on');
+      expect(second!.find('button.check').classes()).not.toContain('on');
+    });
+
+    it('adds a viewing of today from an undone check and drops the rewatch viewings from a done one', async () => {
+      const update = vi
+        .fn()
+        .mockResolvedValue({ ...response(episodes), tracking: tracking('completed') });
+      const { wrapper } = await mountRewatch(update);
+      const [first, second] = wrapper.findAll('li.episode');
+      await second!.find('button.check').trigger('click');
+      await flushPromises();
+      expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k2'], date: today });
+      await first!.find('button.check').trigger('click');
+      await flushPromises();
+      expect(update).toHaveBeenLastCalledWith(50, {
+        op: 'setViewings',
+        key: 'k1',
+        viewings: [before],
+      });
+    });
+
+    it('marks up to here and all with viewings of today, only for the episodes still to rewatch', async () => {
+      const update = vi
+        .fn()
+        .mockResolvedValue({ ...response(episodes), tracking: tracking('completed') });
+      const { wrapper } = await mountRewatch(update);
+      await wrapper.find('.actions button').trigger('click');
+      await flushPromises();
+      expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k2'], date: today });
+    });
+  });
+
+  it('starts a season rewatch from the Rewatch button of a completed season', async () => {
+    const patch = vi.fn().mockResolvedValue({ id: 50, status: 'completed', rewatches: [] });
+    const mounted = await mountWithApi(
+      SeasonEpisodes,
+      { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])), patch } as never,
+      { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [] },
+    );
+    await flushPromises();
+    const button = mounted.wrapper.findAll('.actions button').find((b) => b.text() === 'Rewatch');
+    await button!.trigger('click');
+    await flushPromises();
+    expect(patch).toHaveBeenCalledWith('seasons', 50, {
+      rewatches: [{ startedAt: today, finishedAt: null }],
+    });
+    expect(mounted.wrapper.emitted('saved')).toHaveLength(1);
+  });
+
+  it('hides the Rewatch button while a rewatch is open or the season is not completed', async () => {
+    const open = await mountWithApi(
+      SeasonEpisodes,
+      { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])) } as never,
+      {
+        seasonId: 50,
+        seriesId: 7,
+        status: 'completed',
+        rewatches: [{ startedAt: '2026-05-01', finishedAt: null }],
+      },
+    );
+    await flushPromises();
+    expect(open.wrapper.text()).not.toContain('Rewatch ');
+    const { wrapper } = await mountList([item(1)]);
+    expect(wrapper.findAll('.actions button').map((b) => b.text())).toEqual(['Watched today']);
   });
 
   it('says the status changed and that undo does not revert it', async () => {

@@ -1,6 +1,14 @@
 import type { SeasonEpisodeItem, SeasonEpisodesUpdateResponse, Season } from '@metrack/domain';
 import { describe, expect, it } from 'vitest';
-import { hasAired, unwatchedAired } from '../src/logic/episodeSelection';
+import {
+  doneOrSkipped,
+  hasAired,
+  hasDatedViewing,
+  isDone,
+  openRewatchStart,
+  unwatchedAired,
+  watchedTodayKeys,
+} from '../src/logic/episodeSelection';
 import { inverseOperations } from '../src/logic/inverseOperations';
 import { stillUrl } from '../src/logic/stillUrl';
 import { withTracking } from '../src/logic/withTracking';
@@ -15,6 +23,7 @@ const episode = (number: number, patch: Partial<SeasonEpisodeItem> = {}): Season
   overview: null,
   stillPath: null,
   watched: false,
+  skipped: false,
   viewings: [],
   ...patch,
 });
@@ -47,6 +56,45 @@ describe('unwatchedAired', () => {
   });
 });
 
+describe('episode selection with skipped episodes and rewatches', () => {
+  const dated = { startedAt: '2026-05-02', finishedAt: '2026-05-02' };
+  const episodes = [
+    episode(1, { watched: true, viewings: [viewing, dated] }),
+    episode(2, { watched: true, viewings: [viewing] }),
+    episode(3, { skipped: true }),
+    episode(4),
+  ];
+
+  it('never selects a skipped episode', () => {
+    expect(unwatchedAired(episodes, today)).toEqual(['k4']);
+  });
+
+  it('reads an open rewatch start and counts viewings since it', () => {
+    expect(openRewatchStart([viewing, { startedAt: '2026-05-01', finishedAt: null }])).toBe(
+      '2026-05-01',
+    );
+    expect(openRewatchStart([viewing])).toBeNull();
+    expect(isDone(episodes[0]!, '2026-05-01')).toBe(true);
+    expect(isDone(episodes[1]!, '2026-05-01')).toBe(false);
+    expect(isDone(episodes[2]!)).toBe(false);
+    expect(doneOrSkipped(episodes, '2026-05-01')).toBe(2);
+    expect(unwatchedAired(episodes, today, undefined, '2026-05-01')).toEqual(['k2', 'k4']);
+  });
+
+  it('watched today covers the pending episodes, or every unskipped aired one when none is pending', () => {
+    expect(watchedTodayKeys(episodes, today)).toEqual(['k4']);
+    const finished = [episodes[0]!, episodes[1]!, episodes[2]!];
+    expect(watchedTodayKeys(finished, today)).toEqual(['k1', 'k2']);
+    expect(watchedTodayKeys(finished, today, '2026-06-01')).toEqual(['k1', 'k2']);
+    expect(watchedTodayKeys([episodes[0]!, episodes[2]!], today, '2026-05-01')).toEqual([]);
+  });
+
+  it('knows whether an episode has a dated viewing', () => {
+    expect(hasDatedViewing(episodes[0]!)).toBe(true);
+    expect(hasDatedViewing(episode(5, { watched: true, viewings: [] }))).toBe(false);
+  });
+});
+
 describe('inverseOperations', () => {
   const before = [
     episode(1, { watched: true, viewings: [viewing] }),
@@ -57,8 +105,34 @@ describe('inverseOperations', () => {
   it('unmarks only the episodes a mark added', () => {
     expect(inverseOperations({ op: 'mark', keys: ['k1', 'k2'], date: today }, before)).toEqual([
       { op: 'unmark', keys: ['k2'] },
+      { op: 'setViewings', key: 'k1', viewings: [viewing] },
     ]);
-    expect(inverseOperations({ op: 'mark', keys: ['k1'], date: today }, before)).toEqual([]);
+    expect(inverseOperations({ op: 'mark', keys: ['k1'], date: today }, before)).toEqual([
+      { op: 'setViewings', key: 'k1', viewings: [viewing] },
+    ]);
+  });
+
+  it('skips again the episodes a mark unskipped', () => {
+    const skipped = [episode(1, { skipped: true }), episode(2)];
+    expect(inverseOperations({ op: 'mark', keys: ['k1', 'k2'], date: today }, skipped)).toEqual([
+      { op: 'unmark', keys: ['k2'] },
+      { op: 'skip', keys: ['k1'] },
+    ]);
+  });
+
+  it('undoes a skip by unskipping and putting back an undated watch it removed', () => {
+    const state = [episode(1, { watched: true, viewings: [] }), episode(2)];
+    expect(inverseOperations({ op: 'skip', keys: ['k1', 'k2'] }, state)).toEqual([
+      { op: 'setViewings', key: 'k1', viewings: [] },
+      { op: 'unskip', keys: ['k2'] },
+    ]);
+  });
+
+  it('undoes an unskip by skipping again', () => {
+    const state = [episode(1, { skipped: true }), episode(2)];
+    expect(inverseOperations({ op: 'unskip', keys: ['k1', 'k2'] }, state)).toEqual([
+      { op: 'skip', keys: ['k1'] },
+    ]);
   });
 
   it('restores the viewings an unmark removed', () => {

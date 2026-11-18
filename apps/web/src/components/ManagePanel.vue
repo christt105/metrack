@@ -15,6 +15,7 @@ import SeasonOrderingPanel from './SeasonOrderingPanel.vue';
 import SeasonOverrideEditor from './SeasonOverrideEditor.vue';
 
 const props = defineProps<{
+  rewatchesLocked?: boolean;
   collection: Collection;
   detail: AnyDetail;
   title: string;
@@ -62,6 +63,7 @@ function onArtwork(updated: AnyDetail): void {
           :collection="collection"
           :rewatches="rewatches"
           :completed="trackedStatus === 'completed'"
+          :locked="rewatchesLocked"
           @updated="emit('saved', $event)"
         />
       </ManageGroup>

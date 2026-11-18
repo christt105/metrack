@@ -24,7 +24,11 @@ import UndoToast from './UndoToast.vue';
 
 const TOAST_MS = 6000;
 
-const props = defineProps<{ collection: Collection; detail: AnyDetail }>();
+const props = defineProps<{
+  collection: Collection;
+  detail: AnyDetail;
+  episodeMode?: boolean;
+}>();
 const emit = defineEmits<{ saved: [detail: AnyDetail] }>();
 
 const api = useApi();
@@ -141,7 +145,7 @@ onBeforeUnmount(() => clearTimeout(timer));
       <AppIcon name="star" :size="18" />
       {{ rating === null ? messages.ratingPicker.unrated : messages.ratingPicker.change }}
     </button>
-    <button type="button" :disabled="busy" @click="watchedToday">
+    <button v-if="!episodeMode" type="button" :disabled="busy" @click="watchedToday">
       <AppIcon name="check" :size="18" />
       {{ messages.quick.watchedToday }}
     </button>

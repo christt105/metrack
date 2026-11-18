@@ -88,6 +88,8 @@ function onEpisodes(update: SeasonEpisodesUpdateResponse): void {
   if (seasonOf.value) detail.value = withTracking(seasonOf.value, update) as unknown as AnyDetail;
 }
 
+const hasCatalog = ref(false);
+
 const watchedEpisodes = computed(() => (seasonOf.value ? seasonWatched(seasonOf.value) : null));
 
 const titleText = computed(() => {
@@ -97,6 +99,12 @@ const titleText = computed(() => {
 });
 const eyebrow = computed(() => messages.typeLabels[type.value]);
 
+watch(
+  () => [props.collection, props.id],
+  () => {
+    hasCatalog.value = false;
+  },
+);
 watch(() => [props.collection, props.id], load, { immediate: true });
 </script>
 
@@ -128,6 +136,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
           v-if="trackedStatus"
           :collection="collection"
           :detail="detail"
+          :episode-mode="hasCatalog"
           @saved="onSaved"
         />
         <RouterLink :to="`/${collection}/${detail.id}/edit`" class="button">
@@ -147,7 +156,10 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       :season-id="seasonOf.id"
       :series-id="seasonOf.seriesId"
       :status="seasonOf.status"
+      :rewatches="seasonOf.rewatches"
       @updated="onEpisodes"
+      @loaded="hasCatalog = $event.source !== 'numbers'"
+      @saved="onSaved($event as unknown as AnyDetail)"
     />
 
     <ManagePanel
@@ -155,6 +167,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       :detail="detail"
       :title="titleText"
       :fallback="parentArtwork"
+      :rewatches-locked="hasCatalog"
       @load="load"
       @saved="onSaved"
     />

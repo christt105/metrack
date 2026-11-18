@@ -46,7 +46,11 @@ function coverOf(season: Season): string | null {
               <span v-if="season.rating !== null" class="rating">{{ season.rating }}/10</span>
               <PendingBadge v-if="season.pendingReview" />
             </span>
-            <SeasonProgress :watched="seasonWatched(season)" :total="season.episodeCount" />
+            <SeasonProgress
+              :watched="seasonWatched(season)"
+              :total="season.episodeCount"
+              :skipped="season.skippedCount"
+            />
           </span>
         </RouterLink>
       </li>

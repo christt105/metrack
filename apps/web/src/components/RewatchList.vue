@@ -24,6 +24,7 @@ const props = defineProps<{
   id: number;
   rewatches: Viewing[];
   completed: boolean;
+  locked?: boolean;
 }>();
 const emit = defineEmits<{ updated: [detail: AnyDetail] }>();
 
@@ -96,11 +97,12 @@ onBeforeUnmount(() => clearTimeout(timer));
         :key="`${viewing.startedAt}|${viewing.finishedAt}`"
         :viewing="viewing"
         :busy="busy"
+        :readonly="locked"
         @change="change(withReplaced(rewatches, index, $event), messages.rewatches.changed)"
         @remove="change(withoutViewing(rewatches, index), messages.rewatches.removed)"
       />
     </ul>
-    <form v-if="completed" class="add" @submit.prevent="add">
+    <form v-if="completed && !locked" class="add" @submit.prevent="add">
       <label>
         <span>{{ messages.rewatches.start }}</span>
         <input v-model="start" type="date" />
@@ -111,6 +113,7 @@ onBeforeUnmount(() => clearTimeout(timer));
       </label>
       <button type="submit" :disabled="busy || !canAdd">{{ messages.rewatches.add }}</button>
     </form>
+    <p v-else-if="locked" class="muted">{{ messages.episodes.rewatchListLocked }}</p>
     <p v-else-if="!rewatching" class="muted">{{ messages.rewatches.onlyCompleted }}</p>
     <ErrorNotice :error="error" />
     <Teleport to="body">

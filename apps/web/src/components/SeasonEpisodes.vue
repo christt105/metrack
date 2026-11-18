@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { normalizeViewings } from '@metrack/domain';
 import type {
   EpisodeOperation,
   MediaStatus,
+  Season,
   SeasonEpisodesResponse,
   SeasonEpisodesUpdateResponse,
   Viewing,
 } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
-import { unwatchedAired } from '../logic/episodeSelection';
+import {
+  doneOrSkipped,
+  isDone,
+  openRewatchStart,
+  unwatchedAired,
+  watchedTodayKeys,
+} from '../logic/episodeSelection';
 import { inverseOperations } from '../logic/inverseOperations';
 import { todayIso } from '../logic/todayIso';
 import EpisodeRow from './EpisodeRow.vue';
@@ -21,8 +29,17 @@ const TOAST_MS = 7000;
 const REFILL_MS = 1500;
 const REFILL_ATTEMPTS = 20;
 
-const props = defineProps<{ seasonId: number; seriesId: number; status: MediaStatus }>();
-const emit = defineEmits<{ updated: [update: SeasonEpisodesUpdateResponse] }>();
+const props = defineProps<{
+  seasonId: number;
+  seriesId: number;
+  status: MediaStatus;
+  rewatches?: Viewing[];
+}>();
+const emit = defineEmits<{
+  updated: [update: SeasonEpisodesUpdateResponse];
+  loaded: [data: SeasonEpisodesResponse];
+  saved: [season: Season];
+}>();
 
 const api = useApi();
 const data = ref<SeasonEpisodesResponse | null>(null);
@@ -38,8 +55,23 @@ const today = computed(() => todayIso());
 const numbered = computed(() => data.value?.source !== 'numbers');
 const partial = computed(() => data.value !== null && !data.value.complete);
 const stalled = computed(() => partial.value && attempts.value >= REFILL_ATTEMPTS);
+const rewatchStart = computed(() => openRewatchStart(props.rewatches ?? []));
 const markable = computed(() =>
-  data.value ? unwatchedAired(data.value.episodes, today.value) : [],
+  data.value ? watchedTodayKeys(data.value.episodes, today.value, rewatchStart.value) : [],
+);
+const progress = computed(() =>
+  data.value
+    ? rewatchStart.value === null
+      ? data.value.watchedCount + data.value.skippedCount
+      : doneOrSkipped(data.value.episodes, rewatchStart.value)
+    : 0,
+);
+const canRewatch = computed(
+  () =>
+    numbered.value &&
+    props.status === 'completed' &&
+    rewatchStart.value === null &&
+    props.rewatches !== undefined,
 );
 
 function stopRefill(): void {
@@ -79,6 +111,7 @@ async function load(): Promise<void> {
     const loaded = await api.seasonEpisodes(props.seasonId);
     if (mine !== ticket) return;
     data.value = loaded;
+    emit('loaded', loaded);
     planRefill(mine);
   } catch (cause) {
     if (mine === ticket) error.value = cause;
@@ -129,24 +162,60 @@ function marked(count: number): (changed: MediaStatus | null) => string {
       : messages.episodes.marked(count);
 }
 
-function mark(keys: string[], dated: boolean): Promise<void> {
+function mark(keys: string[]): Promise<void> {
   if (keys.length === 0) {
     say(messages.episodes.nothingToMark, []);
     return Promise.resolve();
   }
-  return run({ op: 'mark', keys, date: dated ? today.value : null }, marked(keys.length));
+  return run({ op: 'mark', keys, date: today.value }, marked(keys.length));
 }
 
-function toggle(key: string, watched: boolean): Promise<void> {
-  return watched
+function toggle(key: string): Promise<void> {
+  const episode = data.value?.episodes.find((e) => e.key === key);
+  if (!episode || !isDone(episode, rewatchStart.value)) return mark([key]);
+  if (rewatchStart.value === null) {
+    return run({ op: 'unmark', keys: [key] }, () => messages.episodes.unmarked);
+  }
+  const start = rewatchStart.value;
+  const kept = episode.viewings.filter(
+    (viewing) => viewing.finishedAt !== null && viewing.finishedAt < start,
+  );
+  return kept.length === 0
     ? run({ op: 'unmark', keys: [key] }, () => messages.episodes.unmarked)
-    : mark([key], true);
+    : run({ op: 'setViewings', key, viewings: kept }, () => messages.episodes.unmarked);
 }
 
-function markUpTo(key: string, dated: boolean): Promise<void> {
+function markUpTo(key: string): Promise<void> {
   return data.value
-    ? mark(unwatchedAired(data.value.episodes, today.value, key), dated)
+    ? mark(unwatchedAired(data.value.episodes, today.value, key, rewatchStart.value))
     : Promise.resolve();
+}
+
+function skip(key: string): Promise<void> {
+  return run({ op: 'skip', keys: [key] }, () => messages.episodes.skipped(1));
+}
+
+function unskip(key: string): Promise<void> {
+  return run({ op: 'unskip', keys: [key] }, () => messages.episodes.unskipped);
+}
+
+async function startRewatch(): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
+  error.value = null;
+  try {
+    const next = normalizeViewings([
+      ...(props.rewatches ?? []),
+      { startedAt: today.value, finishedAt: null },
+    ]);
+    const updated = await api.patch('seasons', props.seasonId, { rewatches: next } as never);
+    emit('saved', updated as unknown as Season);
+    say(messages.episodes.rewatchStarted, []);
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    busy.value = false;
+  }
 }
 
 function setViewings(key: string, viewings: Viewing[]): Promise<void> {
@@ -185,7 +254,12 @@ onBeforeUnmount(() => {
     <p v-if="!data && !error" class="muted">{{ messages.episodes.loading }}</p>
     <ErrorNotice :error="error" />
     <template v-if="data">
-      <SeasonProgress :watched="data.watchedCount" :total="data.episodeCount" />
+      <SeasonProgress
+        :watched="progress"
+        :total="data.episodeCount"
+        :skipped="rewatchStart === null ? data.skippedCount : 0"
+        :rewatch="rewatchStart !== null"
+      />
       <p v-if="partial" class="muted partial" role="status">
         {{ stalled ? messages.episodes.partialStalled : messages.episodes.partial }}
       </p>
@@ -196,17 +270,18 @@ onBeforeUnmount(() => {
             type="button"
             class="small"
             :disabled="busy || markable.length === 0"
-            @click="mark(markable, true)"
+            @click="mark(markable)"
           >
-            {{ messages.episodes.markAll }}
+            {{ messages.episodes.watchedToday }}
           </button>
           <button
+            v-if="canRewatch"
             type="button"
             class="small ghost"
-            :disabled="busy || markable.length === 0"
-            @click="mark(markable, false)"
+            :disabled="busy"
+            @click="startRewatch"
           >
-            {{ messages.episodes.markAllUndated }}
+            {{ messages.episodes.rewatch }}
           </button>
         </div>
         <ul class="list">
@@ -217,8 +292,11 @@ onBeforeUnmount(() => {
             :numbered="numbered"
             :today="today"
             :busy="busy"
-            @toggle="toggle(episode.key, episode.watched)"
-            @mark-up-to="markUpTo(episode.key, $event)"
+            :rewatch-start="rewatchStart"
+            @toggle="toggle(episode.key)"
+            @mark-up-to="markUpTo(episode.key)"
+            @skip="skip(episode.key)"
+            @unskip="unskip(episode.key)"
             @viewings="setViewings(episode.key, $event)"
           />
         </ul>

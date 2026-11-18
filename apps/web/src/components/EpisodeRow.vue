@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import type { SeasonEpisodeItem, Viewing } from '@metrack/domain';
 import { messages } from '../i18n/messages';
-import { hasAired } from '../logic/episodeSelection';
+import { hasAired, hasDatedViewing, isDone } from '../logic/episodeSelection';
 import { stillUrl } from '../logic/stillUrl';
 import AppIcon from './AppIcon.vue';
 import EpisodeViewings from './EpisodeViewings.vue';
@@ -12,10 +12,13 @@ const props = defineProps<{
   numbered: boolean;
   today: string;
   busy: boolean;
+  rewatchStart: string | null;
 }>();
 const emit = defineEmits<{
   toggle: [];
-  markUpTo: [dated: boolean];
+  markUpTo: [];
+  skip: [];
+  unskip: [];
   viewings: [viewings: Viewing[]];
 }>();
 
@@ -37,25 +40,25 @@ const meta = computed(() =>
     .join(' · '),
 );
 const times = computed(() => props.episode.viewings.length);
+const done = computed(() => isDone(props.episode, props.rewatchStart));
+const skippable = computed(() => !props.episode.skipped && !hasDatedViewing(props.episode));
 </script>
 
 <template>
-  <li class="episode" :class="{ unaired: !aired, watched: episode.watched }">
+  <li class="episode" :class="{ unaired: !aired, watched: done, skipped: episode.skipped }">
     <div class="line">
       <button
         type="button"
         class="check"
-        :class="{ on: episode.watched }"
-        :disabled="busy || (!aired && !episode.watched)"
-        :aria-pressed="episode.watched"
+        :class="{ on: done }"
+        :disabled="busy || (!aired && !done && !episode.skipped)"
+        :aria-pressed="done"
         :aria-label="
-          episode.watched
-            ? messages.episodes.unmarkWatched(name)
-            : messages.episodes.markWatched(name)
+          done ? messages.episodes.unmarkWatched(name) : messages.episodes.markWatched(name)
         "
         @click="emit('toggle')"
       >
-        <AppIcon v-if="episode.watched" name="check" :size="18" />
+        <AppIcon v-if="done" name="check" :size="18" />
       </button>
       <img
         v-if="still"
@@ -78,7 +81,13 @@ const times = computed(() => props.episode.viewings.length);
         <span class="name">
           <span class="number">{{ episode.number }}</span>
           <span class="title">{{ name }}</span>
-          <span v-if="times > 1" class="times" :title="messages.episodes.watchedTimes(times)"
+          <span v-if="episode.skipped" class="skipped-label">{{
+            messages.episodes.skippedLabel
+          }}</span>
+          <span
+            v-if="times > 1 && !episode.skipped"
+            class="times"
+            :title="messages.episodes.watchedTimes(times)"
             >&times;{{ times }}</span
           >
         </span>
@@ -91,16 +100,32 @@ const times = computed(() => props.episode.viewings.length);
       <p class="overview" :class="{ muted: !episode.overview }">
         {{ episode.overview ?? messages.episodes.noOverview }}
       </p>
-      <div v-if="aired" class="row">
-        <button type="button" class="small" :disabled="busy" @click="emit('markUpTo', true)">
+      <div class="row">
+        <button v-if="aired" type="button" class="small" :disabled="busy" @click="emit('markUpTo')">
           {{ messages.episodes.markUpTo }}
         </button>
-        <button type="button" class="small ghost" :disabled="busy" @click="emit('markUpTo', false)">
-          {{ messages.episodes.markUpToUndated }}
+        <button
+          v-if="skippable"
+          type="button"
+          class="small ghost"
+          :disabled="busy"
+          @click="emit('skip')"
+        >
+          {{ messages.episodes.skip }}
+        </button>
+        <button
+          v-else-if="episode.skipped"
+          type="button"
+          class="small ghost"
+          :disabled="busy"
+          @click="emit('unskip')"
+        >
+          {{ messages.episodes.unskip }}
         </button>
       </div>
+      <p v-if="episode.skipped" class="muted hint">{{ messages.episodes.skippedHint }}</p>
       <EpisodeViewings
-        v-if="episode.watched"
+        v-if="episode.watched && !episode.skipped"
         :viewings="episode.viewings"
         :busy="busy"
         @change="emit('viewings', $event)"
@@ -126,6 +151,29 @@ const times = computed(() => props.episode.viewings.length);
 
 .unaired .line {
   opacity: 0.5;
+}
+
+.skipped .line {
+  opacity: 0.55;
+}
+
+.skipped .title {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.skipped-label {
+  flex: none;
+  padding: 1px var(--s-2);
+  border: 1px solid var(--outline-strong);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: var(--t-label);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--t-small);
 }
 
 .check {
