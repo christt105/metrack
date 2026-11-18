@@ -26,11 +26,18 @@ export function draftOrderedSeasons(
       message: 'Viewings of specials (season 0) are not synced.',
     });
   }
-  const { matches, unmatched } = matchOrderedEpisodes(
+  const { matches, unmatched, foreign } = matchOrderedEpisodes(
     watchedSeasons.filter((s) => s.number > 0),
     (episode) => watchDays.has(episode.jellyfinId),
     index,
   );
+  for (const [showId, { showName, count }] of foreign) {
+    result.warnings.push({
+      code: 'episode_other_series',
+      title,
+      message: `${count} watched episode${count === 1 ? ' belongs' : 's belong'} to "${showName}" (TMDB ${showId}) on TMDB, not to "${index.name}" (TMDB ${index.tmdbId}), so ${count === 1 ? 'it was' : 'they were'} not recorded as watched. The Jellyfin numbering or metadata of this series is probably off.`,
+    });
+  }
   if (unmatched > 0) {
     result.warnings.push({
       code: 'episode_unmatched',

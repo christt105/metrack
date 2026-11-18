@@ -147,6 +147,7 @@ export type { SyncState } from './sync/SyncState.js';
 export type { SeriesWatches } from './sync/SeriesWatches.js';
 export type { OrderedEpisode } from './sync/OrderedEpisode.js';
 export type { OrderingSeason } from './sync/OrderingSeason.js';
+export type { ForeignEpisode } from './sync/ForeignEpisode.js';
 export type { SeriesIndex } from './sync/SeriesIndex.js';
 export { collectSyncWatchDays } from './sync/collectSyncWatchDays.js';
 export { findStoredSeries } from './sync/findStoredSeries.js';

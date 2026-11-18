@@ -4,7 +4,8 @@ export type SyncWarningCode =
   | 'episode_count_mismatch'
   | 'specials_ignored'
   | 'episode_without_number'
-  | 'episode_unmatched';
+  | 'episode_unmatched'
+  | 'episode_other_series';
 
 export interface SyncWarning {
   code: SyncWarningCode;

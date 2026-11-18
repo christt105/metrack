@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -29,7 +29,10 @@ const tmdbEpisode = (id: number, number: number, airDate: string) => ({
 
 function routes(): Record<string, object> {
   return {
-    [`${API}/find/11516722`]: { tv_results: [], tv_episode_results: [{ id: 6701926 }] },
+    [`${API}/find/11516722`]: {
+      tv_results: [],
+      tv_episode_results: [{ id: 6701926, show_id: TMDB_ID }],
+    },
     [`${API}/find/42`]: { tv_results: [], tv_episode_results: [] },
     [`${API}/tv/${TMDB_ID}`]: {
       id: TMDB_ID,
@@ -141,6 +144,9 @@ describe('SeriesIndexBuilder', () => {
     const net = pathFetch(routes());
     const { indexes } = await builder(net).build(input(library([11516722]), ['e1']));
     expect(indexes.get('js')).toEqual({
+      tmdbId: TMDB_ID,
+      name: 'Jujutsu Kaisen',
+      foreignEpisodes: {},
       episodeIds: { '11516722': 6701926 },
       seasons: [{ number: 1, title: 'Season 1', firstAirDate: '2020-10-03' }],
       episodes: [
@@ -167,11 +173,72 @@ describe('SeriesIndexBuilder', () => {
     expect(finds(first)).toHaveLength(1);
     expect(JSON.parse(readFileSync(join(dir, 'ids.json'), 'utf8'))['11516722']).toMatchObject({
       tmdb: 6701926,
+      show: TMDB_ID,
     });
     const second = pathFetch(routes());
     const { indexes } = await builder(second).build(input(library([11516722]), ['e1']));
     expect(finds(second)).toHaveLength(0);
     expect(indexes.get('js')?.episodeIds).toEqual({ '11516722': 6701926 });
+  });
+
+  it('asks again for a cached match stored without its series', async () => {
+    writeFileSync(
+      join(dir, 'ids.json'),
+      JSON.stringify({ '11516722': { tmdb: 6701926, at: '2026-11-01' } }),
+    );
+    const net = pathFetch(routes());
+    await builder(net).build(input(library([11516722]), ['e1']));
+    expect(finds(net)).toHaveLength(1);
+  });
+
+  it('keeps an episode of another TMDB series out of the ids and names both shows', async () => {
+    const net = pathFetch({
+      ...routes(),
+      [`${API}/find/7974291`]: { tv_results: [], tv_episode_results: [{ id: 5, show_id: 113988 }] },
+      [`${API}/tv/113988`]: { id: 113988, name: 'Monstruo: La historia de Jeffrey Dahmer' },
+    });
+    const first = builder(net);
+    const { indexes } = await first.build(input(library([7974291]), ['e1']));
+    expect(indexes.get('js')).toMatchObject({
+      episodeIds: {},
+      foreignEpisodes: {
+        '7974291': { showId: 113988, showName: 'Monstruo: La historia de Jeffrey Dahmer' },
+      },
+    });
+
+    const again = pathFetch({
+      ...routes(),
+      [`${API}/tv/113988`]: { id: 113988, name: 'Monstruo: La historia de Jeffrey Dahmer' },
+    });
+    const cached = await builder(again).build(input(library([7974291]), ['e1']));
+    expect(finds(again)).toHaveLength(0);
+    expect(Object.keys(cached.indexes.get('js')?.foreignEpisodes ?? {})).toEqual(['7974291']);
+  });
+
+  it('does not settle a series whose cached episode belongs to another series', async () => {
+    writeFileSync(
+      join(dir, 'ids.json'),
+      JSON.stringify({ '7974291': { tmdb: 5, show: 113988, at: '2026-11-18' } }),
+    );
+    const wrong = {
+      ...input(library([7974291]), ['e1']),
+      state: {
+        ...state(),
+        watches: [
+          {
+            seriesId: 1,
+            watched: { '5': [{ startedAt: '2026-11-18', finishedAt: '2026-11-18' }] },
+          },
+        ],
+      },
+    };
+    const net = pathFetch({
+      ...routes(),
+      [`${API}/tv/113988`]: { id: 113988, name: 'Other' },
+    });
+    const { settled, indexes } = await builder(net).build(wrong);
+    expect(settled.size).toBe(0);
+    expect(indexes.has('js')).toBe(true);
   });
 
   it('remembers a miss and asks again only after the retry period', async () => {

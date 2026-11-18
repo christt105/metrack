@@ -389,7 +389,14 @@ function jujutsuIndex(grouped: boolean): SeriesIndex {
   [100, 101, 102, 200, 201, 300, 301].forEach((tmdb, i) => {
     episodeIds[String(TVDB + i)] = tmdb;
   });
-  return { episodeIds, seasons, episodes };
+  return {
+    tmdbId: 95479,
+    name: 'Jujutsu Kaisen',
+    foreignEpisodes: {},
+    episodeIds,
+    seasons,
+    episodes,
+  };
 }
 
 function jujutsuLibrary(): LibrarySeason[] {
@@ -519,6 +526,32 @@ describe('sync by TMDB episode id', () => {
       index,
     });
     expect(plan.warnings).toEqual([expect.objectContaining({ code: 'episode_unmatched' })]);
+  });
+
+  it('never records an episode TMDB places in another series, not even by air date', () => {
+    const base = jujutsuIndex(true);
+    const { [String(TVDB)]: _removed, ...episodeIds } = base.episodeIds;
+    const index = {
+      ...base,
+      episodeIds,
+      foreignEpisodes: { [String(TVDB)]: { showId: 113988, showName: 'Monster: Dahmer' } },
+    };
+    const library = jujutsuLibrary();
+    library[0]!.episodes[0]!.airDate = base.episodes[0]!.airDate;
+    const plan = run({
+      seasons: library,
+      stored: [stored({ tmdbSeasonNumber: 1 })],
+      days: { s1e1: ['2026-03-01'] },
+      index,
+    });
+    expect(plan.series).toEqual([]);
+    expect(plan.warnings).toEqual([
+      expect.objectContaining({
+        code: 'episode_other_series',
+        message: expect.stringContaining('"Monster: Dahmer" (TMDB 113988)'),
+      }),
+    ]);
+    expect(plan.warnings[0]?.message).toContain('"Jujutsu Kaisen" (TMDB 95479)');
   });
 
   it('keeps the Jellyfin numbering for a series without an index', () => {
