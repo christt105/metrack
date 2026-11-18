@@ -259,7 +259,7 @@ describe('MediaEditView', () => {
       const started = wrapper.find('#field-startedAt');
       expect((started.element as HTMLInputElement).disabled).toBe(true);
       expect((wrapper.find('#field-finishedAt').element as HTMLInputElement).disabled).toBe(true);
-      expect(wrapper.text()).toContain('Calculated from the episodes');
+      expect(wrapper.text()).toContain('calculated from the episodes');
     });
 
     it('keeps the dates editable when they are not derived', async () => {
@@ -272,7 +272,7 @@ describe('MediaEditView', () => {
         '/seasons/30',
       );
       expect((wrapper.find('#field-startedAt').element as HTMLInputElement).disabled).toBe(false);
-      expect(wrapper.text()).not.toContain('Calculated from the episodes');
+      expect(wrapper.text()).not.toContain('calculated from the episodes');
     });
   });
 });

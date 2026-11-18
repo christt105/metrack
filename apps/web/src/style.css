@@ -289,6 +289,14 @@ button:disabled {
   cursor: default;
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: default;
+  border-style: dashed;
+}
+
 button.primary {
   background: var(--primary);
   border-color: var(--primary);

@@ -110,7 +110,8 @@ export const messages = {
   edit: {
     title: (name: string) => `Edit ${name}`,
     back: 'Back to details',
-    datesDerived: 'Calculated from the episodes you watched, so it cannot be edited here.',
+    datesDerived:
+      'Start and finish are calculated from the episodes you watched, so they cannot be edited here.',
     sectionTracking: 'Your tracking',
     sectionNotes: 'Your notes',
     sectionMetadata: 'Title details',

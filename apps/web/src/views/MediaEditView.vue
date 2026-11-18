@@ -227,7 +227,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
               :edited="isEdited(schema.key)"
               :released="releases.includes(schema.key)"
               :hint="
-                isDerived(schema.key)
+                isDerived(schema.key) && schema.key === 'finishedAt'
                   ? messages.edit.datesDerived
                   : schema.kind === 'list'
                     ? messages.detail.listHint
