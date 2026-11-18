@@ -24,8 +24,11 @@ export class SqliteSeasonRepository
       .run(seriesId);
   }
 
-  async hasPersonalData(seasonId: number): Promise<boolean> {
-    return this.db.prepare(SEASON_PERSONAL_DATA_SQL).get(seasonId) !== undefined;
+  async hasPersonalData(seasonId: number, episodeKeys: readonly string[]): Promise<boolean> {
+    return (
+      this.db.prepare(SEASON_PERSONAL_DATA_SQL).get(seasonId, JSON.stringify(episodeKeys)) !==
+      undefined
+    );
   }
 
   async deleteForAll(seasonId: number): Promise<void> {

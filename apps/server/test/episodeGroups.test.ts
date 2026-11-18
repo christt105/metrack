@@ -349,6 +349,63 @@ describe('reorganizing the seasons when the ordering changes', () => {
     expect((await seriesOf(normal, seriesId)).seasons.map((s) => s.number)).toEqual([1, 2, 5]);
   });
 
+  describe('going back to the regular seasons', () => {
+    async function onGroup(): Promise<{ seriesId: number; second: Season }> {
+      const seriesId = await dandadanOnRegular();
+      await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
+      const second = (await seriesOf(normal, seriesId)).seasons[1] as Season;
+      return { seriesId, second };
+    }
+
+    function recordEpisode(seriesId: number, season: Season): void {
+      api.db
+        .prepare(
+          "INSERT INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, 'tmdb', 'now')",
+        )
+        .run(
+          season.id,
+          JSON.stringify([{ number: 1, tmdbId: 777, title: 'E', airDate: '2025-07-03' }]),
+        );
+      api.db
+        .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (2, ?, ?)')
+        .run(seriesId, JSON.stringify({ '777': [] }));
+    }
+
+    const progress = (season: Season, status: string) =>
+      api.db
+        .prepare(
+          'UPDATE season_entry SET status = ?, started_at = ?, finished_at = ?, watched_count = 1 WHERE season_id = ? AND user_id = 2',
+        )
+        .run(status, '2026-01-01', status === 'completed' ? '2026-01-02' : null, season.id);
+
+    it('leaves exactly the regular seasons when only watched episodes filled the extra ones', async () => {
+      const { seriesId, second } = await onGroup();
+      recordEpisode(seriesId, second);
+      progress(second, 'completed');
+      expect((await ordering(normal, seriesId, null)).statusCode).toBe(200);
+      expect(summary(await seriesOf(normal, seriesId))).toEqual([[1, 1, 24, 'planned']]);
+    });
+
+    it('keeps an extra season holding a status the episodes do not explain', async () => {
+      const { seriesId, second } = await onGroup();
+      recordEpisode(seriesId, second);
+      progress(second, 'completed');
+      api.db
+        .prepare('UPDATE series_episode_entry SET watched = ?')
+        .run(JSON.stringify({ '999': [] }));
+      await ordering(normal, seriesId, null);
+      expect((await seriesOf(normal, seriesId)).seasons.map((s) => s.number)).toEqual([1, 2]);
+    });
+
+    it('keeps an extra season the user rated even with episodes recorded', async () => {
+      const { seriesId, second } = await onGroup();
+      recordEpisode(seriesId, second);
+      await normal.patch(`/api/seasons/${second.id}`, { rating: 6 });
+      await ordering(normal, seriesId, null);
+      expect((await seriesOf(normal, seriesId)).seasons.map((s) => s.number)).toEqual([1, 2]);
+    });
+  });
+
   it('keeps it when another user has data in it', async () => {
     const seriesId = await addSeries(owner, DANDADAN_ID);
     expect((await owner.post('/api/seasons', { seriesId, number: 5 })).statusCode).toBe(201);
