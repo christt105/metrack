@@ -165,4 +165,35 @@ describe('connector sync of episodes', () => {
     );
     expect(response.statusCode).toBe(200);
   });
+
+  it('materializes a completed season without a row before merging partial watches', async () => {
+    const { send, repositories, scope, season } = await setup();
+    await scope.run(2, () =>
+      repositories.seasons.update(season.id, { status: 'completed', finishedAt: '2026-02-01' }),
+    );
+    await send({
+      status: 'completed',
+      finishedAt: '2026-02-01',
+      watches: { '1': [view('2026-01-05')] },
+    });
+    await scope.run(2, async () => {
+      expect(await repositories.episodeWatches.get(season.id)).toEqual({
+        '1': [view('2026-01-05')],
+        '2': [],
+        '3': [],
+      });
+      expect((await repositories.seasons.get(season.id))?.watchedCount).toBe(3);
+    });
+  });
+
+  it('keeps only the played episodes of an in-progress season without a row', async () => {
+    const { send, repositories, scope, season } = await setup();
+    await send({ watches: { '2': [view('2026-01-05')] } });
+    await scope.run(2, async () => {
+      expect(await repositories.episodeWatches.get(season.id)).toEqual({
+        '2': [view('2026-01-05')],
+      });
+      expect((await repositories.seasons.get(season.id))?.watchedCount).toBe(1);
+    });
+  });
 });

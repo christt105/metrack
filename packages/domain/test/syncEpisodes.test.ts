@@ -129,13 +129,18 @@ describe('planSeasonChange episodes', () => {
     expect(change?.rewatches).toBeUndefined();
   });
 
-  it('opens a rewatch when a completed season has plays after its finish', () => {
+  it('opens a rewatch when a completed season with stored watches has a new play after its finish', () => {
     const season = stored({
       status: 'completed',
       startedAt: '2026-01-01',
       finishedAt: '2026-02-01',
     });
-    const change = plan(librarySeason(3), season, { e1: ['2026-06-01'] });
+    const change = plan(
+      librarySeason(3),
+      season,
+      { e1: ['2026-06-01'] },
+      { '1': [], '2': [], '3': [] },
+    );
     expect(change?.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: null }]);
     expect(change?.completes).toBe(false);
   });
@@ -146,11 +151,12 @@ describe('planSeasonChange episodes', () => {
       startedAt: '2026-01-01',
       finishedAt: '2026-02-01',
     });
-    const change = plan(librarySeason(3), season, {
-      e1: ['2026-06-01'],
-      e2: ['2026-06-02'],
-      e3: ['2026-06-05'],
-    });
+    const change = plan(
+      librarySeason(3),
+      season,
+      { e1: ['2026-06-01'], e2: ['2026-06-02'], e3: ['2026-06-05'] },
+      { '1': [], '2': [], '3': [] },
+    );
     expect(change?.rewatches).toEqual([view('2026-06-05', '2026-06-01')]);
   });
 
@@ -195,5 +201,61 @@ describe('planSeasonChange episodes', () => {
     });
     expect(result.warnings).toEqual([expect.objectContaining({ code: 'episode_without_number' })]);
     expect(result.series[0]?.seasons[0]?.watches).toBeUndefined();
+  });
+
+  it('backfills a completed season without a row without opening a rewatch', () => {
+    const season = stored({
+      status: 'completed',
+      startedAt: '2026-01-01',
+      finishedAt: '2026-02-01',
+    });
+    const change = plan(librarySeason(3), season, {
+      e1: ['2026-06-01'],
+      e2: ['2026-06-02'],
+      e3: ['2026-06-03'],
+    });
+    expect(change?.rewatches).toBeUndefined();
+    expect(change).toMatchObject({
+      status: 'completed',
+      startedAt: '2026-01-01',
+      finishedAt: '2026-02-01',
+    });
+    expect(Object.keys(change?.watches ?? {})).toHaveLength(3);
+  });
+
+  it('does not open a rewatch from an old play after the finish that is already stored', () => {
+    const season = stored({
+      status: 'completed',
+      startedAt: '2026-01-01',
+      finishedAt: '2026-02-01',
+    });
+    const watches = { '1': [view('2026-06-01')], '2': [], '3': [] };
+    expect(plan(librarySeason(3), season, { e1: ['2026-06-01'] }, watches)).toBeNull();
+    const change = plan(
+      librarySeason(3),
+      season,
+      { e1: ['2026-06-01'], e2: ['2026-07-01'] },
+      watches,
+    );
+    expect(change?.rewatches).toEqual([{ startedAt: '2026-07-01', finishedAt: null }]);
+  });
+
+  it('materializes a completed season without a row before adding partial plays', () => {
+    const season = stored({
+      status: 'completed',
+      startedAt: '2026-01-01',
+      finishedAt: '2026-02-01',
+    });
+    const change = plan(librarySeason(12), season, { e1: ['2026-01-05'], e2: ['2026-01-06'] });
+    expect(Object.keys(change?.watches ?? {})).toHaveLength(12);
+    expect(change?.watches?.['1']).toEqual([view('2026-01-05')]);
+    expect(change?.watches?.['9']).toEqual([]);
+    expect(change?.watchedEpisodes).toBe(12);
+  });
+
+  it('records only the played episodes of an in-progress season without a row', () => {
+    const season = stored({ status: 'in_progress', startedAt: '2026-01-01' });
+    const change = plan(librarySeason(12), season, { e1: ['2026-01-05'], e2: ['2026-01-06'] });
+    expect(Object.keys(change?.watches ?? {})).toEqual(['1', '2']);
   });
 });

@@ -44,10 +44,23 @@ function firstViewingDates(
   });
 }
 
-function rewatchStart(watches: EpisodeWatches, after: string): string | null {
-  const starts = Object.values(watches).flatMap((viewings) =>
+function isKnown(baseline: EpisodeWatches | undefined, key: string, viewing: Viewing): boolean {
+  return (
+    baseline?.[key]?.some(
+      (other) => other.finishedAt === viewing.finishedAt && other.startedAt === viewing.startedAt,
+    ) ?? false
+  );
+}
+
+function rewatchStart(
+  watches: EpisodeWatches,
+  after: string,
+  baseline: EpisodeWatches | undefined,
+): string | null {
+  const starts = Object.entries(watches).flatMap(([key, viewings]) =>
     viewings.flatMap((viewing) => {
       if (viewing.finishedAt === null || viewing.finishedAt <= after) return [];
+      if (isKnown(baseline, key, viewing)) return [];
       return [
         viewing.startedAt !== null && viewing.startedAt > after
           ? viewing.startedAt
@@ -82,7 +95,7 @@ function rewatchFinish(
  * sync. The first watched episode starts a planned or paused season (the start is the earliest viewing date, when
  * there is one). Once every expected episode is watched and none is still to air, the season completes on the
  * latest first viewing date; completing never invents a start. A completed season with a viewing dated after its
- * last finish opens a rewatch starting that day, and the rewatch closes on the latest of the dates that watched
+ * last finish that is not in `baseline` opens a rewatch starting that day, and the rewatch closes on the latest of the dates that watched
  * every aired episode again. At most one rewatch is open and it is the last. Dropped seasons never change, and
  * removing episodes never changes anything because nothing here reacts to a missing viewing.
  */
@@ -121,7 +134,7 @@ function deriveRewatch(input: SeasonTrackingInput): DerivedSeasonTracking {
   if (open === undefined) {
     const finish = lastFinish(input);
     if (finish === null) return result;
-    const startedAt = rewatchStart(watches, finish);
+    const startedAt = rewatchStart(watches, finish, input.baseline);
     if (startedAt === null) return result;
     open = { startedAt, finishedAt: null };
     rewatches = [...rewatches, open];

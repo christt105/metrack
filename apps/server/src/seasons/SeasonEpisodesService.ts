@@ -100,6 +100,7 @@ export class SeasonEpisodesService {
             tracking: before,
             episodes: episodes.map(({ number, airDate }) => ({ number, airDate })),
             watches: next,
+            baseline: base,
             today: this.today(),
           });
     const tracking: SeasonTracking = {

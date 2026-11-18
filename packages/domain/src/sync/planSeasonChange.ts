@@ -51,9 +51,7 @@ export function planSeasonChange(
   if (!library.episodes.some((episode) => viewing.watchDays.has(episode.jellyfinId))) return null;
   const base =
     viewing.watches ??
-    (stored?.status === 'completed'
-      ? materializeEpisodeWatches(stored.episodeCount ?? library.episodes.length)
-      : {});
+    (stored?.status === 'completed' ? materializeEpisodeWatches(library.episodes.length) : {});
   const merged = mergeEpisodeWatches(base, incomingWatches(library, viewing.watchDays));
   const watchesChanged = !sameEpisodeWatches(base, merged);
   const derived = deriveSeasonTracking({
@@ -67,6 +65,7 @@ export function planSeasonChange(
       episode.number === null ? [] : [{ number: episode.number, airDate: episode.airDate }],
     ),
     watches: merged,
+    baseline: viewing.watches ?? merged,
     today: viewing.today,
   });
   const rewatchesChanged =

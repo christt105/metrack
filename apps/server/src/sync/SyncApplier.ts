@@ -1,5 +1,6 @@
 import {
   countWatchedEpisodes,
+  materializeEpisodeWatches,
   mergeEpisodeWatches,
   normalizeEpisodeWatches,
   normalizeViewings,
@@ -100,7 +101,10 @@ export class SyncApplier {
       for (const season of change.seasons) {
         if (season.seasonId === null) {
           seasonAdded = true;
-          const watched = normalizeEpisodeWatches(season.watches);
+          const watched = mergeEpisodeWatches(
+            season.status === 'completed' ? materializeEpisodeWatches(season.episodeCount) : {},
+            normalizeEpisodeWatches(season.watches),
+          );
           const added = await seasons.create({
             ...emptySeason(),
             ...seasonFields(season),
@@ -153,7 +157,10 @@ export class SyncApplier {
     if (!change.watches) return;
     const watches = this.targets.episodeWatches;
     const stored = await watches.get(id);
-    const merged = mergeEpisodeWatches(stored ?? {}, normalizeEpisodeWatches(change.watches));
+    const base =
+      stored ??
+      (change.status === 'completed' ? materializeEpisodeWatches(change.episodeCount) : {});
+    const merged = mergeEpisodeWatches(base, normalizeEpisodeWatches(change.watches));
     if (stored === undefined || !sameEpisodeWatches(stored, merged)) await watches.set(id, merged);
   }
 

@@ -267,4 +267,25 @@ describe('deriveSeasonTracking', () => {
       view('2026-06-02', '2026-06-01'),
     ]);
   });
+
+  it('opens no rewatch from viewings that were already stored', () => {
+    const watches = { '1': [view('2026-01-10'), view('2026-06-01')], '2': [], '3': [] };
+    expect(derive(completed, watches).rewatches).toHaveLength(1);
+    const known = deriveSeasonTracking({
+      tracking: completed,
+      episodes: episodes(3),
+      watches,
+      baseline: watches,
+      today: TODAY,
+    });
+    expect(known.rewatches).toEqual([]);
+    const added = deriveSeasonTracking({
+      tracking: completed,
+      episodes: episodes(3),
+      watches: { ...watches, '2': [view('2026-07-01')] },
+      baseline: watches,
+      today: TODAY,
+    });
+    expect(added.rewatches).toEqual([{ startedAt: '2026-07-01', finishedAt: null }]);
+  });
 });
