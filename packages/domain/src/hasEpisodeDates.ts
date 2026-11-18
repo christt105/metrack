@@ -1,6 +1,7 @@
 import type { EpisodeWatches } from './EpisodeWatches.js';
+import { firstViewingStarts } from './firstViewingStarts.js';
 
-/** Whether any of the episodes has a dated viewing, which is what a season takes its dates from. */
+/** Whether a season's start date follows its episodes: some are watched and every first viewing has a start. */
 export function hasEpisodeDates(keys: readonly string[], watches: EpisodeWatches): boolean {
-  return keys.some((key) => (watches[key] ?? []).some((viewing) => viewing.finishedAt !== null));
+  return firstViewingStarts(keys, watches) !== null;
 }

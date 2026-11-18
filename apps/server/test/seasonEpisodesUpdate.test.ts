@@ -147,7 +147,10 @@ describe('PATCH /api/seasons/:id/episodes', () => {
     expect(watchesOf(1, season)).toEqual({ s1e1: [], s1e2: [] });
     await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: '2026-02-03' });
     await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: null });
-    expect(watchesOf(1, season)).toEqual({ s1e1: [view('2026-02-03')], s1e2: [] });
+    expect(watchesOf(1, season)).toEqual({
+      s1e1: [{ startedAt: null, finishedAt: null }, view('2026-02-03')],
+      s1e2: [],
+    });
   });
 
   it('completes the season on the latest first viewing', async () => {
@@ -233,7 +236,11 @@ describe('PATCH /api/seasons/:id/episodes', () => {
     const season = addSeason({ status: 'completed', finishedAt: '2026-02-01' });
     const opened = await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: '2026-03-01' });
     expect(opened.body.tracking.rewatches).toEqual([{ startedAt: '2026-03-01', finishedAt: null }]);
-    expect(watchesOf(1, season)).toEqual({ s1e1: [view('2026-03-01')], s1e2: [], s1e3: [] });
+    expect(watchesOf(1, season)).toEqual({
+      s1e1: [{ startedAt: null, finishedAt: null }, view('2026-03-01')],
+      s1e2: [],
+      s1e3: [],
+    });
     await patch(owner, season, { op: 'mark', keys: ['s1e2'], date: '2026-03-02' });
     const closed = await patch(owner, season, { op: 'mark', keys: ['s1e3'], date: '2026-03-04' });
     expect(closed.body.tracking.rewatches).toEqual([view('2026-03-04', '2026-03-01')]);

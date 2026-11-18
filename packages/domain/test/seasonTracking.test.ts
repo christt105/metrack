@@ -13,6 +13,7 @@ import {
 
 const TODAY = '2026-11-17';
 
+const day = (date: string): Viewing => ({ startedAt: date, finishedAt: date });
 const view = (finishedAt: string | null, startedAt: string | null = null): Viewing => ({
   startedAt,
   finishedAt,
@@ -65,9 +66,9 @@ describe('mergeEpisodeWatches', () => {
     ).toHaveLength(2);
   });
 
-  it('keeps a watched episode with unknown date when only dated viewings arrive', () => {
+  it('keeps the unknown date as the first viewing when dated viewings arrive', () => {
     expect(mergeEpisodeWatches({ '1': [] }, { '1': [view('2026-01-01')] })).toEqual({
-      '1': [view('2026-01-01')],
+      '1': [{ startedAt: null, finishedAt: null }, view('2026-01-01')],
     });
   });
 
@@ -129,7 +130,7 @@ describe('applyEpisodeOperation', () => {
 
 describe('deriveSeasonTracking', () => {
   it('starts a planned or paused season on the first watched episode, at the earliest date', () => {
-    const watches = { '2': [view('2026-03-05')], '1': [view('2026-03-03', '2026-03-02')] };
+    const watches = { '2': [day('2026-03-05')], '1': [view('2026-03-03', '2026-03-02')] };
     expect(derive(planned, watches)).toMatchObject({
       status: 'in_progress',
       startedAt: '2026-03-02',
@@ -145,9 +146,9 @@ describe('deriveSeasonTracking', () => {
   it('keeps a stored start when no episode has a dated viewing and never changes a dropped season', () => {
     const started = { ...planned, status: 'in_progress' as const, startedAt: '2026-01-01' };
     expect(derive(started, { '1': [] }).startedAt).toBe('2026-01-01');
-    expect(derive(started, { '1': [view('2026-03-03')] }).startedAt).toBe('2026-03-03');
+    expect(derive(started, { '1': [day('2026-03-03')] }).startedAt).toBe('2026-03-03');
     const dropped = { ...planned, status: 'dropped' as const };
-    expect(derive(dropped, { '1': [view('2026-03-03')], '2': [], '3': [] })).toMatchObject({
+    expect(derive(dropped, { '1': [day('2026-03-03')], '2': [], '3': [] })).toMatchObject({
       status: 'dropped',
       startedAt: null,
       completes: false,
@@ -156,9 +157,9 @@ describe('deriveSeasonTracking', () => {
 
   it('completes when every aired episode is watched, on the latest first viewing', () => {
     const watches = {
-      '1': [view('2026-03-01'), view('2026-04-01')],
-      '2': [view('2026-03-09')],
-      '3': [view('2026-03-05')],
+      '1': [day('2026-03-01'), day('2026-04-01')],
+      '2': [day('2026-03-09')],
+      '3': [day('2026-03-05')],
     };
     expect(derive(planned, watches)).toMatchObject({
       status: 'completed',
@@ -178,13 +179,13 @@ describe('deriveSeasonTracking', () => {
 
   it('does not complete while an episode is still to air or unwatched', () => {
     const watches = {
-      '1': [view('2026-03-01')],
-      '2': [view('2026-03-02')],
-      '3': [view('2026-03-03')],
+      '1': [day('2026-03-01')],
+      '2': [day('2026-03-02')],
+      '3': [day('2026-03-03')],
     };
     const later = [...episodes(2), { key: '3', airDate: '2026-12-01' }];
     expect(derive(planned, watches, later).status).toBe('in_progress');
-    expect(derive(planned, { '1': [view('2026-03-01')] }).status).toBe('in_progress');
+    expect(derive(planned, { '1': [day('2026-03-01')] }).status).toBe('in_progress');
     expect(derive(planned, watches, []).status).toBe('planned');
   });
 
@@ -210,9 +211,9 @@ describe('deriveSeasonTracking', () => {
 
   it('opens a rewatch when a completed season gets a viewing after its last finish', () => {
     const watches = {
-      '1': [view('2026-01-10'), view('2026-06-01')],
-      '2': [view('2026-01-11')],
-      '3': [view('2026-01-12')],
+      '1': [day('2026-01-10'), day('2026-06-01')],
+      '2': [day('2026-01-11')],
+      '3': [day('2026-01-12')],
     };
     expect(derive(completed, watches)).toMatchObject({
       status: 'completed',
@@ -224,9 +225,9 @@ describe('deriveSeasonTracking', () => {
 
   it('ignores viewings on or before the last finish, closed rewatches included', () => {
     const watches = {
-      '1': [view('2026-02-01')],
-      '2': [view('2026-01-11')],
-      '3': [view('2026-03-05')],
+      '1': [day('2026-02-01')],
+      '2': [day('2026-01-11')],
+      '3': [day('2026-03-05')],
     };
     const tracking = { ...completed, rewatches: [view('2026-03-05', '2026-03-01')] };
     expect(derive(tracking, watches).rewatches).toEqual(tracking.rewatches);
@@ -235,27 +236,27 @@ describe('deriveSeasonTracking', () => {
   it('closes the open rewatch on the latest date once every aired episode has a viewing since its start', () => {
     const tracking = { ...completed, rewatches: [{ startedAt: '2026-06-01', finishedAt: null }] };
     const partial = {
-      '1': [view('2026-06-01')],
-      '2': [view('2026-06-02')],
-      '3': [view('2026-01-01')],
+      '1': [day('2026-06-01')],
+      '2': [day('2026-06-02')],
+      '3': [day('2026-01-01')],
     };
     expect(derive(tracking, partial).rewatches).toEqual(tracking.rewatches);
-    const whole = { ...partial, '3': [view('2026-01-01'), view('2026-06-04')] };
+    const whole = { ...partial, '3': [day('2026-01-01'), day('2026-06-04')] };
     expect(derive(tracking, whole).rewatches).toEqual([view('2026-06-04', '2026-06-01')]);
   });
 
   it('opens and closes a rewatch in one go when the season is watched again entirely', () => {
     const watches = {
-      '1': [view('2026-01-10'), view('2026-06-01')],
-      '2': [view('2026-01-11'), view('2026-06-02')],
-      '3': [view('2026-01-12'), view('2026-06-03')],
+      '1': [day('2026-01-10'), day('2026-06-01')],
+      '2': [day('2026-01-11'), day('2026-06-02')],
+      '3': [day('2026-01-12'), day('2026-06-03')],
     };
     expect(derive(completed, watches).rewatches).toEqual([view('2026-06-03', '2026-06-01')]);
   });
 
   it('opens a second rewatch after a closed one and keeps at most one open, last', () => {
     const tracking = { ...completed, rewatches: [view('2026-03-05', '2026-03-01')] };
-    const watches = { '1': [view('2026-08-01')], '2': [], '3': [] };
+    const watches = { '1': [day('2026-08-01')], '2': [], '3': [] };
     const { rewatches } = derive(tracking, watches);
     expect(rewatches).toEqual([
       view('2026-03-05', '2026-03-01'),
@@ -265,20 +266,20 @@ describe('deriveSeasonTracking', () => {
 
   it('opens nothing for a completed season without a finish date', () => {
     const tracking = { ...completed, finishedAt: null };
-    expect(derive(tracking, { '1': [view('2026-06-01')], '2': [], '3': [] }).rewatches).toEqual([]);
+    expect(derive(tracking, { '1': [day('2026-06-01')], '2': [], '3': [] }).rewatches).toEqual([]);
   });
 
   it('only waits for aired episodes to close a rewatch', () => {
     const tracking = { ...completed, rewatches: [{ startedAt: '2026-06-01', finishedAt: null }] };
     const expected = [...episodes(2), { key: '3', airDate: '2026-12-31' }];
-    const watches = { '1': [view('2026-06-01')], '2': [view('2026-06-02')], '3': [] };
+    const watches = { '1': [day('2026-06-01')], '2': [day('2026-06-02')], '3': [] };
     expect(derive(tracking, watches, expected).rewatches).toEqual([
       view('2026-06-02', '2026-06-01'),
     ]);
   });
 
   it('opens no rewatch from viewings that were already stored', () => {
-    const watches = { '1': [view('2026-01-10'), view('2026-06-01')], '2': [], '3': [] };
+    const watches = { '1': [day('2026-01-10'), day('2026-06-01')], '2': [], '3': [] };
     expect(derive(completed, watches).rewatches).toHaveLength(1);
     const known = deriveSeasonTracking({
       tracking: completed,
@@ -291,7 +292,7 @@ describe('deriveSeasonTracking', () => {
     const added = deriveSeasonTracking({
       tracking: completed,
       episodes: episodes(3),
-      watches: { ...watches, '2': [view('2026-07-01')] },
+      watches: { ...watches, '2': [day('2026-07-01')] },
       baseline: watches,
       today: TODAY,
     });

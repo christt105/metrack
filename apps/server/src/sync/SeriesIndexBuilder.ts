@@ -6,6 +6,7 @@ import {
   type SyncInput,
 } from '@metrack/domain';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
+import type { SeriesIndexes } from './SeriesIndexes.js';
 import { loadSeriesOrdering } from './loadSeriesOrdering.js';
 import type { TvdbEpisodeIdCache } from './TvdbEpisodeIdCache.js';
 
@@ -17,7 +18,9 @@ type Input = Pick<SyncInput, 'movies' | 'series' | 'plays' | 'timeZone' | 'state
  * Builds, for each watched series linked to TMDB, what the planner needs to record its viewings by TMDB episode id:
  * the TMDB id of each watched episode TheTVDB knows (asked of TMDB's `/find` once and remembered, see
  * `TvdbEpisodeIdCache`) and the series' ordering. It runs where the sync runs, which has a TMDB key and no CPU
- * limit. A series whose ordering cannot be read gets no index, so it falls back to the library's numbering.
+ * limit. A series whose watched episodes are all recorded already (every one has a cached TMDB id and a viewing
+ * for each day it was played) is `settled`: it costs no TMDB request and the planner leaves it out. A series whose
+ * ordering cannot be read gets no index, so it falls back to the library's numbering.
  */
 export class SeriesIndexBuilder {
   constructor(
@@ -25,9 +28,10 @@ export class SeriesIndexBuilder {
     private readonly cache: TvdbEpisodeIdCache,
   ) {}
 
-  async build(input: Input): Promise<Map<string, SeriesIndex>> {
+  async build(input: Input): Promise<SeriesIndexes> {
     const { days } = collectSyncWatchDays(input);
     const indexes = new Map<string, SeriesIndex>();
+    const settled = new Set<string>();
     for (const item of input.series) {
       const watched = item.seasons
         .filter((season) => season.number > 0)
@@ -36,6 +40,10 @@ export class SeriesIndexBuilder {
       const stored = findStoredSeries(input.state, item);
       const tmdbId = stored?.tmdbId ?? item.tmdbId;
       if (tmdbId === null) continue;
+      if (stored && this.isRecorded(watched, days, input, stored.id)) {
+        settled.add(item.jellyfinId);
+        continue;
+      }
       try {
         const ordering = await loadSeriesOrdering(
           this.tmdb,
@@ -49,7 +57,27 @@ export class SeriesIndexBuilder {
       }
     }
     this.cache.flush();
-    return indexes;
+    return { indexes, settled };
+  }
+
+  /** Whether every watched episode is known to TMDB by id and has a viewing on each day it was played. */
+  private isRecorded(
+    watched: readonly LibraryEpisode[],
+    days: ReadonlyMap<string, string[]>,
+    input: Input,
+    seriesId: number,
+  ): boolean {
+    const stored = input.state.watches?.find((row) => row.seriesId === seriesId)?.watched;
+    if (!stored) return false;
+    return watched.every((episode) => {
+      if (episode.tvdbId === null || episode.tvdbId === undefined) return false;
+      const tmdbId = this.cache.lookup(episode.tvdbId, input.today);
+      if (typeof tmdbId !== 'number') return false;
+      const viewings = stored[String(tmdbId)];
+      return (days.get(episode.jellyfinId) ?? []).every((day) =>
+        viewings?.some((viewing) => viewing.finishedAt === day),
+      );
+    });
   }
 
   private async episodeIds(

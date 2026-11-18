@@ -12,6 +12,7 @@ import {
 const TODAY = '2026-11-17';
 
 const view = (day: string): Viewing => ({ startedAt: day, finishedAt: day });
+const undated: Viewing = { startedAt: null, finishedAt: null };
 const plain = (finishedAt: string): Viewing => ({ startedAt: null, finishedAt });
 
 function librarySeason(
@@ -210,10 +211,8 @@ describe('numbered sync (no TMDB index)', () => {
       ],
       days: { s1e1: ['2026-01-05'] },
     });
-    expect(series?.watches).toEqual({ s1e1: [view('2026-01-05')], s1e2: [], s1e3: [] });
-    expect(change?.status).toBe('completed');
-    expect(change?.rewatches).toBeUndefined();
-    expect(change?.watchedEpisodes).toBe(3);
+    expect(series?.watches).toEqual({ s1e1: [undated, view('2026-01-05')], s1e2: [], s1e3: [] });
+    expect(change).toBeUndefined();
   });
 
   it('opens a rewatch when a completed season has a new play after its finish', () => {
@@ -289,21 +288,20 @@ describe('numbered sync (no TMDB index)', () => {
       ],
       days: { s1e1: ['2026-06-01'], s1e2: ['2026-06-02'], s1e3: ['2026-06-03'] },
     });
-    expect(change?.rewatches).toBeUndefined();
-    expect(change?.status).toBe('completed');
+    expect(change).toBeUndefined();
     expect(Object.keys(series?.watches ?? {})).toHaveLength(3);
   });
 
-  it('materializes a completed season without watches before adding partial plays', () => {
+  it('materializes a completed season without watches before adding partial plays and keeps its hand-set dates', () => {
     const { change, series } = one({
       seasons: [librarySeason(12)],
       stored: [stored({ status: 'completed', episodeCount: 12, watchedCount: 12 })],
       days: { s1e1: ['2026-01-05'], s1e2: ['2026-01-06'] },
     });
     expect(Object.keys(series?.watches ?? {})).toHaveLength(12);
-    expect(series?.watches?.s1e1).toEqual([view('2026-01-05')]);
+    expect(series?.watches?.s1e1).toEqual([undated, view('2026-01-05')]);
     expect(series?.watches?.s1e9).toEqual([]);
-    expect(change?.watchedEpisodes).toBe(12);
+    expect(change).toBeUndefined();
   });
 
   it('records only the played episodes of an in-progress season without watches', () => {
@@ -512,8 +510,8 @@ describe('sync by TMDB episode id', () => {
   });
 
   it('warns when TMDB knows the episode but the ordering lacks it', () => {
-    const index = jujutsuIndex(true);
-    index.episodeIds[String(TVDB)] = 555;
+    const base = jujutsuIndex(true);
+    const index = { ...base, episodeIds: { ...base.episodeIds, [String(TVDB)]: 555 } };
     const plan = run({
       seasons: jujutsuLibrary(),
       stored: [stored({ tmdbSeasonNumber: 1 })],

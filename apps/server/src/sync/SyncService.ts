@@ -38,7 +38,7 @@ export class SyncService {
       today: this.now().toISOString().slice(0, 10),
       timeZone: this.options.timeZone,
     };
-    return planSync({ ...input, indexes: await this.indexes?.build(input) });
+    return planSync({ ...input, ...(await this.indexes?.build(input)) });
   }
 
   async apply(): Promise<{ plan: SyncPlan; result: SyncApplyResult }> {

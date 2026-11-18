@@ -18,6 +18,7 @@ export function planSync(input: SyncInput): SyncPlan {
     input.state,
     input.today,
     input.indexes ?? new Map(),
+    input.settled ?? new Set(),
   );
   return {
     movies: movies.changes,

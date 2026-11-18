@@ -14,6 +14,8 @@ export interface SyncInput {
    * episode id in the seasons of its ordering; one without it, by the library's numbering.
    */
   indexes?: ReadonlyMap<string, SeriesIndex>;
+  /** Jellyfin series ids whose watched episodes are all recorded already; the planner leaves them out. */
+  settled?: ReadonlySet<string>;
   /** Today as `YYYY-MM-DD`; episodes airing later are not expected to be watched yet. */
   today: string;
   /** IANA time zone used to turn playback timestamps into dates. */

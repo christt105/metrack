@@ -312,7 +312,11 @@ describe('reorganizing the seasons when the ordering changes', () => {
       .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (2, ?, ?)')
       .run(
         seriesId,
-        JSON.stringify({ s1e1: [day('2026-03-01')], s1e2: [], s2e1: [day('2026-03-05')] }),
+        JSON.stringify({
+          s1e1: [day('2026-03-01')],
+          s1e2: [day('2026-03-02')],
+          s2e1: [day('2026-03-05')],
+        }),
       );
     await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
     const entries = api.db

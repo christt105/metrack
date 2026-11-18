@@ -45,7 +45,7 @@ export class UserSync {
         today: this.now().toISOString().slice(0, 10),
         timeZone: this.timeZone,
       };
-      const plan = planSync({ ...input, indexes: await indexes?.build(input) });
+      const plan = planSync({ ...input, ...(await indexes?.build(input)) });
       const outcome = { plan, created: 0, unfetched: unfetched.length, refreshed: 0 };
       if (!apply) return outcome;
       if (!hasChanges(plan)) {

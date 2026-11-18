@@ -79,9 +79,47 @@ describe('deriveSeasonDates', () => {
     ).toEqual({ startedAt: '2026-01-01', finishedAt: '2026-02-02' });
   });
 
-  it('reports whether any episode has a dated viewing', () => {
-    expect(hasEpisodeDates(['a', 'b'], { a: [], b: [view('2026-01-01')] })).toBe(true);
-    expect(hasEpisodeDates(['a', 'b'], { a: [], c: [view('2026-01-01')] })).toBe(false);
+  it('keeps the stored start when a watched episode has no start date, even if others do', () => {
+    const undated = { startedAt: null, finishedAt: null };
+    expect(
+      deriveSeasonDates(
+        { startedAt: '2026-01-01', finishedAt: '2026-02-02' },
+        episodes,
+        { a: [undated, view('2026-06-01')], b: [view('2026-03-01')], c: [view('2026-03-02')] },
+        TODAY,
+      ),
+    ).toEqual({ startedAt: '2026-01-01', finishedAt: '2026-02-02' });
+  });
+
+  it('keeps the stored finish when a first viewing has no finish date', () => {
+    expect(
+      deriveSeasonDates(
+        { startedAt: '2026-01-01', finishedAt: '2026-02-02' },
+        episodes,
+        { a: [], b: [view('2026-03-01')], c: [view('2026-03-02')] },
+        TODAY,
+      ),
+    ).toEqual({ startedAt: '2026-01-01', finishedAt: '2026-02-02' });
+  });
+
+  it('derives both from fully dated manual marking', () => {
+    const watches = { a: [view('2026-03-01')], b: [view('2026-03-02')], c: [view('2026-03-03')] };
+    expect(
+      deriveSeasonDates(
+        { startedAt: '2026-01-01', finishedAt: '2026-02-02' },
+        episodes,
+        watches,
+        TODAY,
+      ),
+    ).toEqual({ startedAt: '2026-03-01', finishedAt: '2026-03-03' });
+  });
+
+  it('reports whether the start follows the episodes', () => {
+    expect(hasEpisodeDates(['a', 'b'], { a: [view('2026-01-01')], b: [view('2026-01-02')] })).toBe(
+      true,
+    );
+    expect(hasEpisodeDates(['a', 'b'], { a: [], b: [view('2026-01-01')] })).toBe(false);
+    expect(hasEpisodeDates(['a', 'b'], { c: [view('2026-01-01')] })).toBe(false);
   });
 });
 

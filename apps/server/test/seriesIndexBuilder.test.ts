@@ -139,7 +139,7 @@ const finds = (net: ReturnType<typeof pathFetch>) => net.calls.filter((c) => c.i
 describe('SeriesIndexBuilder', () => {
   it('maps a TheTVDB episode id to its TMDB id and reads the regular seasons as the ordering', async () => {
     const net = pathFetch(routes());
-    const indexes = await builder(net).build(input(library([11516722]), ['e1']));
+    const { indexes } = await builder(net).build(input(library([11516722]), ['e1']));
     expect(indexes.get('js')).toEqual({
       episodeIds: { '11516722': 6701926 },
       seasons: [{ number: 1, title: 'Season 1', firstAirDate: '2020-10-03' }],
@@ -153,7 +153,7 @@ describe('SeriesIndexBuilder', () => {
 
   it('reads the episode group of the stored series as the ordering', async () => {
     const net = pathFetch(routes());
-    const indexes = await builder(net).build(input(library([11516722]), ['e1'], GROUP));
+    const { indexes } = await builder(net).build(input(library([11516722]), ['e1'], GROUP));
     expect(indexes.get('js')?.seasons.map((s) => s.number)).toEqual([1, 2]);
     expect(indexes.get('js')?.episodes).toEqual([
       { tmdbId: 6701925, seasonNumber: 1, number: 1, airDate: '2020-10-03' },
@@ -169,7 +169,7 @@ describe('SeriesIndexBuilder', () => {
       tmdb: 6701926,
     });
     const second = pathFetch(routes());
-    const indexes = await builder(second).build(input(library([11516722]), ['e1']));
+    const { indexes } = await builder(second).build(input(library([11516722]), ['e1']));
     expect(finds(second)).toHaveLength(0);
     expect(indexes.get('js')?.episodeIds).toEqual({ '11516722': 6701926 });
   });
@@ -180,7 +180,7 @@ describe('SeriesIndexBuilder', () => {
     expect(finds(first)).toHaveLength(1);
 
     const soon = pathFetch(routes());
-    const indexes = await builder(soon).build(input(library([42]), ['e1'], null, '2026-11-20'));
+    const { indexes } = await builder(soon).build(input(library([42]), ['e1'], null, '2026-11-20'));
     expect(finds(soon)).toHaveLength(0);
     expect(indexes.get('js')?.episodeIds).toEqual({});
 
@@ -197,16 +197,46 @@ describe('SeriesIndexBuilder', () => {
     expect(finds(net).map((c) => new URL(c).pathname)).toEqual(['/3/find/11516722']);
   });
 
+  it('settles a series whose watched episodes are all recorded and does not ask TMDB about it', async () => {
+    const first = pathFetch(routes());
+    await builder(first).build(input(library([11516722]), ['e1']));
+    const recorded = {
+      ...input(library([11516722]), ['e1']),
+      state: {
+        ...state(),
+        watches: [
+          {
+            seriesId: 1,
+            watched: { '6701926': [{ startedAt: '2026-11-18', finishedAt: '2026-11-18' }] },
+          },
+        ],
+      },
+    };
+    const second = pathFetch(routes());
+    const { indexes, settled } = await builder(second).build(recorded);
+    expect(second.calls).toEqual([]);
+    expect(indexes.size).toBe(0);
+    expect([...settled]).toEqual(['js']);
+
+    const newDay = pathFetch(routes());
+    const again = await builder(newDay).build({
+      ...recorded,
+      plays: [{ ...recorded.plays[0]!, playedAt: '2026-11-19T12:00:00Z' }],
+    });
+    expect(again.settled.size).toBe(0);
+    expect(again.indexes.has('js')).toBe(true);
+  });
+
   it('does nothing for a series without watched episodes', async () => {
     const net = pathFetch(routes());
-    const indexes = await builder(net).build(input(library([11516722]), []));
+    const { indexes } = await builder(net).build(input(library([11516722]), []));
     expect(indexes.size).toBe(0);
     expect(net.calls).toEqual([]);
   });
 
   it('gives no index when the ordering cannot be read, so the series keeps the library numbering', async () => {
     const net = pathFetch({ [`${API}/find/11516722`]: { tv_results: [], tv_episode_results: [] } });
-    const indexes = await builder(net).build(input(library([11516722]), ['e1']));
+    const { indexes } = await builder(net).build(input(library([11516722]), ['e1']));
     expect(indexes.size).toBe(0);
   });
 
@@ -226,7 +256,7 @@ describe('SeriesIndexBuilder', () => {
       ),
       cache,
     );
-    const indexes = await failing.build(input(library([11516722]), ['e1']));
+    const { indexes } = await failing.build(input(library([11516722]), ['e1']));
     expect(indexes.get('js')?.episodeIds).toEqual({});
     expect(cache.lookup(11516722, '2026-11-18')).toBeUndefined();
   });

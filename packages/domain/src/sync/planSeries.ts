@@ -23,10 +23,12 @@ export function planSeries(
   state: SyncState,
   today: string,
   indexes: ReadonlyMap<string, SeriesIndex> = new Map(),
+  settled: ReadonlySet<string> = new Set(),
 ): SeriesPlan {
   const plan: SeriesPlan = { changes: [], unlinked: [], warnings: [] };
   const storedWatches = new Map((state.watches ?? []).map((row) => [row.seriesId, row.watched]));
   for (const item of library) {
+    if (settled.has(item.jellyfinId)) continue;
     const watchedSeasons = item.seasons.filter((season) =>
       season.episodes.some((episode) => watchDays.has(episode.jellyfinId)),
     );

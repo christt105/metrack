@@ -17,15 +17,6 @@ function latest(dates: readonly string[]): string | null {
   return dates.length === 0 ? null : dates.reduce((a, b) => (a >= b ? a : b));
 }
 
-function startDates(watches: EpisodeWatches): string[] {
-  return Object.values(watches).flatMap((viewings) =>
-    viewings.flatMap((viewing) => {
-      const date = viewing.startedAt ?? viewing.finishedAt;
-      return date === null ? [] : [date];
-    }),
-  );
-}
-
 function lastFinish(input: SeasonTrackingInput): string | null {
   const { finishedAt, rewatches } = input.tracking;
   return latest([
@@ -123,7 +114,6 @@ export function deriveSeasonTracking(input: SeasonTrackingInput): DerivedSeasonT
 
   const next: DerivedSeasonTracking = { ...tracking, completes: false };
   Object.assign(next, deriveSeasonDates(tracking, input.episodes, watches, today));
-  if (next.startedAt === null) next.startedAt = earliest(startDates(watches));
   if (next.status === 'planned' || next.status === 'paused') next.status = 'in_progress';
   const expected = input.episodes;
   const allWatched =
