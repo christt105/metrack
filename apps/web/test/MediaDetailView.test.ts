@@ -41,7 +41,6 @@ describe('MediaDetailView', () => {
     tmdbId: 20,
     title: 'Dark',
     seasons: [{ id: 70, number: 1, tmdbSeasonNumber: 1, status: 'planned', rating: null }],
-    overrides: [],
   };
   const season = { ...movie, id: 70, seriesId: 7, number: 1, title: null };
   const groups = (wrapper: { findAll: (s: string) => { text: () => string }[] }) =>
@@ -65,13 +64,7 @@ describe('MediaDetailView', () => {
   it('lists the manage groups of a series in order', async () => {
     const { wrapper } = await mountDetail('series', series);
     await flushPromises();
-    expect(groups(wrapper)).toEqual([
-      'Images',
-      'Season order',
-      'Season settings',
-      'Metadata',
-      'Danger zone',
-    ]);
+    expect(groups(wrapper)).toEqual(['Images', 'Season order', 'Metadata', 'Danger zone']);
   });
 
   it('lists the manage groups of a season, a game and a book', async () => {

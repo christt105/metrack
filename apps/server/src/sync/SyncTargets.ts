@@ -1,7 +1,6 @@
 import type {
   EpisodeWatchRepository,
   MovieRepository,
-  SeasonOverrideRepository,
   SeasonRepository,
   SeriesRepository,
   UnlinkedTitleRepository,
@@ -11,7 +10,6 @@ export interface SyncTargets {
   movies: MovieRepository;
   series: SeriesRepository;
   seasons: SeasonRepository;
-  overrides: SeasonOverrideRepository;
   unlinked: UnlinkedTitleRepository;
   episodeWatches: EpisodeWatchRepository;
 }

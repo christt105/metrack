@@ -79,17 +79,8 @@ const jobs = new UserJobContext({
   ntfy: config.ntfyServer,
   logger,
 });
-const {
-  movies,
-  series,
-  seasons,
-  videogames,
-  books,
-  overrides,
-  unlinked,
-  releaseAlerts,
-  metadataStates,
-} = repositories;
+const { movies, series, seasons, videogames, books, unlinked, releaseAlerts, metadataStates } =
+  repositories;
 
 const imageStore = createImageStore(
   db,
@@ -126,7 +117,6 @@ if (tmdb) {
               movies,
               series,
               seasons,
-              overrides,
               alerts: releaseAlerts,
             }),
             source,
@@ -160,7 +150,7 @@ titleProviders.register(
 );
 
 const edit = createEditServices({
-  sources: { movies, series, seasons, videogames, books, overrides },
+  sources: { movies, series, seasons, videogames, books },
   unlinked,
   states: metadataStates,
   images: imageStore,
@@ -188,7 +178,6 @@ const syncServices =
             movies,
             series,
             seasons,
-            overrides,
             unlinked,
             episodeWatches: repositories.episodeWatches,
           },
@@ -265,7 +254,6 @@ const connector = new ConnectorService({
     movies,
     series,
     seasons,
-    overrides,
     unlinked,
     episodeWatches: repositories.episodeWatches,
   },
@@ -273,7 +261,6 @@ const connector = new ConnectorService({
     movies,
     series,
     seasons,
-    overrides,
     unlinked,
     episodeWatches: repositories.episodeWatches,
   }),

@@ -94,7 +94,6 @@ function library(tvdbIds: (number | null)[]): LibrarySeries {
 const state = (group: string | null = null): SyncState => ({
   movies: [],
   seasons: [],
-  overrides: [],
   unlinked: [],
   series: [
     {

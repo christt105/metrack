@@ -58,13 +58,12 @@ export function planSeries(
     }
 
     const storedSeasons = existing ? state.seasons.filter((s) => s.seriesId === existing.id) : [];
-    const overrides = existing ? state.overrides.filter((o) => o.seriesId === existing.id) : [];
     const index = indexes.get(item.jellyfinId);
     const tmdbId = existing?.tmdbId ?? item.tmdbId;
     const drafted =
       index && tmdbId !== null
         ? draftOrderedSeasons(item.title, watchedSeasons, storedSeasons, watchDays, index)
-        : draftNumberedSeasons(item.title, watchedSeasons, storedSeasons, overrides, watchDays);
+        : draftNumberedSeasons(item.title, watchedSeasons, storedSeasons, watchDays);
     plan.warnings.push(...drafted.warnings);
     const {
       changes: seasons,

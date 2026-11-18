@@ -103,11 +103,8 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
         };
       },
       extend: async (entity) => {
-        const [seasons, overrides] = await Promise.all([
-          sources.seasons.listBySeries(entity.id),
-          sources.overrides.listBySeries(entity.id),
-        ]);
-        return { seasons, overrides };
+        const seasons = await sources.seasons.listBySeries(entity.id);
+        return { seasons };
       },
     },
     seasons: {

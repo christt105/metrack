@@ -9,7 +9,7 @@ export interface AccountRepository {
   /** Users whose request was made at or before the moment, ordered by id. */
   dueForDeletion(requestedAtOrBefore: string): Promise<number[]>;
   /**
-   * Deletes the user and everything personal they hold: entries, reviews, season overrides, the unlinked
+   * Deletes the user and everything personal they hold: entries, reviews, the unlinked
    * inbox, sent alerts, settings, sessions, tokens, image ownership and the handle. Catalog rows added by
    * hand pass to the owner (user 1), shared catalog rows that nobody else has any more are removed, and
    * nothing of anyone else is touched. Answers the hashes of the images the user owned, which may now be

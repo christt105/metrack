@@ -124,27 +124,15 @@ describe.each(backends)('$name: users cannot reach each other', (backend) => {
     expect((await bob.movies.create({ ...emptyMovie(), tmdbId: 77, title: 'x' })).id).toBe(mine.id);
   });
 
-  it('removes only the deleting user season entries and overrides with a series', async () => {
+  it('removes only the deleting user season entries with a series', async () => {
     const series = await alice.series.create({ ...emptySeries(), tmdbId: 10, title: 'Lupin' });
     await bob.series.create({ ...emptySeries(), tmdbId: 10, title: 'Lupin' });
     const season = await alice.seasons.create({ ...emptySeason(), seriesId: series.id });
     expect(await bob.seasons.listBySeries(series.id)).toEqual([]);
     await bob.seasons.create({ ...emptySeason(), seriesId: series.id });
-    await alice.overrides.set({
-      seriesId: series.id,
-      tmdbSeasonNumber: 1,
-      number: 2,
-      title: null,
-      jellyfinSeasonId: null,
-    });
-    expect(await bob.overrides.listBySeries(series.id)).toEqual([]);
-    expect(await bob.overrides.list()).toEqual([]);
-    expect(await alice.overrides.list()).toHaveLength(1);
-    expect(await bob.overrides.delete(series.id, 1)).toBe(false);
 
     expect(await alice.series.delete(series.id)).toBe(true);
     expect(await alice.seasons.get(season.id)).toBeUndefined();
-    expect(await alice.overrides.listBySeries(series.id)).toEqual([]);
     expect(await bob.seasons.listBySeries(series.id)).toHaveLength(1);
     expect(await bob.series.findByTmdbId(10)).toMatchObject({ title: 'Lupin' });
     expect(await count(harness, 'series')).toBe(1);

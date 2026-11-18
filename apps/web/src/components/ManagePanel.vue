@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { MEDIA_TYPE_OF_COLLECTION } from '@metrack/domain';
-import type { Collection, Season, SeasonOverride, SeriesDetail } from '@metrack/domain';
+import type { Collection, Season, SeriesDetail } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { messages } from '../i18n/messages';
 import { isTracked } from '../logic/fieldSchemas';
@@ -12,7 +12,6 @@ import ManageGroup from './ManageGroup.vue';
 import MetadataRefresh from './MetadataRefresh.vue';
 import RewatchList from './RewatchList.vue';
 import SeasonOrderingPanel from './SeasonOrderingPanel.vue';
-import SeasonOverrideEditor from './SeasonOverrideEditor.vue';
 
 const props = defineProps<{
   rewatchesLocked?: boolean;
@@ -43,7 +42,6 @@ const viewingsTitle = computed(() =>
 const hasUnlinkedSeasons = computed(() =>
   (series.value?.seasons ?? []).some((s) => s.number >= 1 && s.tmdbSeasonNumber === null),
 );
-const overrides = computed<SeasonOverride[]>(() => series.value?.overrides ?? []);
 const redirectTo = computed(() => (seasonOf.value ? `/series/${seasonOf.value.seriesId}` : '/'));
 
 function onArtwork(updated: AnyDetail): void {
@@ -81,17 +79,6 @@ function onArtwork(updated: AnyDetail): void {
         :has-unlinked-seasons="hasUnlinkedSeasons"
         @changed="emit('load')"
       />
-      <ManageDisclosure
-        v-if="series"
-        :title="messages.manage.seasonSettings"
-        :hint="messages.manage.seasonSettingsHint"
-      >
-        <SeasonOverrideEditor
-          :series-id="series.id"
-          :overrides="overrides"
-          @changed="emit('load')"
-        />
-      </ManageDisclosure>
       <ManageGroup v-if="refreshable" :title="messages.manage.metadata">
         <MetadataRefresh
           :id="detail.id"

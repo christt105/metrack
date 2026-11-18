@@ -27,7 +27,6 @@ describe('data owners migration', () => {
       'movie_entry',
       'series_entry',
       'season_entry',
-      'season_override',
       'unlinked_title',
       'release_alert',
     ]) {

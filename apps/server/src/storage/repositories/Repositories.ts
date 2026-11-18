@@ -9,7 +9,6 @@ import type { MovieRepository } from './MovieRepository.js';
 import type { ReleaseAlertRepository } from './ReleaseAlertRepository.js';
 import type { EpisodeWatchRepository } from './EpisodeWatchRepository.js';
 import type { SeasonEpisodesRepository } from './SeasonEpisodesRepository.js';
-import type { SeasonOverrideRepository } from './SeasonOverrideRepository.js';
 import type { SeasonRepository } from './SeasonRepository.js';
 import type { SessionRepository } from './SessionRepository.js';
 import type { SeriesRepository } from './SeriesRepository.js';
@@ -26,7 +25,6 @@ export interface Repositories {
   seasons: SeasonRepository;
   videogames: VideogameRepository;
   books: BookRepository;
-  overrides: SeasonOverrideRepository;
   seasonEpisodes: SeasonEpisodesRepository;
   episodeWatches: EpisodeWatchRepository;
   unlinked: UnlinkedTitleRepository;

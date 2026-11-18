@@ -79,7 +79,7 @@ A `MediaSummary` has `type`, `id`, `title`, `subtitle`, `releaseDate`, `cover`, 
 
 ### Per collection
 
-- `GET /api/{collection}/{id}`: the entity as `MediaDetail<T>`, which adds `editedFields` (fields a refresh will not overwrite) and `fetchedAt`. A series answers `SeriesDetail`: it also carries `seasons` (ordered by number) and `overrides`.
+- `GET /api/{collection}/{id}`: the entity as `MediaDetail<T>`, which adds `editedFields` (fields a refresh will not overwrite) and `fetchedAt`. A series answers `SeriesDetail`: it also carries `seasons` (ordered by number).
 - `POST /api/{collection}`: creates an entity and answers 201 with its detail. The body is `CreateInput`: any entity field except `id`, `cover` and `banner`. `title` is required. Status defaults to `planned`. There is no collection route for seasons: a season is never created by hand, it comes from the series' TMDB ordering (a refresh, switching the ordering, the release watcher) or from the Jellyfin sync, and `POST /api/seasons` answers 404.
 - `PATCH /api/{collection}/{id}`: edits any subset of the fields (`EditablePatch`) and answers the new detail. At least one field is required. See the rules below.
 - `DELETE /api/{collection}/{id}`: 204. Deleting a series deletes its seasons. Image files stay in the store until `POST /api/images/cleanup`.
@@ -107,14 +107,6 @@ The tracking fields are `status`, `startedAt`, `finishedAt`, `rating`, `review`,
 
 - `POST /api/{collection}/{id}/rewatches` with `{ "date": "YYYY-MM-DD" }` or `{ "startedAt"?: "YYYY-MM-DD" | null, "finishedAt": "YYYY-MM-DD" }` (`RewatchRequest`): adds a closed viewing. Only completed items can be rewatched, otherwise 409 `invalid_rewatch`. Answers 201 with the detail.
 - `DELETE /api/{collection}/{id}/rewatches/{date}`: removes the closed viewing that finished on that date, 404 if there is none.
-
-### Season overrides
-
-Manual corrections keyed by a series and a TMDB season number (`SeasonOverride`). The body of `PUT` is `SeasonOverrideInput`: `number`, `title` and `jellyfinSeasonId`, each optional and null by default.
-
-- `GET /api/series/{id}/overrides`
-- `PUT /api/series/{id}/overrides/{tmdbSeasonNumber}`: creates or replaces. Answers the override.
-- `DELETE /api/series/{id}/overrides/{tmdbSeasonNumber}`: 204 or 404.
 
 ### Season episodes
 
@@ -167,7 +159,7 @@ Kinds are `cover` and `banner` (`IMAGE_KINDS`); books only have `cover`.
 The routes the home connector syncs through (see [connector.md](connector.md)). Only API tokens reach them (a browser session answers 403 `token_required`). A `connector` token acts on every user with a Jellyfin account in their settings; a personal `write` token only on its own user (403 `connector_other_user` for another one), and a `read` token cannot post. A user with no Jellyfin account set answers 404.
 
 - `GET /api/connector/users`: the users the token may act on, `[{ id, name, jellyfinUser }]`.
-- `GET /api/connector/users/{id}/sync-state`: `{ contentVersion, state }`, where `state` is the `SyncState` (movies, series, seasons, overrides, unlinked and, from the episode-tracking release on, `watches`: the user's watched episodes of each series that has any, `[{ seriesId, watched }]`) and `contentVersion` the user's content version at that moment.
+- `GET /api/connector/users/{id}/sync-state`: `{ contentVersion, state }`, where `state` is the `SyncState` (movies, series, seasons, unlinked and, from the episode-tracking release on, `watches`: the user's watched episodes of each series that has any, `[{ seriesId, watched }]`) and `contentVersion` the user's content version at that moment.
 - `POST /api/connector/users/{id}/sync` with `{ contentVersion, plan }` (`ConnectorSyncRequest`): 409 `content_changed` when the content version moved since it was read; 400 `plan_foreign_id` when the plan names a movie, series or season that is not the user's; otherwise it writes the plan with the same applier as `POST /api/sync/apply` (tracking fields and external ids only, never notes, reviews, ratings or images), bumps the user's content version and answers `{ result: SyncApplyResult, created: EntityRef[] }`. On the home server the writes share one SQLite transaction. On D1, which has no interactive transactions, they run one after another, so a failure halfway leaves what was written and the next plan, computed from the new state, finishes the job. A series change may carry `watches` (the series' merged watched episodes, keyed by TMDB episode id or `s<season>e<episode>`) and each season change `watchedEpisodes` and a nullable `jellyfinSeasonId`; all are optional, so a connector that predates them keeps working.
 - `POST /api/connector/users/{id}/refresh/{type}/{titleId}` (`type` is `movie` or `series`): fetches the provider metadata of one title, 501 `no_metadata_source` when none is configured.
 
@@ -194,7 +186,7 @@ The release alert routes below follow the same rules, except that the users they
 
 ## Account
 
-- `GET /api/account/export/data`: the signed-in user's data as JSON (`AccountExport`), the content of `data.json`: `format`, `exportedAt`, `user`, `settings` (without `ntfyTopic`), `publicPage`, `tokens` (`ApiToken[]`, no secrets or hashes), `invites` (the owner's invitations with who used them, never their codes; empty for everyone else), the merged `movies`, `series`, `seasons`, `videogames`, `books`, `seasonOverrides`, `episodeWatches` (per series the user has a per-episode record for: `seriesId` and `watched`, the episode keys with their viewings), `unlinkedTitles`, `releaseAlerts` and `images` (hash, ref, size and the archive path `images/<hash>.<ext>` in `file`). The web app calls it, fetches each file with `GET /api/images/{hash}` and builds the ZIP in the browser (`data.json` plus `images/`, named `metrack-export-user-<id>-<date>.zip`); an image it cannot fetch gets `file: null`. The home server sets `file` to null for an image whose bytes are missing; the Worker does not check the store, so there `file` is set for every image row. A token may call it.
+- `GET /api/account/export/data`: the signed-in user's data as JSON (`AccountExport`), the content of `data.json`: `format`, `exportedAt`, `user`, `settings` (without `ntfyTopic`), `publicPage`, `tokens` (`ApiToken[]`, no secrets or hashes), `invites` (the owner's invitations with who used them, never their codes; empty for everyone else), the merged `movies`, `series`, `seasons`, `videogames`, `books`, `episodeWatches` (per series the user has a per-episode record for: `seriesId` and `watched`, the episode keys with their viewings), `unlinkedTitles`, `releaseAlerts` and `images` (hash, ref, size and the archive path `images/<hash>.<ext>` in `file`). The web app calls it, fetches each file with `GET /api/images/{hash}` and builds the ZIP in the browser (`data.json` plus `images/`, named `metrack-export-user-<id>-<date>.zip`); an image it cannot fetch gets `file: null`. The home server sets `file` to null for an image whose bytes are missing; the Worker does not check the store, so there `file` is set for every image row. A token may call it.
 - `GET /api/account/export` (home server only; the Worker answers 404): the same export as a ready-made ZIP (`application/zip`, `Content-Disposition: attachment`), built in memory on the server, for the CLI and other programs. A token may call it.
 - `GET /api/account` (browser session only): `AccountStatus`, `{ deletion: { requestedAt, deleteAt } | null, canDelete, needsWelcome }`; `canDelete` is false for the owner and `needsWelcome` is true until a user who joined by invitation confirms their name and handle.
 - `POST /api/account/deletion` (browser session only; `DeleteAccountRequest`: `{ confirm }`): schedules the deletion 7 days after the first request (asking again keeps the original date) and answers the `AccountDeletion`. `confirm` must be the user's handle (any case) or `delete`, otherwise 400 `confirmation_mismatch`; 403 `owner_cannot_delete` for user 1; a token gets 403 `session_required`.

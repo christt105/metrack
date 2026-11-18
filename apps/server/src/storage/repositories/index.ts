@@ -7,7 +7,6 @@ export type { MetadataStateRepository } from './MetadataStateRepository.js';
 export type { MovieRepository } from './MovieRepository.js';
 export type { NewReleaseAlert } from './NewReleaseAlert.js';
 export type { ReleaseAlertRepository } from './ReleaseAlertRepository.js';
-export type { SeasonOverrideRepository } from './SeasonOverrideRepository.js';
 export type { SeasonEpisodesRepository } from './SeasonEpisodesRepository.js';
 export type { EpisodeWatchRepository } from './EpisodeWatchRepository.js';
 export type { StoredEpisodeWatches } from './StoredEpisodeWatches.js';

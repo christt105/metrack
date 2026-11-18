@@ -317,7 +317,6 @@ describe('erasing an account', () => {
       'season_entry',
       'videogame_entry',
       'book_entry',
-      'season_override',
       'unlinked_title',
       'release_alert',
       'session',

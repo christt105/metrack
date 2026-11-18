@@ -130,7 +130,6 @@ function run(input: Run) {
       movies: [],
       series: existing,
       seasons: input.stored ?? [],
-      overrides: [],
       unlinked: [],
       ...(input.watches
         ? { watches: [{ seriesId: 1, watched: input.watches, skipped: input.skipped ?? [] }] }
