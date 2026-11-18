@@ -4,4 +4,5 @@ import type { EpisodeWatches } from '@metrack/domain';
 export interface ExportedEpisodeWatches {
   seriesId: number;
   watched: EpisodeWatches;
+  skipped: string[];
 }

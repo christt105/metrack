@@ -13,6 +13,8 @@ export interface SeasonTrackingInput {
    * rewatch; without it every viewing counts as new.
    */
   baseline?: EpisodeWatches;
+  /** Keys of the episodes the user skipped: not owed for the season to complete. */
+  skipped?: ReadonlySet<string>;
   /** Today as `YYYY-MM-DD`; episodes airing later are not expected to be watched yet. */
   today: string;
 }

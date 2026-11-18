@@ -131,14 +131,16 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
     {
       seasonId: season.id,
       watchedCount: 1,
+      skippedCount: 0,
       completes: false,
       tracking: { status: 'in_progress', startedAt: null, finishedAt: null, rewatches: [] },
     },
   ]);
   await owner.episodeWatches.get(series.id);
+  await owner.episodeWatches.getSkipped(series.id);
   await owner.episodeWatches.list();
   await owner.episodeWatches.listForSeries(series.id);
-  await owner.episodeWatches.replace(1, series.id, {});
+  await owner.episodeWatches.replace(1, series.id, {}, [], ['1']);
   await owner.overrides.set({
     seriesId: series.id,
     tmdbSeasonNumber: 1,

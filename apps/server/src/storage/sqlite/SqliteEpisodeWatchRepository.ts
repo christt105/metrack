@@ -2,7 +2,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { EpisodeWatches, SeasonEntryUpdate } from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
 import { episodeWatchesFromRow } from '../mapping/episodeWatchesFromRow.js';
-import { UPDATE_TRACKING_SQL, UPSERT_WATCHES_SQL } from '../mapping/episodeWatchesSql.js';
+import {
+  UPDATE_TRACKING_SQL,
+  UPSERT_WATCHES_KEEP_SKIPPED_SQL,
+  UPSERT_WATCHES_SQL,
+} from '../mapping/episodeWatchesSql.js';
 import { seasonEntryUpdateParams } from '../mapping/seasonEntryUpdateParams.js';
 import type { EpisodeWatchRepository } from '../repositories/EpisodeWatchRepository.js';
 import type { StoredEpisodeWatches } from '../repositories/StoredEpisodeWatches.js';
@@ -27,12 +31,20 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
       .map(episodeWatchesFromRow);
   }
 
+  async getSkipped(seriesId: number): Promise<string[]> {
+    const row = this.db
+      .prepare('SELECT * FROM series_episode_entry WHERE user_id = ? AND series_id = ?')
+      .get(this.scope.userId(), seriesId);
+    return row ? episodeWatchesFromRow(row).skipped : [];
+  }
+
   async set(
     seriesId: number,
     watched: EpisodeWatches,
     seasons: readonly SeasonEntryUpdate[] = [],
+    skipped?: readonly string[],
   ): Promise<void> {
-    await this.replace(this.scope.userId(), seriesId, watched, seasons);
+    await this.replace(this.scope.userId(), seriesId, watched, seasons, skipped);
   }
 
   async listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]> {
@@ -47,11 +59,20 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
     seriesId: number,
     watched: EpisodeWatches,
     seasons: readonly SeasonEntryUpdate[] = [],
+    skipped?: readonly string[],
   ): Promise<void> {
     const own = !this.db.isTransaction;
     if (own) this.db.exec('BEGIN');
     try {
-      this.db.prepare(UPSERT_WATCHES_SQL).run(userId, seriesId, JSON.stringify(watched));
+      if (skipped === undefined) {
+        this.db
+          .prepare(UPSERT_WATCHES_KEEP_SKIPPED_SQL)
+          .run(userId, seriesId, JSON.stringify(watched));
+      } else {
+        this.db
+          .prepare(UPSERT_WATCHES_SQL)
+          .run(userId, seriesId, JSON.stringify(watched), JSON.stringify(skipped));
+      }
       for (const update of seasons) {
         this.db.prepare(UPDATE_TRACKING_SQL).run(...seasonEntryUpdateParams(userId, update));
       }

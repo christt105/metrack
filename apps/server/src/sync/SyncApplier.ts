@@ -115,7 +115,9 @@ export class SyncApplier {
           result.seasonsUpdated += 1;
         }
       }
-      if (change.watches) await this.mergeWatches(seriesId, change.watches);
+      if (change.watches || change.skipped) {
+        await this.mergeWatches(seriesId, change.watches ?? {}, change.skipped);
+      }
       if (seasonAdded && !created.some((r) => r.type === 'series' && r.id === seriesId)) {
         if (((await series.get(seriesId))?.tmdbId ?? null) !== null) {
           created.push({ type: 'series', id: seriesId });
@@ -144,12 +146,17 @@ export class SyncApplier {
     }
   }
 
-  private async mergeWatches(seriesId: number, incoming: EpisodeWatches): Promise<void> {
+  private async mergeWatches(
+    seriesId: number,
+    incoming: EpisodeWatches,
+    skipped: readonly string[] | undefined,
+  ): Promise<void> {
     const watches = this.targets.episodeWatches;
     const stored = await watches.get(seriesId);
     const merged = mergeEpisodeWatches(stored ?? {}, normalizeEpisodeWatches(incoming));
-    if (stored === undefined || !sameEpisodeWatches(stored, merged)) {
-      await watches.set(seriesId, merged);
+    const skipChanged = skipped !== undefined;
+    if (stored === undefined || skipChanged || !sameEpisodeWatches(stored, merged)) {
+      await watches.set(seriesId, merged, [], skipChanged ? skipped : undefined);
     }
   }
 
@@ -162,6 +169,7 @@ export class SyncApplier {
         ...readViewings(change.rewatches),
       ]);
     }
+    if (change.skippedEpisodes !== undefined) extras.skippedCount = change.skippedEpisodes;
     if (change.watchedEpisodes !== undefined) {
       extras.watchedCount = change.watchedEpisodes;
     } else if (change.status === 'completed') {

@@ -66,6 +66,7 @@ export const season = (over: Partial<Season> = {}): Season => ({
   firstAirDate: null,
   episodeCount: null,
   watchedCount: 0,
+  skippedCount: 0,
   cover: null,
   banner: null,
   slug: 'Show - Season 1',

@@ -94,6 +94,7 @@ function seasonWatches(
  */
 export function deriveSeasonTracking(input: SeasonTrackingInput): DerivedSeasonTracking {
   const { tracking, today } = input;
+  const skipped = input.skipped ?? new Set<string>();
   const unchanged: DerivedSeasonTracking = { ...tracking, completes: false };
   if (tracking.status === 'dropped') return unchanged;
   const watches = seasonWatches(input.watches, input.episodes);
@@ -108,17 +109,20 @@ export function deriveSeasonTracking(input: SeasonTrackingInput): DerivedSeasonT
     const rewatching = deriveRewatch(scoped);
     return {
       ...rewatching,
-      ...deriveSeasonDates(rewatching, input.episodes, watches, today),
+      ...deriveSeasonDates(rewatching, input.episodes, watches, today, skipped),
     };
   }
 
   const next: DerivedSeasonTracking = { ...tracking, completes: false };
-  Object.assign(next, deriveSeasonDates(tracking, input.episodes, watches, today));
+  Object.assign(next, deriveSeasonDates(tracking, input.episodes, watches, today, skipped));
   if (next.status === 'planned' || next.status === 'paused') next.status = 'in_progress';
   const expected = input.episodes;
   const allWatched =
     expected.length > 0 &&
-    expected.every((e) => (e.airDate === null || e.airDate <= today) && e.key in watches);
+    expected.some((e) => !skipped.has(e.key)) &&
+    expected.every(
+      (e) => skipped.has(e.key) || ((e.airDate === null || e.airDate <= today) && e.key in watches),
+    );
   if (allWatched) {
     next.status = 'completed';
     next.completes = true;
@@ -129,7 +133,10 @@ export function deriveSeasonTracking(input: SeasonTrackingInput): DerivedSeasonT
 function deriveRewatch(input: SeasonTrackingInput): DerivedSeasonTracking {
   const { tracking, watches, today } = input;
   const result: DerivedSeasonTracking = { ...tracking, completes: false };
-  const aired = input.episodes.filter((e) => e.airDate === null || e.airDate <= today);
+  const skipped = input.skipped ?? new Set<string>();
+  const aired = input.episodes.filter(
+    (e) => !skipped.has(e.key) && (e.airDate === null || e.airDate <= today),
+  );
   let rewatches = [...tracking.rewatches];
   let open = rewatches.find((viewing) => viewing.finishedAt === null);
   if (open === undefined) {

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyEpisodeChange,
   applyEpisodeOperation,
   deriveSeasonTracking,
   materializeEpisodeWatches,
   mergeEpisodeWatches,
   sameEpisodeWatches,
+  skipBlockers,
   type EpisodeWatches,
   type ExpectedEpisode,
   type SeasonTracking,
@@ -297,5 +299,111 @@ describe('deriveSeasonTracking', () => {
       today: TODAY,
     });
     expect(added.rewatches).toEqual([{ startedAt: '2026-07-01', finishedAt: null }]);
+  });
+});
+
+describe('skipped episodes', () => {
+  const deriveSkipping = (
+    tracking: SeasonTracking,
+    watches: EpisodeWatches,
+    skipped: string[],
+    expected = episodes(3),
+  ) =>
+    deriveSeasonTracking({
+      tracking,
+      episodes: expected,
+      watches,
+      skipped: new Set(skipped),
+      today: TODAY,
+    });
+
+  it('completes a season when every aired episode is watched or skipped', () => {
+    const result = deriveSkipping(planned, { '1': [day('2026-03-01')], '3': [day('2026-03-04')] }, [
+      '2',
+    ]);
+    expect(result).toMatchObject({
+      status: 'completed',
+      completes: true,
+      finishedAt: '2026-03-04',
+    });
+  });
+
+  it('does not complete while an episode is neither watched nor skipped', () => {
+    const result = deriveSkipping(planned, { '1': [day('2026-03-01')] }, ['2']);
+    expect(result.status).toBe('in_progress');
+  });
+
+  it('still waits for an unaired episode that is not skipped, but not for a skipped one', () => {
+    const expected = [...episodes(2), { key: '3', airDate: '2027-01-01' }];
+    expect(
+      deriveSkipping(planned, { '1': [day('2026-03-01')], '2': [day('2026-03-02')] }, [], expected)
+        .status,
+    ).toBe('in_progress');
+    expect(
+      deriveSkipping(
+        planned,
+        { '1': [day('2026-03-01')], '2': [day('2026-03-02')] },
+        ['3'],
+        expected,
+      ).status,
+    ).toBe('completed');
+  });
+
+  it('closes a rewatch when every aired episode that is not skipped has a viewing since it started', () => {
+    const watches: EpisodeWatches = {
+      '1': [day('2026-01-01'), day('2026-05-02')],
+      '2': [day('2026-01-02')],
+      '3': [day('2026-01-03'), day('2026-05-03')],
+    };
+    const baseline: EpisodeWatches = {
+      '1': [day('2026-01-01')],
+      '2': [day('2026-01-02')],
+      '3': [day('2026-01-03')],
+    };
+    const result = deriveSeasonTracking({
+      tracking: completed,
+      episodes: episodes(3),
+      watches,
+      baseline,
+      skipped: new Set(['2']),
+      today: TODAY,
+    });
+    expect(result.rewatches).toEqual([view('2026-05-03', '2026-05-02')]);
+  });
+});
+
+describe('applyEpisodeChange', () => {
+  it('skips by dropping an undated watch and keeping the skip', () => {
+    const next = applyEpisodeChange(
+      { watches: { '1': [], '2': [view(null)] }, skipped: [] },
+      { op: 'skip', keys: ['1', '2'] },
+    );
+    expect(next).toEqual({ watches: {}, skipped: ['1', '2'] });
+  });
+
+  it('reports the dated viewings that block a skip, and ignores undated ones', () => {
+    const watches: EpisodeWatches = { '1': [day('2026-01-01')], '2': [], '3': [view(null)] };
+    expect(skipBlockers(watches, ['1', '2', '3', '4'])).toEqual(['1']);
+  });
+
+  it('unskips on unskip and on any watch of the episode', () => {
+    const state = { watches: {}, skipped: ['1', '2', '3'] };
+    expect(applyEpisodeChange(state, { op: 'unskip', keys: ['1'] }).skipped).toEqual(['2', '3']);
+    expect(applyEpisodeChange(state, { op: 'mark', keys: ['2'], date: null }).skipped).toEqual([
+      '1',
+      '3',
+    ]);
+    expect(
+      applyEpisodeChange(state, { op: 'setViewings', key: '3', viewings: [day('2026-01-01')] })
+        .skipped,
+    ).toEqual(['1', '2']);
+  });
+
+  it('leaves the skipped keys alone on unmark', () => {
+    const state = { watches: { '1': [] }, skipped: ['2'] };
+    expect(applyEpisodeChange(state, { op: 'unmark', keys: ['1'] })).toEqual({
+      watches: {},
+      skipped: ['2'],
+    });
   });
 });

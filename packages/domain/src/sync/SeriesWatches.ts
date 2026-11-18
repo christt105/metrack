@@ -4,4 +4,6 @@ import type { EpisodeWatches } from '../EpisodeWatches.js';
 export interface SeriesWatches {
   seriesId: number;
   watched: EpisodeWatches;
+  /** Keys of the episodes the user skipped; absent from connectors that predate skipping. */
+  skipped?: readonly string[];
 }

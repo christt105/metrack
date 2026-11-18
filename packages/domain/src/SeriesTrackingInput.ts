@@ -4,6 +4,8 @@ import type { SeriesSeasonInput } from './SeriesSeasonInput.js';
 export interface SeriesTrackingInput {
   seasons: readonly SeriesSeasonInput[];
   watches: EpisodeWatches;
+  /** Keys of the episodes the user skipped. */
+  skipped?: readonly string[];
   /** The watches before the change; only viewings missing from it can open a season rewatch. */
   baseline?: EpisodeWatches;
   today: string;

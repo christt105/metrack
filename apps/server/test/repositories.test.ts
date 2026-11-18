@@ -61,6 +61,7 @@ const newSeason = (
   firstAirDate: null,
   episodeCount: null,
   watchedCount: 0,
+  skippedCount: 0,
   cover: null,
   banner: null,
   slug: null,

@@ -5,4 +5,6 @@ export interface StoredEpisodeWatches {
   userId: number;
   seriesId: number;
   watched: EpisodeWatches;
+  /** Keys of the episodes the user skipped. */
+  skipped: string[];
 }

@@ -29,6 +29,7 @@ function inputOf(draft: SeasonDraft): SeriesSeasonInput[] {
           seasonId: stored.id,
           tracking: trackingOf(stored),
           watchedCount: stored.watchedCount,
+          skippedCount: stored.skippedCount,
           episodes: draft.expected,
         },
       ]
@@ -46,13 +47,17 @@ export function planSeasonChanges(
   incoming: EpisodeWatches,
   storedWatches: EpisodeWatches | undefined,
   today: string,
+  storedSkipped: readonly string[] = [],
 ): SeasonChanges {
   const stored = storedWatches ?? {};
   const inputs = drafts.flatMap(inputOf);
-  const base = materializeCompletedSeasons(inputs, stored);
+  const base = materializeCompletedSeasons(inputs, stored, new Set(storedSkipped));
   const merged = mergeEpisodeWatches(base, incoming);
+  const skipped = new Set(storedSkipped.filter((key) => !(key in incoming)));
   const unrecorded = new Set(
-    inputs.filter((input) => isUnrecordedCompletion(input, stored)).map((input) => input.seasonId),
+    inputs
+      .filter((input) => isUnrecordedCompletion(input, stored, skipped))
+      .map((input) => input.seasonId),
   );
   const changes: SeasonChange[] = [];
   for (const draft of drafts) {
@@ -61,6 +66,7 @@ export function planSeasonChanges(
       tracking: trackingOf(season),
       episodes: draft.expected,
       watches: merged,
+      skipped,
       baseline: season !== null && unrecorded.has(season.id) ? merged : base,
       today,
     });
@@ -79,6 +85,7 @@ export function planSeasonChanges(
       startedAt: derived.startedAt,
       finishedAt: derived.finishedAt,
       watchedEpisodes: draft.expected.filter(({ key }) => key in merged).length,
+      skippedEpisodes: draft.expected.filter(({ key }) => skipped.has(key)).length,
       completes: derived.status === 'completed' && season?.status !== 'completed',
       missingRating: derived.status === 'completed' && (season?.rating ?? null) === null,
       ...(rewatchesChanged ? { rewatches: derived.rewatches } : {}),
@@ -89,6 +96,7 @@ export function planSeasonChanges(
   return {
     changes,
     ...(sameEpisodeWatches(stored, merged) ? {} : { watches: merged }),
+    ...(skipped.size === storedSkipped.length ? {} : { skipped: [...skipped] }),
   };
 }
 
@@ -102,6 +110,7 @@ function isUnchanged(stored: Season, change: SeasonChange): boolean {
     stored.finishedAt === change.finishedAt &&
     stored.episodeCount === change.episodeCount &&
     stored.firstAirDate === change.firstAirDate &&
-    stored.watchedCount === change.watchedEpisodes
+    stored.watchedCount === change.watchedEpisodes &&
+    stored.skippedCount === (change.skippedEpisodes ?? stored.skippedCount)
   );
 }

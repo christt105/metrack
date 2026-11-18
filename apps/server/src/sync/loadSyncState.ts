@@ -9,9 +9,10 @@ export async function loadSyncState(targets: SyncTargets): Promise<SyncState> {
     seasons: await targets.seasons.list(),
     overrides: await targets.overrides.list(),
     unlinked: await targets.unlinked.list(),
-    watches: (await targets.episodeWatches.list()).map(({ seriesId, watched }) => ({
+    watches: (await targets.episodeWatches.list()).map(({ seriesId, watched, skipped }) => ({
       seriesId,
       watched,
+      skipped,
     })),
   };
 }

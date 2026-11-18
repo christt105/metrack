@@ -78,6 +78,7 @@ function stored(over: Partial<Season> = {}): Season {
     firstAirDate: '2025-01-01',
     episodeCount: 3,
     watchedCount: 0,
+    skippedCount: 0,
     slug: null,
     tags: [],
     cover: null,
@@ -98,6 +99,7 @@ interface Run {
   days: Record<string, string[]>;
   stored?: Season[];
   watches?: EpisodeWatches;
+  skipped?: string[];
   series?: Series | null;
   index?: SeriesIndex;
 }
@@ -130,7 +132,9 @@ function run(input: Run) {
       seasons: input.stored ?? [],
       overrides: [],
       unlinked: [],
-      ...(input.watches ? { watches: [{ seriesId: 1, watched: input.watches }] } : {}),
+      ...(input.watches
+        ? { watches: [{ seriesId: 1, watched: input.watches, skipped: input.skipped ?? [] }] }
+        : {}),
     },
     ...(input.index ? { indexes: new Map([['js', input.index]]) } : {}),
     today: TODAY,
@@ -185,6 +189,48 @@ describe('numbered sync (no TMDB index)', () => {
       completes: true,
       missingRating: true,
       watchedEpisodes: 3,
+    });
+  });
+
+  it('unskips an episode that was played and keeps the other skip', () => {
+    const { change, series } = one({
+      seasons: [librarySeason(3)],
+      stored: [
+        stored({
+          status: 'in_progress',
+          startedAt: '2026-01-01',
+          watchedCount: 1,
+          skippedCount: 2,
+        }),
+      ],
+      days: { s1e2: ['2026-03-01'] },
+      watches: { s1e1: [plain('2026-01-01')] },
+      skipped: ['s1e2', 's1e3'],
+    });
+    expect(series?.skipped).toEqual(['s1e3']);
+    expect(change).toMatchObject({ status: 'completed', watchedEpisodes: 2, skippedEpisodes: 1 });
+  });
+
+  it('completes a season whose unplayed episodes are skipped', () => {
+    const { change, series } = one({
+      seasons: [librarySeason(3)],
+      stored: [
+        stored({
+          status: 'in_progress',
+          startedAt: '2026-01-01',
+          watchedCount: 1,
+          skippedCount: 1,
+        }),
+      ],
+      days: { s1e3: ['2026-03-03'] },
+      watches: { s1e1: [plain('2026-01-01')] },
+      skipped: ['s1e2'],
+    });
+    expect(series?.skipped).toBeUndefined();
+    expect(change).toMatchObject({
+      status: 'completed',
+      finishedAt: '2026-03-03',
+      skippedEpisodes: 1,
     });
   });
 

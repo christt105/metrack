@@ -14,20 +14,23 @@ function latest(dates: readonly string[]): string {
 /**
  * The dates a season takes from its watched episodes, never replacing what is known with less. The start is the
  * earliest start among the first viewings of its watched episodes, and only when every one of them has a start
- * date. The finish is the latest finish among those first viewings, and only when every aired episode is watched
- * and every first viewing is dated. Otherwise the stored value stays.
+ * date. The finish is the latest finish among those first viewings, and only when every aired episode that is not skipped
+ * is watched and every first viewing is dated. Otherwise the stored value stays.
  */
 export function deriveSeasonDates(
   tracking: Pick<SeasonTracking, 'startedAt' | 'finishedAt'>,
   episodes: readonly ExpectedEpisode[],
   watches: EpisodeWatches,
   today: string,
+  skipped: ReadonlySet<string> = new Set(),
 ): Pick<SeasonTracking, 'startedAt' | 'finishedAt'> {
   const keys = episodes.map((episode) => episode.key);
   const starts = firstViewingStarts(keys, watches);
   const result = { startedAt: tracking.startedAt, finishedAt: tracking.finishedAt };
   if (starts !== null) result.startedAt = earliest(starts);
-  const aired = episodes.filter((e) => e.airDate === null || e.airDate <= today);
+  const aired = episodes.filter(
+    (e) => !skipped.has(e.key) && (e.airDate === null || e.airDate <= today),
+  );
   const finishes = keys.flatMap((key) =>
     key in watches ? [watches[key]?.[0]?.finishedAt ?? null] : [],
   );

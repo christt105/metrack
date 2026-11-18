@@ -35,6 +35,7 @@ const season = {
     finishedAt: nullableDate,
     completes: { type: 'boolean' },
     watchedEpisodes: { type: 'integer', minimum: 0 },
+    skippedEpisodes: { type: 'integer', minimum: 0 },
     rewatches: { type: 'array', items: viewingItem },
   },
   required: [
@@ -62,6 +63,7 @@ const series = {
     title: text,
     seasons: { type: 'array', items: season },
     watches: { type: 'object' },
+    skipped: { type: 'array', items: { type: 'string' } },
   },
   required: ['seriesId', 'jellyfinId', 'tmdbId', 'tvdbId', 'title', 'seasons'],
 } as const;

@@ -7,5 +7,7 @@ export interface SeriesSeasonInput {
   tracking: SeasonTracking;
   /** The season entry's `watched_count` as stored. */
   watchedCount: number;
+  /** The season entry's `skipped_count` as stored. */
+  skippedCount: number;
   episodes: readonly ExpectedEpisode[];
 }

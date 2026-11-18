@@ -6,12 +6,14 @@ import type { SeriesSeasonInput } from './SeriesSeasonInput.js';
 export function isUnrecordedCompletion(
   season: SeriesSeasonInput,
   watches: EpisodeWatches,
+  skipped: ReadonlySet<string> = new Set(),
 ): boolean {
   return (
     season.tracking.status === 'completed' &&
     season.watchedCount > 0 &&
     season.episodes.length > 0 &&
-    season.episodes.every(({ key }) => !(key in watches))
+    season.episodes.every(({ key }) => !(key in watches)) &&
+    season.episodes.some(({ key }) => !skipped.has(key))
   );
 }
 
@@ -19,12 +21,15 @@ export function isUnrecordedCompletion(
 export function materializeCompletedSeasons(
   seasons: readonly SeriesSeasonInput[],
   watches: EpisodeWatches,
+  skipped: ReadonlySet<string> = new Set(),
 ): EpisodeWatches {
   let result = watches;
   for (const season of seasons) {
-    if (!isUnrecordedCompletion(season, watches)) continue;
+    if (!isUnrecordedCompletion(season, watches, skipped)) continue;
     result = {
-      ...materializeEpisodeWatches(season.episodes.map((e) => e.key)),
+      ...materializeEpisodeWatches(
+        season.episodes.map((e) => e.key).filter((key) => !skipped.has(key)),
+      ),
       ...result,
     };
   }

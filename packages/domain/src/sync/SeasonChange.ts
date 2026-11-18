@@ -17,6 +17,8 @@ export interface SeasonChange {
   finishedAt: string | null;
   /** How many of the season's episodes are watched once the series' watches are merged; absent from connectors that predate episode tracking. */
   watchedEpisodes?: number;
+  /** How many of the season's episodes are skipped once the played ones are taken out; absent from connectors that predate skipping. */
+  skippedEpisodes?: number;
   /** The season's later viewings after the change; present only when they change. */
   rewatches?: Viewing[];
   /** Whether this change completes a season that was not completed before. */

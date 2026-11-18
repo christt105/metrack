@@ -80,7 +80,7 @@ describe('connector sync of episodes', () => {
       repositories.episodeWatches.set(series.id, { '1': [view('2026-01-02')] }),
     );
     expect((await stateOf()).state.watches).toEqual([
-      { seriesId: series.id, watched: { '1': [view('2026-01-02')] } },
+      { seriesId: series.id, watched: { '1': [view('2026-01-02')] }, skipped: [] },
     ]);
     expect((await stateOf()).state.seasons[0]).toMatchObject({
       rewatches: [],
