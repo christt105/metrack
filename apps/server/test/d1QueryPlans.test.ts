@@ -128,6 +128,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.seasons.deleteForAll(spare.id);
   await owner.episodeWatches.set(series.id, { '1': [] });
   await owner.episodeWatches.get(series.id);
+  await owner.episodeWatches.getSkipped(series.id);
   await owner.episodeWatches.list();
   await owner.episodeWatches.listForSeries(series.id);
   await owner.episodeWatches.replace(1, series.id, {});

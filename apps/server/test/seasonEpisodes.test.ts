@@ -220,6 +220,7 @@ describe('GET /api/seasons/:id/episodes', () => {
         overview: null,
         stillPath: '/still11.jpg',
         watched: false,
+        skipped: false,
         viewings: [],
       },
       {
@@ -232,6 +233,7 @@ describe('GET /api/seasons/:id/episodes', () => {
         overview: null,
         stillPath: '/still12.jpg',
         watched: true,
+        skipped: false,
         viewings: [viewing],
       },
     ]);

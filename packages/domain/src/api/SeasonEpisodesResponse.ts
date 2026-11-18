@@ -13,5 +13,6 @@ export interface SeasonEpisodesResponse {
   complete: boolean;
   episodeCount: number;
   watchedCount: number;
+  skippedCount: number;
   episodes: SeasonEpisodeItem[];
 }

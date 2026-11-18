@@ -65,8 +65,9 @@ export class SeasonEpisodesService {
         : numberedEpisodes(season.episodeCount);
     const stored = await this.deps.watches.get(season.seriesId);
     const watched = await this.withIds(season, catalog, episodes, stored);
+    const skipped = new Set(await this.deps.watches.getSkipped(season.seriesId));
     return {
-      response: this.respond(season, catalog, episodes, watched),
+      response: this.respond(season, catalog, episodes, watched, skipped),
       episodeCountChanged,
     };
   }
@@ -163,6 +164,7 @@ export class SeasonEpisodesService {
     catalog: SeasonEpisodes | undefined,
     episodes: readonly Episode[],
     stored: EpisodeWatches | undefined,
+    skipped: ReadonlySet<string>,
   ): SeasonEpisodesResult['response'] {
     const watched = stored ?? {};
     const counted = countWatchedEpisodes(episodes, season.number, watched);
@@ -174,6 +176,8 @@ export class SeasonEpisodesService {
       complete: catalog?.complete ?? true,
       episodeCount: episodes.length,
       watchedCount: allWatched ? episodes.length : counted,
+      skippedCount: episodes.filter((episode) => skipped.has(episodeKey(episode, season.number)))
+        .length,
       episodes: episodes.map((episode) => {
         const key = episodeKey(episode, season.number);
         const viewings = watched[key];
@@ -187,6 +191,7 @@ export class SeasonEpisodesService {
           overview: episode.overview,
           stillPath: episode.stillPath,
           watched: allWatched || viewings !== undefined,
+          skipped: skipped.has(key),
           viewings: viewings ?? [],
         };
       }),

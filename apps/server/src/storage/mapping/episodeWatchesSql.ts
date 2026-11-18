@@ -1,4 +1,7 @@
-export const UPSERT_WATCHES_SQL = `INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (?, ?, ?)
+export const UPSERT_WATCHES_SQL = `INSERT INTO series_episode_entry (user_id, series_id, watched, skipped) VALUES (?, ?, ?, ?)
+  ON CONFLICT (user_id, series_id) DO UPDATE SET watched = excluded.watched, skipped = excluded.skipped`;
+
+export const UPSERT_WATCHES_KEEP_SKIPPED_SQL = `INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (?, ?, ?)
   ON CONFLICT (user_id, series_id) DO UPDATE SET watched = excluded.watched`;
 
 export const UPSERT_CATALOG_SQL = `INSERT INTO season_episodes (season_id, episodes, source, fetched_at, complete) VALUES (?, ?, ?, ?, ?)

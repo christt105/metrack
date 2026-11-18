@@ -123,9 +123,22 @@ describe.each(backends)('$name episode repositories', (backend) => {
       await friend.episodeWatches.set(seriesId, { '13': [] });
       expect(await owner.episodeWatches.get(seriesId)).toEqual(watched);
       expect(await friend.episodeWatches.get(seriesId)).toEqual({ '13': [] });
-      expect(await owner.episodeWatches.list()).toEqual([{ userId: 1, seriesId, watched }]);
+      expect(await owner.episodeWatches.list()).toEqual([
+        { userId: 1, seriesId, watched, skipped: [] },
+      ]);
       const all = await owner.episodeWatches.listForSeries(seriesId);
       expect(all.map((row) => row.userId)).toEqual([1, 2]);
+    });
+
+    it('stores the skipped keys with the watches, and keeps them when only the watches are set', async () => {
+      expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual([]);
+      await owner.episodeWatches.set(seriesId, watched, ['21', 's1e3']);
+      expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual(['21', 's1e3']);
+      await owner.episodeWatches.set(seriesId, { '12': [] });
+      expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual(['21', 's1e3']);
+      await owner.episodeWatches.set(seriesId, { '12': [] }, []);
+      expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual([]);
+      expect(await friend.episodeWatches.getSkipped(seriesId)).toEqual([]);
     });
 
     it('replaces the rows of another user by id', async () => {

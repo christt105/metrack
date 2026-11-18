@@ -2,7 +2,10 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { EpisodeWatches } from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
 import { episodeWatchesFromRow } from '../mapping/episodeWatchesFromRow.js';
-import { UPSERT_WATCHES_SQL } from '../mapping/episodeWatchesSql.js';
+import {
+  UPSERT_WATCHES_KEEP_SKIPPED_SQL,
+  UPSERT_WATCHES_SQL,
+} from '../mapping/episodeWatchesSql.js';
 import type { EpisodeWatchRepository } from '../repositories/EpisodeWatchRepository.js';
 import type { StoredEpisodeWatches } from '../repositories/StoredEpisodeWatches.js';
 
@@ -26,8 +29,15 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
       .map(episodeWatchesFromRow);
   }
 
-  async set(seriesId: number, watched: EpisodeWatches): Promise<void> {
-    await this.replace(this.scope.userId(), seriesId, watched);
+  async getSkipped(seriesId: number): Promise<string[]> {
+    const row = this.db
+      .prepare('SELECT * FROM series_episode_entry WHERE user_id = ? AND series_id = ?')
+      .get(this.scope.userId(), seriesId);
+    return row ? episodeWatchesFromRow(row).skipped : [];
+  }
+
+  async set(seriesId: number, watched: EpisodeWatches, skipped?: readonly string[]): Promise<void> {
+    await this.replace(this.scope.userId(), seriesId, watched, skipped);
   }
 
   async listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]> {
@@ -37,7 +47,20 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
       .map(episodeWatchesFromRow);
   }
 
-  async replace(userId: number, seriesId: number, watched: EpisodeWatches): Promise<void> {
-    this.db.prepare(UPSERT_WATCHES_SQL).run(userId, seriesId, JSON.stringify(watched));
+  async replace(
+    userId: number,
+    seriesId: number,
+    watched: EpisodeWatches,
+    skipped?: readonly string[],
+  ): Promise<void> {
+    if (skipped === undefined) {
+      this.db
+        .prepare(UPSERT_WATCHES_KEEP_SKIPPED_SQL)
+        .run(userId, seriesId, JSON.stringify(watched));
+      return;
+    }
+    this.db
+      .prepare(UPSERT_WATCHES_SQL)
+      .run(userId, seriesId, JSON.stringify(watched), JSON.stringify(skipped));
   }
 }

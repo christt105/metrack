@@ -7,10 +7,17 @@ export interface EpisodeWatchRepository {
   get(seriesId: number): Promise<EpisodeWatches | undefined>;
   /** Every row of the user in scope, ordered by series. */
   list(): Promise<StoredEpisodeWatches[]>;
-  /** Stores the watches of the user in scope. */
-  set(seriesId: number, watched: EpisodeWatches): Promise<void>;
+  /** The keys of the episodes the user in scope skipped of the series. */
+  getSkipped(seriesId: number): Promise<string[]>;
+  /** Stores the watches of the user in scope, and the skipped keys when given (they are kept as they were otherwise), in one write. */
+  set(seriesId: number, watched: EpisodeWatches, skipped?: readonly string[]): Promise<void>;
   /** The rows of every user for the series; not scoped. */
   listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]>;
   /** Like `set`, for a given user; not scoped. */
-  replace(userId: number, seriesId: number, watched: EpisodeWatches): Promise<void>;
+  replace(
+    userId: number,
+    seriesId: number,
+    watched: EpisodeWatches,
+    skipped?: readonly string[],
+  ): Promise<void>;
 }

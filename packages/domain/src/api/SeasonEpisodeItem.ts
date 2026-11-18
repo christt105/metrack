@@ -12,5 +12,7 @@ export interface SeasonEpisodeItem {
   overview: string | null;
   stillPath: string | null;
   watched: boolean;
+  /** Skipped by the user: not watched, and not owed for the season to be complete. */
+  skipped: boolean;
   viewings: Viewing[];
 }
