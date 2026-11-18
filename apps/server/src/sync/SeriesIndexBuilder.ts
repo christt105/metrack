@@ -1,10 +1,12 @@
 import {
   collectSyncWatchDays,
   findStoredSeries,
+  hasCollapsibleViewings,
   type ForeignEpisode,
   type LibraryEpisode,
   type SeriesIndex,
   type SyncInput,
+  type Viewing,
 } from '@metrack/domain';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import type { TmdbEpisodeMatch } from '../providers/tmdb/TmdbEpisodeMatch.js';
@@ -53,7 +55,11 @@ export class SeriesIndexBuilder {
           tmdbId,
           stored?.tmdbEpisodeGroup ?? null,
         );
-        const found = await this.episodeIds(watched, input.today);
+        const known = new Set(ordering.episodes.map((episode) => episode.tmdbId));
+        const unknown = watched.filter(
+          (episode) => episode.tmdbId == null || !known.has(episode.tmdbId),
+        );
+        const found = await this.episodeIds(unknown, input.today);
         const foreign = await this.foreignEpisodes(found, tmdbId);
         const episodeIds: Record<string, number> = {};
         for (const [tvdbId, match] of Object.entries(found)) {
@@ -84,15 +90,22 @@ export class SeriesIndexBuilder {
   ): boolean {
     const stored = input.state.watches?.find((row) => row.seriesId === seriesId)?.watched;
     if (!stored) return false;
+    const finishes = input.state.seasons
+      .filter((season) => season.seriesId === seriesId)
+      .map((season) => season.finishedAt);
+    if (hasCollapsibleViewings(stored, finishes)) return false;
     return watched.every((episode) => {
+      const own = episode.tmdbId == null ? undefined : stored[String(episode.tmdbId)];
+      if (own !== undefined && this.hasDays(own, days.get(episode.jellyfinId))) return true;
       if (episode.tvdbId === null || episode.tvdbId === undefined) return false;
       const match = this.cache.lookup(episode.tvdbId, input.today);
       if (!match || (match.showId !== null && match.showId !== seriesTmdbId)) return false;
-      const viewings = stored[String(match.id)];
-      return (days.get(episode.jellyfinId) ?? []).every((day) =>
-        viewings?.some((viewing) => viewing.finishedAt === day),
-      );
+      return this.hasDays(stored[String(match.id)], days.get(episode.jellyfinId));
     });
+  }
+
+  private hasDays(viewings: readonly Viewing[] | undefined, played: readonly string[] | undefined) {
+    return (played ?? []).every((day) => viewings?.some((viewing) => viewing.finishedAt === day));
   }
 
   private async foreignEpisodes(

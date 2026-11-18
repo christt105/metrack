@@ -549,7 +549,7 @@ describe('Dan Da Dan: one TMDB season of 24 episodes, two in Jellyfin', () => {
     expect(plan.unlinked).toEqual([expect.objectContaining({ mediaType: 'series', plays: 1 })]);
   });
 
-  it('keeps the status and dates of a completed season whose plays predate its finish', () => {
+  it('derives the dates of a completed season from plays that predate its finish and keeps its status', () => {
     const done: SyncState = {
       ...stored,
       seasons: [
@@ -575,7 +575,14 @@ describe('Dan Da Dan: one TMDB season of 24 episodes, two in Jellyfin', () => {
       plays: first.map((e) => play(e.jellyfinId, '2024-11-20')),
       state: done,
     });
-    expect(plan.series[0]?.seasons).toEqual([]);
+    expect(plan.series[0]?.seasons).toEqual([
+      expect.objectContaining({
+        status: 'completed',
+        startedAt: '2024-11-20',
+        finishedAt: '2024-11-20',
+        completes: false,
+      }),
+    ]);
     expect(plan.series[0]?.watches).toBeDefined();
     expect(Object.keys(plan.series[0]?.watches ?? {})).toHaveLength(12);
   });

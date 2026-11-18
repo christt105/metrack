@@ -101,7 +101,14 @@ export function createWorkerServices(
   );
 
   const edit = createEditServices({
-    sources: { movies, series, seasons, videogames, books },
+    sources: {
+      movies,
+      series,
+      seasons,
+      videogames,
+      books,
+      episodeWatches: repositories.episodeWatches,
+    },
     unlinked,
     states: repositories.metadataStates,
     images: imageStore,

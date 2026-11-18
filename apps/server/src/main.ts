@@ -150,7 +150,14 @@ titleProviders.register(
 );
 
 const edit = createEditServices({
-  sources: { movies, series, seasons, videogames, books },
+  sources: {
+    movies,
+    series,
+    seasons,
+    videogames,
+    books,
+    episodeWatches: repositories.episodeWatches,
+  },
   unlinked,
   states: metadataStates,
   images: imageStore,

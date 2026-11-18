@@ -4,6 +4,7 @@ import type {
   EpisodeWatches,
   SeasonChange,
   SeriesChange,
+  UnmatchedEpisode,
 } from '@metrack/domain';
 import { emptySeason, emptySeries } from '../src/media/emptyEntities.js';
 import { connectorHarness } from './support/connectorHarness.js';
@@ -69,7 +70,16 @@ async function setup() {
       secret,
       harness.syncBody((await stateOf()).contentVersion, { series: [change(over, watches)] }),
     );
-  return { ...harness, season, series, secret, stateOf, send };
+  const sendUnmatched = async (unmatched?: UnmatchedEpisode[]) =>
+    harness.call(
+      'POST',
+      '/api/connector/users/2/sync',
+      secret,
+      harness.syncBody((await stateOf()).contentVersion, {
+        series: [{ ...change({}), seasons: [], ...(unmatched ? { unmatched } : {}) }],
+      }),
+    );
+  return { ...harness, season, series, secret, stateOf, send, sendUnmatched };
 }
 
 describe('connector sync of episodes', () => {
@@ -80,7 +90,12 @@ describe('connector sync of episodes', () => {
       repositories.episodeWatches.set(series.id, { '1': [view('2026-01-02')] }),
     );
     expect((await stateOf()).state.watches).toEqual([
-      { seriesId: series.id, watched: { '1': [view('2026-01-02')] }, skipped: [] },
+      {
+        seriesId: series.id,
+        watched: { '1': [view('2026-01-02')] },
+        skipped: [],
+        unmatched: [],
+      },
     ]);
     expect((await stateOf()).state.seasons[0]).toMatchObject({
       rewatches: [],
@@ -104,7 +119,7 @@ describe('connector sync of episodes', () => {
     });
   });
 
-  it('merges with the stored watches and never removes a viewing', async () => {
+  it('replaces the viewings of the episodes the plan carries and keeps the other episodes', async () => {
     const { send, repositories, scope, series } = await setup();
     await scope.run(2, () =>
       repositories.episodeWatches.set(series.id, {
@@ -112,7 +127,7 @@ describe('connector sync of episodes', () => {
         '3': [],
       }),
     );
-    await send({}, { '1': [view('2026-02-02')], '2': [view('2026-02-03')] });
+    await send({}, { '1': [view('2026-01-02'), view('2026-02-02')], '2': [view('2026-02-03')] });
     await scope.run(2, async () => {
       expect(await repositories.episodeWatches.get(series.id)).toEqual({
         '1': [view('2026-01-02'), view('2026-02-02')],
@@ -187,6 +202,70 @@ describe('connector sync of episodes', () => {
         '2': [view('2026-01-05')],
       });
       expect((await repositories.seasons.get(season.id))?.watchedCount).toBe(1);
+    });
+  });
+
+  it('keeps the viewing of an episode collapsed by the plan', async () => {
+    const { send, repositories, scope, series } = await setup();
+    await scope.run(2, () =>
+      repositories.episodeWatches.set(series.id, {
+        '1': [{ startedAt: null, finishedAt: null }, view('2026-01-02')],
+      }),
+    );
+    await send({}, { '1': [view('2026-01-02')] });
+    await scope.run(2, async () => {
+      expect(await repositories.episodeWatches.get(series.id)).toEqual({
+        '1': [view('2026-01-02')],
+      });
+    });
+  });
+
+  describe('unmatched episodes', () => {
+    const lost: UnmatchedEpisode[] = [
+      { code: 'episode_unmatched', season: 1, number: 2, name: 'Pilot' },
+      { code: 'episode_other_series', season: 1, number: 3, name: null, tmdbSeriesId: 9 },
+    ];
+
+    it('stores the list, serves it in the state and replaces it on the next sync', async () => {
+      const { sendUnmatched, repositories, scope, series, stateOf } = await setup();
+      expect((await sendUnmatched(lost)).statusCode).toBe(200);
+      await scope.run(2, async () => {
+        expect((await repositories.episodeWatches.getEntry(series.id))?.unmatched).toEqual(lost);
+      });
+      expect((await stateOf()).state.watches?.[0]?.unmatched).toEqual(lost);
+      await sendUnmatched([lost[0]!]);
+      await scope.run(2, async () => {
+        expect((await repositories.episodeWatches.getEntry(series.id))?.unmatched).toEqual([
+          lost[0],
+        ]);
+      });
+    });
+
+    it('is cleared by an empty list', async () => {
+      const { sendUnmatched, repositories, scope, series } = await setup();
+      await sendUnmatched(lost);
+      await sendUnmatched([]);
+      await scope.run(2, async () => {
+        expect((await repositories.episodeWatches.getEntry(series.id))?.unmatched).toEqual([]);
+      });
+    });
+
+    it('is left as it is by a plan that carries none, like one from connector 0.21.0', async () => {
+      const { sendUnmatched, send, repositories, scope, series } = await setup();
+      await sendUnmatched(lost);
+      await send({}, { '1': [view('2026-01-02')] });
+      await sendUnmatched();
+      await scope.run(2, async () => {
+        const entry = await repositories.episodeWatches.getEntry(series.id);
+        expect(entry?.unmatched).toEqual(lost);
+        expect(entry?.watched).toEqual({ '1': [view('2026-01-02')] });
+      });
+    });
+
+    it('rejects a malformed list', async () => {
+      const { sendUnmatched } = await setup();
+      const response = await sendUnmatched([{ code: 'nope', season: 1 } as never]);
+      expect(response.statusCode).toBe(400);
     });
   });
 });

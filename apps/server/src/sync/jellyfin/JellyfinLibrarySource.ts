@@ -14,11 +14,13 @@ function toEpisode(item: JellyfinItem): LibraryEpisode {
   return {
     jellyfinId: item.Id,
     number: item.IndexNumber ?? null,
+    name: item.Name ?? null,
     airDate: dateOf(item.PremiereDate),
     runtimeSeconds: ticksToSeconds(item.RunTimeTicks),
     available: item.LocationType !== 'Virtual',
     played: item.UserData?.Played === true,
     tvdbId: providerId(item, 'Tvdb'),
+    tmdbId: providerId(item, 'Tmdb'),
   };
 }
 

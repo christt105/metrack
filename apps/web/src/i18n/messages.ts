@@ -147,6 +147,16 @@ export const messages = {
     noSeasons: 'No seasons yet.',
     openLink: 'Open',
   },
+  unmatched: {
+    title: (count: number) =>
+      `${count} watched episode${count === 1 ? '' : 's'} could not be recorded`,
+    hint: 'The sync could not match them to TMDB episodes, so they are not marked as watched. Fix their data on TMDB or in Jellyfin and the next sync picks them up.',
+    season: (number: number) => `Season ${number}`,
+    episode: (number: number | null, name: string | null) =>
+      [number === null ? 'Episode ?' : `E${number}`, name].filter(Boolean).join(' '),
+    otherSeries: 'belongs to another TMDB series',
+    openSeason: 'Open on TMDB',
+  },
   seasons: {
     watchedOf: (watched: number, total: number) => `${watched} of ${total} episodes`,
     watchedOfSkipped: (done: number, total: number, skipped: number) =>

@@ -1,15 +1,32 @@
 import type { Season } from '../Season.js';
+import type { LibraryEpisode } from './LibraryEpisode.js';
 import { addWatchDays } from './addWatchDays.js';
 import type { LibrarySeason } from './LibrarySeason.js';
 import { matchOrderedEpisodes } from './matchOrderedEpisodes.js';
+import type { UnmatchedEpisode } from './UnmatchedEpisode.js';
 import type { SeriesDrafts } from './SeriesDrafts.js';
 import type { SeriesIndex } from './SeriesIndex.js';
+
+function unmatchedOf(
+  code: UnmatchedEpisode['code'],
+  season: number,
+  episode: LibraryEpisode,
+  tmdbSeriesId?: number,
+): UnmatchedEpisode {
+  return {
+    code,
+    season,
+    number: episode.number,
+    name: episode.name ?? null,
+    ...(tmdbSeriesId === undefined ? {} : { tmdbSeriesId }),
+  };
+}
 
 /**
  * The series' TMDB ordering: each watched episode is recorded under its TMDB episode id in the season of the
  * ordering that holds it, whatever numbering the library uses. A stored season is paired by the number TMDB gives
  * it in the ordering; the seasons of the ordering the series lacks are created. Watched episodes of specials
- * (season 0) are ignored.
+ * (season 0) are ignored. `librarySeasons` are all the library's seasons, which the position guess counts.
  */
 export function draftOrderedSeasons(
   title: string,
@@ -17,8 +34,11 @@ export function draftOrderedSeasons(
   storedSeasons: readonly Season[],
   watchDays: ReadonlyMap<string, string[]>,
   index: SeriesIndex,
+  today = '9999-12-31',
+  librarySeasons: readonly LibrarySeason[] = watchedSeasons,
 ): SeriesDrafts {
-  const result: SeriesDrafts = { drafts: [], incoming: {}, warnings: [] };
+  const unrecorded: UnmatchedEpisode[] = [];
+  const result: SeriesDrafts = { drafts: [], incoming: {}, warnings: [], unmatched: unrecorded };
   if (watchedSeasons.some((s) => s.number === 0)) {
     result.warnings.push({
       code: 'specials_ignored',
@@ -27,22 +47,31 @@ export function draftOrderedSeasons(
     });
   }
   const { matches, unmatched, foreign } = matchOrderedEpisodes(
-    watchedSeasons.filter((s) => s.number > 0),
+    librarySeasons.filter((s) => s.number > 0),
     (episode) => watchDays.has(episode.jellyfinId),
     index,
+    today,
   );
-  for (const [showId, { showName, count }] of foreign) {
+  for (const [showId, { showName, episodes }] of foreign) {
+    const count = episodes.length;
+    for (const { library, episode } of episodes) {
+      unrecorded.push(unmatchedOf('episode_other_series', library.number, episode, showId));
+    }
     result.warnings.push({
       code: 'episode_other_series',
       title,
       message: `${count} watched episode${count === 1 ? ' belongs' : 's belong'} to "${showName}" (TMDB ${showId}) on TMDB, not to "${index.name}" (TMDB ${index.tmdbId}), so ${count === 1 ? 'it was' : 'they were'} not recorded as watched. The Jellyfin numbering or metadata of this series is probably off.`,
     });
   }
-  if (unmatched > 0) {
+  const lost = unmatched.length;
+  for (const { library, episode } of unmatched) {
+    unrecorded.push(unmatchedOf('episode_unmatched', library.number, episode));
+  }
+  if (lost > 0) {
     result.warnings.push({
       code: 'episode_unmatched',
       title,
-      message: `${unmatched} watched episode${unmatched === 1 ? ' has' : 's have'} no matching TMDB episode (by TheTVDB id or a unique air date), so ${unmatched === 1 ? 'it was' : 'they were'} not recorded as watched.`,
+      message: `${lost} watched episode${lost === 1 ? ' has' : 's have'} no matching TMDB episode (by TMDB id, TheTVDB id, a unique air date or its position), so ${lost === 1 ? 'it was' : 'they were'} not recorded as watched.`,
     });
   }
   const taken = new Set(storedSeasons.map((s) => s.number));

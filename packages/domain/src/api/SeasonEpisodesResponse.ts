@@ -1,4 +1,5 @@
 import type { EpisodeSource } from '../EpisodeSource.js';
+import type { UnmatchedEpisode } from '../sync/UnmatchedEpisode.js';
 import type { SeasonEpisodeItem } from './SeasonEpisodeItem.js';
 
 /**
@@ -17,4 +18,6 @@ export interface SeasonEpisodesResponse {
   /** Whether the season's dates follow its episodes' viewings, so they are not edited by hand. */
   datesDerived: boolean;
   episodes: SeasonEpisodeItem[];
+  /** The watched library episodes the last sync could not record for the series; only in the answer to `GET`. */
+  unmatched?: UnmatchedEpisode[];
 }

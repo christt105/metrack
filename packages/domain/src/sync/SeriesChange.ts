@@ -1,4 +1,5 @@
 import type { EpisodeWatches } from '../EpisodeWatches.js';
+import type { UnmatchedEpisode } from './UnmatchedEpisode.js';
 import type { SeasonChange } from './SeasonChange.js';
 
 /** A series to create (`seriesId` null) or link, with the seasons whose viewings changed. */
@@ -14,4 +15,6 @@ export interface SeriesChange {
   watches?: EpisodeWatches;
   /** The series' skipped episode keys once the played ones are taken out; present only when they change. */
   skipped?: string[];
+  /** The watched library episodes that could not be recorded, replacing the stored list; absent leaves it as it is, and connectors that predate it never send it. */
+  unmatched?: UnmatchedEpisode[];
 }

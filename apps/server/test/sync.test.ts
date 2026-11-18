@@ -144,8 +144,10 @@ describe('JellyfinLibrarySource', () => {
     return [
       {
         Id: 'e1',
+        Name: 'Pilot',
         SeasonId: 'sn4',
         IndexNumber: 1,
+        ProviderIds: { Tmdb: '6044217', Tvdb: '11024520' },
         PremiereDate: '2026-10-23T16:31:00.0000000Z',
         RunTimeTicks: 1500 * TICKS,
       },
@@ -196,7 +198,9 @@ describe('JellyfinLibrarySource', () => {
                 runtimeSeconds: 1500,
                 available: true,
                 played: false,
-                tvdbId: null,
+                name: 'Pilot',
+                tmdbId: 6044217,
+                tvdbId: 11024520,
               },
               {
                 jellyfinId: 'e2',
@@ -205,6 +209,8 @@ describe('JellyfinLibrarySource', () => {
                 runtimeSeconds: null,
                 available: false,
                 played: false,
+                name: null,
+                tmdbId: null,
                 tvdbId: null,
               },
             ],

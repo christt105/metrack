@@ -1,5 +1,6 @@
 import type {
   BookRepository,
+  EpisodeWatchRepository,
   MovieRepository,
   SeasonRepository,
   SeriesRepository,
@@ -10,6 +11,7 @@ export interface MediaKindSources {
   movies: MovieRepository;
   series: SeriesRepository;
   seasons: SeasonRepository;
+  episodeWatches: EpisodeWatchRepository;
   videogames: VideogameRepository;
   books: BookRepository;
 }

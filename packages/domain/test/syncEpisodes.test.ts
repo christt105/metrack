@@ -12,7 +12,6 @@ import {
 const TODAY = '2026-11-17';
 
 const view = (day: string): Viewing => ({ startedAt: day, finishedAt: day });
-const undated: Viewing = { startedAt: null, finishedAt: null };
 const plain = (finishedAt: string): Viewing => ({ startedAt: null, finishedAt });
 
 function librarySeason(
@@ -256,7 +255,7 @@ describe('numbered sync (no TMDB index)', () => {
       ],
       days: { s1e1: ['2026-01-05'] },
     });
-    expect(series?.watches).toEqual({ s1e1: [undated, view('2026-01-05')], s1e2: [], s1e3: [] });
+    expect(series?.watches).toEqual({ s1e1: [view('2026-01-05')], s1e2: [], s1e3: [] });
     expect(change).toBeUndefined();
   });
 
@@ -344,7 +343,7 @@ describe('numbered sync (no TMDB index)', () => {
       days: { s1e1: ['2026-01-05'], s1e2: ['2026-01-06'] },
     });
     expect(Object.keys(series?.watches ?? {})).toHaveLength(12);
-    expect(series?.watches?.s1e1).toEqual([undated, view('2026-01-05')]);
+    expect(series?.watches?.s1e1).toEqual([view('2026-01-05')]);
     expect(series?.watches?.s1e9).toEqual([]);
     expect(change).toBeUndefined();
   });
@@ -551,6 +550,7 @@ describe('sync by TMDB episode id', () => {
     );
     const library = jujutsuLibrary();
     library[0]!.episodes[0]!.tvdbId = null;
+    library[0]!.episodes.pop();
     const plan = run({
       seasons: library,
       stored: [stored({ tmdbSeasonNumber: 1 })],
@@ -558,14 +558,21 @@ describe('sync by TMDB episode id', () => {
       index,
     });
     expect(plan.warnings).toEqual([expect.objectContaining({ code: 'episode_unmatched' })]);
-    expect(plan.series).toEqual([]);
+    expect(plan.series).toEqual([
+      expect.objectContaining({
+        seasons: [],
+        unmatched: [expect.objectContaining({ code: 'episode_unmatched', season: 1, number: 1 })],
+      }),
+    ]);
   });
 
   it('warns when TMDB knows the episode but the ordering lacks it', () => {
     const base = jujutsuIndex(true);
     const index = { ...base, episodeIds: { ...base.episodeIds, [String(TVDB)]: 555 } };
+    const library = jujutsuLibrary();
+    library[0]!.episodes.pop();
     const plan = run({
-      seasons: jujutsuLibrary(),
+      seasons: library,
       stored: [stored({ tmdbSeasonNumber: 1 })],
       days: { s1e1: ['2026-03-01'] },
       index,
@@ -590,7 +597,14 @@ describe('sync by TMDB episode id', () => {
       days: { s1e1: ['2026-03-01'] },
       index,
     });
-    expect(plan.series).toEqual([]);
+    expect(plan.series).toEqual([
+      expect.objectContaining({
+        seasons: [],
+        unmatched: [
+          expect.objectContaining({ code: 'episode_other_series', tmdbSeriesId: 113988 }),
+        ],
+      }),
+    ]);
     expect(plan.warnings).toEqual([
       expect.objectContaining({
         code: 'episode_other_series',
