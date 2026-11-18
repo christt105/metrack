@@ -387,7 +387,7 @@ describe('reorganizing the seasons when the ordering changes', () => {
     function recordEpisode(seriesId: number, season: Season): void {
       api.db
         .prepare(
-          "INSERT INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, 'tmdb', 'now')",
+          "INSERT OR REPLACE INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, 'tmdb', 'now')",
         )
         .run(
           season.id,

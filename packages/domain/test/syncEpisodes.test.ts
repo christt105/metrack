@@ -530,7 +530,8 @@ describe('sync by TMDB episode id', () => {
 
   it('never records an episode TMDB places in another series, not even by air date', () => {
     const base = jujutsuIndex(true);
-    const { [String(TVDB)]: _removed, ...episodeIds } = base.episodeIds;
+    const episodeIds = { ...base.episodeIds };
+    delete episodeIds[String(TVDB)];
     const index = {
       ...base,
       episodeIds,
