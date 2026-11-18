@@ -125,6 +125,14 @@ defineProps<{ name: AppIconName; size?: number }>();
     <template v-else-if="name === 'sortAsc'">
       <path d="M7 19.5v-15M3.5 8 7 4.5 10.5 8M13.5 6.5h3M13.5 12h5M13.5 17.5h7" />
     </template>
+    <template v-else-if="name === 'skipForward'">
+      <path d="M5 6.5v11l7-5.5zM12.5 6.5v11l7-5.5z" />
+    </template>
+    <template v-else-if="name === 'externalLink'">
+      <path
+        d="M13.5 4.5h6v6M19.5 4.5 11 13M17.5 14v3.5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2H10"
+      />
+    </template>
     <template v-else-if="name === 'trash'">
       <path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13h9l1-13" />
     </template>

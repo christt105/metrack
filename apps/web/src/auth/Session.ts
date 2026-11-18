@@ -1,5 +1,5 @@
 import { shallowRef } from 'vue';
-import type { AccountDeletion, User } from '@metrack/domain';
+import type { AccountDeletion, PublicPage, User } from '@metrack/domain';
 import type { ApiClient } from '../api/ApiClient';
 
 /** Who is signed in. The server is asked once; sign-in, sign-out and a refused call update it. */
@@ -9,6 +9,8 @@ export class Session {
   readonly deletion = shallowRef<AccountDeletion | null>(null);
   /** True until a user who joined by invitation confirms their name and handle. */
   readonly needsWelcome = shallowRef(false);
+  /** The signed-in user's own public page settings, or null while unknown or signed out. */
+  readonly publicPage = shallowRef<PublicPage | null>(null);
   private known = false;
 
   constructor(private readonly api: ApiClient) {}
@@ -18,6 +20,7 @@ export class Session {
       this.user.value = await this.api.me();
       this.known = true;
       await this.refreshDeletion();
+      await this.refreshPublicPage();
     }
     return this.user.value;
   }
@@ -26,6 +29,7 @@ export class Session {
     this.user.value = user;
     this.known = true;
     void this.refreshDeletion();
+    void this.refreshPublicPage();
   }
 
   /** Asks the server whether the signed-in user has a deletion waiting. A failure leaves it unknown. */
@@ -45,10 +49,28 @@ export class Session {
     }
   }
 
+  /** Asks the server for the user's public page settings. A failure leaves them unknown. */
+  async refreshPublicPage(): Promise<void> {
+    if (this.user.value === null) {
+      this.publicPage.value = null;
+      return;
+    }
+    try {
+      this.publicPage.value = (await this.api.ownSettings()).publicPage;
+    } catch {
+      this.publicPage.value = null;
+    }
+  }
+
+  setPublicPage(page: PublicPage | null): void {
+    this.publicPage.value = page;
+  }
+
   /** Records the user as they confirmed themselves on first entry. */
   welcomed(user: User): void {
     this.user.value = user;
     this.needsWelcome.value = false;
+    void this.refreshPublicPage();
   }
 
   setDeletion(deletion: AccountDeletion | null): void {
@@ -64,6 +86,7 @@ export class Session {
   forget(): void {
     this.user.value = null;
     this.deletion.value = null;
+    this.publicPage.value = null;
     this.needsWelcome.value = false;
     this.known = true;
   }

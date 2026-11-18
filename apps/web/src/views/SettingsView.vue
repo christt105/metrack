@@ -12,10 +12,12 @@ import UsersPanel from '../components/UsersPanel.vue';
 import UserSettingsEditor from '../components/UserSettingsEditor.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
+import { useSession } from '../composables/useSession';
 import { messages } from '../i18n/messages';
 import { countSyncChanges } from '../logic/countSyncChanges';
 
 const api = useApi();
+const session = useSession();
 let healthRequest: Promise<HealthReport> | undefined;
 const loadHealth = (): Promise<HealthReport> => (healthRequest ??= api.health());
 const { data: health, error: healthError } = useLoader(loadHealth);
@@ -37,6 +39,7 @@ const { data: users, error: usersError } = useLoader(() => ownerOnly(() => api.l
 const refreshOwn = async (): Promise<void> => {
   ownRequest = undefined;
   await reloadOwn();
+  if (own.value) session.setPublicPage(own.value.publicPage);
 };
 const actionError = ref<unknown>(null);
 const actionResult = ref<string | null>(null);

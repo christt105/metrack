@@ -111,6 +111,7 @@ const skippable = computed(() => !props.episode.skipped && !hasDatedViewing(prop
           :disabled="busy"
           @click="emit('skip')"
         >
+          <AppIcon name="skipForward" :size="16" />
           {{ messages.episodes.skip }}
         </button>
         <button
@@ -272,5 +273,11 @@ const skippable = computed(() => !props.episode.skipped && !hasDatedViewing(prop
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2);
+}
+
+.row .small {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 </style>
