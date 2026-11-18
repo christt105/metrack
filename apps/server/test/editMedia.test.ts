@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { pathFetch } from './support/pathFetch.js';
+import { insertSeason } from './support/insertSeason.js';
 import { createTestApi, type TestApi } from './support/createTestApi.js';
 
 let api: TestApi;
@@ -91,26 +92,16 @@ describe('creating and reading', () => {
     expect(duplicate.json().code).toBe('conflict');
   });
 
-  it('creates a season only under an existing series', async () => {
-    const orphan = await post('/api/seasons', { seriesId: 42, number: 1 });
-    expect(orphan.statusCode).toBe(400);
-    expect(orphan.json().code).toBe('invalid_reference');
-
+  it('has no route that creates a season by hand', async () => {
     const series = (await post('/api/series', { title: 'Lupin', tmdbId: 1 })).json();
-    const season = await post('/api/seasons', { seriesId: series.id, number: 1, title: 'Part 1' });
-    expect(season.statusCode).toBe(201);
-    expect((await post('/api/seasons', { seriesId: series.id, number: 1 })).statusCode).toBe(409);
-
-    const detail = (
-      await api.app.inject({ method: 'GET', url: `/api/series/${series.id}` })
-    ).json();
-    expect(detail.seasons.map((s: { number: number }) => s.number)).toEqual([1]);
-    expect(detail.overrides).toEqual([]);
+    const response = await post('/api/seasons', { seriesId: series.id, number: 1 });
+    expect(response.statusCode).toBe(404);
+    expect(await api.seasons.list()).toEqual([]);
   });
 
   it('deletes an entity and cascades from a series to its seasons', async () => {
     const series = (await post('/api/series', { title: 'Lupin' })).json();
-    await post('/api/seasons', { seriesId: series.id, number: 1 });
+    await insertSeason(api, series.id, { number: 1 });
     expect(
       (await api.app.inject({ method: 'DELETE', url: `/api/series/${series.id}` })).statusCode,
     ).toBe(204);
@@ -334,7 +325,7 @@ describe('editing', () => {
 
   it('edits season numbers and the series season overrides', async () => {
     const series = (await post('/api/series', { title: 'Lupin' })).json();
-    const season = (await post('/api/seasons', { seriesId: series.id, number: 3 })).json();
+    const season = await insertSeason(api, series.id, { number: 3 });
     expect(
       (await patch(`/api/seasons/${season.id}`, { number: 4, tmdbSeasonNumber: 3 })).json(),
     ).toMatchObject({
@@ -523,8 +514,8 @@ describe('listing', () => {
     await post('/api/games', { title: 'Hades', status: 'in_progress' });
     await post('/api/books', { title: 'Dune', authors: ['Frank Herbert'] });
     const lupin = (await post('/api/series', { title: 'Lupin' })).json();
-    await post('/api/seasons', { seriesId: lupin.id, number: 1, status: 'completed' });
-    await post('/api/seasons', { seriesId: lupin.id, number: 2, title: 'Second' });
+    await insertSeason(api, lupin.id, { number: 1, status: 'completed' });
+    await insertSeason(api, lupin.id, { number: 2, title: 'Second' });
   });
 
   const list = async (query: string) =>

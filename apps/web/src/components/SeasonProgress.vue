@@ -2,7 +2,12 @@
 import { computed } from 'vue';
 import { messages } from '../i18n/messages';
 
-const props = defineProps<{ watched: number | null; total: number | null }>();
+const props = defineProps<{
+  watched: number | null;
+  total: number | null;
+  skipped?: number;
+  rewatch?: boolean;
+}>();
 
 const share = computed(() =>
   props.watched !== null && props.total ? Math.min(1, props.watched / props.total) : null,
@@ -10,6 +15,9 @@ const share = computed(() =>
 const label = computed(() => {
   if (props.total === null) return null;
   if (props.watched === null) return messages.hero.episodes(props.total);
+  if (props.rewatch) return messages.episodes.rewatchOf(props.watched, props.total);
+  if (props.skipped)
+    return messages.seasons.watchedOfSkipped(props.watched, props.total, props.skipped);
   return messages.seasons.watchedOf(props.watched, props.total);
 });
 </script>

@@ -157,7 +157,6 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       routes,
       editor,
       catalog,
-      deps.metadataCache,
       deps.contentVersions && { versions: deps.contentVersions, appVersion: deps.appVersion },
     );
     registerSeasonOverrideRoutes(routes, series, overrides);

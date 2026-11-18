@@ -31,6 +31,7 @@ defineEmits<{ undo: []; dismiss: [] }>();
   display: flex;
   align-items: center;
   gap: var(--s-3);
+  width: max-content;
   max-width: calc(100vw - 2 * var(--s-3));
   padding: 10px 14px;
   transform: translateX(-50%);

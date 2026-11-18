@@ -2,7 +2,6 @@ import type { ApiRoutes } from './ApiRoutes.js';
 import { jsonResponse } from './jsonResponse.js';
 import { noContent } from './noContent.js';
 import {
-  canAddByHand,
   COLLECTIONS,
   MEDIA_SORT_FIELDS,
   MEDIA_STATUSES,
@@ -10,18 +9,14 @@ import {
   type Collection,
   type MediaQuery,
   type RewatchRequest,
-  type Series,
-  type UserRole,
 } from '@metrack/domain';
 import type { MediaCatalog } from '../media/MediaCatalog.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
-import type { MetadataCache } from '../metadata/MetadataCache.js';
 import { ApiError } from './ApiError.js';
 import { DATE_PATTERN, nullableDate } from './schemas/fieldTypes.js';
 import { matchesEtag } from '../site/matchesEtag.js';
 import type { ContentVersions } from '../site/ContentVersions.js';
 import { mediaListEtag } from './mediaListEtag.js';
-import { requireUser } from './requireUser.js';
 import { createBody, idParams, patchBody } from './schemas/mediaSchemas.js';
 
 const listQuery = {
@@ -55,16 +50,14 @@ const dateBody = {
 } as const;
 
 /**
- * Combined list plus read, create, edit and delete for every entity collection. Normal users may add a season
- * to a series linked to TMDB, and creating one refreshes the series so the season picks up its provider data.
- * Only the owner may pass `forAll` to change a catalog field other users hold too. With content versions the list
+ * Combined list plus read, create, edit and delete for every entity collection, except that a season is never
+ * created by hand: seasons come from the TMDB ordering and the Jellyfin sync. Only the owner may pass `forAll` to change a catalog field other users hold too. With content versions the list
  * carries an ETag and answers 304 to a matching `If-None-Match` without reading the library.
  */
 export function registerMediaRoutes(
   routes: ApiRoutes,
   editor: MediaEditor,
   catalog: MediaCatalog,
-  cache?: MetadataCache,
   list?: { versions: ContentVersions; appVersion: string },
 ): void {
   routes.get<{ Querystring: MediaQuery }>(
@@ -88,41 +81,10 @@ export function registerMediaRoutes(
     },
   );
 
-  for (const collection of COLLECTIONS) registerCollection(routes, editor, collection, cache);
+  for (const collection of COLLECTIONS) registerCollection(routes, editor, collection);
 }
 
-async function assertCanAddSeason(
-  editor: MediaEditor,
-  role: UserRole,
-  seriesId: number,
-): Promise<void> {
-  if (canAddByHand(role)) return;
-  const series = (await editor.require('series', seriesId)) as Series;
-  if (series.tmdbId === null) {
-    throw ApiError.forbidden(
-      'trusted_only',
-      'Only trusted users can add seasons to a series that is not linked to TMDB',
-    );
-  }
-}
-
-async function refreshSeriesOf(
-  editor: MediaEditor,
-  cache: MetadataCache | undefined,
-  seriesId: number,
-): Promise<void> {
-  if (!cache?.supports('series')) return;
-  const series = (await editor.require('series', seriesId)) as Series;
-  if (series.tmdbId === null) return;
-  await cache.refresh('series', seriesId, true).catch(() => undefined);
-}
-
-function registerCollection(
-  routes: ApiRoutes,
-  editor: MediaEditor,
-  collection: Collection,
-  cache: MetadataCache | undefined,
-): void {
+function registerCollection(routes: ApiRoutes, editor: MediaEditor, collection: Collection): void {
   const base = `/api/${collection}`;
 
   routes.get<{ Params: { id: number } }>(
@@ -131,23 +93,13 @@ function registerCollection(
     async (request) => editor.detail(collection, request.params.id),
   );
 
-  routes.post<{ Body: Record<string, unknown> }>(
-    base,
-    {
-      config: collection === 'seasons' ? {} : { trustedOnly: true },
-      schema: { body: createBody(collection) },
-    },
-    async (request) => {
-      if (collection !== 'seasons') {
-        return jsonResponse(await editor.create(collection, request.body), 201);
-      }
-      const seriesId = Number(request.body.seriesId);
-      await assertCanAddSeason(editor, requireUser(request.user).role, seriesId);
-      const created = await editor.create(collection, request.body);
-      await refreshSeriesOf(editor, cache, seriesId);
-      return jsonResponse(await editor.detail(collection, created.id), 201);
-    },
-  );
+  if (collection !== 'seasons') {
+    routes.post<{ Body: Record<string, unknown> }>(
+      base,
+      { config: { trustedOnly: true }, schema: { body: createBody(collection) } },
+      async (request) => jsonResponse(await editor.create(collection, request.body), 201),
+    );
+  }
 
   routes.patch<{
     Params: { id: number };

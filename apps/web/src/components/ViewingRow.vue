@@ -4,7 +4,7 @@ import type { Viewing } from '@metrack/domain';
 import { messages } from '../i18n/messages';
 import { describeViewing, formIsValid, viewingFromForm } from '../logic/viewingEdits';
 
-const props = defineProps<{ viewing: Viewing; busy: boolean }>();
+const props = defineProps<{ viewing: Viewing; busy: boolean; readonly?: boolean }>();
 const emit = defineEmits<{ change: [viewing: Viewing]; remove: [] }>();
 
 const editing = ref(false);
@@ -46,7 +46,7 @@ function save(): void {
     </form>
     <template v-else>
       <span class="text">{{ describeViewing(viewing) }}</span>
-      <span class="actions">
+      <span v-if="!readonly" class="actions">
         <button type="button" class="small ghost" :disabled="busy" @click="edit">
           {{ messages.common.edit }}
         </button>
