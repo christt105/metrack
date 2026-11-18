@@ -10,11 +10,14 @@ enableAutoUnmount(afterEach);
 const today = todayIso();
 const viewing = { startedAt: null, finishedAt: '2026-02-02' };
 const item = (number: number, patch: Partial<SeasonEpisodeItem> = {}): SeasonEpisodeItem => ({
+  key: `k${number}`,
   number,
+  tmdbId: 100 + number,
   title: `Title ${number}`,
   airDate: '2020-01-01',
   runtime: 24,
   overview: `About ${number}`,
+  stillPath: null,
   watched: false,
   viewings: [],
   ...patch,
@@ -26,10 +29,11 @@ const response = (
   seasonId: 50,
   source: 'tmdb',
   fetchedAt: '2026-01-01',
+  complete: true,
+  datesDerived: false,
   episodeCount: episodes.length,
   watchedCount: episodes.filter((e) => e.watched).length,
   episodes,
-  catalogMismatch: null,
   ...patch,
 });
 const tracking = (status = 'in_progress') => ({
@@ -98,13 +102,13 @@ describe('SeasonEpisodes', () => {
     const { wrapper } = await mountList([item(1), item(2)], { updateSeasonEpisodes: update });
     await wrapper.find('li.episode button.check').trigger('click');
     await flushPromises();
-    expect(update).toHaveBeenCalledWith(50, { op: 'mark', numbers: [1], date: today });
+    expect(update).toHaveBeenCalledWith(50, { op: 'mark', keys: ['k1'], date: today });
     expect(wrapper.emitted('updated')).toHaveLength(1);
     const toast = document.body.querySelector('.toast')!;
     expect(toast.textContent).toContain('Episode marked');
     (toast.querySelector('.undo') as HTMLElement).click();
     await flushPromises();
-    expect(update).toHaveBeenLastCalledWith(50, { op: 'unmark', numbers: [1] });
+    expect(update).toHaveBeenLastCalledWith(50, { op: 'unmark', keys: ['k1'] });
   });
 
   it('unmarks a watched episode and undo restores its viewings', async () => {
@@ -114,12 +118,12 @@ describe('SeasonEpisodes', () => {
     });
     await wrapper.find('li.episode button.check').trigger('click');
     await flushPromises();
-    expect(update).toHaveBeenCalledWith(50, { op: 'unmark', numbers: [1] });
+    expect(update).toHaveBeenCalledWith(50, { op: 'unmark', keys: ['k1'] });
     (document.body.querySelector('.toast .undo') as HTMLElement).click();
     await flushPromises();
     expect(update).toHaveBeenLastCalledWith(50, {
       op: 'setViewings',
-      number: 1,
+      key: 'k1',
       viewings: [viewing],
     });
   });
@@ -133,7 +137,7 @@ describe('SeasonEpisodes', () => {
     await wrapper.findAll('li.episode')[2]!.find('button.text').trigger('click');
     await wrapper.findAll('li.episode')[2]!.find('.body button.small').trigger('click');
     await flushPromises();
-    expect(update).toHaveBeenCalledWith(50, { op: 'mark', numbers: [2, 3], date: today });
+    expect(update).toHaveBeenCalledWith(50, { op: 'mark', keys: ['k2', 'k3'], date: today });
   });
 
   it('marks every aired episode, with or without a date', async () => {
@@ -143,10 +147,10 @@ describe('SeasonEpisodes', () => {
     const [all, undated] = wrapper.findAll('.actions button');
     await all!.trigger('click');
     await flushPromises();
-    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', numbers: [1, 2], date: today });
+    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k1', 'k2'], date: today });
     await undated!.trigger('click');
     await flushPromises();
-    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', numbers: [1, 2], date: null });
+    expect(update).toHaveBeenLastCalledWith(50, { op: 'mark', keys: ['k1', 'k2'], date: null });
   });
 
   it('says the status changed and that undo does not revert it', async () => {
@@ -174,24 +178,66 @@ describe('SeasonEpisodes', () => {
     await flushPromises();
     expect(update).toHaveBeenCalledWith(50, {
       op: 'setViewings',
-      number: 1,
+      key: 'k1',
       viewings: [viewing, { startedAt: null, finishedAt: '2026-03-03' }],
     });
   });
 
-  it('points to the episode group chooser on a catalog mismatch', async () => {
-    const { wrapper } = await mountList(
-      [item(1, { title: null })],
-      {},
-      {
-        source: 'numbers',
-        catalogMismatch: { catalogEpisodes: 25 },
-      },
-    );
-    const note = wrapper.find('.mismatch');
-    expect(note.text()).toContain('lists 25 episodes');
-    expect(note.find('a').attributes('href')).toBe('/series/7');
-    expect(rows(wrapper)).toHaveLength(1);
+  it('shows a still from TMDB only when the episode has one', async () => {
+    const { wrapper } = await mountList([item(1, { stillPath: '/a.jpg' }), item(2)]);
+    const [first, second] = wrapper.findAll('li.episode');
+    const image = first!.find('img.still');
+    expect(image.attributes('src')).toBe('https://image.tmdb.org/t/p/w300/a.jpg');
+    expect(image.attributes('loading')).toBe('lazy');
+    expect(second!.find('img').exists()).toBe(false);
+    await image.trigger('error');
+    expect(first!.find('img').exists()).toBe(false);
+  });
+
+  it('keeps asking for the episodes until the catalog is complete', async () => {
+    vi.useFakeTimers();
+    try {
+      const seasonEpisodes = vi
+        .fn()
+        .mockResolvedValueOnce(response([item(1)], { complete: false }))
+        .mockResolvedValueOnce(response([item(1), item(2)], { complete: false }))
+        .mockResolvedValueOnce(response([item(1), item(2), item(3)]));
+      const { wrapper } = await mountWithApi(SeasonEpisodes, { seasonEpisodes } as never, {
+        seasonId: 50,
+        seriesId: 7,
+        status: 'in_progress',
+      });
+      await flushPromises();
+      expect(rows(wrapper)).toHaveLength(1);
+      expect(wrapper.find('.partial').exists()).toBe(true);
+      await vi.advanceTimersByTimeAsync(1600);
+      expect(rows(wrapper)).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(1600);
+      expect(rows(wrapper)).toHaveLength(3);
+      expect(wrapper.find('.partial').exists()).toBe(false);
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(seasonEpisodes).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops asking after a bounded number of attempts', async () => {
+    vi.useFakeTimers();
+    try {
+      const seasonEpisodes = vi.fn().mockResolvedValue(response([item(1)], { complete: false }));
+      const { wrapper } = await mountWithApi(SeasonEpisodes, { seasonEpisodes } as never, {
+        seasonId: 50,
+        seriesId: 7,
+        status: 'in_progress',
+      });
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(seasonEpisodes).toHaveBeenCalledTimes(21);
+      expect(wrapper.find('.partial').text()).toContain('Reload');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('shows an error when the episodes cannot be loaded', async () => {

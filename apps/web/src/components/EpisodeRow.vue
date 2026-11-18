@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { SeasonEpisodeItem, Viewing } from '@metrack/domain';
 import { messages } from '../i18n/messages';
 import { hasAired } from '../logic/episodeSelection';
+import { stillUrl } from '../logic/stillUrl';
 import AppIcon from './AppIcon.vue';
 import EpisodeViewings from './EpisodeViewings.vue';
 
@@ -19,6 +20,8 @@ const emit = defineEmits<{
 }>();
 
 const open = ref(false);
+const stillFailed = ref(false);
+const still = computed(() => (stillFailed.value ? null : stillUrl(props.episode.stillPath)));
 const aired = computed(() => hasAired(props.episode, props.today));
 const name = computed(() =>
   props.numbered && props.episode.title
@@ -54,6 +57,17 @@ const times = computed(() => props.episode.viewings.length);
       >
         <AppIcon v-if="episode.watched" name="check" :size="18" />
       </button>
+      <img
+        v-if="still"
+        class="still"
+        :src="still"
+        :alt="messages.episodes.still(name)"
+        width="80"
+        height="45"
+        loading="lazy"
+        decoding="async"
+        @error="stillFailed = true"
+      />
       <button
         type="button"
         class="text"
@@ -118,8 +132,9 @@ const times = computed(() => props.episode.viewings.length);
   display: grid;
   flex: none;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  min-height: 0;
   padding: 0;
   border: 1px solid var(--outline-strong);
   border-radius: 50%;
@@ -130,6 +145,16 @@ const times = computed(() => props.episode.viewings.length);
 .check.on {
   border-color: var(--primary);
   background: var(--primary);
+}
+
+.still {
+  flex: none;
+  width: 80px;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border-radius: var(--r-sm);
+  background: var(--surface-low);
+  object-fit: cover;
 }
 
 .text {
@@ -162,10 +187,13 @@ const times = computed(() => props.episode.viewings.length);
 }
 
 .title {
+  display: -webkit-box;
   overflow: hidden;
   font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 
 .times {
@@ -184,7 +212,7 @@ const times = computed(() => props.episode.viewings.length);
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  padding: 0 0 var(--s-3) calc(36px + var(--s-3));
+  padding: 0 0 var(--s-3) calc(44px + var(--s-3));
 }
 
 .overview {

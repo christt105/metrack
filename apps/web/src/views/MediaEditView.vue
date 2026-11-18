@@ -33,6 +33,7 @@ const saving = ref(false);
 const error = ref<unknown>(null);
 const invalid = ref<{ key: string; reason: string } | null>(null);
 const leaving = ref(false);
+const datesDerived = ref(false);
 let ticket = 0;
 
 const schemas = computed(() => fieldSchemas[props.collection]);
@@ -85,6 +86,12 @@ function fieldId(key: string): string {
   return `field-${key}`;
 }
 
+const DERIVED_KEYS = ['startedAt', 'finishedAt'];
+
+function isDerived(key: string): boolean {
+  return datesDerived.value && DERIVED_KEYS.includes(key);
+}
+
 function isEdited(key: string): boolean {
   return detail.value?.editedFields.includes(key) ?? false;
 }
@@ -109,7 +116,12 @@ async function load(): Promise<void> {
     if (mine !== ticket) return;
     detail.value = result;
     error.value = null;
+    datesDerived.value = false;
     reset(result);
+    if (props.collection === 'seasons') {
+      const episodes = await api.seasonEpisodes(props.id).catch(() => null);
+      if (mine === ticket) datesDerived.value = episodes?.datesDerived === true;
+    }
   } catch (cause) {
     if (mine !== ticket) return;
     detail.value = null;
@@ -214,7 +226,13 @@ watch(() => [props.collection, props.id], load, { immediate: true });
               :label="fieldLabel(schema.key)"
               :edited="isEdited(schema.key)"
               :released="releases.includes(schema.key)"
-              :hint="schema.kind === 'list' ? messages.detail.listHint : undefined"
+              :hint="
+                isDerived(schema.key)
+                  ? messages.edit.datesDerived
+                  : schema.kind === 'list'
+                    ? messages.detail.listHint
+                    : undefined
+              "
               :invalid="invalid?.key === schema.key ? invalid.reason : undefined"
               :class="{ wide: schema.kind === 'textarea' || schema.kind === 'list' }"
               @release="toggleRelease(schema.key)"
@@ -223,6 +241,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
                 :id="fieldId(schema.key)"
                 :kind="schema.kind"
                 :required="schema.required"
+                :disabled="isDerived(schema.key)"
                 :model-value="draft[schema.key] ?? ''"
                 @update:model-value="draft[schema.key] = $event"
               />

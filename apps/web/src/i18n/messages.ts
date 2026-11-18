@@ -110,6 +110,7 @@ export const messages = {
   edit: {
     title: (name: string) => `Edit ${name}`,
     back: 'Back to details',
+    datesDerived: 'Calculated from the episodes you watched, so it cannot be edited here.',
     sectionTracking: 'Your tracking',
     sectionNotes: 'Your notes',
     sectionMetadata: 'Title details',
@@ -181,9 +182,9 @@ export const messages = {
     viewingsSaved: 'Viewings saved',
     statusChanged: (label: string) => `Season is now ${label}. Undo keeps that status.`,
     nothingToMark: 'Nothing to mark: every aired episode is already watched.',
-    mismatch: (catalogEpisodes: number) =>
-      `TMDB numbers this season differently (it lists ${catalogEpisodes} episodes), so only episode numbers are shown.`,
-    chooseGroup: 'Choose an episode group on the series page',
+    partial: 'Loading the rest of the episodes...',
+    partialStalled: 'Some episodes are still loading. Reload the page in a moment to see them.',
+    still: (title: string) => `Still from ${title}`,
   },
   ratings: {
     crown: 'Masterpiece',

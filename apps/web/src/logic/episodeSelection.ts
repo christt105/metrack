@@ -5,13 +5,18 @@ export function hasAired(episode: SeasonEpisodeItem, today: string): boolean {
   return episode.airDate === null || episode.airDate <= today;
 }
 
-/** The numbers of the unwatched episodes that have aired, up to and including `upTo` when given. */
+/** The keys of the unwatched episodes that have aired, up to and including the episode `upToKey` when given. */
 export function unwatchedAired(
   episodes: readonly SeasonEpisodeItem[],
   today: string,
-  upTo: number = Number.POSITIVE_INFINITY,
-): number[] {
+  upToKey?: string,
+): string[] {
+  const limit =
+    upToKey === undefined ? -1 : episodes.findIndex((episode) => episode.key === upToKey);
   return episodes
-    .filter((episode) => !episode.watched && episode.number <= upTo && hasAired(episode, today))
-    .map((episode) => episode.number);
+    .filter(
+      (episode, index) =>
+        !episode.watched && (limit < 0 || index <= limit) && hasAired(episode, today),
+    )
+    .map((episode) => episode.key);
 }

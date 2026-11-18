@@ -52,6 +52,16 @@ const series = {
   editedFields: [],
 } as unknown as AnyDetail;
 
+const EMPTY_EPISODES = {
+  seasonId: 30,
+  source: 'tmdb',
+  fetchedAt: null,
+  complete: true,
+  episodeCount: 0,
+  watchedCount: 0,
+  episodes: [],
+};
+
 const mounted: { unmount: () => void }[] = [];
 
 async function open(api: Partial<ApiClient>, path = '/movies/4/edit', from = '/movies/4') {
@@ -223,5 +233,46 @@ describe('MediaEditView', () => {
     const gone = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(gone);
     expect(gone.defaultPrevented).toBe(false);
+  });
+
+  describe('season dates', () => {
+    const season = {
+      id: 30,
+      seriesId: 9,
+      number: 1,
+      status: 'completed',
+      startedAt: '2026-01-01',
+      finishedAt: '2026-01-09',
+      rewatches: [],
+      editedFields: [],
+    } as unknown as AnyDetail;
+
+    it('shows the dates read-only with a hint when they come from the episodes', async () => {
+      const { wrapper } = await open(
+        {
+          getDetail: vi.fn().mockResolvedValue(season),
+          seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: true }),
+        },
+        '/seasons/30/edit',
+        '/seasons/30',
+      );
+      const started = wrapper.find('#field-startedAt');
+      expect((started.element as HTMLInputElement).disabled).toBe(true);
+      expect((wrapper.find('#field-finishedAt').element as HTMLInputElement).disabled).toBe(true);
+      expect(wrapper.text()).toContain('Calculated from the episodes');
+    });
+
+    it('keeps the dates editable when they are not derived', async () => {
+      const { wrapper } = await open(
+        {
+          getDetail: vi.fn().mockResolvedValue(season),
+          seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: false }),
+        },
+        '/seasons/30/edit',
+        '/seasons/30',
+      );
+      expect((wrapper.find('#field-startedAt').element as HTMLInputElement).disabled).toBe(false);
+      expect(wrapper.text()).not.toContain('Calculated from the episodes');
+    });
   });
 });

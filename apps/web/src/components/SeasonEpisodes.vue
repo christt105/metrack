@@ -18,6 +18,8 @@ import SeasonProgress from './SeasonProgress.vue';
 import UndoToast from './UndoToast.vue';
 
 const TOAST_MS = 7000;
+const REFILL_MS = 1500;
+const REFILL_ATTEMPTS = 20;
 
 const props = defineProps<{ seasonId: number; seriesId: number; status: MediaStatus }>();
 const emit = defineEmits<{ updated: [update: SeasonEpisodesUpdateResponse] }>();
@@ -29,21 +31,55 @@ const error = ref<unknown>(null);
 const toast = ref<{ message: string; undo: EpisodeOperation[] } | null>(null);
 let timer: ReturnType<typeof setTimeout> | undefined;
 let ticket = 0;
+let refill: ReturnType<typeof setTimeout> | undefined;
+const attempts = ref(0);
 
 const today = computed(() => todayIso());
 const numbered = computed(() => data.value?.source !== 'numbers');
+const partial = computed(() => data.value !== null && !data.value.complete);
+const stalled = computed(() => partial.value && attempts.value >= REFILL_ATTEMPTS);
 const markable = computed(() =>
   data.value ? unwatchedAired(data.value.episodes, today.value) : [],
 );
 
+function stopRefill(): void {
+  clearTimeout(refill);
+  refill = undefined;
+}
+
+function planRefill(mine: number): void {
+  stopRefill();
+  if (mine !== ticket || !data.value || data.value.complete || attempts.value >= REFILL_ATTEMPTS)
+    return;
+  refill = setTimeout(() => void refillOnce(mine), REFILL_MS);
+}
+
+async function refillOnce(mine: number): Promise<void> {
+  refill = undefined;
+  if (mine !== ticket) return;
+  if (busy.value) return planRefill(mine);
+  attempts.value += 1;
+  try {
+    const loaded = await api.seasonEpisodes(props.seasonId);
+    if (mine === ticket && !busy.value) data.value = loaded;
+  } catch {
+    /* the next attempt asks again */
+  }
+  planRefill(mine);
+}
+
 async function load(): Promise<void> {
   const mine = ++ticket;
+  stopRefill();
+  attempts.value = 0;
   data.value = null;
   error.value = null;
   dismiss();
   try {
     const loaded = await api.seasonEpisodes(props.seasonId);
-    if (mine === ticket) data.value = loaded;
+    if (mine !== ticket) return;
+    data.value = loaded;
+    planRefill(mine);
   } catch (cause) {
     if (mine === ticket) error.value = cause;
   }
@@ -63,6 +99,7 @@ function dismiss(): void {
 function receive(update: SeasonEpisodesUpdateResponse): void {
   data.value = update;
   emit('updated', update);
+  planRefill(ticket);
 }
 
 async function run(
@@ -92,28 +129,28 @@ function marked(count: number): (changed: MediaStatus | null) => string {
       : messages.episodes.marked(count);
 }
 
-function mark(numbers: number[], dated: boolean): Promise<void> {
-  if (numbers.length === 0) {
+function mark(keys: string[], dated: boolean): Promise<void> {
+  if (keys.length === 0) {
     say(messages.episodes.nothingToMark, []);
     return Promise.resolve();
   }
-  return run({ op: 'mark', numbers, date: dated ? today.value : null }, marked(numbers.length));
+  return run({ op: 'mark', keys, date: dated ? today.value : null }, marked(keys.length));
 }
 
-function toggle(number: number, watched: boolean): Promise<void> {
+function toggle(key: string, watched: boolean): Promise<void> {
   return watched
-    ? run({ op: 'unmark', numbers: [number] }, () => messages.episodes.unmarked)
-    : mark([number], true);
+    ? run({ op: 'unmark', keys: [key] }, () => messages.episodes.unmarked)
+    : mark([key], true);
 }
 
-function markUpTo(number: number, dated: boolean): Promise<void> {
+function markUpTo(key: string, dated: boolean): Promise<void> {
   return data.value
-    ? mark(unwatchedAired(data.value.episodes, today.value, number), dated)
+    ? mark(unwatchedAired(data.value.episodes, today.value, key), dated)
     : Promise.resolve();
 }
 
-function setViewings(number: number, viewings: Viewing[]): Promise<void> {
-  return run({ op: 'setViewings', number, viewings }, () => messages.episodes.viewingsSaved);
+function setViewings(key: string, viewings: Viewing[]): Promise<void> {
+  return run({ op: 'setViewings', key, viewings }, () => messages.episodes.viewingsSaved);
 }
 
 async function undo(): Promise<void> {
@@ -135,7 +172,11 @@ async function undo(): Promise<void> {
 }
 
 watch(() => props.seasonId, load, { immediate: true });
-onBeforeUnmount(() => clearTimeout(timer));
+onBeforeUnmount(() => {
+  clearTimeout(timer);
+  stopRefill();
+  ticket += 1;
+});
 </script>
 
 <template>
@@ -145,9 +186,8 @@ onBeforeUnmount(() => clearTimeout(timer));
     <ErrorNotice :error="error" />
     <template v-if="data">
       <SeasonProgress :watched="data.watchedCount" :total="data.episodeCount" />
-      <p v-if="data.catalogMismatch" class="notice mismatch" role="note">
-        {{ messages.episodes.mismatch(data.catalogMismatch.catalogEpisodes) }}
-        <RouterLink :to="`/series/${seriesId}`">{{ messages.episodes.chooseGroup }}</RouterLink>
+      <p v-if="partial" class="muted partial" role="status">
+        {{ stalled ? messages.episodes.partialStalled : messages.episodes.partial }}
       </p>
       <p v-if="data.episodes.length === 0" class="muted">{{ messages.episodes.empty }}</p>
       <template v-else>
@@ -172,14 +212,14 @@ onBeforeUnmount(() => clearTimeout(timer));
         <ul class="list">
           <EpisodeRow
             v-for="episode in data.episodes"
-            :key="episode.number"
+            :key="episode.key"
             :episode="episode"
             :numbered="numbered"
             :today="today"
             :busy="busy"
-            @toggle="toggle(episode.number, episode.watched)"
-            @mark-up-to="markUpTo(episode.number, $event)"
-            @viewings="setViewings(episode.number, $event)"
+            @toggle="toggle(episode.key, episode.watched)"
+            @mark-up-to="markUpTo(episode.key, $event)"
+            @viewings="setViewings(episode.key, $event)"
           />
         </ul>
       </template>
@@ -211,7 +251,7 @@ onBeforeUnmount(() => clearTimeout(timer));
   list-style: none;
 }
 
-.mismatch {
+.partial {
   margin: var(--s-3) 0;
 }
 </style>

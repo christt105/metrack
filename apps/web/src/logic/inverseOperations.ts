@@ -8,20 +8,20 @@ export function inverseOperations(
   operation: EpisodeOperation,
   before: readonly SeasonEpisodeItem[],
 ): EpisodeOperation[] {
-  const byNumber = new Map(before.map((episode) => [episode.number, episode]));
+  const byKey = new Map(before.map((episode) => [episode.key, episode]));
   if (operation.op === 'mark') {
-    const added = operation.numbers.filter((number) => byNumber.get(number)?.watched === false);
-    return added.length > 0 ? [{ op: 'unmark', numbers: added }] : [];
+    const added = operation.keys.filter((key) => byKey.get(key)?.watched === false);
+    return added.length > 0 ? [{ op: 'unmark', keys: added }] : [];
   }
   if (operation.op === 'unmark') {
-    return operation.numbers.flatMap((number): EpisodeOperation[] => {
-      const episode = byNumber.get(number);
-      return episode?.watched ? [{ op: 'setViewings', number, viewings: episode.viewings }] : [];
+    return operation.keys.flatMap((key): EpisodeOperation[] => {
+      const episode = byKey.get(key);
+      return episode?.watched ? [{ op: 'setViewings', key, viewings: episode.viewings }] : [];
     });
   }
-  const episode = byNumber.get(operation.number);
+  const episode = byKey.get(operation.key);
   if (!episode) return [];
   return episode.watched
-    ? [{ op: 'setViewings', number: operation.number, viewings: episode.viewings }]
-    : [{ op: 'unmark', numbers: [operation.number] }];
+    ? [{ op: 'setViewings', key: operation.key, viewings: episode.viewings }]
+    : [{ op: 'unmark', keys: [operation.key] }];
 }

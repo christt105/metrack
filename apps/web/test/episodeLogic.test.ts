@@ -2,14 +2,18 @@ import type { SeasonEpisodeItem, SeasonEpisodesUpdateResponse, Season } from '@m
 import { describe, expect, it } from 'vitest';
 import { hasAired, unwatchedAired } from '../src/logic/episodeSelection';
 import { inverseOperations } from '../src/logic/inverseOperations';
+import { stillUrl } from '../src/logic/stillUrl';
 import { withTracking } from '../src/logic/withTracking';
 
 const episode = (number: number, patch: Partial<SeasonEpisodeItem> = {}): SeasonEpisodeItem => ({
+  key: `k${number}`,
   number,
+  tmdbId: 100 + number,
   title: null,
   airDate: '2026-01-01',
   runtime: null,
   overview: null,
+  stillPath: null,
   watched: false,
   viewings: [],
   ...patch,
@@ -27,13 +31,13 @@ describe('unwatchedAired', () => {
   ];
 
   it('lists every unwatched aired episode', () => {
-    expect(unwatchedAired(episodes, today)).toEqual([2, 3, 4]);
+    expect(unwatchedAired(episodes, today)).toEqual(['k2', 'k3', 'k4']);
   });
 
   it('stops at the chosen episode and skips watched and unaired ones', () => {
-    expect(unwatchedAired(episodes, today, 3)).toEqual([2, 3]);
-    expect(unwatchedAired(episodes, today, 5)).toEqual([2, 3, 4]);
-    expect(unwatchedAired(episodes, today, 1)).toEqual([]);
+    expect(unwatchedAired(episodes, today, 'k3')).toEqual(['k2', 'k3']);
+    expect(unwatchedAired(episodes, today, 'k5')).toEqual(['k2', 'k3', 'k4']);
+    expect(unwatchedAired(episodes, today, 'k1')).toEqual([]);
   });
 
   it('treats an episode aired today as aired and a missing date as aired', () => {
@@ -51,22 +55,22 @@ describe('inverseOperations', () => {
   ];
 
   it('unmarks only the episodes a mark added', () => {
-    expect(inverseOperations({ op: 'mark', numbers: [1, 2], date: today }, before)).toEqual([
-      { op: 'unmark', numbers: [2] },
+    expect(inverseOperations({ op: 'mark', keys: ['k1', 'k2'], date: today }, before)).toEqual([
+      { op: 'unmark', keys: ['k2'] },
     ]);
-    expect(inverseOperations({ op: 'mark', numbers: [1], date: today }, before)).toEqual([]);
+    expect(inverseOperations({ op: 'mark', keys: ['k1'], date: today }, before)).toEqual([]);
   });
 
   it('restores the viewings an unmark removed', () => {
-    expect(inverseOperations({ op: 'unmark', numbers: [1, 2, 3] }, before)).toEqual([
-      { op: 'setViewings', number: 1, viewings: [viewing] },
-      { op: 'setViewings', number: 3, viewings: [] },
+    expect(inverseOperations({ op: 'unmark', keys: ['k1', 'k2', 'k3'] }, before)).toEqual([
+      { op: 'setViewings', key: 'k1', viewings: [viewing] },
+      { op: 'setViewings', key: 'k3', viewings: [] },
     ]);
   });
 
   it('restores the previous viewings of an edited episode', () => {
-    expect(inverseOperations({ op: 'setViewings', number: 1, viewings: [] }, before)).toEqual([
-      { op: 'setViewings', number: 1, viewings: [viewing] },
+    expect(inverseOperations({ op: 'setViewings', key: 'k1', viewings: [] }, before)).toEqual([
+      { op: 'setViewings', key: 'k1', viewings: [viewing] },
     ]);
   });
 });
@@ -89,5 +93,13 @@ describe('withTracking', () => {
       startedAt: '2026-03-01',
       watchedCount: 4,
     });
+  });
+});
+
+describe('stillUrl', () => {
+  it('builds the TMDB image address and ignores a missing or odd path', () => {
+    expect(stillUrl('/abc.jpg')).toBe('https://image.tmdb.org/t/p/w300/abc.jpg');
+    expect(stillUrl(null)).toBeNull();
+    expect(stillUrl('abc.jpg')).toBeNull();
   });
 });
