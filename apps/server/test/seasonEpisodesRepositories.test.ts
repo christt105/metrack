@@ -219,9 +219,9 @@ describe.each(backends)('$name episode repositories', (backend) => {
     });
 
     it('sees personal data of any user, and nothing in an untouched season', async () => {
-      expect(await owner.seasons.hasPersonalData(seasonId)).toBe(false);
+      expect(await owner.seasons.hasPersonalData(seasonId, [])).toBe(false);
       await friend.seasons.update(seasonId, { rating: 5 });
-      expect(await owner.seasons.hasPersonalData(seasonId)).toBe(true);
+      expect(await owner.seasons.hasPersonalData(seasonId, [])).toBe(true);
     });
 
     it('counts status, dates, review and rewatches as personal data', async () => {
@@ -233,11 +233,11 @@ describe.each(backends)('$name episode repositories', (backend) => {
       ];
       for (const patch of patches) {
         await owner.seasons.update(seasonId, patch);
-        expect(await owner.seasons.hasPersonalData(seasonId)).toBe(true);
+        expect(await owner.seasons.hasPersonalData(seasonId, [])).toBe(true);
         await harness.run(
           "UPDATE season_entry SET status = 'planned', started_at = NULL, finished_at = NULL, review = NULL, rewatches = '[]'",
         );
-        expect(await owner.seasons.hasPersonalData(seasonId)).toBe(false);
+        expect(await owner.seasons.hasPersonalData(seasonId, [])).toBe(false);
       }
     });
 
