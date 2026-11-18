@@ -35,6 +35,7 @@ beforeAll(async () => {
     ...statements('../d1/migrations/0002_public_render_cache.sql'),
     ...statements('../d1/migrations/0003_connector_token_scope.sql'),
     ...statements('../d1/migrations/0005_invites.sql'),
+    ...statements('../d1/migrations/0009_season_episodes.sql'),
     ...statements('../d1/seed/test-data.sql'),
     `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'test', '${hashSecret(SECRET)}', 'write', '2026-01-01T00:00:00.000Z')`,
     `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'connector', '${hashSecret(CONNECTOR_SECRET)}', 'connector', '2026-01-01T00:00:00.000Z')`,
@@ -129,6 +130,19 @@ describe('Worker app over D1 and R2', () => {
     };
     expect(page.total).toBe(5);
     expect((await app.request('http://localhost/api/media')).status).toBe(401);
+  });
+
+  it('lists the episode numbers of a season over D1 when there is no TMDB client', async () => {
+    const response = await app.request('http://localhost/api/seasons/1/episodes', {
+      headers: auth,
+    });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { source: string; episodes: unknown[] };
+    expect(body.source).toBe('numbers');
+    expect(body.episodes).toHaveLength(8);
+    expect(
+      (await app.request('http://localhost/api/seasons/99/episodes', { headers: auth })).status,
+    ).toBe(404);
   });
 
   it('adds and edits a hand-added title', async () => {

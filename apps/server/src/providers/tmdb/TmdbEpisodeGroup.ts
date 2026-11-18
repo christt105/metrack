@@ -1,5 +1,10 @@
 /** One episode inside a season of an episode group. */
 export interface TmdbGroupEpisode {
+  id?: number;
+  name?: string;
+  overview?: string;
+  still_path?: string | null;
+  runtime?: number | null;
   season_number: number;
   episode_number: number;
   air_date?: string | null;

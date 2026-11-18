@@ -82,6 +82,8 @@ function season(over: Partial<Season>): Season {
     overview: null,
     firstAirDate: null,
     episodeCount: null,
+    watchedCount: 0,
+    skippedCount: 0,
     slug: null,
     tags: [],
     ...ART,

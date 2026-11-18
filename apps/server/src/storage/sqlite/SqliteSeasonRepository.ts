@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Season } from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
+import { SEASON_PERSONAL_DATA_SQL } from '../mapping/seasonPersonalDataSql.js';
 import { seasonTable } from '../mapping/seasonTable.js';
 import type { SeasonRepository } from '../repositories/SeasonRepository.js';
 import { SqliteTableRepository } from './SqliteTableRepository.js';
@@ -21,5 +22,16 @@ export class SqliteSeasonRepository
     this.db
       .prepare('UPDATE season SET tmdb_season_number = NULL WHERE series_id = ?')
       .run(seriesId);
+  }
+
+  async hasPersonalData(seasonId: number, episodeKeys: readonly string[]): Promise<boolean> {
+    return (
+      this.db.prepare(SEASON_PERSONAL_DATA_SQL).get(seasonId, JSON.stringify(episodeKeys)) !==
+      undefined
+    );
+  }
+
+  async deleteForAll(seasonId: number): Promise<void> {
+    this.db.prepare('DELETE FROM season WHERE id = ?').run(seasonId);
   }
 }

@@ -267,6 +267,163 @@ describe('changing the season ordering', () => {
   });
 });
 
+describe('reorganizing the seasons when the ordering changes', () => {
+  const ordering = (client: ReturnType<typeof as>, seriesId: number, group: string | null) =>
+    client.put(`/api/series/${seriesId}/season-ordering`, { episodeGroup: group });
+
+  const summary = (series: Series & { seasons: Season[] }) =>
+    series.seasons.map((s) => [s.number, s.tmdbSeasonNumber, s.episodeCount, s.status]);
+
+  async function dandadanOnRegular(): Promise<number> {
+    const seriesId = await addSeries(normal, DANDADAN_ID);
+    expect(summary(await seriesOf(normal, seriesId))).toEqual([[1, 1, 24, 'planned']]);
+    return seriesId;
+  }
+
+  it('creates the seasons the new ordering has and the series lacks, and relinks the rest', async () => {
+    const seriesId = await dandadanOnRegular();
+    expect((await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP)).statusCode).toBe(200);
+    const series = await seriesOf(normal, seriesId);
+    expect(summary(series)).toEqual([
+      [1, 1, 12, 'planned'],
+      [2, 2, 12, 'planned'],
+    ]);
+    expect(series.seasons[1]?.firstAirDate).toBe('2025-07-03');
+  });
+
+  it('drops the cached episode catalogs of the series so they are fetched again', async () => {
+    const seriesId = await dandadanOnRegular();
+    const season = (await seriesOf(normal, seriesId)).seasons[0] as Season;
+    api.db
+      .prepare(
+        "INSERT INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, '[]', 'tmdb', 'now')",
+      )
+      .run(season.id);
+    await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
+    expect(api.db.prepare('SELECT * FROM season_episodes').all()).toEqual([]);
+  });
+
+  it('does not touch what the user watched of the series', async () => {
+    const seriesId = await dandadanOnRegular();
+    const watched = JSON.stringify({ '123': [], s1e4: [] });
+    api.db
+      .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (2, ?, ?)')
+      .run(seriesId, watched);
+    await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
+    expect(api.db.prepare('SELECT watched FROM series_episode_entry').get()).toEqual({ watched });
+  });
+
+  async function dandadanWithSpecialSeason(): Promise<{ seriesId: number; extra: Season }> {
+    const seriesId = await dandadanOnRegular();
+    expect((await normal.post('/api/seasons', { seriesId, number: 5 })).statusCode).toBe(201);
+    const series = await seriesOf(normal, seriesId);
+    expect(series.tmdbEpisodeGroup).toBeNull();
+    return { seriesId, extra: series.seasons[1] as Season };
+  }
+
+  it('deletes a stored season the new ordering lacks when nobody entered anything in it', async () => {
+    const { seriesId } = await dandadanWithSpecialSeason();
+    expect((await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP)).statusCode).toBe(200);
+    expect(summary(await seriesOf(normal, seriesId))).toEqual([
+      [1, 1, 12, 'planned'],
+      [2, 2, 12, 'planned'],
+    ]);
+    expect(api.db.prepare('SELECT COUNT(*) AS n FROM season').get()).toEqual({ n: 2 });
+  });
+
+  it('keeps it unlinked when the user rated it', async () => {
+    const { seriesId, extra } = await dandadanWithSpecialSeason();
+    await normal.patch(`/api/seasons/${extra.id}`, { rating: 6 });
+    await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
+    expect(summary(await seriesOf(normal, seriesId))).toEqual([
+      [1, 1, 12, 'planned'],
+      [2, 2, 12, 'planned'],
+      [5, null, null, 'planned'],
+    ]);
+  });
+
+  it('keeps it when it is marked as watched', async () => {
+    const { seriesId, extra } = await dandadanWithSpecialSeason();
+    await normal.patch(`/api/seasons/${extra.id}`, { status: 'completed' });
+    await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
+    expect((await seriesOf(normal, seriesId)).seasons.map((s) => s.number)).toEqual([1, 2, 5]);
+  });
+
+  describe('going back to the regular seasons', () => {
+    async function onGroup(): Promise<{ seriesId: number; second: Season }> {
+      const seriesId = await dandadanOnRegular();
+      await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
+      const second = (await seriesOf(normal, seriesId)).seasons[1] as Season;
+      return { seriesId, second };
+    }
+
+    function recordEpisode(seriesId: number, season: Season): void {
+      api.db
+        .prepare(
+          "INSERT INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, 'tmdb', 'now')",
+        )
+        .run(
+          season.id,
+          JSON.stringify([{ number: 1, tmdbId: 777, title: 'E', airDate: '2025-07-03' }]),
+        );
+      api.db
+        .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (2, ?, ?)')
+        .run(seriesId, JSON.stringify({ '777': [] }));
+    }
+
+    const progress = (season: Season, status: string) =>
+      api.db
+        .prepare(
+          'UPDATE season_entry SET status = ?, started_at = ?, finished_at = ?, watched_count = 1 WHERE season_id = ? AND user_id = 2',
+        )
+        .run(status, '2026-01-01', status === 'completed' ? '2026-01-02' : null, season.id);
+
+    it('leaves exactly the regular seasons when only watched episodes filled the extra ones', async () => {
+      const { seriesId, second } = await onGroup();
+      recordEpisode(seriesId, second);
+      progress(second, 'completed');
+      expect((await ordering(normal, seriesId, null)).statusCode).toBe(200);
+      expect(summary(await seriesOf(normal, seriesId))).toEqual([[1, 1, 24, 'planned']]);
+    });
+
+    it('keeps an extra season holding a status the episodes do not explain', async () => {
+      const { seriesId, second } = await onGroup();
+      recordEpisode(seriesId, second);
+      progress(second, 'completed');
+      api.db
+        .prepare('UPDATE series_episode_entry SET watched = ?')
+        .run(JSON.stringify({ '999': [] }));
+      await ordering(normal, seriesId, null);
+      expect((await seriesOf(normal, seriesId)).seasons.map((s) => s.number)).toEqual([1, 2]);
+    });
+
+    it('keeps an extra season the user rated even with episodes recorded', async () => {
+      const { seriesId, second } = await onGroup();
+      recordEpisode(seriesId, second);
+      await normal.patch(`/api/seasons/${second.id}`, { rating: 6 });
+      await ordering(normal, seriesId, null);
+      expect((await seriesOf(normal, seriesId)).seasons.map((s) => s.number)).toEqual([1, 2]);
+    });
+  });
+
+  it('keeps it when another user has data in it', async () => {
+    const seriesId = await addSeries(owner, DANDADAN_ID);
+    expect((await owner.post('/api/seasons', { seriesId, number: 5 })).statusCode).toBe(201);
+    const extra = (await seriesOf(owner, seriesId)).seasons[1] as Season;
+    api.db.prepare('INSERT INTO series_entry (user_id, series_id) VALUES (2, ?)').run(seriesId);
+    api.db
+      .prepare(
+        "INSERT INTO season_entry (user_id, season_id, finished_at) VALUES (2, ?, '2026-02-01')",
+      )
+      .run(extra.id);
+    const forced = await owner.put(`/api/series/${seriesId}/season-ordering?forAll=true`, {
+      episodeGroup: DANDADAN_SEASONS_GROUP,
+    });
+    expect(forced.statusCode).toBe(200);
+    expect((await seriesOf(owner, seriesId)).seasons.map((s) => s.number)).toEqual([1, 2, 5]);
+  });
+});
+
 describe('editing shared catalog fields as the owner', () => {
   it('changes a season number for every user only with forAll, and only for the owner', async () => {
     const seriesId = await addSeries(owner, FRIEREN_ID);

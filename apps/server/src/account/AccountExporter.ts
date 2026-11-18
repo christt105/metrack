@@ -68,6 +68,12 @@ export class AccountExporter {
     const seasonOverrides = (
       await Promise.all(series.map((entry) => deps.overrides.listBySeries(entry.id)))
     ).flat();
+    const seasons = await deps.seasons.list();
+    const episodeWatches = (await deps.episodeWatches.list()).map((row) => ({
+      seriesId: row.seriesId,
+      watched: row.watched,
+      skipped: row.skipped,
+    }));
     const settings = await deps.settings.get(userId);
     return {
       format: 1,
@@ -79,10 +85,11 @@ export class AccountExporter {
       invites: userId === OWNER_ID ? await this.invites() : [],
       movies: await deps.movies.list(),
       series,
-      seasons: await deps.seasons.list(),
+      seasons,
       videogames: await deps.videogames.list(),
       books: await deps.books.list(),
       seasonOverrides,
+      episodeWatches,
       unlinkedTitles: await deps.unlinked.list(),
       releaseAlerts: await deps.releaseAlerts.list(),
       images,

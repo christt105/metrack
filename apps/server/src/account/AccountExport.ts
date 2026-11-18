@@ -12,6 +12,7 @@ import type {
   UserSettings,
   Videogame,
 } from '@metrack/domain';
+import type { ExportedEpisodeWatches } from './ExportedEpisodeWatches.js';
 
 /** One image a user owns, as listed in the export; `file` is its path inside the archive, or null when the bytes were missing. */
 export interface ExportedImage {
@@ -45,6 +46,8 @@ export interface AccountExport {
   videogames: Videogame[];
   books: Book[];
   seasonOverrides: SeasonOverride[];
+  /** The episodes watched in each series that has a per-episode record; series without one are not listed. */
+  episodeWatches: ExportedEpisodeWatches[];
   unlinkedTitles: UnlinkedTitle[];
   releaseAlerts: ReleaseAlert[];
   images: ExportedImage[];
