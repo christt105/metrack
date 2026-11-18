@@ -9,7 +9,9 @@ import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
 import { SqliteBookRepository } from '../src/storage/sqlite/SqliteBookRepository.js';
+import { SqliteEpisodeWatchRepository } from '../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
 import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
+import { SqliteSeasonEpisodesRepository } from '../src/storage/sqlite/SqliteSeasonEpisodesRepository.js';
 import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
 import { SqliteSeriesRepository } from '../src/storage/sqlite/SqliteSeriesRepository.js';
@@ -81,7 +83,7 @@ describe('backup and restore of the whole data directory', () => {
       nextEpisode: null,
       nextEpisodeCheckedAt: null,
     });
-    await new SqliteSeasonRepository(db, OWNER_SCOPE).create({
+    const season = await new SqliteSeasonRepository(db, OWNER_SCOPE).create({
       seriesId: series.id,
       number: 1,
       tmdbSeasonNumber: 1,
@@ -96,6 +98,27 @@ describe('backup and restore of the whole data directory', () => {
       slug: null,
       tags: [],
       ...tracking,
+    });
+    await new SqliteSeasonEpisodesRepository(db).put({
+      seasonId: season.id,
+      episodes: [
+        {
+          number: 1,
+          title: 'Pilot',
+          airDate: '2026-01-01',
+          runtime: 24,
+          tmdbId: 11,
+          overview: null,
+          stillPath: '/still.jpg',
+        },
+      ],
+      source: 'tmdb',
+      fetchedAt: '2026-03-05T12:00:00.000Z',
+      complete: false,
+    });
+    await new SqliteEpisodeWatchRepository(db, OWNER_SCOPE).set(series.id, {
+      '11': [{ startedAt: null, finishedAt: '2026-03-01' }],
+      s1e2: [],
     });
     await new SqliteSeasonOverrideRepository(db, OWNER_SCOPE).set({
       seriesId: series.id,

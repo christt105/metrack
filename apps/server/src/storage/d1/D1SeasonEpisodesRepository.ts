@@ -1,5 +1,5 @@
 import type { SeasonEpisodes } from '@metrack/domain';
-import { UPSERT_CATALOG_SQL } from '../mapping/episodeWatchesSql.js';
+import { DELETE_SERIES_CATALOGS_SQL, UPSERT_CATALOG_SQL } from '../mapping/episodeWatchesSql.js';
 import { seasonEpisodesFromRow, seasonEpisodesToRow } from '../mapping/seasonEpisodesFromRow.js';
 import type { SeasonEpisodesRepository } from '../repositories/SeasonEpisodesRepository.js';
 import type { D1Database } from './D1Database.js';
@@ -19,5 +19,9 @@ export class D1SeasonEpisodesRepository implements SeasonEpisodesRepository {
 
   async put(catalog: SeasonEpisodes): Promise<void> {
     await execute(this.db, UPSERT_CATALOG_SQL, ...seasonEpisodesToRow(catalog));
+  }
+
+  async deleteForSeries(seriesId: number): Promise<void> {
+    await execute(this.db, DELETE_SERIES_CATALOGS_SQL, seriesId);
   }
 }

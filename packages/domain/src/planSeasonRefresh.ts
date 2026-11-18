@@ -86,6 +86,7 @@ export function planSeasonRefresh(
   }
   return {
     updates,
+    unmatched: unclaimed(),
     unlinked: stored.filter(
       (s) => s.number >= 1 && !links.has(s.id) && (relink || s.tmdbSeasonNumber === null),
     ),

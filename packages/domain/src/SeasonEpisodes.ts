@@ -8,4 +8,6 @@ export interface SeasonEpisodes {
   source: EpisodeSource;
   /** When the catalog was last fetched, as an ISO timestamp. */
   fetchedAt: string;
+  /** False while a season too big for one request is still being filled in. */
+  complete: boolean;
 }

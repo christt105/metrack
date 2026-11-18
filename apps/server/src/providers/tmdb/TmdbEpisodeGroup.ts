@@ -3,6 +3,7 @@ export interface TmdbGroupEpisode {
   id?: number;
   name?: string;
   overview?: string;
+  still_path?: string | null;
   runtime?: number | null;
   season_number: number;
   episode_number: number;

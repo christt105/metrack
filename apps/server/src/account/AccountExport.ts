@@ -46,7 +46,7 @@ export interface AccountExport {
   videogames: Videogame[];
   books: Book[];
   seasonOverrides: SeasonOverride[];
-  /** The episodes watched in each season that has a per-episode record; seasons without one are not listed. */
+  /** The episodes watched in each series that has a per-episode record; series without one are not listed. */
   episodeWatches: ExportedEpisodeWatches[];
   unlinkedTitles: UnlinkedTitle[];
   releaseAlerts: ReleaseAlert[];

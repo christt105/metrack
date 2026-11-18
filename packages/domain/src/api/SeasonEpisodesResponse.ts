@@ -9,8 +9,9 @@ export interface SeasonEpisodesResponse {
   seasonId: number;
   source: EpisodeSource | 'numbers';
   fetchedAt: string | null;
+  /** False while the catalog of a very large season is still being filled in; ask again for the rest. */
+  complete: boolean;
   episodeCount: number;
   watchedCount: number;
   episodes: SeasonEpisodeItem[];
-  catalogMismatch: { catalogEpisodes: number } | null;
 }

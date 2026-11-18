@@ -5,6 +5,7 @@ import { TmdbSeriesSource } from '../providers/tmdb/TmdbSeriesSource.js';
 import { SeasonRefresher } from '../seasons/SeasonRefresher.js';
 import type {
   MovieRepository,
+  SeasonEpisodesRepository,
   SeasonRepository,
   SeriesRepository,
 } from '../storage/repositories/index.js';
@@ -16,7 +17,12 @@ import { seriesLifecycle } from './seriesLifecycle.js';
 export function registerTmdbMetadata(
   cache: MetadataCache,
   tmdb: TmdbClient,
-  repositories: { movies: MovieRepository; series: SeriesRepository; seasons: SeasonRepository },
+  repositories: {
+    movies: MovieRepository;
+    series: SeriesRepository;
+    seasons: SeasonRepository;
+    seasonEpisodes: SeasonEpisodesRepository;
+  },
   images: ImageStore,
 ): void {
   cache.register('movie', {
@@ -26,7 +32,10 @@ export function registerTmdbMetadata(
   });
   cache.register('series', {
     repository: repositories.series,
-    source: new TmdbSeriesSource(tmdb, new SeasonRefresher(tmdb, repositories.seasons, images)),
+    source: new TmdbSeriesSource(
+      tmdb,
+      new SeasonRefresher(tmdb, repositories.seasons, images, repositories.seasonEpisodes),
+    ),
     lifecycle: seriesLifecycle,
   });
 }

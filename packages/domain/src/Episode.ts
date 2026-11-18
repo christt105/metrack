@@ -8,4 +8,6 @@ export interface Episode {
   runtime: number | null;
   tmdbId: number | null;
   overview: string | null;
+  /** TMDB image path, loaded from the TMDB image host; null when there is none. */
+  stillPath: string | null;
 }

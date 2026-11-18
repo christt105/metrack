@@ -9,6 +9,7 @@ const ENTRY_COLUMNS = ['jellyfin_id', 'follow', 'note', 'slug', 'tags', 'review'
 const RELATED_DELETES = [
   'DELETE FROM season_entry WHERE user_id = ? AND season_id IN (SELECT id FROM season WHERE series_id = ?)',
   'DELETE FROM season_override WHERE user_id = ? AND series_id = ?',
+  'DELETE FROM series_episode_entry WHERE user_id = ? AND series_id = ?',
 ];
 
 function seriesToRow(s: Omit<Series, 'id'>): RowValues {

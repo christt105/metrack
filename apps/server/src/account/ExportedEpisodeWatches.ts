@@ -1,9 +1,7 @@
 import type { EpisodeWatches } from '@metrack/domain';
 
-/** The episodes a user watched of one season, with the identifiers that locate the season in the export. */
+/** The episodes a user watched of one series, keyed by TMDB episode id or `s<season>e<episode>`. */
 export interface ExportedEpisodeWatches {
-  seasonId: number;
   seriesId: number;
-  seasonNumber: number;
   watched: EpisodeWatches;
 }

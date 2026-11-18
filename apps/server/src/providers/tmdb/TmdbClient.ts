@@ -8,6 +8,7 @@ import type { TmdbClientOptions } from './TmdbClientOptions.js';
 import type { TmdbEpisodeGroup } from './TmdbEpisodeGroup.js';
 import type { TmdbEpisodeGroupList } from './TmdbEpisodeGroupList.js';
 import type { TmdbFindResponse } from './TmdbFindResponse.js';
+import type { TmdbSeasonEpisode } from './TmdbSeasonEpisode.js';
 import type { TmdbSeasonResponse } from './TmdbSeasonResponse.js';
 import type { TmdbTitleResponse } from './TmdbTitleResponse.js';
 
@@ -62,6 +63,17 @@ export class TmdbClient {
   /** One regular season with its episodes. Refuses (`ResponseTooLargeError`) a document over 1 MB without parsing it. */
   season(tvId: number, seasonNumber: number): Promise<TmdbSeasonResponse> {
     return this.getCapped(`/tv/${tvId}/season/${seasonNumber}`, TMDB_SEASON_MAX_BYTES, {
+      language: this.options.language,
+    });
+  }
+
+  /** One episode of a regular season, for seasons too large to read whole. */
+  seasonEpisode(
+    tvId: number,
+    seasonNumber: number,
+    episodeNumber: number,
+  ): Promise<TmdbSeasonEpisode> {
+    return this.get(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`, {
       language: this.options.language,
     });
   }

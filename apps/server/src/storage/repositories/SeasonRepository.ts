@@ -9,4 +9,11 @@ export interface SeasonRepository extends MediaEntityRepository<Season> {
    * have, so each one is linked again on its next refresh.
    */
   unlinkProviderSeasons(seriesId: number): Promise<void>;
+  /**
+   * Whether any user's entry for the season holds something they entered: a status other than planned, a rating,
+   * a review, rewatches, dates, tags or hand edits. Not scoped.
+   */
+  hasPersonalData(seasonId: number): Promise<boolean>;
+  /** Deletes the season for every user, with their entries and its episode catalog. Not scoped. */
+  deleteForAll(seasonId: number): Promise<void>;
 }

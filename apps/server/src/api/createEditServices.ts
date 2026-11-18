@@ -3,6 +3,7 @@ import { buildMediaKinds } from '../media/buildMediaKinds.js';
 import { MediaCatalog } from '../media/MediaCatalog.js';
 import { MediaEditor } from '../media/MediaEditor.js';
 import { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
+import { SeasonRefresher } from '../seasons/SeasonRefresher.js';
 import { SeasonEpisodesService } from '../seasons/SeasonEpisodesService.js';
 import { UnlinkedResolver } from '../titles/UnlinkedResolver.js';
 import type { EditServices } from './EditServices.js';
@@ -36,6 +37,7 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
             sources.series,
             sources.seasons,
             deps.cache,
+            new SeasonRefresher(deps.tmdb, sources.seasons, deps.images, deps.seasonEpisodes),
           ),
         }
       : {}),

@@ -106,7 +106,12 @@ const tmdb = config.tmdbApiKey
   ? new TmdbClient(fetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
   : undefined;
 if (tmdb) {
-  registerTmdbMetadata(metadataCache, tmdb, { movies, series, seasons }, imageStore);
+  registerTmdbMetadata(
+    metadataCache,
+    tmdb,
+    { movies, series, seasons, seasonEpisodes: repositories.seasonEpisodes },
+    imageStore,
+  );
   titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
   titleProviders.register(new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore));
   imageProviders.push(new TmdbImageProvider(tmdb));

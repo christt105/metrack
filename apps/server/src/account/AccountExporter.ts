@@ -69,20 +69,10 @@ export class AccountExporter {
       await Promise.all(series.map((entry) => deps.overrides.listBySeries(entry.id)))
     ).flat();
     const seasons = await deps.seasons.list();
-    const seasonById = new Map(seasons.map((season) => [season.id, season]));
-    const episodeWatches = (await deps.episodeWatches.list()).flatMap((row) => {
-      const season = seasonById.get(row.seasonId);
-      return season
-        ? [
-            {
-              seasonId: row.seasonId,
-              seriesId: season.seriesId,
-              seasonNumber: season.number,
-              watched: row.watched,
-            },
-          ]
-        : [];
-    });
+    const episodeWatches = (await deps.episodeWatches.list()).map((row) => ({
+      seriesId: row.seriesId,
+      watched: row.watched,
+    }));
     const settings = await deps.settings.get(userId);
     return {
       format: 1,
