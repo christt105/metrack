@@ -1,8 +1,9 @@
-import type { Series } from '../Series.js';
 import type { LibrarySeries } from './LibrarySeries.js';
-import { pairLibrarySeasons } from './pairLibrarySeasons.js';
-import type { SeasonChange } from './SeasonChange.js';
-import { planSeasonChange } from './planSeasonChange.js';
+import { draftNumberedSeasons } from './draftNumberedSeasons.js';
+import { draftOrderedSeasons } from './draftOrderedSeasons.js';
+import { findStoredSeries } from './findStoredSeries.js';
+import { planSeasonChanges } from './planSeasonChanges.js';
+import type { SeriesIndex } from './SeriesIndex.js';
 import type { SeriesChange } from './SeriesChange.js';
 import type { SyncState } from './SyncState.js';
 import type { SyncWarning } from './SyncWarning.js';
@@ -21,18 +22,22 @@ export function planSeries(
   playCount: ReadonlyMap<string, number>,
   state: SyncState,
   today: string,
+  indexes: ReadonlyMap<string, SeriesIndex> = new Map(),
+  settled: ReadonlySet<string> = new Set(),
 ): SeriesPlan {
   const plan: SeriesPlan = { changes: [], unlinked: [], warnings: [] };
+  const storedWatches = new Map((state.watches ?? []).map((row) => [row.seriesId, row.watched]));
+  const storedSkipped = new Map(
+    (state.watches ?? []).map((row) => [row.seriesId, row.skipped ?? []]),
+  );
   for (const item of library) {
+    if (settled.has(item.jellyfinId)) continue;
     const watchedSeasons = item.seasons.filter((season) =>
       season.episodes.some((episode) => watchDays.has(episode.jellyfinId)),
     );
     if (watchedSeasons.length === 0) continue;
 
-    const existing: Series | undefined =
-      state.series.find((s) => s.jellyfinId === item.jellyfinId) ??
-      (item.tvdbId === null ? undefined : state.series.find((s) => s.tvdbId === item.tvdbId)) ??
-      (item.tmdbId === null ? undefined : state.series.find((s) => s.tmdbId === item.tmdbId));
+    const existing = findStoredSeries(state, item);
     if (!existing && item.tmdbId === null && item.tvdbId === null) {
       const known = state.unlinked.some(
         (u) => u.source === 'jellyfin' && u.sourceRef === item.jellyfinId,
@@ -54,56 +59,44 @@ export function planSeries(
 
     const storedSeasons = existing ? state.seasons.filter((s) => s.seriesId === existing.id) : [];
     const overrides = existing ? state.overrides.filter((o) => o.seriesId === existing.id) : [];
-    const pairs = pairLibrarySeasons(
-      watchedSeasons.filter((s) => s.number > 0),
-      storedSeasons,
-      overrides,
+    const index = indexes.get(item.jellyfinId);
+    const tmdbId = existing?.tmdbId ?? item.tmdbId;
+    const drafted =
+      index && tmdbId !== null
+        ? draftOrderedSeasons(item.title, watchedSeasons, storedSeasons, watchDays, index)
+        : draftNumberedSeasons(item.title, watchedSeasons, storedSeasons, overrides, watchDays);
+    plan.warnings.push(...drafted.warnings);
+    const {
+      changes: seasons,
+      watches,
+      skipped,
+    } = planSeasonChanges(
+      drafted.drafts,
+      drafted.incoming,
+      existing ? storedWatches.get(existing.id) : undefined,
+      today,
+      existing ? storedSkipped.get(existing.id) : undefined,
     );
-    if (watchedSeasons.some((s) => s.number === 0)) {
-      plan.warnings.push({
-        code: 'specials_ignored',
-        title: item.title,
-        message: 'Viewings of specials (season 0) are not synced.',
-      });
-    }
-
-    const seasons: SeasonChange[] = [];
-    for (const pair of pairs) {
-      const conflict = storedSeasons.find(
-        (s) => s.number === pair.library.number && s.id !== pair.stored?.id,
-      );
-      if (conflict) {
-        plan.warnings.push({
-          code: 'season_number_conflict',
-          title: item.title,
-          message: `Library season ${pair.library.number} has no matching stored season, but number ${pair.library.number} is already used by another one. Add a season override to pair them.`,
-        });
-        continue;
-      }
-      const change = planSeasonChange(pair.library, pair.stored, pair.matchedBy, {
-        watchDays,
-        today,
-      });
-      if (!change) continue;
+    for (const change of seasons) {
+      const stored = storedSeasons.find((s) => s.id === change.seasonId);
       if (
-        pair.stored?.episodeCount != null &&
-        pair.stored.episodeCount !== change.episodeCount &&
+        stored?.episodeCount != null &&
+        stored.episodeCount !== change.episodeCount &&
         change.status === 'completed'
       ) {
         plan.warnings.push({
           code: 'episode_count_mismatch',
           title: item.title,
-          message: `Season ${change.number} has ${change.episodeCount} episodes in the library but ${pair.stored.episodeCount} stored; the library count wins.`,
+          message: `Season ${change.number} has ${change.episodeCount} episodes in the library but ${stored.episodeCount} stored; the library count wins.`,
         });
       }
-      seasons.push(change);
     }
 
     const needsLink =
       existing !== undefined &&
       (existing.jellyfinId === null ||
         (existing.tmdbId === null && (item.tmdbId !== null || item.tvdbId !== null)));
-    if (seasons.length === 0 && !needsLink) continue;
+    if (seasons.length === 0 && !watches && !skipped && !needsLink) continue;
     plan.changes.push({
       seriesId: existing?.id ?? null,
       jellyfinId: item.jellyfinId,
@@ -112,6 +105,8 @@ export function planSeries(
       title: existing?.title ?? item.title,
       year: item.year,
       seasons,
+      ...(watches ? { watches } : {}),
+      ...(skipped ? { skipped } : {}),
     });
   }
   return plan;

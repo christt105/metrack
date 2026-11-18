@@ -291,7 +291,7 @@ describe('reorganizing the seasons when the ordering changes', () => {
     expect(series.seasons[1]?.firstAirDate).toBe('2025-07-03');
   });
 
-  it('drops the cached episode catalogs of the series so they are fetched again', async () => {
+  it('drops the cached episode catalogs of the series and fetches them again', async () => {
     const seriesId = await dandadanOnRegular();
     const season = (await seriesOf(normal, seriesId)).seasons[0] as Season;
     api.db
@@ -300,7 +300,34 @@ describe('reorganizing the seasons when the ordering changes', () => {
       )
       .run(season.id);
     await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
-    expect(api.db.prepare('SELECT * FROM season_episodes').all()).toEqual([]);
+    const rows = api.db.prepare('SELECT episodes FROM season_episodes ORDER BY season_id').all();
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.episodes !== '[]')).toBe(true);
+  });
+
+  it("derives the acting user's season entries again from their watches", async () => {
+    const seriesId = await dandadanOnRegular();
+    const day = (finishedAt: string) => ({ startedAt: finishedAt, finishedAt });
+    api.db
+      .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (2, ?, ?)')
+      .run(
+        seriesId,
+        JSON.stringify({
+          s1e1: [day('2026-03-01')],
+          s1e2: [day('2026-03-02')],
+          s2e1: [day('2026-03-05')],
+        }),
+      );
+    await ordering(normal, seriesId, DANDADAN_SEASONS_GROUP);
+    const entries = api.db
+      .prepare(
+        'SELECT e.status, e.started_at, e.watched_count FROM season_entry e JOIN season s ON s.id = e.season_id WHERE e.user_id = 2 AND s.series_id = ? ORDER BY s.number',
+      )
+      .all(seriesId);
+    expect(entries).toEqual([
+      { status: 'in_progress', started_at: '2026-03-01', watched_count: 2 },
+      { status: 'in_progress', started_at: '2026-03-05', watched_count: 1 },
+    ]);
   });
 
   it('does not touch what the user watched of the series', async () => {
@@ -360,7 +387,7 @@ describe('reorganizing the seasons when the ordering changes', () => {
     function recordEpisode(seriesId: number, season: Season): void {
       api.db
         .prepare(
-          "INSERT INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, 'tmdb', 'now')",
+          "INSERT OR REPLACE INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, 'tmdb', 'now')",
         )
         .run(
           season.id,

@@ -7,6 +7,10 @@ export function toWireSyncState(state: SyncState): WireSyncState {
   return {
     ...state,
     movies: state.movies.map((m) => ({ ...m, rewatches: finishDates(m.rewatches) })),
-    seasons: state.seasons.map((s) => ({ ...s, rewatches: finishDates(s.rewatches) })),
+    seasons: state.seasons.map((s) => ({
+      ...s,
+      rewatches: finishDates(s.rewatches),
+      viewings: s.rewatches,
+    })),
   };
 }

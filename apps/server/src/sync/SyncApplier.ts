@@ -1,4 +1,10 @@
 import {
+  mergeEpisodeWatches,
+  normalizeEpisodeWatches,
+  normalizeViewings,
+  readViewings,
+  sameEpisodeWatches,
+  type EpisodeWatches,
   viewingsFromDates,
   type EntityRef,
   type Season,
@@ -99,12 +105,18 @@ export class SyncApplier {
             ...seasonFields(season),
             seriesId,
             pendingReview: season.completes,
+            rewatches: readViewings(season.rewatches ?? []),
+            watchedCount:
+              season.watchedEpisodes ?? (season.status === 'completed' ? season.episodeCount : 0),
           });
           result.seasonsCreated += 1;
         } else {
           await this.updateSeason(season.seasonId, season);
           result.seasonsUpdated += 1;
         }
+      }
+      if (change.watches || change.skipped) {
+        await this.mergeWatches(seriesId, change.watches ?? {}, change.skipped);
       }
       if (seasonAdded && !created.some((r) => r.type === 'series' && r.id === seriesId)) {
         if (((await series.get(seriesId))?.tmdbId ?? null) !== null) {
@@ -134,9 +146,42 @@ export class SyncApplier {
     }
   }
 
+  private async mergeWatches(
+    seriesId: number,
+    incoming: EpisodeWatches,
+    skipped: readonly string[] | undefined,
+  ): Promise<void> {
+    const watches = this.targets.episodeWatches;
+    const stored = await watches.get(seriesId);
+    const merged = mergeEpisodeWatches(stored ?? {}, normalizeEpisodeWatches(incoming));
+    const skipChanged = skipped !== undefined;
+    if (stored === undefined || skipChanged || !sameEpisodeWatches(stored, merged)) {
+      await watches.set(seriesId, merged, [], skipChanged ? skipped : undefined);
+    }
+  }
+
+  private async personalExtras(id: number, change: SeasonChange): Promise<Partial<Season>> {
+    const extras: Partial<Season> = change.completes ? { pendingReview: true } : {};
+    if (change.rewatches) {
+      const stored = (await this.targets.seasons.get(id))?.rewatches ?? [];
+      extras.rewatches = normalizeViewings([
+        ...stored.filter((viewing) => viewing.finishedAt !== null),
+        ...readViewings(change.rewatches),
+      ]);
+    }
+    if (change.skippedEpisodes !== undefined) extras.skippedCount = change.skippedEpisodes;
+    if (change.watchedEpisodes !== undefined) {
+      extras.watchedCount = change.watchedEpisodes;
+    } else if (change.status === 'completed') {
+      const stored = await this.targets.seasons.get(id);
+      extras.watchedCount = Math.max(stored?.watchedCount ?? 0, change.episodeCount);
+    }
+    return extras;
+  }
+
   private async updateSeason(id: number, change: SeasonChange) {
     const { seasons } = this.targets;
-    const review = change.completes ? { pendingReview: true } : {};
+    const review = await this.personalExtras(id, change);
     try {
       await seasons.update(id, { ...seasonFields(change), ...review });
     } catch (error) {

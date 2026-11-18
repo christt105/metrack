@@ -220,7 +220,7 @@ async function main(argv: string[]): Promise<number> {
     const logger = { info: console.log, error: console.error };
     const pool = openJellystatPool(config.sync.jellystat, logger);
     const sources = (jellyfinUser: string) =>
-      createSyncSources(config.sync, jellyfinUser, pool, tmdb);
+      createSyncSources(config.sync, jellyfinUser, pool, tmdb, fetch, config.dataDir);
     if (target === undefined) {
       const stop = runConnector(config, appConfig, sources, logger, tmdb, process.env);
       const shutdown = (): void => {

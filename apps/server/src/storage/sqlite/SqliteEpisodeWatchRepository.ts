@@ -1,11 +1,13 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { EpisodeWatches } from '@metrack/domain';
+import type { EpisodeWatches, SeasonEntryUpdate } from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
 import { episodeWatchesFromRow } from '../mapping/episodeWatchesFromRow.js';
 import {
+  UPDATE_TRACKING_SQL,
   UPSERT_WATCHES_KEEP_SKIPPED_SQL,
   UPSERT_WATCHES_SQL,
 } from '../mapping/episodeWatchesSql.js';
+import { seasonEntryUpdateParams } from '../mapping/seasonEntryUpdateParams.js';
 import type { EpisodeWatchRepository } from '../repositories/EpisodeWatchRepository.js';
 import type { StoredEpisodeWatches } from '../repositories/StoredEpisodeWatches.js';
 
@@ -36,8 +38,13 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
     return row ? episodeWatchesFromRow(row).skipped : [];
   }
 
-  async set(seriesId: number, watched: EpisodeWatches, skipped?: readonly string[]): Promise<void> {
-    await this.replace(this.scope.userId(), seriesId, watched, skipped);
+  async set(
+    seriesId: number,
+    watched: EpisodeWatches,
+    seasons: readonly SeasonEntryUpdate[] = [],
+    skipped?: readonly string[],
+  ): Promise<void> {
+    await this.replace(this.scope.userId(), seriesId, watched, seasons, skipped);
   }
 
   async listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]> {
@@ -51,16 +58,28 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
     userId: number,
     seriesId: number,
     watched: EpisodeWatches,
+    seasons: readonly SeasonEntryUpdate[] = [],
     skipped?: readonly string[],
   ): Promise<void> {
-    if (skipped === undefined) {
-      this.db
-        .prepare(UPSERT_WATCHES_KEEP_SKIPPED_SQL)
-        .run(userId, seriesId, JSON.stringify(watched));
-      return;
+    const own = !this.db.isTransaction;
+    if (own) this.db.exec('BEGIN');
+    try {
+      if (skipped === undefined) {
+        this.db
+          .prepare(UPSERT_WATCHES_KEEP_SKIPPED_SQL)
+          .run(userId, seriesId, JSON.stringify(watched));
+      } else {
+        this.db
+          .prepare(UPSERT_WATCHES_SQL)
+          .run(userId, seriesId, JSON.stringify(watched), JSON.stringify(skipped));
+      }
+      for (const update of seasons) {
+        this.db.prepare(UPDATE_TRACKING_SQL).run(...seasonEntryUpdateParams(userId, update));
+      }
+      if (own) this.db.exec('COMMIT');
+    } catch (error) {
+      if (own) this.db.exec('ROLLBACK');
+      throw error;
     }
-    this.db
-      .prepare(UPSERT_WATCHES_SQL)
-      .run(userId, seriesId, JSON.stringify(watched), JSON.stringify(skipped));
   }
 }

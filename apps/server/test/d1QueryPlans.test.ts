@@ -122,16 +122,25 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
     complete: true,
   });
   await owner.seasonEpisodes.get(season.id);
+  await owner.seasonEpisodes.listForSeries(series.id);
   await owner.seasonEpisodes.deleteForSeries(series.id);
   await owner.seasons.hasPersonalData(season.id, ['1']);
   const spare = await owner.seasons.create({ ...emptySeason(), seriesId: series.id, number: 9 });
   await owner.seasons.deleteForAll(spare.id);
-  await owner.episodeWatches.set(series.id, { '1': [] });
+  await owner.episodeWatches.set(series.id, { '1': [] }, [
+    {
+      seasonId: season.id,
+      watchedCount: 1,
+      skippedCount: 0,
+      completes: false,
+      tracking: { status: 'in_progress', startedAt: null, finishedAt: null, rewatches: [] },
+    },
+  ]);
   await owner.episodeWatches.get(series.id);
   await owner.episodeWatches.getSkipped(series.id);
   await owner.episodeWatches.list();
   await owner.episodeWatches.listForSeries(series.id);
-  await owner.episodeWatches.replace(1, series.id, {});
+  await owner.episodeWatches.replace(1, series.id, {}, [], ['1']);
   await owner.overrides.set({
     seriesId: series.id,
     tmdbSeasonNumber: 1,

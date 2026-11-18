@@ -564,17 +564,35 @@ describe('GET /api/seasons/:id/episodes', () => {
       expect(body.episodes).toEqual([]);
     });
 
-    it('restarts from the first episode when a complete catalog goes stale', async () => {
+    it('keeps serving the old complete catalog while a stale one is refetched in chunks', async () => {
       const season = addSeason({ episodeCount: 20 });
       setUpChunks(20);
       storeCatalog(
         season.id,
         '2025-01-01T00:00:00.000Z',
-        Array.from({ length: 20 }, (_, i) => compact(i + 1, 100 + i + 1)),
+        Array.from({ length: 20 }, (_, i) => compact(i + 1, 900 + i + 1)),
       );
-      const { body } = await episodes(owner, season.id);
-      expect(body.complete).toBe(false);
-      expect(body.episodes).toHaveLength(15);
+      const first = await episodes(owner, season.id);
+      expect(first.body.complete).toBe(true);
+      expect(first.body.episodes).toHaveLength(20);
+      expect(first.body.episodes[0]?.tmdbId).toBe(901);
+      expect(calls.filter((c) => c.includes('/episode/'))).toHaveLength(15);
+      const stored = api.db.prepare('SELECT complete, refill FROM season_episodes').get() as {
+        complete: number;
+        refill: string;
+      };
+      expect(stored.complete).toBe(1);
+      expect(JSON.parse(stored.refill)).toHaveLength(15);
+
+      calls = [];
+      const second = await episodes(owner, season.id);
+      expect(calls.filter((c) => c.includes('/episode/')).sort()).toEqual(
+        [16, 17, 18, 19, 20].map(episodePath).sort(),
+      );
+      expect(second.body.complete).toBe(true);
+      expect(second.body.episodes[0]?.tmdbId).toBe(101);
+      expect(second.body.episodes).toHaveLength(20);
+      expect(api.db.prepare('SELECT refill FROM season_episodes').get()).toEqual({ refill: null });
     });
 
     it('stops reading a streamed season document that grows past 1 MB', async () => {

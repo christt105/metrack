@@ -121,6 +121,7 @@ describe('/api/connector/users/{id}', () => {
       seasons: [],
       overrides: [],
       unlinked: [],
+      watches: [],
     });
     expect(body.unfetched).toEqual([]);
   });

@@ -63,6 +63,12 @@ describe.each(backends)('$name episode repositories', (backend) => {
   });
 
   describe('SeasonEpisodesRepository', () => {
+    let seriesOfSeason: number;
+
+    beforeEach(async () => {
+      seriesOfSeason = (await owner.seasons.get(seasonId))!.seriesId;
+    });
+
     it('round-trips a catalog and replaces it on a second put', async () => {
       expect(await owner.seasonEpisodes.get(seasonId)).toBeUndefined();
       await owner.seasonEpisodes.put(catalog(seasonId));
@@ -87,6 +93,23 @@ describe.each(backends)('$name episode repositories', (backend) => {
         seasonId,
       );
       expect((await owner.seasonEpisodes.get(seasonId))?.complete).toBe(true);
+    });
+
+    it('keeps a refill apart from the episodes and clears it on the next put', async () => {
+      const refill = catalog(seasonId).episodes.slice(0, 1);
+      await owner.seasonEpisodes.put({ ...catalog(seasonId), refill });
+      expect((await owner.seasonEpisodes.get(seasonId))?.refill).toEqual(refill);
+      await owner.seasonEpisodes.put(catalog(seasonId));
+      expect((await owner.seasonEpisodes.get(seasonId))?.refill).toBeUndefined();
+    });
+
+    it('lists the catalogs of one series', async () => {
+      expect(await owner.seasonEpisodes.listForSeries(seriesOfSeason)).toEqual([]);
+      await owner.seasonEpisodes.put(catalog(seasonId));
+      expect(
+        (await owner.seasonEpisodes.listForSeries(seriesOfSeason)).map((row) => row.seasonId),
+      ).toEqual([seasonId]);
+      expect(await owner.seasonEpisodes.listForSeries(seriesOfSeason + 100)).toEqual([]);
     });
 
     it('refuses a source other than tmdb or jellyfin', async () => {
@@ -130,13 +153,37 @@ describe.each(backends)('$name episode repositories', (backend) => {
       expect(all.map((row) => row.userId)).toEqual([1, 2]);
     });
 
+    it('writes the season entries that follow the watches in the same step', async () => {
+      await owner.episodeWatches.set(seriesId, watched, [
+        {
+          seasonId,
+          watchedCount: 2,
+          skippedCount: 1,
+          completes: false,
+          tracking: {
+            status: 'in_progress',
+            startedAt: '2026-03-01',
+            finishedAt: null,
+            rewatches: [{ startedAt: '2026-04-01', finishedAt: null }],
+          },
+        },
+      ]);
+      expect(await owner.seasons.get(seasonId)).toMatchObject({
+        status: 'in_progress',
+        startedAt: '2026-03-01',
+        watchedCount: 2,
+        skippedCount: 1,
+        rewatches: [{ startedAt: '2026-04-01', finishedAt: null }],
+      });
+    });
+
     it('stores the skipped keys with the watches, and keeps them when only the watches are set', async () => {
       expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual([]);
-      await owner.episodeWatches.set(seriesId, watched, ['21', 's1e3']);
+      await owner.episodeWatches.set(seriesId, watched, [], ['21', 's1e3']);
       expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual(['21', 's1e3']);
       await owner.episodeWatches.set(seriesId, { '12': [] });
       expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual(['21', 's1e3']);
-      await owner.episodeWatches.set(seriesId, { '12': [] }, []);
+      await owner.episodeWatches.set(seriesId, { '12': [] }, [], []);
       expect(await owner.episodeWatches.getSkipped(seriesId)).toEqual([]);
       expect(await friend.episodeWatches.getSkipped(seriesId)).toEqual([]);
     });

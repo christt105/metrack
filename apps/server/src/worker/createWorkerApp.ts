@@ -42,6 +42,7 @@ export function createWorkerApp(
     seasons,
     overrides: repositories.overrides,
     unlinked: repositories.unlinked,
+    episodeWatches: repositories.episodeWatches,
   };
   const sessions = new SessionService(repositories.sessions, repositories.users);
   return buildApp({

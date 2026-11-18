@@ -1,11 +1,12 @@
 import type { MediaStatus } from '../MediaStatus.js';
+import type { Viewing } from '../Viewing.js';
 import type { SeasonMatchKind } from './SeasonMatchKind.js';
 
-/** A season to create (`seasonId` null) or update. `number` is the library number and replaces the stored one. */
+/** A season to create (`seasonId` null) or update. `number` is the number the season ends up with. */
 export interface SeasonChange {
   seasonId: number | null;
   matchedBy: SeasonMatchKind;
-  jellyfinSeasonId: string;
+  jellyfinSeasonId: string | null;
   number: number;
   tmdbSeasonNumber: number | null;
   title: string | null;
@@ -14,7 +15,12 @@ export interface SeasonChange {
   status: MediaStatus;
   startedAt: string | null;
   finishedAt: string | null;
-  watchedEpisodes: number;
+  /** How many of the season's episodes are watched once the series' watches are merged; absent from connectors that predate episode tracking. */
+  watchedEpisodes?: number;
+  /** How many of the season's episodes are skipped once the played ones are taken out; absent from connectors that predate skipping. */
+  skippedEpisodes?: number;
+  /** The season's later viewings after the change; present only when they change. */
+  rewatches?: Viewing[];
   /** Whether this change completes a season that was not completed before. */
   completes: boolean;
   missingRating: boolean;

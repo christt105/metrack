@@ -81,6 +81,7 @@ export async function connectorHarness(options: { metadata?: boolean } = {}) {
     seasons: repositories.seasons,
     overrides: repositories.overrides,
     unlinked: repositories.unlinked,
+    episodeWatches: repositories.episodeWatches,
   };
   const app = buildTestApp({
     appVersion: 'test',

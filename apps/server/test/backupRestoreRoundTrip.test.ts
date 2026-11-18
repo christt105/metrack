@@ -123,6 +123,7 @@ describe('backup and restore of the whole data directory', () => {
         '11': [{ startedAt: null, finishedAt: '2026-03-01' }],
         s1e2: [],
       },
+      [],
       ['s1e3'],
     );
     await new SqliteSeasonOverrideRepository(db, OWNER_SCOPE).set({

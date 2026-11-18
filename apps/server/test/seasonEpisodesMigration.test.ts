@@ -4,10 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 
-const d1Sql = readFileSync(
-  new URL('../d1/migrations/0009_season_episodes.sql', import.meta.url),
-  'utf8',
-);
+const d1Sql = ['0009_season_episodes.sql', '0010_season_episodes_refill.sql']
+  .map((file) => readFileSync(new URL(`../d1/migrations/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 
 function legacyDatabase(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
@@ -49,6 +48,7 @@ describe('the season episodes migration', () => {
       'source',
       'fetched_at',
       'complete',
+      'refill',
     ]);
     expect(columns(db, 'series_episode_entry')).toEqual([
       'user_id',

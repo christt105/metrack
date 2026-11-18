@@ -7,6 +7,7 @@ import type { SeasonRepository } from '../storage/repositories/SeasonRepository.
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
 import type { UpdateOptions } from '../storage/repositories/UpdateOptions.js';
 import { loadSeasonsGroups } from './loadSeasonsGroups.js';
+import type { SeasonEpisodesService } from './SeasonEpisodesService.js';
 import type { SeasonRefresher } from './SeasonRefresher.js';
 
 /** Lists the season orderings TMDB offers for a series and switches the series to one of them. */
@@ -17,6 +18,7 @@ export class EpisodeGroupService {
     private readonly seasons: SeasonRepository,
     private readonly cache: MetadataCache,
     private readonly refresher: SeasonRefresher,
+    private readonly episodes: SeasonEpisodesService,
   ) {}
 
   async options(seriesId: number): Promise<EpisodeGroupOptions> {
@@ -38,7 +40,8 @@ export class EpisodeGroupService {
   /**
    * Makes the series number its seasons by the group, or by the regular TMDB seasons for null: its seasons are
    * relinked by number, the ones the ordering has and the series lacks are created, and the ones the ordering
-   * lacks are removed unless a user entered something in them. Cached episode catalogs are dropped. Refused when
+   * lacks are removed unless a user entered something in them. Cached episode catalogs are dropped and fetched again,
+   * and the season entries of the user in scope are derived again from their watches. Refused when
    * other users have the series, unless `allowSharedCatalog` is set.
    */
   async apply(
@@ -60,6 +63,7 @@ export class EpisodeGroupService {
     const provider = await this.refresher.providerSeasons(series.tmdbId as number, episodeGroup);
     const updated = await this.series.update(seriesId, { tmdbEpisodeGroup: episodeGroup }, options);
     await this.refresher.reorganize(updated, provider);
+    await this.episodes.recomputeSeries(seriesId);
     await this.cache.refresh('series', seriesId, true);
   }
 

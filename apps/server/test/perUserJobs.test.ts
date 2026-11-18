@@ -164,10 +164,17 @@ describe('per-user Jellyfin sync', () => {
       readAccounts.push(jellyfinUser);
       const plays = playsOf[jellyfinUser];
       if (!plays) throw new Error(`unknown account ${jellyfinUser}`);
-      return new SyncService(library, plays, repos, new SyncApplier(repos.transactions, repos), {
-        timeZone: 'Europe/Madrid',
-        now: () => new Date('2026-10-25T12:00:00Z'),
-      });
+      return new SyncService(
+        library,
+        plays,
+        undefined,
+        repos,
+        new SyncApplier(repos.transactions, repos),
+        {
+          timeZone: 'Europe/Madrid',
+          now: () => new Date('2026-10-25T12:00:00Z'),
+        },
+      );
     });
   }
 

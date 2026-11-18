@@ -7,6 +7,7 @@ import type { FetchFn } from '../src/http/FetchFn.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { openDatabase } from '../src/storage/sqlite/openDatabase.js';
+import { SqliteEpisodeWatchRepository } from '../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
 import { SqliteMovieRepository } from '../src/storage/sqlite/SqliteMovieRepository.js';
 import { SqliteSeasonOverrideRepository } from '../src/storage/sqlite/SqliteSeasonOverrideRepository.js';
 import { SqliteSeasonRepository } from '../src/storage/sqlite/SqliteSeasonRepository.js';
@@ -196,6 +197,7 @@ describe('JellyfinLibrarySource', () => {
                 runtimeSeconds: 1500,
                 available: true,
                 played: false,
+                tvdbId: null,
               },
               {
                 jellyfinId: 'e2',
@@ -204,6 +206,7 @@ describe('JellyfinLibrarySource', () => {
                 runtimeSeconds: null,
                 available: false,
                 played: false,
+                tvdbId: null,
               },
             ],
           },
@@ -316,10 +319,12 @@ function setup(library: LibrarySource, plays: PlaybackSource) {
     seasons: new SqliteSeasonRepository(db, OWNER_SCOPE),
     overrides: new SqliteSeasonOverrideRepository(db, OWNER_SCOPE),
     unlinked: new SqliteUnlinkedTitleRepository(db, OWNER_SCOPE),
+    episodeWatches: new SqliteEpisodeWatchRepository(db, OWNER_SCOPE),
   };
   const service = new SyncService(
     library,
     plays,
+    undefined,
     targets,
     new SyncApplier(new SqliteTransactionRunner(db), targets),
     {
@@ -458,7 +463,13 @@ describe('SyncService', () => {
       finishedAt: '2026-10-26',
       rating: 9,
       review: 'season review',
+      watchedCount: 3,
     });
+    expect(Object.keys((await t.targets.episodeWatches.get(series.id)) ?? {})).toEqual([
+      's4e1',
+      's4e2',
+      's4e3',
+    ]);
     expect(await t.targets.series.get(series.id)).toMatchObject({
       jellyfinId: 's1',
       note: 'my note',
@@ -718,6 +729,7 @@ describe('sync with TMDB', () => {
     const service = new SyncService(
       lupinLibrary,
       lupinPlays,
+      undefined,
       t.targets,
       new SyncApplier(new SqliteTransactionRunner(t.db), t.targets),
       {

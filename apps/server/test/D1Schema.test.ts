@@ -56,6 +56,11 @@ const seasonEpisodesSql = readFileSync(
   'utf8',
 );
 
+const refillSql = readFileSync(
+  new URL('../d1/migrations/0010_season_episodes_refill.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -66,6 +71,7 @@ function fromSql(): DatabaseSync {
   db.exec(nextEpisodeSql);
   db.exec(rewatchViewingsSql);
   db.exec(seasonEpisodesSql);
+  db.exec(refillSql);
   return db;
 }
 

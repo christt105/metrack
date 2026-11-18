@@ -13,6 +13,14 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
   const { sources } = deps;
   const kinds = buildMediaKinds(sources);
   const editor = new MediaEditor(kinds, deps.states, deps.images, deps.now);
+  const seasonEpisodes = new SeasonEpisodesService({
+    seasons: sources.seasons,
+    series: sources.series,
+    catalog: deps.seasonEpisodes,
+    watches: deps.episodeWatches,
+    ...(deps.tmdb ? { tmdb: deps.tmdb } : {}),
+    ...(deps.now ? { now: deps.now } : {}),
+  });
   return {
     editor,
     catalog: new MediaCatalog(kinds),
@@ -22,14 +30,7 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     series: sources.series,
     overrides: sources.overrides,
     unlinked: deps.unlinked,
-    seasonEpisodes: new SeasonEpisodesService({
-      seasons: sources.seasons,
-      series: sources.series,
-      catalog: deps.seasonEpisodes,
-      watches: deps.episodeWatches,
-      ...(deps.tmdb ? { tmdb: deps.tmdb } : {}),
-      ...(deps.now ? { now: deps.now } : {}),
-    }),
+    seasonEpisodes,
     ...(deps.tmdb
       ? {
           episodeGroups: new EpisodeGroupService(
@@ -38,6 +39,7 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
             sources.seasons,
             deps.cache,
             new SeasonRefresher(deps.tmdb, sources.seasons, deps.images, deps.seasonEpisodes),
+            seasonEpisodes,
           ),
         }
       : {}),
