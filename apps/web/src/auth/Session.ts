@@ -20,7 +20,7 @@ export class Session {
       this.user.value = await this.api.me();
       this.known = true;
       await this.refreshDeletion();
-      await this.refreshPublicPage();
+      void this.refreshPublicPage();
     }
     return this.user.value;
   }
