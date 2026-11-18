@@ -15,6 +15,7 @@ const props = defineProps<{
   eyebrow: string;
   status: MediaStatus | null;
   fallback?: { cover: string | null; banner: string | null } | null;
+  watched?: number | null;
 }>();
 
 const facts = computed(() => readDetailFacts(props.detail));
@@ -32,7 +33,11 @@ const meta = computed(() =>
   [
     props.eyebrow,
     facts.value.year,
-    facts.value.episodeCount ? messages.hero.episodes(facts.value.episodeCount) : null,
+    facts.value.episodeCount
+      ? props.watched
+        ? messages.seasons.watchedOf(props.watched, facts.value.episodeCount)
+        : messages.hero.episodes(facts.value.episodeCount)
+      : null,
   ]
     .filter(Boolean)
     .join(' · '),

@@ -1,5 +1,7 @@
 import type {
+  EpisodeOperation,
   SeasonEpisodesResponse,
+  SeasonEpisodesUpdateResponse,
   AccountDeletion,
   AccountStatus,
   AddTitleRequest,
@@ -190,6 +192,13 @@ export class ApiClient {
 
   seasonEpisodes(seasonId: number): Promise<SeasonEpisodesResponse> {
     return this.request('GET', `/seasons/${seasonId}/episodes`);
+  }
+
+  updateSeasonEpisodes(
+    seasonId: number,
+    operation: EpisodeOperation,
+  ): Promise<SeasonEpisodesUpdateResponse> {
+    return this.request('PATCH', `/seasons/${seasonId}/episodes`, operation);
   }
 
   episodeGroups(seriesId: number): Promise<EpisodeGroupOptions> {

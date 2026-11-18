@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { MEDIA_TYPE_OF_COLLECTION } from '@metrack/domain';
-import type { Collection, Season, SeriesDetail } from '@metrack/domain';
+import type {
+  Collection,
+  Season,
+  SeasonEpisodesUpdateResponse,
+  SeriesDetail,
+} from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import AppIcon from '../components/AppIcon.vue';
 import DetailHero from '../components/DetailHero.vue';
@@ -10,10 +15,13 @@ import FollowToggle from '../components/FollowToggle.vue';
 import ManagePanel from '../components/ManagePanel.vue';
 import QuickActions from '../components/QuickActions.vue';
 import ReviewPanel from '../components/ReviewPanel.vue';
+import SeasonEpisodes from '../components/SeasonEpisodes.vue';
 import SeasonList from '../components/SeasonList.vue';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import { isTracked } from '../logic/fieldSchemas';
+import { seasonWatched } from '../logic/seasonWatched';
+import { withTracking } from '../logic/withTracking';
 
 const props = defineProps<{ collection: Collection; id: number }>();
 
@@ -76,6 +84,12 @@ function onSaved(updated: AnyDetail): void {
       : updated;
 }
 
+function onEpisodes(update: SeasonEpisodesUpdateResponse): void {
+  if (seasonOf.value) detail.value = withTracking(seasonOf.value, update) as unknown as AnyDetail;
+}
+
+const watchedEpisodes = computed(() => (seasonOf.value ? seasonWatched(seasonOf.value) : null));
+
 const titleText = computed(() => {
   if (!detail.value) return '';
   if ('title' in detail.value && detail.value.title) return detail.value.title;
@@ -94,6 +108,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       :eyebrow="eyebrow"
       :status="trackedStatus"
       :fallback="parentArtwork"
+      :watched="watchedEpisodes"
     >
       <template #before-title>
         <RouterLink v-if="seasonOf" :to="`/series/${seasonOf.seriesId}`" class="back">
@@ -126,6 +141,14 @@ watch(() => [props.collection, props.id], load, { immediate: true });
     </DetailHero>
 
     <SeasonList v-if="series" :seasons="series.seasons" :series-cover="series.cover" />
+
+    <SeasonEpisodes
+      v-if="seasonOf"
+      :season-id="seasonOf.id"
+      :series-id="seasonOf.seriesId"
+      :status="seasonOf.status"
+      @updated="onEpisodes"
+    />
 
     <ManagePanel
       :collection="collection"

@@ -36,13 +36,16 @@ describe('ApiClient', () => {
     await client.setSeasonOrdering(4, 'g1');
     await client.setSeasonOrdering(4, null, { forAll: true });
     await client.episodeGroups(4);
+    await client.updateSeasonEpisodes(5, { op: 'unmark', numbers: [2] });
     expect(calls.map((c) => `${c.init?.method ?? 'GET'} ${c.url}`)).toEqual([
       'PATCH /api/seasons/3?forAll=true',
       'PUT /api/series/4/season-ordering',
       'PUT /api/series/4/season-ordering?forAll=true',
       'GET /api/series/4/episode-groups',
+      'PATCH /api/seasons/5/episodes',
     ]);
     expect(calls[1]?.init?.body).toBe('{"episodeGroup":"g1"}');
+    expect(calls[4]?.init?.body).toBe('{"op":"unmark","numbers":[2]}');
   });
 
   it('encodes free-text path segments', async () => {
