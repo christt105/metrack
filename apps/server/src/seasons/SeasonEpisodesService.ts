@@ -26,6 +26,7 @@ import {
 } from '../providers/tmdb/mapSeasonEpisodes.js';
 import type { SeasonEpisodesDeps } from './SeasonEpisodesDeps.js';
 import type { SeasonEpisodesResult } from './SeasonEpisodesResult.js';
+import { PremiereReopener } from './PremiereReopener.js';
 import { SeriesWatchTracker } from './SeriesWatchTracker.js';
 
 /** How many single episodes one request fetches for a season too large to read whole. */
@@ -45,9 +46,11 @@ export const EPISODE_CHUNK_SIZE = 15;
 export class SeasonEpisodesService {
   private readonly now: () => Date;
   private readonly tracker: SeriesWatchTracker;
+  private readonly premieres: PremiereReopener;
 
   constructor(private readonly deps: SeasonEpisodesDeps) {
     this.now = deps.now ?? (() => new Date());
+    this.premieres = new PremiereReopener(deps.seasons, this.now);
     this.tracker = new SeriesWatchTracker({
       seasons: deps.seasons,
       catalog: deps.catalog,
@@ -59,11 +62,14 @@ export class SeasonEpisodesService {
   async get(seasonId: number): Promise<SeasonEpisodesResult> {
     const loaded = await this.resolve(seasonId);
     const { season, catalog, episodes } = loaded;
-    const stored = await this.deps.watches.get(season.seriesId);
-    const watched = await this.withIds(season, catalog, episodes, stored);
-    const skipped = new Set(await this.deps.watches.getSkipped(season.seriesId));
+    const entry = await this.deps.watches.getEntry(season.seriesId);
+    const watched = await this.withIds(season, catalog, episodes, entry?.watched);
+    const skipped = new Set(entry?.skipped ?? []);
     return {
-      response: this.respond(season, catalog, episodes, watched, skipped),
+      response: {
+        ...this.respond(season, catalog, episodes, watched, skipped),
+        unmatched: entry?.unmatched ?? [],
+      },
       episodeCountChanged: loaded.episodeCountChanged,
     };
   }
@@ -166,8 +172,13 @@ export class SeasonEpisodesService {
     if (series && series.tmdbId !== null && this.needsFetch(season, series, catalog)) {
       const fetched = await this.fetch(season, series, catalog);
       if (fetched) {
+        const previous = catalog;
         catalog = fetched;
         await this.deps.catalog.put(fetched);
+        if (previous?.complete && fetched.complete && fetched.refill === undefined) {
+          const reopened = await this.premieres.reopen(season, previous.episodes, fetched.episodes);
+          if (reopened > 0) episodeCountChanged = true;
+        }
         if (
           fetched.complete &&
           fetched.refill === undefined &&

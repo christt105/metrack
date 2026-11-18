@@ -1,4 +1,5 @@
 import type { Season } from '@metrack/domain';
+import type { CompletedSeasonEntry } from './CompletedSeasonEntry.js';
 import type { MediaEntityRepository } from './MediaEntityRepository.js';
 
 export interface SeasonRepository extends MediaEntityRepository<Season> {
@@ -15,6 +16,10 @@ export interface SeasonRepository extends MediaEntityRepository<Season> {
    * Not scoped.
    */
   hasPersonalData(seasonId: number, episodeKeys: readonly string[]): Promise<boolean>;
+  /** The completed entries of every user for the season that have watches of the series. Not scoped. */
+  listCompletedEntries(seasonId: number): Promise<CompletedSeasonEntry[]>;
+  /** Sets the completed entries of the given users for the season back to in progress, unfinished. Not scoped. */
+  reopenEntries(seasonId: number, userIds: readonly number[]): Promise<void>;
   /** Deletes the season for every user, with their entries and its episode catalog. Not scoped. */
   deleteForAll(seasonId: number): Promise<void>;
 }

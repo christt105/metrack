@@ -104,7 +104,8 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       },
       extend: async (entity) => {
         const seasons = await sources.seasons.listBySeries(entity.id);
-        return { seasons };
+        const unmatched = (await sources.episodeWatches.getEntry(entity.id))?.unmatched ?? [];
+        return { seasons, unmatched };
       },
     },
     seasons: {

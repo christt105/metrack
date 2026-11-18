@@ -160,6 +160,7 @@ export async function createTestApi(
       seasons,
       videogames,
       books,
+      episodeWatches: new SqliteEpisodeWatchRepository(db, scope),
     },
     unlinked,
     states,

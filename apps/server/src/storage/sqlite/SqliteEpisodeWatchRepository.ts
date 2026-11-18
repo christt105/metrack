@@ -1,9 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { EpisodeWatches, SeasonEntryUpdate } from '@metrack/domain';
+import type { EpisodeWatches, SeasonEntryUpdate, UnmatchedEpisode } from '@metrack/domain';
 import type { UserScope } from '../../users/UserScope.js';
 import { episodeWatchesFromRow } from '../mapping/episodeWatchesFromRow.js';
 import {
   UPDATE_TRACKING_SQL,
+  UPSERT_UNMATCHED_SQL,
   UPSERT_WATCHES_KEEP_SKIPPED_SQL,
   UPSERT_WATCHES_SQL,
 } from '../mapping/episodeWatchesSql.js';
@@ -22,6 +23,19 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
       .prepare('SELECT * FROM series_episode_entry WHERE user_id = ? AND series_id = ?')
       .get(this.scope.userId(), seriesId);
     return row ? episodeWatchesFromRow(row).watched : undefined;
+  }
+
+  async getEntry(seriesId: number): Promise<StoredEpisodeWatches | undefined> {
+    const row = this.db
+      .prepare('SELECT * FROM series_episode_entry WHERE user_id = ? AND series_id = ?')
+      .get(this.scope.userId(), seriesId);
+    return row ? episodeWatchesFromRow(row) : undefined;
+  }
+
+  async setUnmatched(seriesId: number, unmatched: readonly UnmatchedEpisode[]): Promise<void> {
+    this.db
+      .prepare(UPSERT_UNMATCHED_SQL)
+      .run(this.scope.userId(), seriesId, JSON.stringify(unmatched));
   }
 
   async list(): Promise<StoredEpisodeWatches[]> {

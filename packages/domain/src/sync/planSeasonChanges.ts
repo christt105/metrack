@@ -36,9 +36,18 @@ function inputOf(draft: SeasonDraft): SeriesSeasonInput[] {
     : [];
 }
 
+function seasonFinishes(drafts: readonly SeasonDraft[]): Map<string, string | null> {
+  const finishes = new Map<string, string | null>();
+  for (const { stored, expected } of drafts) {
+    if (!stored) continue;
+    for (const { key } of expected) finishes.set(key, stored.finishedAt ?? null);
+  }
+  return finishes;
+}
+
 /**
  * Merges the incoming viewings into the series' stored watches (nothing is removed) and derives each draft's status
- * and dates from the result as `deriveSeasonTracking` says. A completed season that records none of its episodes
+ * and dates from the result as `deriveSeasonTracking` says. A dated viewing replaces the unknown-date first viewing of an episode, also when both are stored already, as `mergeEpisodeWatches` says with the finish of the stored season. A completed season that records none of its episodes
  * counts as all watched on an unknown date first, and its incoming viewings are not new, so they never open a
  * rewatch. A draft whose season would not change is left out. Ratings are never touched.
  */
@@ -52,7 +61,7 @@ export function planSeasonChanges(
   const stored = storedWatches ?? {};
   const inputs = drafts.flatMap(inputOf);
   const base = materializeCompletedSeasons(inputs, stored, new Set(storedSkipped));
-  const merged = mergeEpisodeWatches(base, incoming);
+  const merged = mergeEpisodeWatches(base, incoming, seasonFinishes(drafts));
   const skipped = new Set(storedSkipped.filter((key) => !(key in incoming)));
   const unrecorded = new Set(
     inputs

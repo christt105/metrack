@@ -147,7 +147,7 @@ describe.each(backends)('$name episode repositories', (backend) => {
       expect(await owner.episodeWatches.get(seriesId)).toEqual(watched);
       expect(await friend.episodeWatches.get(seriesId)).toEqual({ '13': [] });
       expect(await owner.episodeWatches.list()).toEqual([
-        { userId: 1, seriesId, watched, skipped: [] },
+        { userId: 1, seriesId, watched, skipped: [], unmatched: [] },
       ]);
       const all = await owner.episodeWatches.listForSeries(seriesId);
       expect(all.map((row) => row.userId)).toEqual([1, 2]);

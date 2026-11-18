@@ -4,8 +4,10 @@ import { MEDIA_TYPE_OF_COLLECTION } from '@metrack/domain';
 import type {
   Collection,
   Season,
+  SeasonEpisodesResponse,
   SeasonEpisodesUpdateResponse,
   SeriesDetail,
+  UnmatchedEpisode,
 } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import AppIcon from '../components/AppIcon.vue';
@@ -17,6 +19,7 @@ import QuickActions from '../components/QuickActions.vue';
 import ReviewPanel from '../components/ReviewPanel.vue';
 import SeasonEpisodes from '../components/SeasonEpisodes.vue';
 import SeasonList from '../components/SeasonList.vue';
+import UnmatchedEpisodes from '../components/UnmatchedEpisodes.vue';
 import { useApi } from '../composables/useApi';
 import { messages } from '../i18n/messages';
 import { isTracked } from '../logic/fieldSchemas';
@@ -47,6 +50,27 @@ const trackedStatus = computed(() =>
 );
 const parentTitle = ref<string | null>(null);
 const parentArtwork = ref<{ cover: string | null; banner: string | null } | null>(null);
+const parentTmdbId = ref<number | null>(null);
+const seasonUnmatched = ref<UnmatchedEpisode[]>([]);
+
+const unmatchedSource = computed(() => {
+  if (series.value) {
+    return {
+      unmatched: series.value.unmatched ?? [],
+      tmdbId: series.value.tmdbId,
+      known: series.value.seasons.map((s) => s.tmdbSeasonNumber ?? s.number),
+      only: undefined,
+    };
+  }
+  if (!seasonOf.value) return null;
+  const number = seasonOf.value.tmdbSeasonNumber ?? seasonOf.value.number;
+  return {
+    unmatched: seasonUnmatched.value,
+    tmdbId: parentTmdbId.value,
+    known: [number],
+    only: number,
+  };
+});
 
 async function load(): Promise<void> {
   const mine = ++ticket;
@@ -57,6 +81,8 @@ async function load(): Promise<void> {
     error.value = null;
     parentTitle.value = null;
     parentArtwork.value = null;
+    parentTmdbId.value = null;
+    seasonUnmatched.value = [];
     if (props.collection === 'seasons') {
       const parent = await api
         .getDetail('series', (result as unknown as Season).seriesId)
@@ -64,6 +90,7 @@ async function load(): Promise<void> {
       if (mine === ticket) {
         parentTitle.value = parent?.title ?? null;
         parentArtwork.value = parent ? { cover: parent.cover, banner: parent.banner } : null;
+        parentTmdbId.value = parent?.tmdbId ?? null;
       }
     }
   } catch (cause) {
@@ -89,6 +116,11 @@ function onEpisodes(update: SeasonEpisodesUpdateResponse): void {
 }
 
 const hasCatalog = ref(false);
+
+function onEpisodesLoaded(data: SeasonEpisodesResponse): void {
+  hasCatalog.value = data.source !== 'numbers';
+  seasonUnmatched.value = data.unmatched ?? [];
+}
 
 const watchedEpisodes = computed(() => (seasonOf.value ? seasonWatched(seasonOf.value) : null));
 
@@ -149,6 +181,14 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       </template>
     </DetailHero>
 
+    <UnmatchedEpisodes
+      v-if="unmatchedSource"
+      :unmatched="unmatchedSource.unmatched"
+      :tmdb-id="unmatchedSource.tmdbId"
+      :known-seasons="unmatchedSource.known"
+      :only="unmatchedSource.only"
+    />
+
     <SeasonList v-if="series" :seasons="series.seasons" :series-cover="series.cover" />
 
     <SeasonEpisodes
@@ -158,7 +198,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       :status="seasonOf.status"
       :rewatches="seasonOf.rewatches"
       @updated="onEpisodes"
-      @loaded="hasCatalog = $event.source !== 'numbers'"
+      @loaded="onEpisodesLoaded"
       @saved="onSaved($event as unknown as AnyDetail)"
     />
 

@@ -7,12 +7,23 @@ import type { SeriesIndex } from './SeriesIndex.js';
 import type { SeriesChange } from './SeriesChange.js';
 import type { SyncState } from './SyncState.js';
 import type { SyncWarning } from './SyncWarning.js';
+import type { UnmatchedEpisode } from './UnmatchedEpisode.js';
 import type { UnlinkedChange } from './UnlinkedChange.js';
 
 export interface SeriesPlan {
   changes: SeriesChange[];
   unlinked: UnlinkedChange[];
   warnings: SyncWarning[];
+}
+
+function sortedUnmatched(list: readonly UnmatchedEpisode[]): UnmatchedEpisode[] {
+  return [...list].sort(
+    (a, b) =>
+      a.season - b.season ||
+      (a.number ?? 0) - (b.number ?? 0) ||
+      a.code.localeCompare(b.code) ||
+      (a.name ?? '').localeCompare(b.name ?? ''),
+  );
 }
 
 /** Turns the episode viewings of each library series into season changes, creating series and seasons that do not exist yet. */
@@ -29,6 +40,9 @@ export function planSeries(
   const storedWatches = new Map((state.watches ?? []).map((row) => [row.seriesId, row.watched]));
   const storedSkipped = new Map(
     (state.watches ?? []).map((row) => [row.seriesId, row.skipped ?? []]),
+  );
+  const storedUnmatched = new Map(
+    (state.watches ?? []).map((row) => [row.seriesId, row.unmatched ?? []]),
   );
   for (const item of library) {
     if (settled.has(item.jellyfinId)) continue;
@@ -62,7 +76,15 @@ export function planSeries(
     const tmdbId = existing?.tmdbId ?? item.tmdbId;
     const drafted =
       index && tmdbId !== null
-        ? draftOrderedSeasons(item.title, watchedSeasons, storedSeasons, watchDays, index)
+        ? draftOrderedSeasons(
+            item.title,
+            watchedSeasons,
+            storedSeasons,
+            watchDays,
+            index,
+            today,
+            item.seasons,
+          )
         : draftNumberedSeasons(item.title, watchedSeasons, storedSeasons, watchDays);
     plan.warnings.push(...drafted.warnings);
     const {
@@ -91,11 +113,17 @@ export function planSeries(
       }
     }
 
+    const unmatched = drafted.unmatched ? sortedUnmatched(drafted.unmatched) : undefined;
+    const unmatchedChanged =
+      unmatched !== undefined &&
+      JSON.stringify(unmatched) !==
+        JSON.stringify(existing ? (storedUnmatched.get(existing.id) ?? []) : []);
+
     const needsLink =
       existing !== undefined &&
       (existing.jellyfinId === null ||
         (existing.tmdbId === null && (item.tmdbId !== null || item.tvdbId !== null)));
-    if (seasons.length === 0 && !watches && !skipped && !needsLink) continue;
+    if (seasons.length === 0 && !watches && !skipped && !needsLink && !unmatchedChanged) continue;
     plan.changes.push({
       seriesId: existing?.id ?? null,
       jellyfinId: item.jellyfinId,
@@ -106,6 +134,7 @@ export function planSeries(
       seasons,
       ...(watches ? { watches } : {}),
       ...(skipped ? { skipped } : {}),
+      ...(unmatched && unmatchedChanged ? { unmatched } : {}),
     });
   }
   return plan;
