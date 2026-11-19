@@ -1,6 +1,5 @@
 export { escapeHtml } from './escapeHtml.js';
 export { statusKey } from './statusKey.js';
-export { legacyImageName } from './legacyImageName.js';
 export type { ExportImage } from './ExportImage.js';
 export type { ExportInput } from './ExportInput.js';
 export { buildVaultMirror } from './mirror/buildVaultMirror.js';

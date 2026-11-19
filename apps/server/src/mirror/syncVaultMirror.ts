@@ -4,7 +4,7 @@ import { buildVaultMirror, MIRROR_FOLDERS } from '@metrack/export';
 import type { ExistingNote, ExportInput } from '@metrack/export';
 import type { ExportSources } from '../export/loadExportInput.js';
 import { loadExportInput } from '../export/loadExportInput.js';
-import { parseFrontmatter } from '../importer/parseFrontmatter.js';
+import { parseFrontmatter } from './parseFrontmatter.js';
 import { MirrorImageResolver } from './MirrorImageResolver.js';
 import type { MirrorState } from './MirrorState.js';
 import { readMirrorState } from './readMirrorState.js';

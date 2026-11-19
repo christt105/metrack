@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openExportSources } from '../src/export/openExportSources.js';
-import { runImport } from '../src/importer/runImport.js';
 import { syncVaultMirror } from '../src/mirror/syncVaultMirror.js';
 import { png } from './support/sampleImages.js';
+import { seedMirrorLibrary } from './support/seedMirrorLibrary.js';
 import { syntheticVault } from './support/syntheticVault.js';
 import { writeVault } from './support/writeVault.js';
 
@@ -20,11 +20,16 @@ function tempDir(): string {
   return dir;
 }
 
-async function importedVault() {
+async function seededVault() {
   const vault = writeVault(syntheticVault());
   created.push(vault);
   const dataDir = tempDir();
-  await runImport({ vaultDir: vault, dataDir, apply: true, verbose: false });
+  const { db, sources } = openExportSources(dataDir);
+  try {
+    await seedMirrorLibrary(sources);
+  } finally {
+    db.close();
+  }
   return { vault, dataDir };
 }
 
@@ -45,7 +50,7 @@ async function mirror(vault: string, dataDir: string, apply: boolean) {
 
 describe('syncVaultMirror', () => {
   it('reports without writing, then writes and is idempotent', async () => {
-    const { vault, dataDir } = await importedVault();
+    const { vault, dataDir } = await seededVault();
     const before = readFileSync(join(vault, 'Movies/Alpha (2020).md'), 'utf8');
 
     const report = await mirror(vault, dataDir, false);
@@ -65,7 +70,7 @@ describe('syncVaultMirror', () => {
   });
 
   it('keeps properties it does not own and leaves notes of no item alone', async () => {
-    const { vault, dataDir } = await importedVault();
+    const { vault, dataDir } = await seededVault();
     const result = await mirror(vault, dataDir, true);
     expect(readFileSync(join(vault, 'Movies/Beta (2021).md'), 'utf8')).toContain('mood: happy');
     expect(result.unmanaged).toContain('Movies/Alpha Again.md');
@@ -73,7 +78,7 @@ describe('syncVaultMirror', () => {
   });
 
   it('links local covers to the vault file with the same bytes', async () => {
-    const { vault, dataDir } = await importedVault();
+    const { vault, dataDir } = await seededVault();
     await mirror(vault, dataDir, true);
     expect(readFileSync(join(vault, 'Movies/Beta (2021).md'), 'utf8')).toContain(
       'cover: "[[Media Tracker/Portadas/Local Cover.png]]"',
@@ -81,7 +86,7 @@ describe('syncVaultMirror', () => {
   });
 
   it('copies images the vault does not have and removes notes it wrote for deleted items', async () => {
-    const { vault, dataDir } = await importedVault();
+    const { vault, dataDir } = await seededVault();
     await mirror(vault, dataDir, true);
     const { db, sources } = openExportSources(dataDir);
     try {
@@ -109,7 +114,7 @@ describe('syncVaultMirror', () => {
   });
 
   it('writes a linked cover as its provider URL unless the note already has the same image', async () => {
-    const { vault, dataDir } = await importedVault();
+    const { vault, dataDir } = await seededVault();
     await mirror(vault, dataDir, true);
     const alphaUrl = 'https://image.tmdb.org/t/p/original/alpha.jpg';
     const betaUrl = 'https://image.tmdb.org/t/p/original/beta.jpg';
@@ -135,42 +140,5 @@ describe('syncVaultMirror', () => {
     const again = await mirror(vault, dataDir, true);
     expect(again.updated).toEqual([]);
     expect(again.copiedImages).toEqual([]);
-  });
-
-  it('reads back through the importer as the same library', async () => {
-    const { vault, dataDir } = await importedVault();
-    await mirror(vault, dataDir, true);
-    const secondData = tempDir();
-    await runImport({ vaultDir: vault, dataDir: secondData, apply: true, verbose: false });
-
-    const snapshot = async (dir: string) => {
-      const { db, sources } = openExportSources(dir);
-      try {
-        const strip = <T extends { id: number }>(rows: T[]) =>
-          rows
-            .map((row) => JSON.stringify({ ...row, id: undefined }))
-            .sort()
-            .map((row): unknown => JSON.parse(row));
-        const seriesTitle = new Map((await sources.series.list()).map((s) => [s.id, s.title]));
-        return {
-          seasons: strip(
-            (await sources.seasons.list()).map(({ seriesId, ...rest }) => ({
-              ...rest,
-              series: seriesTitle.get(seriesId),
-            })),
-          ),
-          movies: strip(await sources.movies.list()),
-          series: strip(await sources.series.list()),
-          videogames: strip(await sources.videogames.list()),
-          books: strip(await sources.books.list()),
-        };
-      } finally {
-        db.close();
-      }
-    };
-    const original = await snapshot(dataDir);
-    expect(original.movies.length).toBeGreaterThan(0);
-    expect(original.seasons.length).toBeGreaterThan(1);
-    expect(await snapshot(secondData)).toEqual(original);
   });
 });

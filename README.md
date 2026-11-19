@@ -8,7 +8,6 @@ Self-hosted media tracker for movies, series (tracked per season), games and boo
 
 - Web app to add and edit titles. Movies and series are searched and refreshed from TMDB, games are searched on IGDB and books on Open Library; anything can also be entered by hand. Artwork comes from TMDB, Steam, IGDB, SteamGridDB and Open Library and is stored locally by content hash.
 - Per-season tracking for series: status, dates, rating, review and rewatches.
-- Importer for the Obsidian `Media Tracker` vault.
 - Jellyfin viewing sync through Jellystat, with a report-only pass before anything is written.
 - Release alerts over ntfy for followed series and movies (premieres and Spanish streaming availability).
 - Scheduled, verified backups with retention and a restore command.
@@ -98,20 +97,6 @@ git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0
 ```
 
 Images are stored under `/data/images`, named by content hash, and are served at `/api/images/<hash>`. Covers and banners from TMDB, Steam and IGDB are linked to the provider's CDN; the store keeps their original bytes as an archive. Everything else (SteamGridDB, Open Library, uploads, URLs of any site) is re-encoded to WebP without metadata. Uploads (`POST /api/images`, also for images inside reviews) and covers and banners of your own are for the owner and trusted users; normal users only pick provider candidates. Limits: `IMAGE_QUOTA_MB` (default 200, own images per trusted user; provider images never count; the owner has no quota), `IMAGE_UPLOAD_MAX_MB` (default 5, per file before re-encoding), `IMAGE_MAX_DIMENSION` (default 1920, longest side in pixels) and `IMAGE_WEBP_QUALITY` (default 82). `IMAGE_ENCODED_BY` (`server` by default) set to `client` makes the browser recode uploads to WebP (quality 82, longest side `IMAGE_MAX_DIMENSION`) and the server only accept real WebP files within the limits, unchanged; in that mode copies of other sites' images are stored only when they already are WebP within the limits; otherwise the remote URL is kept and shown as a link (addresses that are not allowed and content that is not an image are still refused). The orphan cleanup never deletes an image stored or claimed in the last 24 hours. Provider access is configured with `TMDB_API_KEY` (a v3 key or v4 token, required for metadata refresh), `TMDB_LANGUAGE` (default `es-ES`), `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (a Twitch application, for game search) and `STEAMGRIDDB_TOKEN`. No keys are bundled. Book search uses Open Library, which needs no key; `OPENLIBRARY_LANGUAGE` (an ISO 639-1 code, by default the language part of `TMDB_LANGUAGE`) picks the edition whose title, cover, publisher and ISBN are used.
-
-## Importing the Obsidian vault
-
-```sh
-npm run metrack -w @metrack/server -- import "/path/to/vault/Media Tracker"
-npm run metrack -w @metrack/server -- import "/path/to/vault/Media Tracker" --apply
-npm run metrack -w @metrack/server -- import "/path/to/vault/Media Tracker" --images-dir /path/to/MediaTracker/static --images-dir "/path/to/vault/Media Tracker/Portadas"
-```
-
-Without `--apply` the command only prints a report (counts per type, notes with problems, titles that would go to the unlinked inbox) and writes nothing, not even the database. With `--apply` it writes to the database and image store in `DATA_DIR` (or `--data-dir`). `--verbose` lists every affected note instead of the first few.
-
-The notes are never modified. The import can be repeated: rows are matched by `tmdb_id`, `igdb_id`, `openlibrary_id` or `isbn` (seasons by series and number, unlinked titles by note path), and only changed fields are written. Tracking fields (status, `date` as `finished_at`, rating, review, rewatches) follow the note on every run; descriptive fields and images are only filled in or changed, never emptied.
-
-Local covers and banners (such as `Portadas/`) go through the image store. A remote cover or banner URL is linked only if a copy of that exact URL is already stored; nothing is downloaded. `--images-dir` (repeatable) points at folders written by the previous Hugo site, whose migration script cached each remote image as `tmdb_<id>.<ext>`, `tvdb_<id>.<ext>`, `steamgriddb_<id>.<ext>`, `steam_<appid>_<name>.<ext>` or, for any other URL, `img_<md5 of the URL>.<ext>`. The importer derives that name from every remote cover and banner URL, searches the folders recursively, stores the matching file through the image store and records the URL, so later runs link it directly. The report lists the URLs that have no matching file. A series note without season notes becomes a series with one season holding its tracking. Notes without an external id, with an id already used by another note, or whose series cannot be found go to the unlinked inbox.
 
 ## Mirroring to the Obsidian vault
 

@@ -4,7 +4,6 @@ import { openExportSources } from './export/openExportSources.js';
 import { runBackupCommand } from './backup/runBackupCommand.js';
 import { loadSyncConfig } from './sync/loadSyncConfig.js';
 import { runSyncCommand } from './sync/runSyncCommand.js';
-import { runImport } from './importer/runImport.js';
 import { formatMirrorResult } from './mirror/formatMirrorResult.js';
 import { syncVaultMirror } from './mirror/syncVaultMirror.js';
 import { runCatalogCommand } from './account/runCatalogCommand.js';
@@ -34,7 +33,6 @@ const USAGE = `Usage: metrack backups [--data-dir <dir>]
        metrack connector cloud-image-cleanup [--apply]
        metrack connector restore-sql <database.db> [--out <file.sql>]
        metrack connector row-counts <database.db>
-       metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
        metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>]
@@ -43,11 +41,6 @@ const USAGE = `Usage: metrack backups [--data-dir <dir>]
        metrack users delete <id> [--cancel] [--data-dir <dir>]
        metrack users export <id> <file.zip> [--data-dir <dir>]
        metrack catalog [delete <movies|series|games|books> <id>] [--data-dir <dir>]
-
-  Reads the Media Tracker notes. Without --apply it only prints a report and writes nothing.
-  With --apply it writes to the database and image store in the data directory (DATA_DIR or ./data).
-  --images-dir (repeatable) points at folders of images cached by the old Hugo site; remote cover and banner
-  URLs are matched to files there by name and imported. Nothing is downloaded.
 
   sync compares the Jellyfin playback history (Jellyfin API plus the Jellystat database, configured with JELLYFIN_URL,
   JELLYFIN_TOKEN, JELLYSTAT_DB_HOST and JELLYSTAT_DB_PASSWORD) of the Jellyfin account in a user's settings with that
@@ -104,7 +97,6 @@ async function main(argv: string[]): Promise<number> {
       cancel: { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
       'data-dir': { type: 'string' },
-      'images-dir': { type: 'string', multiple: true },
       'web-url': { type: 'string' },
       'link-prefix': { type: 'string' },
       email: { type: 'string' },
@@ -342,37 +334,26 @@ async function main(argv: string[]): Promise<number> {
     );
     return 0;
   }
-  const known = command === 'import' || command === 'mirror';
+  const known = command === 'mirror';
   if (values.help || !known || !target || positionals.length > 2) {
     console.error(USAGE);
     return values.help ? 0 : 2;
   }
   const config = loadConfig(process.env);
-  if (command === 'mirror') {
-    const dataDir = values['data-dir'] ?? config.dataDir;
-    const { db, sources } = openExportSources(dataDir, userId);
-    try {
-      const result = await syncVaultMirror(sources, {
-        mirrorDir: target,
-        linkPrefix: values['link-prefix'] ?? 'Media Tracker',
-        webUrl: values['web-url'] ?? process.env.VAULT_MIRROR_WEB_URL ?? null,
-        statePath: userDataPath(dataDir, userId, 'vault-mirror-state.json'),
-        apply: values.apply,
-      });
-      console.log(formatMirrorResult(result, values.apply, values.verbose));
-    } finally {
-      db.close();
-    }
-    return 0;
+  const dataDir = values['data-dir'] ?? config.dataDir;
+  const { db, sources } = openExportSources(dataDir, userId);
+  try {
+    const result = await syncVaultMirror(sources, {
+      mirrorDir: target,
+      linkPrefix: values['link-prefix'] ?? 'Media Tracker',
+      webUrl: values['web-url'] ?? process.env.VAULT_MIRROR_WEB_URL ?? null,
+      statePath: userDataPath(dataDir, userId, 'vault-mirror-state.json'),
+      apply: values.apply,
+    });
+    console.log(formatMirrorResult(result, values.apply, values.verbose));
+  } finally {
+    db.close();
   }
-  const output = await runImport({
-    vaultDir: target,
-    dataDir: values['data-dir'] ?? config.dataDir,
-    imagesDirs: values['images-dir'] ?? [],
-    apply: values.apply,
-    verbose: values.verbose,
-  });
-  console.log(output);
   return 0;
 }
 

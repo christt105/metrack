@@ -195,10 +195,6 @@ The release alert routes below follow the same rules, except that the users they
 
 The privacy page, `GET /privacy`, is outside `/api` and needs no sign-in. The erasure itself is not an endpoint: the server job does it once the 7 days have passed, and the owner schedules or cancels another user's deletion with `metrack users delete <id> [--cancel]`.
 
-## Not in the API
-
-Importing the Obsidian notes stays a command of the server CLI (`metrack import`). It reads and writes the same database and image store as the server.
-
 ## Settings
 
 - `PUT /api/users/{id}/role` (owner only, `RoleChange`: `{ "role": "trusted" | "normal" }`): answers the updated `User`; 400 `owner_role_fixed` for user 1, 404 for an unknown user. Takes effect on the user's next request.

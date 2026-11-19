@@ -5,7 +5,7 @@ export const UNKNOWN_REMOTE_COVER = 'https://image.example.test/t/p/original/unk
 
 const note = (frontmatter: string, body = ''): string => `---\n${frontmatter}\n---\n${body}`;
 
-/** A small vault covering every kind of note and every kind of problem the importer reports. */
+/** A small vault covering every kind of note and every kind of problem a vault can have. */
 export function syntheticVault(): Record<string, string | Buffer> {
   return {
     'Películas.md': '![[Media Tracker/Views.base]]',
