@@ -26,7 +26,7 @@ export function isSecureRequest(request: Request): boolean {
 }
 
 /**
- * Adds the security headers a response does not already set, with the report-only content security
+ * Adds the security headers a response does not already set, with the content security
  * policy that fits the request path. An HTML document (and a 304 for one) always gets the policy with a
  * fresh `script-src` nonce, replacing any other, for the scripts Cloudflare injects into HTML. A response
  * with immutable headers (the assets binding's) is copied; any other is changed in place.

@@ -1,4 +1,4 @@
-/** The report-only policy of the public pages (`/u/*` and `/privacy`): inline styles and the giscus comments script and frame. */
+/** The enforced policy of the public pages (`/u/*` and `/privacy`): inline styles and the giscus comments script and frame. */
 export const PUBLIC_CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' https://giscus.app",

@@ -150,10 +150,11 @@ describe('content security policy', () => {
     expect(contentSecurityPolicyFor(path)).toBe(policy);
   });
 
-  it('is report-only and never the enforcing header', async () => {
+  it('enforces the policy with the Content-Security-Policy header only', async () => {
     const response = await setup().request('http://localhost/api/health');
-    expect(response.headers.get(CONTENT_SECURITY_POLICY_HEADER)).toBe(APP_CONTENT_SECURITY_POLICY);
-    expect(response.headers.has('Content-Security-Policy')).toBe(false);
+    expect(CONTENT_SECURITY_POLICY_HEADER).toBe('Content-Security-Policy');
+    expect(response.headers.get('Content-Security-Policy')).toBe(APP_CONTENT_SECURITY_POLICY);
+    expect(response.headers.has('Content-Security-Policy-Report-Only')).toBe(false);
   });
 
   it('gives a route under /u the public policy', async () => {

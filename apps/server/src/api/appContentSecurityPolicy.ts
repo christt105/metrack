@@ -1,5 +1,5 @@
 /**
- * The report-only policy of the single-page app and everything that is not a public page. The inline style hash is
+ * The enforced policy of the single-page app and everything that is not a public page. The inline style hash is
  * the hidden element Cloudflare's JavaScript Detections injects into HTML; the app has no `'unsafe-inline'`.
  */
 export const APP_CONTENT_SECURITY_POLICY = [
