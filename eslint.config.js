@@ -13,12 +13,7 @@ export default tseslint.config(
     languageOptions: { parserOptions: { parser: tseslint.parser } },
   },
   {
-    files: [
-      'apps/server/**/*.ts',
-      'packages/export/**/*.ts',
-      '*.js',
-      '**/*.config.ts',
-    ],
+    files: ['apps/server/**/*.ts', 'packages/export/**/*.ts', '*.js', '**/*.config.ts'],
     languageOptions: { globals: globals.node },
   },
   {
