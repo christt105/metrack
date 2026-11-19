@@ -2,6 +2,8 @@ import type { ExecutionContext, Hono } from 'hono';
 import type { ApiEnv } from '../api/ApiEnv.js';
 import { createWorkerApp } from './createWorkerApp.js';
 import { createWorkerServices } from './createWorkerServices.js';
+import { isAppPath } from './isAppPath.js';
+import { serveApp } from './serveApp.js';
 import { serveAsset } from './serveAsset.js';
 import type { ScheduledController } from './ScheduledController.js';
 import type { WorkerEnv } from './WorkerEnv.js';
@@ -35,7 +37,9 @@ export function createWorkerHandler(): {
 
   return {
     fetch(request, env, context) {
-      if (new URL(request.url).pathname.startsWith('/assets/')) return serveAsset(request, env);
+      const path = new URL(request.url).pathname;
+      if (path.startsWith('/assets/')) return serveAsset(request, env);
+      if (env.ASSETS && isAppPath(path)) return serveApp(request, env);
       const current = servicesFor(env);
       app ??= createWorkerApp(env, undefined, current);
       return app.fetch(request, env, context);
