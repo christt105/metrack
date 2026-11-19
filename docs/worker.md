@@ -157,6 +157,30 @@ Create an account-owned or user API token with Account permissions Workers Scrip
 - Code: `npx wrangler rollback <version-id> --env production`, with the version id from the deploy's job summary (or `npx wrangler versions list --env production`).
 - Data: `npx wrangler d1 time-travel restore metrack --bookmark <bookmark> --env production`, with the bookmark from the job summary. It overwrites everything written since the bookmark and cancels in-flight queries, and the history is kept for 7 days on the free plan. Migrations should therefore be additive, so that the previous code keeps working on the new schema and only a code rollback is needed.
 
+### Rate limiting the sign-in and invitation routes
+
+The Worker has no rate limit of its own. A Cloudflare Rate Limiting rule on the zone of the custom domain covers the routes that accept a secret or an invitation code. The free plan allows one rule, matching on the path only, counting by IP, with a 10 second period and a 10 second block, so the values below are the most the plan offers. Create it in the dashboard (the zone, Security, WAF, Rate limiting rules):
+
+| Setting                       | Value                                                                                                                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule name                     | `metrack sign-in and invitations`                                                                                                                                                        |
+| Expression (Edit expression)  | `(http.request.uri.path in {"/api/auth/token-login" "/api/auth/dev-login" "/api/auth/google/start" "/api/auth/google/callback"}) or starts_with(http.request.uri.path, "/api/invites/")` |
+| With the same characteristics | IP                                                                                                                                                                                       |
+| When rate exceeds             | 8 requests per 10 seconds                                                                                                                                                                |
+| Then take action              | Block, default response (429)                                                                                                                                                            |
+| For duration                  | 10 seconds                                                                                                                                                                               |
+
+`/api/auth/me` and `/api/auth/logout` stay out: the app calls `/api/auth/me` on every load. `/api/invites/` with the trailing slash catches the public `GET /api/invites/{code}` and the owner's `DELETE /api/invites/{id}`, not the owner's list (`GET /api/invites`). Joining through an invitation takes about four requests (preview, Google start and callback, sometimes a reload), so 8 leaves room for a person and caps a script at about 8 tries every 20 seconds. The rule only sees traffic through the custom domain; the production Worker has `workers_dev` off, so there is no other way in. Check it from a shell outside Cloudflare's bot challenge (Bot Fight Mode answers 403 to datacenter IPs before the rule counts):
+
+```sh
+for i in $(seq 1 12); do
+  curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' \
+    -d '{"token":"x"}' "$METRACK_URL/api/auth/token-login"
+done
+```
+
+The first 8 answer 401 and the rest 429 until 10 seconds after the last blocked one.
+
 ## What the cloud does not do yet
 
 - Sign in: only personal API tokens work on a deployed Worker, either as `Authorization: Bearer` or through the web token sign-in form (`POST /api/auth/token-login`). Google login is pending.
