@@ -1,3 +1,4 @@
+import { isHtmlResponse } from '../api/isHtmlResponse.js';
 import { withSecurityHeaders } from '../api/securityHeaders.js';
 import type { WorkerEnv } from './WorkerEnv.js';
 
@@ -11,7 +12,7 @@ const MISSING = JSON.stringify({ error: 'Not found', code: 'not_found' });
 export async function serveAsset(request: Request, env: WorkerEnv): Promise<Response> {
   const path = new URL(request.url).pathname;
   const response = env.ASSETS ? await env.ASSETS.fetch(request) : undefined;
-  if (response && response.status < 400 && !isHtml(response)) {
+  if (response && response.status < 400 && !isHtmlResponse(response)) {
     return withSecurityHeaders(response, true, path);
   }
   return withSecurityHeaders(
@@ -22,8 +23,4 @@ export async function serveAsset(request: Request, env: WorkerEnv): Promise<Resp
     true,
     path,
   );
-}
-
-function isHtml(response: Response): boolean {
-  return (response.headers.get('content-type') ?? '').toLowerCase().startsWith('text/html');
 }
