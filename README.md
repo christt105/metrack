@@ -4,6 +4,16 @@
 
 Media tracker for movies, series (tracked per season), games and books: a web app to edit your library and public pages that show it. It runs on Cloudflare (a Worker with D1 and R2) or self-hosted in one container with SQLite.
 
+![Library](docs/screenshots/library.jpg)
+
+<p>
+  <img src="docs/screenshots/mobile-library.jpg" alt="Library on a phone" width="200">
+  <img src="docs/screenshots/mobile-season.jpg" alt="Season on a phone" width="200">
+  <img src="docs/screenshots/mobile-following.jpg" alt="Following on a phone" width="200">
+</p>
+
+More in [docs/screenshots.md](docs/screenshots.md).
+
 ## Features
 
 - Web app to add and edit titles, searched and refreshed from TMDB, IGDB and Open Library, or entered by hand.
