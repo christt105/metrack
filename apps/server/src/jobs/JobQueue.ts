@@ -1,21 +1,21 @@
 import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
-import type { PublishQueueOptions } from './PublishQueueOptions.js';
+import type { JobQueueOptions } from './JobQueueOptions.js';
 import type { Scheduler } from './Scheduler.js';
 
-export const DEFAULT_QUEUE_OPTIONS: PublishQueueOptions = {
+export const DEFAULT_QUEUE_OPTIONS: JobQueueOptions = {
   debounceMs: 5_000,
   baseDelayMs: 60_000,
   maxDelayMs: 3_600_000,
 };
 
 /**
- * Publishes when something changed, never on a clock. Changes are coalesced, a change that arrives
- * during a publish triggers another one afterwards, and failures are retried with exponential
+ * Runs a job when something changed, never on a clock. Changes are coalesced, a change that arrives
+ * during a run triggers another one afterwards, and failures are retried with exponential
  * backoff. A run of failures is reported once through the notifier (retrying the alert on later
- * failures until it is delivered), and once more when a publish succeeds again.
+ * failures until it is delivered), and once more when the job succeeds again.
  */
-export class PublishQueue {
+export class JobQueue {
   private dirty = false;
   private running = false;
   private waiting = false;
@@ -27,18 +27,18 @@ export class PublishQueue {
     private readonly notifier: Notifier,
     private readonly logger: Logger,
     private readonly scheduler: Scheduler,
-    private readonly options: PublishQueueOptions = DEFAULT_QUEUE_OPTIONS,
+    private readonly options: JobQueueOptions = DEFAULT_QUEUE_OPTIONS,
   ) {}
 
   private get label(): string {
-    return this.options.label ?? 'publish';
+    return this.options.label ?? 'job';
   }
 
   private get title(): string {
     return this.label.charAt(0).toUpperCase() + this.label.slice(1);
   }
 
-  /** Records that the published site may be out of date. */
+  /** Records that the job has work to do. */
   markDirty(): void {
     this.dirty = true;
     if (!this.running && !this.waiting) this.wait(this.options.debounceMs);

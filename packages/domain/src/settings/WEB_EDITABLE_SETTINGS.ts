@@ -7,7 +7,5 @@ import type { UserSettings } from '../api/UserSettings.js';
 export const WEB_EDITABLE_SETTINGS: readonly (keyof UserSettings)[] = [
   'jellyfinUser',
   'ntfyTopic',
-  'publishProject',
-  'publishBaseUrl',
   'mirrorLinkPrefix',
 ];

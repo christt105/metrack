@@ -100,8 +100,6 @@ function archivePath(image: StoredImage): string {
 function withoutTopic(settings: UserSettings): Omit<UserSettings, 'ntfyTopic'> {
   return {
     jellyfinUser: settings.jellyfinUser,
-    publishProject: settings.publishProject,
-    publishBaseUrl: settings.publishBaseUrl,
     mirrorDir: settings.mirrorDir,
     mirrorLinkPrefix: settings.mirrorLinkPrefix,
   };

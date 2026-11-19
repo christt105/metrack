@@ -1,4 +1,4 @@
-import type { Scheduler } from '../../src/publish/Scheduler.js';
+import type { Scheduler } from '../../src/jobs/Scheduler.js';
 
 /** Collects scheduled callbacks so a test decides when they fire. */
 export class FakeScheduler implements Scheduler {

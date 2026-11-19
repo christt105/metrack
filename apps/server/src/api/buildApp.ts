@@ -18,7 +18,6 @@ import { jsonResponse } from './jsonResponse.js';
 import { ApiRoutes } from './ApiRoutes.js';
 import type { ApiEnv } from './ApiEnv.js';
 import type { StaticFiles } from '../web/StaticFiles.js';
-import { registerPublishRoutes } from './registerPublishRoutes.js';
 import { registerSyncRoutes } from './registerSyncRoutes.js';
 import { registerWatchlistRoutes } from './registerWatchlistRoutes.js';
 import { registerTitleRoutes } from './registerTitleRoutes.js';
@@ -70,8 +69,6 @@ export interface AppDeps {
   web?: StaticFiles;
   imageStore?: ImageStore;
   metadataCache?: MetadataCache;
-  /** Publishes the site of each user who has one. */
-  publishQueues?: UserQueues;
   /** Refreshes each user's read-only notes in their vault after a change. */
   mirrorQueues?: UserQueues;
   edit?: EditServices;
@@ -121,10 +118,6 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   registerErrorHandler(app, deps.logger);
   registerAuthGuard(app, routes, deps.authenticator, deps.scope, deps.tokens);
   if (deps.contentVersions) bumpContentVersionOnWrite(app, deps.contentVersions, deps.logger);
-  if (deps.publishQueues) {
-    const queues = deps.publishQueues;
-    onSuccessfulApiWrite(app, () => queues.markAllDirty(), deps.logger);
-  }
   if (deps.mirrorQueues) {
     const queues = deps.mirrorQueues;
     onSuccessfulApiWrite(app, () => queues.markAllDirty(), deps.logger);
@@ -183,7 +176,6 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
     registerPublicPageRoutes(app, { ...deps.site, scope: deps.scope, images: deps.imageStore });
   }
   if (deps.backup) registerBackupRoutes(routes, deps.backup);
-  if (deps.publishQueues) registerPublishRoutes(routes, deps.publishQueues);
 
   const web = deps.web;
   app.notFound(async (context) => {

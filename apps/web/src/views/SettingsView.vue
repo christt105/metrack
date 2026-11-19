@@ -74,8 +74,6 @@ const applySync = () => {
   });
 };
 
-const publish = () =>
-  run(async () => messages.settings.publishQueued((await api.publish()).failures));
 const cleanup = () =>
   run(async () => messages.settings.cleanupDone((await api.cleanupImages()).removed.length));
 const backup = () =>
@@ -194,13 +192,6 @@ const groups = computed(() =>
                     )
               }}
             </p>
-          </div>
-          <div v-if="own?.settings.publishProject" class="panel">
-            <h2>{{ messages.settings.publishing }}</h2>
-            <p class="muted">{{ messages.settings.publishHint }}</p>
-            <button type="button" :disabled="busy" @click="publish">
-              {{ messages.settings.publish }}
-            </button>
           </div>
           <div v-if="owner" class="panel">
             <h2>{{ messages.settings.storage }}</h2>

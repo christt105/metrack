@@ -6,15 +6,13 @@ import { buildTestApp } from './support/buildTestApp.js';
 import { readCookie } from '../src/auth/readCookie.js';
 import { SessionCookieAuthenticator } from '../src/auth/SessionCookieAuthenticator.js';
 import { SessionService } from '../src/auth/SessionService.js';
-import { PublishQueue } from '../src/publish/PublishQueue.js';
-import { ownerQueues } from './support/ownerQueues.js';
+import type { ImageStore } from '../src/images/ImageStore.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { SqliteSessionRepository } from '../src/storage/sqlite/SqliteSessionRepository.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
 import { runUsersCommand } from '../src/users/runUsersCommand.js';
-import { FakeScheduler } from './support/FakeScheduler.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 
 async function setup(devLogin = true) {
@@ -27,19 +25,13 @@ async function setup(devLogin = true) {
     },
   };
   const sessions = new SessionService(new SqliteSessionRepository(db), users, () => now);
-  const queue = new PublishQueue(
-    async () => 'published',
-    { notify: async () => true },
-    { info: () => {}, error: () => {} },
-    new FakeScheduler(),
-  );
   const app = buildTestApp({
     appVersion: 'test',
     migrationRunner: new MigrationRunner(db, migrations),
     authenticator: new SessionCookieAuthenticator(sessions),
     scope: new AsyncUserScope(),
     auth: { sessions, users, devLogin },
-    publishQueues: ownerQueues(queue),
+    imageStore: { cleanOrphans: async () => [] } as unknown as ImageStore,
   });
   const signIn = async (userId: number) => {
     const response = await app.inject({
@@ -58,7 +50,7 @@ describe('auth guard', () => {
     const { app } = await setup();
     for (const [method, url] of [
       ['GET', '/api/auth/me'],
-      ['POST', '/api/publish'],
+      ['POST', '/api/images/cleanup'],
     ] as const) {
       const response = await app.inject({ method, url });
       expect(response.statusCode).toBe(401);

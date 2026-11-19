@@ -27,5 +27,4 @@ export const ISOLATION_SELF_WRITES: Readonly<Record<string, IsolationSelfWrite>>
   'POST /api/settings/ntfy-topic': { statuses: [200, 201] },
   'DELETE /api/settings/ntfy-topic': { statuses: [200, 204] },
   'POST /api/sync/apply': { payload: { confirm: true }, statuses: [501] },
-  'POST /api/publish': { statuses: [202, 501] },
 };

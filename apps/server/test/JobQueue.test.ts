@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Logger } from '../src/notify/Logger.js';
 import type { Notifier } from '../src/notify/Notifier.js';
-import { PublishQueue } from '../src/publish/PublishQueue.js';
-import type { PublishOutcome } from '../src/publish/PublishOutcome.js';
+import { JobQueue } from '../src/jobs/JobQueue.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
 
 const options = { debounceMs: 10, baseDelayMs: 100, maxDelayMs: 350 };
 
-function setup(results: (PublishOutcome | Error)[], delivered: boolean[] = [], label?: string) {
+function setup(results: (string | Error)[], delivered: boolean[] = [], label?: string) {
   const scheduler = new FakeScheduler();
   const alerts: string[] = [];
   const logs: string[] = [];
@@ -19,16 +18,16 @@ function setup(results: (PublishOutcome | Error)[], delivered: boolean[] = [], l
   };
   const logger: Logger = { info: (m) => void logs.push(m), error: (m) => void logs.push(m) };
   let calls = 0;
-  const attempt = async (): Promise<PublishOutcome> => {
+  const attempt = async (): Promise<string> => {
     const result = results[calls++] ?? 'published';
     if (result instanceof Error) throw result;
     return result;
   };
-  const queue = new PublishQueue(attempt, notifier, logger, scheduler, { ...options, label });
+  const queue = new JobQueue(attempt, notifier, logger, scheduler, { ...options, label });
   return { queue, scheduler, alerts, logs, calls: () => calls };
 }
 
-describe('PublishQueue', () => {
+describe('JobQueue', () => {
   it('does nothing until something changes', () => {
     const { scheduler, calls } = setup([]);
     expect(scheduler.pending()).toBe(0);
@@ -59,8 +58,8 @@ describe('PublishQueue', () => {
     expect(calls()).toBe(5);
     expect(scheduler.delays).toEqual([10, 100, 200, 350, 350]);
     expect(alerts).toEqual([
-      'metrack publish failed|Attempt 1 failed: one. Retrying in 0s.',
-      'metrack publish recovered|Publish published',
+      'metrack job failed|Attempt 1 failed: one. Retrying in 0s.',
+      'metrack job recovered|Job published',
     ]);
     expect(queue.failureCount()).toBe(0);
   });
@@ -73,9 +72,9 @@ describe('PublishQueue', () => {
     queue.markDirty();
     for (let i = 0; i < 4; i += 1) await scheduler.fire();
     expect(alerts).toEqual([
-      'metrack publish failed|Attempt 1 failed: one. Retrying in 0s.',
-      'metrack publish failed|Attempt 2 failed: two. Retrying in 0s.',
-      'metrack publish recovered|Publish published',
+      'metrack job failed|Attempt 1 failed: one. Retrying in 0s.',
+      'metrack job failed|Attempt 2 failed: two. Retrying in 0s.',
+      'metrack job recovered|Job published',
     ]);
   });
 
@@ -90,7 +89,7 @@ describe('PublishQueue', () => {
     const scheduler = new FakeScheduler();
     let release: () => void = () => {};
     let calls = 0;
-    const queue = new PublishQueue(
+    const queue = new JobQueue(
       async () => {
         calls += 1;
         if (calls === 1) await new Promise<void>((resolve) => (release = resolve));

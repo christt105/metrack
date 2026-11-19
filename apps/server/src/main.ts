@@ -20,14 +20,11 @@ import { createImageStore } from './images/createImageStore.js';
 import { storeOptionsFor } from './images/storeOptionsFor.js';
 import { MetadataCache } from './metadata/MetadataCache.js';
 import { registerTmdbMetadata } from './metadata/registerTmdbMetadata.js';
-import { createUserPublishQueues } from './publish/createUserPublishQueues.js';
-import { loadPublishConfig } from './publish/loadPublishConfig.js';
-import { NodeCommandRunner } from './publish/NodeCommandRunner.js';
 import { createUserSyncQueues } from './sync/createUserSyncQueues.js';
 import { openJellystatPool } from './sync/jellystat/openJellystatPool.js';
 import { UserSyncServices } from './sync/UserSyncServices.js';
 import { createUserMirrorQueues } from './mirror/createUserMirrorQueues.js';
-import { TimerScheduler } from './publish/TimerScheduler.js';
+import { TimerScheduler } from './jobs/TimerScheduler.js';
 import { IgdbClient } from './providers/igdb/IgdbClient.js';
 import { OpenLibraryClient } from './providers/openlibrary/OpenLibraryClient.js';
 import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js';
@@ -198,18 +195,6 @@ if (!syncServices) console.log(`Jellyfin sync is disabled, missing: ${syncMissin
 
 const exportSources = { movies, series, seasons, videogames, books, images: imageStore };
 
-const { config: publishConfig, missing: publishMissing } = loadPublishConfig(process.env);
-const publishQueues = publishConfig
-  ? createUserPublishQueues({
-      config: publishConfig,
-      sources: exportSources,
-      dataDir: config.dataDir,
-      runner: new NodeCommandRunner(),
-      jobs,
-    })
-  : undefined;
-if (!publishQueues) console.log(`Publishing is disabled, missing: ${publishMissing.join(', ')}`);
-
 const mirrorQueues = createUserMirrorQueues({
   sources: exportSources,
   dataDir: config.dataDir,
@@ -225,7 +210,7 @@ const syncQueues =
         syncServices,
         jobs,
         syncConfig.webhookDelayMs,
-        [publishQueues, mirrorQueues],
+        [mirrorQueues],
         contentVersions,
       )
     : undefined;
@@ -298,7 +283,6 @@ const app = buildApp({
   web: existsSync(config.webDir) ? new DiskStaticFiles(config.webDir) : undefined,
   imageStore,
   metadataCache,
-  publishQueues,
   mirrorQueues,
   edit,
   backup: { service: backupService, job: backupJob },

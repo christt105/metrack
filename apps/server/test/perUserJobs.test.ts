@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
@@ -14,8 +14,6 @@ import { createImageStore } from '../src/images/createImageStore.js';
 import { emptyMovie, emptySeason, emptySeries } from '../src/media/emptyEntities.js';
 import { createUserMirrorQueues } from '../src/mirror/createUserMirrorQueues.js';
 import { UserNotifier } from '../src/notify/UserNotifier.js';
-import type { CommandRunner } from '../src/publish/CommandRunner.js';
-import { createUserPublishQueues } from '../src/publish/createUserPublishQueues.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { createSqliteRepositories } from '../src/storage/sqlite/createSqliteRepositories.js';
@@ -247,58 +245,6 @@ describe('per-user Jellyfin sync', () => {
   });
 });
 
-describe('per-user publishing', () => {
-  it('builds each site from its own data and uploads it to its own project', async () => {
-    await addMovie(OWNER_ID, 'Owner Film', 1);
-    await addMovie(FRIEND_ID, 'Friend Film', 2);
-    await configure(OWNER_ID, { publishProject: 'owner-site', publishBaseUrl: 'https://o.dev/' });
-    await configure(FRIEND_ID, { publishProject: 'friend-site' });
-    const template = tempDir();
-    mkdirSync(join(template, 'layouts'));
-    const built: Record<string, string> = {};
-    const uploads: string[][] = [];
-    const runner: CommandRunner = {
-      run: async (command, args, options) => {
-        if (command === 'hugo') built[args.join(' ')] = textUnder(options?.cwd ?? '');
-        else uploads.push(args);
-      },
-    };
-    const queues = createUserPublishQueues({
-      config: {
-        siteTemplateDir: template,
-        hugoBinary: 'hugo',
-        wranglerBinary: 'wrangler',
-        cloudflareApiToken: 'token',
-        cloudflareAccountId: 'account',
-        cloudflareBranch: 'main',
-      },
-      sources: { ...repos, images: createImageStore(db, join(dataDir, 'images')) },
-      dataDir,
-      runner,
-      jobs,
-    });
-
-    expect(await queues.markAllDirty()).toBe(2);
-    expect(await queues.markDirty(STRANGER_ID)).toBe(false);
-    await fireAll();
-    await vi.waitFor(() => expect(uploads).toHaveLength(2));
-
-    const ownerBuild = `--minify --destination ${join(dataDir, 'publish', 'public')} --baseURL https://o.dev/`;
-    const friendBuild = `--minify --destination ${join(dataDir, 'users', '2', 'publish', 'public')}`;
-    expect(Object.keys(built).sort()).toEqual([ownerBuild, friendBuild].sort());
-    expect(built[ownerBuild]).toContain('Owner Film');
-    expect(built[ownerBuild]).not.toContain('Friend Film');
-    expect(built[friendBuild]).toContain('Friend Film');
-    expect(built[friendBuild]).not.toContain('Owner Film');
-    expect(uploads.map((args) => args[args.indexOf('--project-name') + 1]).sort()).toEqual([
-      'friend-site',
-      'owner-site',
-    ]);
-    expect(statSync(join(dataDir, 'publish-state.json')).isFile()).toBe(true);
-    expect(statSync(join(dataDir, 'users', '2', 'publish-state.json')).isFile()).toBe(true);
-  });
-});
-
 describe('per-user vault mirror', () => {
   it('mirrors each user notes into their own folder only', async () => {
     await addMovie(OWNER_ID, 'Owner Film', 1);
@@ -457,8 +403,6 @@ describe('owner settings from the environment', () => {
     JELLYSTAT_DB_PASSWORD: 'p',
     NTFY_URL: 'http://ntfy',
     NTFY_TOPIC: 'metrack',
-    CLOUDFLARE_PAGES_PROJECT: 'media-tracker',
-    PUBLISH_BASE_URL: 'https://media-tracker.pages.dev/',
   };
 
   it('are stored the first time, with the default Jellyfin account when sync is configured', async () => {
@@ -467,8 +411,6 @@ describe('owner settings from the environment', () => {
     expect(await repos.settings.get(OWNER_ID)).toEqual({
       jellyfinUser: 'admin',
       ntfyTopic: 'metrack',
-      publishProject: 'media-tracker',
-      publishBaseUrl: 'https://media-tracker.pages.dev/',
       mirrorDir: null,
       mirrorLinkPrefix: null,
     });
@@ -498,7 +440,7 @@ describe('owner settings from the environment', () => {
 
 describe('userDataPath', () => {
   it('keeps the owner paths from before users and gives everyone else a folder', () => {
-    expect(userDataPath('/data', OWNER_ID, 'publish-state.json')).toBe('/data/publish-state.json');
-    expect(userDataPath('/data', 7, 'publish-state.json')).toBe('/data/users/7/publish-state.json');
+    expect(userDataPath('/data', OWNER_ID, 'mirror-state.json')).toBe('/data/mirror-state.json');
+    expect(userDataPath('/data', 7, 'mirror-state.json')).toBe('/data/users/7/mirror-state.json');
   });
 });

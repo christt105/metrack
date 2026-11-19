@@ -1,5 +1,5 @@
 import { retryDelay } from '../connector/retryDelay.js';
-import type { Scheduler } from '../publish/Scheduler.js';
+import type { Scheduler } from '../jobs/Scheduler.js';
 import type { CloudBackup } from './CloudBackup.js';
 import type { CloudBackupJob } from './CloudBackupJob.js';
 import type { CloudBackupTime } from './CloudBackupTime.js';

@@ -1,4 +1,4 @@
-import type { Scheduler } from '../publish/Scheduler.js';
+import type { Scheduler } from '../jobs/Scheduler.js';
 import type { UserScope } from './UserScope.js';
 
 /**

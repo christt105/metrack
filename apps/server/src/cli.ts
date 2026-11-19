@@ -1,9 +1,5 @@
 import { parseArgs } from 'node:util';
 import { loadConfig } from './config/loadConfig.js';
-import { buildRedirectPages } from '@metrack/export';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { exportSite } from './export/exportSite.js';
 import { openExportSources } from './export/openExportSources.js';
 import { runBackupCommand } from './backup/runBackupCommand.js';
 import { loadSyncConfig } from './sync/loadSyncConfig.js';
@@ -27,9 +23,7 @@ import { OWNER_ID } from './users/OWNER_ID.js';
 import { userDataPath } from './users/userDataPath.js';
 import type { UserSettings } from '@metrack/domain';
 
-const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
-       metrack redirect <outDir> --origin <newSiteAddress> [--old-base <path>]
-       metrack backups [--data-dir <dir>]
+const USAGE = `Usage: metrack backups [--data-dir <dir>]
        metrack backup [--data-dir <dir>]
        metrack restore <backupName> [--data-dir <dir>]
        metrack copies [--data-dir <dir>]
@@ -43,8 +37,8 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
        metrack import <vaultMediaTrackerDir> [--apply] [--verbose] [--data-dir <dir>] [--images-dir <dir>]...
        metrack mirror <vaultMediaTrackerDir> [--apply] [--verbose] [--user <id>] [--data-dir <dir>] [--web-url <url>] [--link-prefix <path>]
        metrack users [add <name> [--email <address>]] [--data-dir <dir>]
-       metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>]
-                     [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>]
+       metrack users set <id> [--role trusted|normal] [--jellyfin-user <name>] [--ntfy-topic <topic>]
+                     [--mirror-dir <dir>] [--mirror-link-prefix <path>]
                      [--handle <name>] [--public-page on|off] [--intro <text>] [--description <text>] [--google-sub <sub>] [--data-dir <dir>]
        metrack users delete <id> [--cancel] [--data-dir <dir>]
        metrack users export <id> <file.zip> [--data-dir <dir>]
@@ -71,9 +65,6 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   connector cloud-image-cleanup lists the orphan images of the cloud (unused for over 24 hours) and their size, and with --apply
   deletes them from D1 and R2. It needs the cloud backup settings with the R2 bucket, and an R2 credential that may delete.
   It refuses to delete more than CLOUD_IMAGE_CLEANUP_MAX_COUNT images or CLOUD_IMAGE_CLEANUP_MAX_FRACTION of all of them.
-
-  redirect writes 404.html and index.html for the old GitHub Pages site. Every old address is sent to the same
-  path on --origin (the old site was served under --old-base, default /MediaTracker). Nothing else is touched.
 
   backups lists stored backups, backup creates one now (and prunes to BACKUP_RETENTION), restore replaces the
   database and image store with a backup (stop the server first). When BACKUP_COPY_DIR is set, every backup is
@@ -102,10 +93,7 @@ const USAGE = `Usage: metrack export <outDir> [--data-dir <dir>]
   images they own) to a file.
 
   catalog lists the items added by hand that no user has an entry for any more (they stay when their creator's account
-  is deleted, passing to user 1), and catalog delete removes one of them.
-
-  export writes the Hugo content tree (content/movies, tv, seasons, games, books with their images) into
-  <outDir>, replacing those sections. It reads the database and image store in the data directory.`;
+  is deleted, passing to user 1), and catalog delete removes one of them.`;
 
 async function main(argv: string[]): Promise<number> {
   const { positionals, values } = parseArgs({
@@ -117,8 +105,6 @@ async function main(argv: string[]): Promise<number> {
       verbose: { type: 'boolean', default: false },
       'data-dir': { type: 'string' },
       'images-dir': { type: 'string', multiple: true },
-      origin: { type: 'string' },
-      'old-base': { type: 'string' },
       'web-url': { type: 'string' },
       'link-prefix': { type: 'string' },
       email: { type: 'string' },
@@ -126,14 +112,12 @@ async function main(argv: string[]): Promise<number> {
       out: { type: 'string' },
       'jellyfin-user': { type: 'string' },
       'ntfy-topic': { type: 'string' },
-      'publish-project': { type: 'string' },
       role: { type: 'string' },
       handle: { type: 'string' },
       'public-page': { type: 'string' },
       intro: { type: 'string' },
       description: { type: 'string' },
       'google-sub': { type: 'string' },
-      'publish-base-url': { type: 'string' },
       'mirror-dir': { type: 'string' },
       'mirror-link-prefix': { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
@@ -145,8 +129,6 @@ async function main(argv: string[]): Promise<number> {
       [
         ['jellyfinUser', values['jellyfin-user']],
         ['ntfyTopic', values['ntfy-topic']],
-        ['publishProject', values['publish-project']],
-        ['publishBaseUrl', values['publish-base-url']],
         ['mirrorDir', values['mirror-dir']],
         ['mirrorLinkPrefix', values['mirror-link-prefix']],
       ] as const
@@ -360,36 +342,12 @@ async function main(argv: string[]): Promise<number> {
     );
     return 0;
   }
-  const known =
-    command === 'import' || command === 'export' || command === 'redirect' || command === 'mirror';
+  const known = command === 'import' || command === 'mirror';
   if (values.help || !known || !target || positionals.length > 2) {
     console.error(USAGE);
     return values.help ? 0 : 2;
   }
-  if (command === 'redirect') {
-    if (!values.origin) {
-      console.error(USAGE);
-      return 2;
-    }
-    const files = buildRedirectPages({ newOrigin: values.origin, oldBasePath: values['old-base'] });
-    mkdirSync(target, { recursive: true });
-    for (const file of files) writeFileSync(join(target, file.path), file.content);
-    console.log(`Wrote ${files.map((file) => file.path).join(', ')} to ${target}`);
-    return 0;
-  }
   const config = loadConfig(process.env);
-  if (command === 'export') {
-    const { db, sources } = openExportSources(values['data-dir'] ?? config.dataDir);
-    try {
-      const result = await exportSite(sources, target);
-      console.log(
-        `Exported ${result.files} files to ${target} (fingerprint ${result.fingerprint})`,
-      );
-    } finally {
-      db.close();
-    }
-    return 0;
-  }
   if (command === 'mirror') {
     const dataDir = values['data-dir'] ?? config.dataDir;
     const { db, sources } = openExportSources(dataDir, userId);

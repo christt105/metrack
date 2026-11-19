@@ -1,4 +1,4 @@
-import { DEFAULT_QUEUE_OPTIONS, PublishQueue } from '../publish/PublishQueue.js';
+import { DEFAULT_QUEUE_OPTIONS, JobQueue } from '../jobs/JobQueue.js';
 import { userDataPath } from '../users/userDataPath.js';
 import { UserQueues } from '../users/UserQueues.js';
 import { describeMirrorResult } from './describeMirrorResult.js';
@@ -10,7 +10,7 @@ export function createUserMirrorQueues(deps: UserMirrorDeps): UserQueues {
   return new UserQueues(
     () => deps.jobs.usersWith((settings) => settings.mirrorDir),
     (userId) =>
-      new PublishQueue(
+      new JobQueue(
         () => mirrorAs(deps, userId),
         deps.jobs.notifier(userId),
         deps.jobs.logger(userId),

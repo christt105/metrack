@@ -1,7 +1,7 @@
 import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
-import { DEFAULT_QUEUE_OPTIONS, PublishQueue } from '../publish/PublishQueue.js';
-import type { Scheduler } from '../publish/Scheduler.js';
+import { DEFAULT_QUEUE_OPTIONS, JobQueue } from '../jobs/JobQueue.js';
+import type { Scheduler } from '../jobs/Scheduler.js';
 import type { ContentVersions } from '../site/ContentVersions.js';
 import type { UserQueues } from '../users/UserQueues.js';
 import { describeSyncResult } from './describeSyncResult.js';
@@ -26,8 +26,8 @@ export interface SyncQueueDeps {
  * triggers another afterwards and failures retry with backoff. Whatever the sync wrote is
  * published and mirrored like any other edit.
  */
-export function createSyncQueue(deps: SyncQueueDeps): PublishQueue {
-  return new PublishQueue(
+export function createSyncQueue(deps: SyncQueueDeps): JobQueue {
+  return new JobQueue(
     async () => {
       const sync = await deps.services.forUser(deps.userId);
       if (!sync) return 'skipped, no Jellyfin user is set';
