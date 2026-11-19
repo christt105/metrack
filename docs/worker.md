@@ -4,6 +4,8 @@
 
 API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker first. `/assets/*` is answered from the assets binding, with a JSON 404 (`Cache-Control: no-store`) for a missing file instead of `index.html`. Every other path is answered by the assets, falling back to `index.html` for the web app's routes; that includes `/manifest.webmanifest` and `/sw.js` from `apps/web/public`, which the assets serve with `application/manifest+json`, a JavaScript type and revalidation on every load.
 
+Every response carries the same fixed security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, and `Strict-Transport-Security` over HTTPS). The Hono app and `serveAsset` add them from `apps/server/src/api/securityHeaders.ts`; the paths the assets binding answers without running the Worker cannot, so `apps/web/public/_headers` (copied into the build output, never served as a file) lists the same headers for them, and a test keeps both lists equal. The home server adds them through the same Hono middleware.
+
 ## Run it locally
 
 Local D1 and R2 live under `apps/server/.wrangler` (Miniflare); nothing reaches a Cloudflare account.

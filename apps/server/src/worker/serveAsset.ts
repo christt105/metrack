@@ -1,3 +1,4 @@
+import { withSecurityHeaders } from '../api/securityHeaders.js';
 import type { WorkerEnv } from './WorkerEnv.js';
 
 const MISSING = JSON.stringify({ error: 'Not found', code: 'not_found' });
@@ -9,11 +10,16 @@ const MISSING = JSON.stringify({ error: 'Not found', code: 'not_found' });
  */
 export async function serveAsset(request: Request, env: WorkerEnv): Promise<Response> {
   const response = env.ASSETS ? await env.ASSETS.fetch(request) : undefined;
-  if (response && response.status < 400 && !isHtml(response)) return response;
-  return new Response(MISSING, {
-    status: 404,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  });
+  if (response && response.status < 400 && !isHtml(response)) {
+    return withSecurityHeaders(response, true);
+  }
+  return withSecurityHeaders(
+    new Response(MISSING, {
+      status: 404,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    }),
+    true,
+  );
 }
 
 function isHtml(response: Response): boolean {

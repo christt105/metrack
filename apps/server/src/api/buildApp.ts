@@ -3,6 +3,7 @@ import { createHealthReport } from '@metrack/domain';
 import { registerAuthGuard } from './registerAuthGuard.js';
 import { registerAuthRoutes } from './registerAuthRoutes.js';
 import { registerArtworkRoutes } from './registerArtworkRoutes.js';
+import { registerSecurityHeaders } from './registerSecurityHeaders.js';
 import { registerErrorHandler } from './registerErrorHandler.js';
 import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
@@ -116,6 +117,7 @@ export interface AppDeps {
 export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   const app = new Hono<ApiEnv>();
   const routes = new ApiRoutes(app);
+  registerSecurityHeaders(app);
   registerErrorHandler(app, deps.logger);
   registerAuthGuard(app, routes, deps.authenticator, deps.scope, deps.tokens);
   if (deps.contentVersions) bumpContentVersionOnWrite(app, deps.contentVersions, deps.logger);
