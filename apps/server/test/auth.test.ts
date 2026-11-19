@@ -167,6 +167,32 @@ describe('sessions', () => {
     expect(me.statusCode).toBe(401);
   });
 
+  it('deletes the session row on logout and leaves other sessions alone', async () => {
+    const { db, app, signIn } = await setup();
+    const first = await signIn(1);
+    const second = await signIn(1);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM session').get()?.n).toBe(2);
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie: first.cookie },
+    });
+    expect(db.prepare('SELECT COUNT(*) AS n FROM session').get()?.n).toBe(1);
+    const me = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { cookie: second.cookie },
+    });
+    expect(me.statusCode).toBe(200);
+  });
+
+  it('answers logout without a cookie and still clears it', async () => {
+    const { app } = await setup();
+    const logout = await app.inject({ method: 'POST', url: '/api/auth/logout' });
+    expect(logout.statusCode).toBe(204);
+    expect(String(logout.headers['set-cookie'])).toContain('Max-Age=0');
+  });
+
   it('expires after 30 days and cleans up expired rows on the next sign-in', async () => {
     const { db, app, clock, signIn } = await setup();
     const { cookie } = await signIn(1);
