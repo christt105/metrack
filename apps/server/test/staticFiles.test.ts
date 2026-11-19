@@ -32,7 +32,7 @@ describe('web app files', () => {
     const app = setup();
     for (const url of ['/', '/assets/app.js', '/movies/3']) {
       const response = await app.inject({ method: 'GET', url });
-      const policy = String(response.headers['content-security-policy-report-only']);
+      const policy = String(response.headers['content-security-policy']);
       if (url === '/assets/app.js') expect(policy).toBe(APP_CONTENT_SECURITY_POLICY);
       else expect(policy).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+';/);
     }
