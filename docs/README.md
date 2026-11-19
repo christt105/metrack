@@ -19,5 +19,6 @@ metrack runs either as a Cloudflare Worker with D1 and R2 (the cloud version, op
 
 ## Reference
 
+- [screenshots.md](screenshots.md): the web app and the public pages on desktop and phone.
 - [api.md](api.md): the HTTP API.
 - [development.md](development.md): layout, building, dependencies and migrations.
