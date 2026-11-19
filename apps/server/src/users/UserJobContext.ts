@@ -3,7 +3,7 @@ import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
 import type { NtfyServer } from '../notify/NtfyServer.js';
 import { UserNotifier } from '../notify/UserNotifier.js';
-import type { Scheduler } from '../publish/Scheduler.js';
+import type { Scheduler } from '../jobs/Scheduler.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import { ScopedScheduler } from './ScopedScheduler.js';
 import type { UserScope } from './UserScope.js';

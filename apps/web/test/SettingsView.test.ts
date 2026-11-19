@@ -23,15 +23,12 @@ const existing: BackupInfo = {
 const noSettings: UserSettings = {
   jellyfinUser: null,
   ntfyTopic: null,
-  publishProject: null,
-  publishBaseUrl: null,
   mirrorDir: null,
   mirrorLinkPrefix: null,
 };
 const ownerSettings: UserSettings = {
   ...noSettings,
   jellyfinUser: 'admin',
-  publishProject: 'media-tracker',
   mirrorDir: '/vault/Media Tracker',
 };
 const owner: User = { id: 1, name: 'Owner', email: null, role: 'owner' };
@@ -239,7 +236,6 @@ describe('SettingsView user settings', () => {
     expect(wrapper.text()).toContain('Your background jobs');
     expect(wrapper.text()).toContain('haku');
     expect(wrapper.text()).toContain('Jellyfin viewings');
-    expect(wrapper.text()).not.toContain('Publish now');
     expect(wrapper.text()).not.toContain('Backups');
     expect(wrapper.find('form.user').exists()).toBe(false);
     expect(listBackups).not.toHaveBeenCalled();

@@ -582,13 +582,3 @@ describe('listing', () => {
     );
   });
 });
-
-describe('publishing', () => {
-  it('marks the site dirty after a successful write but not after reads or failures', async () => {
-    await api.app.inject({ method: 'GET', url: '/api/media' });
-    await post('/api/movies', {});
-    expect(api.scheduler.pending()).toBe(0);
-    await post('/api/movies', { title: 'x' });
-    expect(api.scheduler.pending()).toBe(1);
-  });
-});

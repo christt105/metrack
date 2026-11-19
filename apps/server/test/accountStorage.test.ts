@@ -75,8 +75,6 @@ describe.each(backends)('$name: accounts and settings', (backend) => {
     const settings = {
       jellyfinUser: 'friend',
       ntfyTopic: 'topic',
-      publishProject: null,
-      publishBaseUrl: null,
       mirrorDir: null,
       mirrorLinkPrefix: null,
     };

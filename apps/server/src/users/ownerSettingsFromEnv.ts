@@ -7,8 +7,6 @@ export function ownerSettingsFromEnv(env: Record<string, string | undefined>): U
   return {
     jellyfinUser: env.JELLYFIN_USER || (syncConfigured ? 'admin' : null),
     ntfyTopic: env.NTFY_TOPIC || null,
-    publishProject: env.CLOUDFLARE_PAGES_PROJECT || null,
-    publishBaseUrl: env.PUBLISH_BASE_URL || null,
     mirrorDir: env.VAULT_MIRROR_DIR || null,
     mirrorLinkPrefix: env.VAULT_MIRROR_LINK_PREFIX || null,
   };

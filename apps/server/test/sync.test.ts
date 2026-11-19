@@ -19,7 +19,7 @@ import { PostgresPlaybackSource } from '../src/sync/jellystat/PostgresPlaybackSo
 import { MemoryContentVersions } from '../src/site/MemoryContentVersions.js';
 import { createSyncQueue } from '../src/sync/createSyncQueue.js';
 import { loadSyncConfig } from '../src/sync/loadSyncConfig.js';
-import { PublishQueue } from '../src/publish/PublishQueue.js';
+import { JobQueue } from '../src/jobs/JobQueue.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
 import { emptySeries } from '../src/media/emptyEntities.js';
 import { SyncApplier } from '../src/sync/SyncApplier.js';
@@ -655,7 +655,7 @@ describe('SyncService', () => {
       error: (m: string) => void logs.push(m),
     };
     const notifier = { notify: async () => true };
-    const published = new PublishQueue(async () => 'published', notifier, logger, scheduler);
+    const published = new JobQueue(async () => 'published', notifier, logger, scheduler);
     const versions = new MemoryContentVersions();
     const queue = createSyncQueue({
       services: t.services,
@@ -701,7 +701,7 @@ describe('SyncService', () => {
     let marked = 0;
     const queues = new UserQueues(
       async () => [OWNER_ID],
-      () => ({ markDirty: () => void (marked += 1) }) as unknown as PublishQueue,
+      () => ({ markDirty: () => void (marked += 1) }) as unknown as JobQueue,
     );
     const app = buildTestApp({
       appVersion: 'test',

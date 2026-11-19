@@ -1,6 +1,6 @@
 import type { Logger } from '../notify/Logger.js';
 import type { Notifier } from '../notify/Notifier.js';
-import type { Scheduler } from '../publish/Scheduler.js';
+import type { Scheduler } from '../jobs/Scheduler.js';
 import { CloudClient } from './CloudClient.js';
 import { ConnectorQueue } from './ConnectorQueue.js';
 import { ConnectorStateStore } from './ConnectorStateStore.js';

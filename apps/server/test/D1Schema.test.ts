@@ -71,6 +71,11 @@ const unmatchedEpisodesSql = readFileSync(
   'utf8',
 );
 
+const dropPublishSettingsSql = readFileSync(
+  new URL('../d1/migrations/0013_drop_publish_settings.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -84,6 +89,7 @@ function fromSql(): DatabaseSync {
   db.exec(refillSql);
   db.exec(dropSeasonOverrideSql);
   db.exec(unmatchedEpisodesSql);
+  db.exec(dropPublishSettingsSql);
   return db;
 }
 
@@ -119,6 +125,18 @@ describe('D1 schema file', () => {
   it('has no views or triggers', () => {
     expect(actual.other).toEqual(expected.other);
     expect(actual.other).toEqual([]);
+  });
+
+  it('no longer has the publish settings columns', () => {
+    for (const db of [fromMigrations(), fromSql()]) {
+      const columns = db
+        .prepare("SELECT name FROM pragma_table_info('user_setting')")
+        .all()
+        .map((row) => String(row.name));
+      expect(columns).not.toContain('publish_project');
+      expect(columns).not.toContain('publish_base_url');
+      expect(columns).toContain('mirror_dir');
+    }
   });
 
   it('holds no data', () => {

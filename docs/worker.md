@@ -199,7 +199,7 @@ The first 8 answer 401 and the rest 429 until 10 seconds after the last blocked 
 
 - Sign in: only personal API tokens work on a deployed Worker, either as `Authorization: Bearer` or through the web token sign-in form (`POST /api/auth/token-login`). Google login is pending.
 - Jellyfin and Jellystat sync (`/api/sync/*` answer 501), the Jellyfin webhook included.
-- The vault mirror and Hugo/Cloudflare Pages publishing (`/api/publish` does not exist).
+- The vault mirror.
 - The account export ZIP (`GET /api/account/export` does not exist: building it costs CPU and memory in proportion to the image bytes, far over the free plan's 10 ms and 128 MB). The web app builds the ZIP in the browser from `GET /api/account/export/data` and one `GET /api/images/{hash}` per image; the data route skips the R2 lookup per image, so an image row whose file is missing is only discovered when the browser fails to fetch it.
 - Backups (`/api/backups` does not exist; `GET /api/health` reports `features.backups: false`, so Settings hides the section) and the archive of images.
 - Release alerts and ntfy notifications: there is no timer. The Worker only stores each user's ntfy topic and never publishes to ntfy. Users turn alerts on in Settings (`POST /api/settings/ntfy-topic`), which makes the server generate a random topic, regenerate it, or turn alerts off (`DELETE`); the owner cannot type a topic for anyone (`PATCH /api/users/{id}/settings` refuses `ntfyTopic`). Sending the alerts is the job of the home connector, from the home IP.

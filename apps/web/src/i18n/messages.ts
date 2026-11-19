@@ -433,11 +433,6 @@ export const messages = {
     status: 'Status',
     version: 'Version',
     schema: 'Schema',
-    publishing: 'Publishing',
-    publishHint: 'Any change queues a publish by itself. Publish now to force one.',
-    publish: 'Publish now',
-    publishQueued: (failures: number) =>
-      failures > 0 ? `Queued. ${failures} earlier attempt(s) failed.` : 'Queued.',
     storage: 'Image store',
     cleanup: 'Remove unused images',
     cleanupDone: (n: number) => `Removed ${n} image(s).`,
@@ -465,7 +460,7 @@ export const messages = {
       `${plays} play(s) of ${titles} title(s) are no longer in the library and are ignored`,
     jobs: 'Your background jobs',
     jobsHint:
-      'What your Jellyfin sync, release alerts, publishing and vault mirror act on. A job runs only when its setting is set. Only the owner can change them.',
+      'What your Jellyfin sync, release alerts and vault mirror act on. A job runs only when its setting is set. Only the owner can change them.',
     notSet: 'Not set',
     users: 'Users',
     usersHint:
@@ -484,8 +479,6 @@ export const messages = {
     settingLabels: {
       jellyfinUser: 'Jellyfin account',
       ntfyTopic: 'ntfy topic',
-      publishProject: 'Cloudflare Pages project',
-      publishBaseUrl: 'Site address',
       mirrorDir: 'Vault folder',
       mirrorLinkPrefix: 'Folder path in the vault',
     } satisfies Record<keyof UserSettings, string>,
