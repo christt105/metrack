@@ -6,32 +6,18 @@ Self-hosted media tracker for movies, series (tracked per season), games and boo
 
 ## Features
 
-- Web app to add and edit titles. Movies and series are searched and refreshed from TMDB, games are searched on IGDB and books on Open Library; anything can also be entered by hand. Artwork comes from TMDB, Steam, IGDB, SteamGridDB and Open Library and is stored locally by content hash.
+- Web app to add and edit titles, searched and refreshed from TMDB, IGDB and Open Library, or entered by hand.
 - Per-season tracking for series: status, dates, rating, review and rewatches.
 - Jellyfin viewing sync through Jellystat, with a report-only pass before anything is written.
-- Release alerts over ntfy for followed series and movies (premieres and Spanish streaming availability).
+- Release alerts over ntfy for followed series and movies.
 - Scheduled, verified backups with retention and a restore command.
 
-## Security model
+## Two ways to run it
 
-Every API route needs a signed-in session except health, logout and the Jellyfin webhook (which only schedules a sync, and needs `SYNC_WEBHOOK_SECRET` when it is set). Users are listed with `metrack users` and created with `metrack users add <name> [--email <address>]` (in Docker: `docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js users add <name>`); user 1 owns everything stored before users existed. Users that already exist can sign in with Google when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set (see `docs/worker.md`; Google needs an https address, so a plain-http LAN instance cannot use it). The other ways to sign in are an access token and dev login (`DEV_LOGIN=true`), where the sign-in page lists every user and anyone who can open it picks one with no password. With dev login off, nobody can sign in.
+- **Self-hosted:** the Node server with SQLite, run with Docker or from source. Start with [docs/self-hosting.md](docs/self-hosting.md).
+- **Cloud:** a Cloudflare Worker with D1 and R2, described in [docs/worker.md](docs/worker.md). The Worker cannot reach Jellyfin, so an optional home connector syncs Jellyfin and Jellystat into it and copies the cloud data; see [docs/connector.md](docs/connector.md).
 
-Dev login is only safe on a trusted local network, so until there is a real sign-in method do not expose metrack to the internet. Only the public pages are meant to be public. Each user only sees and edits their own library: every personal row (tracking, reviews, notes, hand edits, followed titles, season overrides, the episodes watched of each season, the unlinked inbox and sent alerts) has an owner, and every query filters by the signed-in user. What providers describe about a title (TMDB, IGDB, Open Library) is a shared catalog, so two users who add the same film share one catalog row and keep separate entries; changing an external id of a title someone else also has is refused. Backups and deleting images (images are shared by hash) act on the whole instance and belong to the owner, user 1. The owner can make other users trusted (in Settings or with `metrack users set <id> --role trusted`): only the owner and trusted users add items by hand, the ones no provider knows, which stay private to whoever created them; everyone else adds titles from the providers. Personal API tokens, created in Settings, let a program read or change one user's library with `Authorization: Bearer`; they never reach settings, tokens or owner-only actions (see `docs/api.md`). A `write` token can also be pasted into the login screen ("Sign in with an access token", `POST /api/auth/token-login`), which gives a normal browser session of the token's user; this is how to use the web app on a Worker, where dev login must stay off. Anyone holding a write token can do this, so treat the token like a password; the route has no rate limit.
-
-### Per-user settings
-
-The background jobs run once for each user whose settings enable them, each as that user, so a job only reads and writes its user's library: the Jellyfin sync reads that user's Jellyfin account, release alerts watch what that user follows and go to their ntfy topic, and the vault mirror writes their notes into their folder. The instance keeps the connections and credentials (Jellyfin and Jellystat, the ntfy server and token, the Cloudflare account, the site template); a user's settings only say what to act on:
-
-| Setting            | Enables                               | Starts from (user 1)       |
-| ------------------ | ------------------------------------- | -------------------------- |
-| `jellyfinUser`     | Jellyfin sync of that account         | `JELLYFIN_USER`, `admin`   |
-| `ntfyTopic`        | Release alerts and job failure alerts | `NTFY_TOPIC`               |
-| `mirrorDir`        | The vault mirror into that folder     | `VAULT_MIRROR_DIR`         |
-| `mirrorLinkPrefix` | That folder's path inside the vault   | `VAULT_MIRROR_LINK_PREFIX` |
-
-The first time the server starts with this table, user 1's settings are stored from those variables (`admin` only when sync is configured), so an existing install keeps doing exactly what it did. From then on the stored settings win; a variable that disagrees is logged at start and ignored. Every user sees their own settings under Settings in the web app, but only the owner changes them, because they point the instance's credentials at an account, a project or a folder. The owner edits everyone's from the Users panel there (or `PATCH /api/users/{id}/settings`), except the vault folder, which the server writes into and so is only set from the command line. On the Cloudflare Worker the ntfy topic is not typed: each user turns release alerts on under Settings, which generates a random topic they subscribe to at `https://ntfy.sh/<topic>`, and can regenerate it or turn alerts off; the Worker only stores the topic and sends nothing. Values are checked (ntfy topic characters, a Cloudflare Pages project name, an http or https site address, an absolute folder, a vault path without `..`). From the command line: `metrack users set <id> [--jellyfin-user <name>] [--ntfy-topic <topic>] [--publish-project <name>] [--publish-base-url <url>] [--mirror-dir <dir>] [--mirror-link-prefix <path>]`, where an empty value clears one; `metrack users set <id>` alone shows them and `metrack users` lists which jobs run for each user. Changes apply to the next run without a restart, except that a newly set vault folder is first mirrored after the next write or restart. Job state lives in the data directory: user 1 keeps `publish-state.json`, `publish/` and `vault-mirror-state.json` at its root, other users have them under `users/<id>/`. Because titles are a shared catalog, any write marks every user's site and mirror as changed; a run whose export did not change does nothing.
-
-## Quick start
+## Try it
 
 ```sh
 curl -O https://raw.githubusercontent.com/christt105/metrack/main/docker-compose.yml
@@ -39,255 +25,23 @@ DEV_LOGIN=true docker compose up -d
 curl http://localhost:8097/api/health
 ```
 
-Then open `http://<host>:8097` and sign in as the owner (see the security model above). Every integration is optional and stays off, with a log line naming the missing variables, until it is configured; see the sections below.
-
-## Layout
-
-- `packages/domain`: pure domain logic, no HTTP or database.
-- `packages/site`: pure renderer of the public pages (HTML, RSS and the theme's stylesheet, scripts, font and images) from one user's data; no database, no disk, no Node-only APIs.
-- `packages/export`: pure builder of the vault mirror notes from stored data, plus the helpers the public pages share.
-- `apps/server`: Hono API, SQLite storage and migrations; also serves the built web app.
-- `apps/web`: Vue 3 + Vite frontend.
-
-## Development
-
-Requires Node 22.13 or later and npm 10.
-
-```sh
-npm ci
-npm run lint
-npm run typecheck
-npm test
-npm run build
-```
-
-The HTTP API used by the private editing interface is documented in [docs/api.md](docs/api.md); its types live in `@metrack/domain`.
-
-The Cloudflare Workers build (D1, R2, Static Assets) is described in [docs/worker.md](docs/worker.md), including the tag-driven production deploy. The Worker cannot reach Jellyfin, so a second mode of the same image, the home connector (`metrack connector`), reads Jellyfin and Jellystat at home and syncs into it; see [docs/connector.md](docs/connector.md).
-
-Run the API with `npm run dev:server` (port 8097, data in `./data`) and the web app with `npm run dev:web`, which proxies `/api` to the API.
-
-## Installing the web app
-
-The web app is an installable PWA (a web app manifest, icons and a small service worker) and needs HTTPS, as on the Cloudflare Worker. On Android Chrome, open the site, then the menu and "Install app" (or "Add to Home screen"). On iOS Safari, use Share, then "Add to Home Screen". It opens full screen with its own icon. The service worker only keeps the app shell available offline: the API, the public pages (`/u/`, `/privacy`) and images always go to the network, so editing needs a connection and the app says so when it is offline. A new deploy takes over on the next reload.
-
-Release alerts as notifications on the installed app would need Web Push: a VAPID key pair kept as a Worker secret, a `push` and `notificationclick` handler in `sw.js`, an endpoint that stores each user's push subscription, and a sender that signs and posts the payload from the Worker or the connector (task 5vopg8). iOS only delivers Web Push to an app installed to the Home screen.
-
-## Docker
-
-Images are published to GitHub Container Registry as `ghcr.io/christt105/metrack` and can be pulled without logging in.
-
-```sh
-docker compose pull && docker compose up -d
-curl http://localhost:8097/api/health
-```
-
-The image tag is set with `METRACK_TAG` (default `latest`), the port with `METRACK_PORT` (default 8097) and the data directory with `METRACK_DATA` (default `./data`, mounted at `/data`). The database lives at `/data/metrack.db`. To run a local build instead, tag it and point `METRACK_TAG` at it:
-
-```sh
-docker build -t ghcr.io/christt105/metrack:dev . && METRACK_TAG=dev docker compose up -d
-```
-
-### Images and releases
-
-CI runs lint, typecheck, tests and build on every pull request and push to `main`, then builds the image. Every pull request from this repository publishes a preview image, `ghcr.io/christt105/metrack:pr-<number>`, so it can be tried on the server before merging. Pushing a `vX.Y.Z` tag that points at a commit on `main` publishes `vX.Y.Z`, `vX.Y` and `latest`; tags outside `main` fail the release. The image tag is passed as `APP_VERSION` and reported by `/api/health`.
-
-```sh
-git tag -a v0.2.0 -m "v0.2.0" && git push origin v0.2.0
-```
-
-Images are stored under `/data/images`, named by content hash, and are served at `/api/images/<hash>`. Covers and banners from TMDB, Steam and IGDB are linked to the provider's CDN; the store keeps their original bytes as an archive. Everything else (SteamGridDB, Open Library, uploads, URLs of any site) is re-encoded to WebP without metadata. Uploads (`POST /api/images`, also for images inside reviews) and covers and banners of your own are for the owner and trusted users; normal users only pick provider candidates. Limits: `IMAGE_QUOTA_MB` (default 200, own images per trusted user; provider images never count; the owner has no quota), `IMAGE_UPLOAD_MAX_MB` (default 5, per file before re-encoding), `IMAGE_MAX_DIMENSION` (default 1920, longest side in pixels) and `IMAGE_WEBP_QUALITY` (default 82). `IMAGE_ENCODED_BY` (`server` by default) set to `client` makes the browser recode uploads to WebP (quality 82, longest side `IMAGE_MAX_DIMENSION`) and the server only accept real WebP files within the limits, unchanged; in that mode copies of other sites' images are stored only when they already are WebP within the limits; otherwise the remote URL is kept and shown as a link (addresses that are not allowed and content that is not an image are still refused). The orphan cleanup never deletes an image stored or claimed in the last 24 hours. Provider access is configured with `TMDB_API_KEY` (a v3 key or v4 token, required for metadata refresh), `TMDB_LANGUAGE` (default `es-ES`), `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (a Twitch application, for game search) and `STEAMGRIDDB_TOKEN`. No keys are bundled. Book search uses Open Library, which needs no key; `OPENLIBRARY_LANGUAGE` (an ISO 639-1 code, by default the language part of `TMDB_LANGUAGE`) picks the edition whose title, cover, publisher and ISBN are used.
-
-## Mirroring to the Obsidian vault
-
-```sh
-npm run metrack -w @metrack/server -- mirror "/path/to/vault/Media Tracker" --web-url http://192.168.1.15:8100
-npm run metrack -w @metrack/server -- mirror "/path/to/vault/Media Tracker" --web-url http://192.168.1.15:8100 --apply
-```
-
-Once the web app is the only place where tracking is edited, `mirror` keeps a read-only copy of the library in the vault so other notes can link to it (`[[Predestination (2014)]]` from a journal entry). It writes one note per page of the site, in the format and folders the Obsidian plugin used (`Movies`, `TVs`, `Seasons`, `Juegos`, `Books`) and with the same file names, so existing links keep working and the old Hugo migration script can still read the folder. Any edit made in Obsidian to these notes is overwritten on the next run.
-
-Without `--apply` it only reports which notes would be created, changed or removed. With `--apply` it writes through a temporary file and a rename, and only notes whose text changes. Properties the database does not hold (`related`, `aliases`, `cssclasses`, `category`...) stay as written, and so do values that already mean the same thing: a cover URL or `[[file]]` for the same image, season links written with folders or aliases, a review whose only difference is how its images are embedded. A series with season notes gets its status from its seasons (in progress while one is, completed once one is finished and the rest are not started) and the latest finish date; it has no rating of its own.
-
-Covers keep their original URL when the image came from one; otherwise the note links a file in `Portadas` or `Files` with the same bytes, or the image is copied there as `metrack-<hash>.<ext>`. `--web-url` (or `VAULT_MIRROR_WEB_URL`) adds a `metrack` property linking to the item in the web app. `--link-prefix` is the folder's path inside the vault, `Media Tracker` by default.
-
-The notes written are recorded in `vault-mirror-state.json` in the data directory. A note the mirror wrote before and that no longer matches an item (deleted, or renamed) is removed; notes it never wrote are listed and left alone.
-
-### Automatic mirror
-
-For every user with a vault folder in their settings (`mirrorDir`, see Per-user settings), the server runs the mirror once at start and again a few seconds after every successful write under `/api`, so the vault follows every edit. `VAULT_MIRROR_WEB_URL` and the `mirrorLinkPrefix` setting work like the CLI options; `metrack mirror --user <id>` mirrors another user's notes. Failures are logged, retried with backoff and reported once through the user's ntfy topic. When the server runs as root (the Docker image), written files and folders take the owner of the folder they are written into, so the vault keeps belonging to its user. In Docker, mount the vault folder and set it for the user (`metrack users set 1 --mirror-dir "/vault/Media Tracker"`, or `VAULT_MIRROR_DIR` before the first start):
-
-```yaml
-environment:
-  VAULT_MIRROR_WEB_URL: http://192.168.1.15:8100
-volumes:
-  - /path/to/vault/Media Tracker:/vault/Media Tracker
-```
-
-## Your data and deleting an account
-
-Every user can take their data with them and delete their account. Both are in Settings under "Your data and account"; the privacy page that describes them, in English and open to everyone, is served at `/privacy` (linked from the footer of the web app). Its contact address is `CONTACT_EMAIL` (default `christt105@gmail.com`).
-
-- **Export:** a ZIP with `data.json` (the user, their settings without the ntfy topic, public page, token names and dates but never a secret or its hash, every item merged with the catalog row it references as the app shows it, the unlinked inbox and sent alerts) and `images/<hash>.<ext>` with the images the user owns. Only that user's rows are read. From the web it is one download; over the API `GET /api/account/export` (a token may call it); from the server `metrack users export <id> <file.zip>`.
-- **Delete:** the user types their handle or `delete` in Settings (browser session only; an API token is refused). The deletion is scheduled, not immediate: it waits 7 days, during which signing in shows a banner with a button to cancel it. A job (at start and then hourly) erases every account past the 7 days: the user row and everything personal (entries and reviews, season overrides, the unlinked inbox, sent alerts, settings, sessions, tokens, handle, image ownership), the shared catalog rows only that user had, the images the user owned that no other user owns and nothing references, and the user's folder `users/<id>/` of job state. Nothing of anyone else is touched. The owner (user 1) cannot delete their account.
-- **Deleting someone else's account:** only from the command line, never from the web: `metrack users delete <id>` schedules it with the same 7 days of grace, `metrack users delete <id> --cancel` withdraws it, and the user is told through their ntfy topic (when they have one and `NTFY_URL` is set). `metrack users` shows who has a deletion waiting.
-- **Items added by hand** (fan games and other catalog rows without a provider id) are not deleted with their creator: they stay and their owner becomes user 1. When no user has an entry for one any more, the owner or its trusted owner can delete it: `GET /api/catalog/unreferenced`, `DELETE /api/catalog/{movies|series|games|books}/{id}` (409 `catalog_in_use` while any user still has it), or `metrack catalog` and `metrack catalog delete <collection> <id>`.
-- **Backups:** retention is 14 local backups and 14 copies on the second disk, so the data of a deleted account is gone from them about 14 days after the erasure, about 21 days after the request.
-- **Not removed:** the vault folder a user's notes were mirrored into lives outside metrack's data and is left to the operator.
-
-## Public pages
-
-Each user can serve a read-only page of their library from the app itself, with no sign-in: `/u/<handle>/` (the library: avatar, intro and description, a random hero banner, search and filters, in progress, finished by year with a year navigation, and paused or dropped folded away), `/u/<handle>/<type>/<id>` (`movie`, `series`, `season`, `videogame` or `book`, by the id the API uses), `/u/<handle>/feed.xml` (RSS 2.0 of finished viewings, newest first, at most 100, with confirmed reviews; the finish date and every rewatch of an item are separate entries, each with the guid `metrack:<handle>:<type>:<id>:<date of the viewing>`, so it does not depend on the domain) `/u/<handle>/stats/`, `/u/<handle>/collage/`, `/u/<handle>/about/` (the Markdown the user wrote; the page and its menu entry exist only while there is a text), `/u/<handle>/index.json` (the shown library, which the collage and banner scripts read) and the shared theme files under `/u/assets/`. The pages are a port of the author's Hugo theme (hugo-mediatracker-theme, itself built on hugo-blog-awesome, both MIT; see `THIRD_PARTY.md`): same compiled CSS, same HTML structure and same client scripts, in Spanish, with the content rendered by the server and JavaScript only for search, filters, the year navigation, the random banner, the statistics year selector and the collage. Font Awesome and the collage's html2canvas are vendored and served from `/u/assets/`; only giscus, when comments are on, loads from its own host. `THEME_CSS` is a verbatim copy of the theme's compiled CSS and is never edited; every metrack fix to the public pages goes in the separate `METRACK_CSS` (`metrack.css`), which loads after it on every page.
-
-A page is off until its owner picks a handle (lowercase letters, digits and `-`, 3 to 30 characters, not a reserved word, unique whatever the case, changeable) and switches it on, in the web Settings or with `metrack users set <id> --handle <name> --public-page on`. Over the API: `GET /api/settings` includes `publicPage` and `PATCH /api/settings/public-page` takes `{ "handle": "...", "enabled": true }` plus the profile fields `avatar`, `intro`, `description`, `about` and `giscus` (see `docs/api.md`), also editable in the Settings "Public page" panel; `metrack users set` has `--intro` and `--description`. The avatar is an image the user uploads (only the owner and trusted users upload; everyone else shows a neutral default avatar). Comments use giscus and stay off until the user sets all four values (repository, repository id, category, category id). A missing user, a user without that handle and a page that is off all answer the same 404.
-
-The pages show (ratings on the 1 to 7 scale, confirmed reviews, the five status keys) except that items pending review never appear: not on the home, not on their own page, not in the feed, and a series whose seasons are all pending is left out too. Every response carries `X-Robots-Tag: noindex` and every page `<meta name="robots" content="noindex">`. Linked provider images (TMDB, IGDB, Steam) load from the provider at the size the card needs. Stored images load from `/u/<handle>/images/<hash>`, only for hashes that the user's published pages reference (covers, banners, the avatar and images embedded in shown reviews and the about text), so `/api/images/<hash>` stays private. Feed links use `PUBLIC_URL` (for example `https://metrack.example.org`, trailing slash ignored) as the site address when set, and otherwise the address the visitor used (`X-Forwarded-Proto` and `X-Forwarded-Host` are honoured).
-
-## Dependencies
-
-- `node:sqlite` (built into Node 22): avoids a native module and a build toolchain in the image; it is still marked experimental, so it is confined to `apps/server/src/storage` and the image silences its warning.
-- `hono` (MIT, no dependencies of its own) and `@hono/node-server` (MIT): routing on web-standard `Request` and `Response`, so the same app can later run outside Node; the Node adapter, the static files and `node:sqlite` stay in Node-only modules (`main.ts`, `web/`, `storage/`). Tests send requests in-process through `app.request`.
-- `pg`: the only way to read Jellystat, which exposes its history through its own login-protected API and its Postgres database; used for one read-only query.
-- `vue`, `vite`, `@vitejs/plugin-vue`, `vue-tsc`: the frontend.
-- `yaml`: parses note frontmatter (quoted strings, block lists, multi-line values) and quotes values when writing front matter, both of which a hand-written implementation would get subtly wrong; zero dependencies of its own.
-- `vitest`, `eslint`, `prettier`, `typescript`, `tsx`: tests, lint, formatting, type checking and dev reload.
-
-## Migrations
-
-Migrations are TypeScript modules in `apps/server/src/storage/migrations`, numbered from 1 and registered in `index.ts`; versions only have to increase, so a number can be left free for a branch that has not landed yet. At startup every migration not yet recorded in `schema_migrations` runs, in order and each in its own transaction, even one numbered below the latest already applied.
-
-## Backups
-
-The server writes a backup every `BACKUP_INTERVAL_HOURS` (default 24) to `/data/backups`, keeping the newest `BACKUP_RETENTION` (default 14). A check runs at startup and every 10 minutes, and a backup is taken when the newest one is older than the interval, so a restart after downtime catches up. After a failure the next attempt waits 10 minutes, doubling on each consecutive failure up to the interval. A run of failures sends one alert, and one more message when a backup succeeds again. Set `BACKUP_ENABLED=false` to turn the scheduler off.
-
-Each backup is a directory `metrack-<UTC timestamp>` containing `metrack.db`, a consistent copy made with `VACUUM INTO` that is checked with `PRAGMA integrity_check` before it is accepted, and `images/` when `/data/images` exists. A failed backup leaves nothing behind.
-
-| Variable                               | Default             | Meaning                                                                                                 |
-| -------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------- |
-| `BACKUP_ENABLED`                       | `true`              | Run the internal scheduler                                                                              |
-| `BACKUP_DIR`                           | `$DATA_DIR/backups` | Where backups are written                                                                               |
-| `BACKUP_RETENTION`                     | `14`                | Number of backups to keep                                                                               |
-| `BACKUP_INTERVAL_HOURS`                | `24`                | Minimum age of the newest backup before a new one is taken                                              |
-| `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN` | unset               | Send a failure alert to ntfy; `NTFY_TOKEN` is optional. Without URL and topic, failures are only logged |
-
-`NTFY_URL` and `NTFY_TOKEN` are also the server every user's alerts go through, to the topic in their settings; `NTFY_TOPIC` is only for instance alerts such as backups, and the starting topic of user 1.
-
-Manual use:
-
-```sh
-curl -X POST http://localhost:8097/api/backups
-curl http://localhost:8097/api/backups
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backups
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js backup
-```
-
-### Restore
-
-Stop the service first, since the database file is replaced. Then run the restore in a one-off container (the name comes from `backups`) and start the service again. The backup is re-verified and copied next to the live data before anything is overwritten. The database and image store being replaced are then moved to `/data/pre-restore-<UTC timestamp>` (the command prints the path), and the backup takes their place. To undo a restore, stop the service and move `metrack.db` and `images/` back from that directory. Safety directories are never deleted automatically; remove them once the restored data looks right.
-
-```sh
-docker compose stop metrack
-docker compose run --rm metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js restore metrack-20261024T031500000Z
-docker compose start metrack
-```
-
-A test restores a backup over a modified database and image store and checks the result matches the original and the replaced data is kept in the safety directory.
-
-### Copy to another disk
-
-Backups live next to the database, so a dead disk takes both. Set `BACKUP_COPY_DIR` to a folder on another disk, mounted into the container, and after each successful backup the server copies every backup still missing there: the database of each one as `databases/metrack-<UTC timestamp>.db` (checked with `PRAGMA integrity_check` before it is accepted) and the images into one shared `images/` folder. Images are named by their hash and never change, so each is copied once however many backups hold it, and a copy grows with new images rather than with days. After retention removes old databases, the images that none of the kept databases lists are removed from the copy too (if any kept database cannot be read, no image is removed), so a deleted account's images leave the copy together with the last backup that held them. A database is only written after all its images, and every file goes through a temporary name, so an interrupted copy leaves nothing half-written. When running as root, new files take the owner of the folder they land in.
-
-| Variable                | Default | Meaning                                                                                       |
-| ----------------------- | ------- | --------------------------------------------------------------------------------------------- |
-| `BACKUP_COPY_DIR`       | unset   | Folder that receives the copy; unset means no copy                                            |
-| `BACKUP_COPY_RETENTION` | `14`    | Number of copied databases to keep; an image stays in the copy while a kept database lists it |
-
-A failed copy does not fail the backup. It is logged, sends one alert per run of failures and one more when a copy succeeds again, and the next backup copies everything still missing, so days missed while the disk was unavailable catch up.
-
-```yaml
-volumes:
-  - ${METRACK_DATA:-./data}:/data
-  - /mnt/other-disk/metrack:/backup-copy
-environment:
-  BACKUP_COPY_DIR: /backup-copy
-```
-
-To restore from the copy, `retrieve` rebuilds a copied backup as a regular backup under `backups/` (with every image in the copy; remove unused images afterwards to drop the extra ones), and `restore` takes it from there:
-
-```sh
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js copies
-docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js retrieve metrack-20261024T031500000Z
-```
-
-To copy off the machine instead, sync the bind-mounted `${METRACK_DATA}/backups` folder from the host, for example `rclone sync /path/to/metrack-data/backups remote:metrack-backups`. Backups are immutable directories, so syncing the whole folder is safe; place one back under `backups/` to restore it.
-
-## Jellyfin viewing sync
-
-The service can compare what was played in Jellyfin with the tracking. The structure (seasons, episodes, provider ids) comes from the Jellyfin API and the dates from Jellystat's `jf_playback_activity` table, read directly from its Postgres database in a read-only session. Jellyfin 12 only accepts the `Authorization: MediaBrowser Token="..."` header, which is what the client sends. Jellystat only records real playback, so items marked as watched by hand never show up. Syncing is off unless the four required variables are set, and then runs for each user with a Jellyfin account in their settings (`jellyfinUser`, see Per-user settings); a user without one is never synced, so nobody's viewings are read for them.
-
-| Variable                                     | Default                   | Meaning                                             |
-| -------------------------------------------- | ------------------------- | --------------------------------------------------- |
-| `JELLYFIN_URL`, `JELLYFIN_TOKEN`             | required                  | Jellyfin address and an API key                     |
-| `JELLYSTAT_DB_HOST`, `JELLYSTAT_DB_PASSWORD` | required                  | Jellystat Postgres host and password                |
-| `JELLYSTAT_DB_PORT`, `_USER`, `_NAME`        | 5432, postgres, jellystat | Rest of the connection                              |
-| `SYNC_TIME_ZONE`                             | `Europe/Madrid`           | Time zone that decides on which day a viewing falls |
-| `SYNC_WEBHOOK_DELAY_SECONDS`                 | 120                       | Quiet time after a webhook before the sync runs     |
-| `SYNC_WEBHOOK_SECRET`                        | unset                     | Secret the webhook must send (16+ characters)       |
-
-Rules: an item counts as watched when 90% of its runtime was played in one day, or, when playback never reaches that because intros and credits were skipped, when Jellyfin marks it as played for the tracked account (the day with the most playback is used). A watched movie without a finish date completes with that day, and later viewings become rewatches (a viewing the day after the recorded date is taken as the same one). Each watched day of an episode is stored as one viewing that starts and ends that day, merged with what the user marked in the web app (nothing is ever removed). With `TMDB_API_KEY`, a series linked to TMDB is synced by episode id: each watched episode is matched to its TMDB episode through its TheTVDB id (`/find`, remembered in `tvdb-episode-ids.json` in the data directory, where a miss is asked again after 7 days) or, when it has none, through its air date if exactly one episode of the series' TMDB ordering aired that day; before all that, the TMDB id Jellyfin itself gives the episode wins when the ordering has it, and an episode still unmatched at the end is matched by position (its index in the season when the Jellyfin season has as many episodes as the ordering's season of the same number, else its absolute position when all numbered seasons have as many episodes as the ordering has aired), never over an episode matched by id, and recorded under that TMDB id in the season of the ordering that holds it (the series' episode group, or the regular seasons); the seasons of the ordering the series lacks are created, whatever numbering Jellyfin uses. Episodes that cannot be matched are reported as the `episode_unmatched` warning and listed in the web app, with links to TMDB, on the series and season pages. A dated viewing from the sync replaces the unknown-date first viewing of an episode (a season completed by hand) unless it is after the season's finish, in which case it is a rewatch. Without a TMDB id or key, or when TMDB cannot be read, episodes are stored by the library's numbering. The season follows its episodes, the same way as when they are marked by hand: the first watched episode puts the season in progress; once every episode of the season is watched and none is still to air it completes; a completed season with a play after its finish that is new against the stored viewings opens a season rewatch starting that day, closed on the day every aired episode has been played again. The season's `started_at` is the earliest start among its episodes' first viewings and `finished_at` the latest finish among them once every aired episode is watched; seasons without dated episode viewings keep their dates. Ratings, reviews and notes are never touched. Every movie viewing the sync records (a first viewing or a rewatch) and every season it completes is marked as pending review: the title is published, but the site feeds leave it out until it is confirmed in the web app (Save and confirm), so a feed entry never goes out before the rating and review are written. Library seasons are paired with stored seasons by Jellyfin id, a season override, the date of the first episode (never the number, so TMDB season 3 pairs with Jellyfin season 4 for Lupin) and finally the number for stored seasons that have no air date. Series are paired with stored ones by TheTVDB id, then TMDB id; when Jellyfin only has the TheTVDB id and `TMDB_API_KEY` is set, the TMDB id is looked up first, so a series added from TMDB is not created twice. Movies and series the sync creates get their TMDB metadata and artwork right after the write (a failed refresh leaves them as created). Titles without any id go to the unlinked inbox. Playback of items that left the library or came back under new ids cannot be matched and is only counted.
-
-To sync without clicking, point the Jellyfin Webhook plugin at `POST /api/sync/webhook`. The body is ignored: every request queues one sync for each user with a Jellyfin account after `SYNC_WEBHOOK_DELAY_SECONDS` of quiet (so Jellystat has recorded the playback), a burst of events is one run, an event during a run triggers another afterwards, and failures retry with backoff and alert through ntfy. What the sync writes is published and mirrored like any other edit. In the plugin add a Generic destination with that URL, a JSON body such as `{"event": "{{NotificationType}}"}`, the `Content-Type: application/json` header, the notification types Playback Stop and User Data Saved, and your user as the only user filter. Set `SYNC_WEBHOOK_SECRET` (for example `openssl rand -hex 32`) once metrack is reachable from outside the local network: requests without it answer 401. Send it in an `X-Webhook-Secret` header (another header in the same Generic destination), or, for a sender that cannot set headers, as `?token=<secret>` in the URL (masked in metrack's logs, but a URL can end up in other logs, so prefer the header).
-
-On a Cloudflare Worker, syncing is done by the home connector instead (see [docs/connector.md](docs/connector.md)); the web sync page there only says so.
-
-The first pass is report only:
-
-```sh
-node --disable-warning=ExperimentalWarning apps/server/dist/cli.js sync --verbose
-curl http://localhost:8097/api/sync/report
-```
-
-`sync` (as user 1, or `--user <id>`) without `--apply` opens the database read-only. `sync --apply` and `POST /api/sync/apply` with `{ "confirm": true }` recompute the plan for the signed-in user and write it in one transaction. The settings page has the same two steps.
-
-## Release alerts
-
-Following a series (`follow`) or a movie puts it on the watchlist (the "Following" page, or the button on its page). A worker asks TMDB about every followed title and sends an ntfy notification, with the poster attached, once per (movie or season, kind):
-
-- `releases_tomorrow` the day before the release and `releases_today` on the day. These only fire on their exact day, so a late warning is never sent.
-- `available_es` when TMDB lists a `flatrate` provider for Spain (`buy` and `rent` are ignored) for a release that happened in the last 14 days (seasons) or 60 days (movies).
-
-The release date of a season is its `air_date`, or the date of `next_episode_to_air` when that is the first episode and the season has no date yet. For a movie it is the earliest Spanish premiere or limited release in `release_dates`, falling back to `release_date`. When TMDB announces a season of a followed series that is not stored, the season is created as `planned`. It is paired with an existing season by its stored TMDB number, then by the date of its first episode, and a season override can give it another number. Seasons that are missing locally but were released long ago are left alone. When the season shows up in Jellyfin under another number, the Jellyfin sync pairs it by date, so nothing is duplicated.
-
-How often a title is asked about depends on how close its release is: every 30 minutes from the day before to the day after, every 3 hours while providers may still be catching up, and twice a day otherwise. The scheduler ticks every 10 minutes and keeps the due times in memory. Nothing is checked or sent before `ALERTS_NOTIFY_FROM_HOUR`, so alerts do not arrive at night. An alert is recorded in `release_alert` only once ntfy has accepted it, and recorded alerts are listed on the Following page; an alert ntfy does not accept stays pending and is retried 30 minutes later. Every user with an ntfy topic in their settings (`ntfyTopic`) gets alerts for what they follow, with their own due times. Alerts need `TMDB_API_KEY` and `NTFY_URL`.
-
-| Variable                  | Default         | Meaning                                                      |
-| ------------------------- | --------------- | ------------------------------------------------------------ |
-| `ALERTS_ENABLED`          | `true`          | Run the worker                                               |
-| `ALERTS_TIMEZONE`         | `Europe/Madrid` | Time zone that decides what "today" and "tomorrow" mean      |
-| `ALERTS_NOTIFY_FROM_HOUR` | `8`             | Local hour (0 to 23) before which nothing is checked or sent |
-
-### Cloudflare usage alerts
-
-The home server or the home connector (never the Worker) checks the Cloudflare account usage every 15 minutes, the first time at startup, and sends an ntfy alert to the instance topic (`NTFY_URL` and `NTFY_TOPIC`) when a free-plan quota gets close to its limit. It watches Worker requests, D1 rows read and written, the size of the largest D1 database (the free plan caps each database, not the account total), and R2 Class A and Class B operations and storage. Requests and D1 rows count per UTC day and R2 operations per UTC month. Storage is the current size, so its alerts repeat at most once a month per threshold. Each metric is announced once per threshold and period: at `CLOUDFLARE_USAGE_WARN_PERCENT` with normal priority and at `CLOUDFLARE_USAGE_CRITICAL_PERCENT` with urgent priority (a jump straight over the critical one sends only that alert). The alert lists the three biggest consumers. If three checks in a row fail, one alert per UTC day says so. What was already announced is kept in `$DATA_DIR/cloudflare-usage-state.json`, so a restart does not repeat alerts.
-
-The token needs only the `Account Analytics: Read` permission on the account. The numbers are account-wide: other Workers, D1 databases and R2 buckets in the same account count too. R2 operations that are free (deletes, aborting multipart uploads) are not counted, and an operation Cloudflare adds later counts as Class A until it is classified.
-
-| Variable                                                             | Default               | Meaning                                               |
-| -------------------------------------------------------------------- | --------------------- | ----------------------------------------------------- |
-| `CLOUDFLARE_USAGE_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`                    | unset                 | Both are needed, and also `NTFY_URL` and `NTFY_TOPIC` |
-| `CLOUDFLARE_USAGE_WARN_PERCENT`, `CLOUDFLARE_USAGE_CRITICAL_PERCENT` | `70`, `90`            | Thresholds                                            |
-| `CLOUDFLARE_LIMIT_WORKER_REQUESTS`                                   | `100000`              | Worker requests per day                               |
-| `CLOUDFLARE_LIMIT_D1_ROWS_READ`, `CLOUDFLARE_LIMIT_D1_ROWS_WRITTEN`  | `5000000`, `100000`   | D1 rows per day                                       |
-| `CLOUDFLARE_LIMIT_D1_DATABASE_BYTES`                                 | 500 MiB               | Size of the largest D1 database                       |
-| `CLOUDFLARE_LIMIT_R2_CLASS_A`, `CLOUDFLARE_LIMIT_R2_CLASS_B`         | `1000000`, `10000000` | R2 operations per month                               |
-| `CLOUDFLARE_LIMIT_R2_STORAGE_BYTES`                                  | 10 GB                 | R2 storage, all buckets                               |
-
-Limitations:
-
-- TMDB watch providers are JustWatch data, have no date and can lag by hours or days, so `available_es` can arrive later than the real availability.
-- There is no free source for "episode X airs in Spain" for weekly broadcast series. Only season premieres are announced, never single episodes, and a season that streams all at once is detected by its provider listing.
-- A season that TMDB lists without any date is not created or announced until it gets one. If a release date moves after an alert was sent, the alert is not repeated.
-- Created seasons have no cover of their own and show the series cover until a metadata refresh or an image choice sets one.
+Then open `http://<host>:8097` and sign in as the owner (see [docs/users.md](docs/users.md)). Dev login lets anyone who can open the page pick a user with no password, so only use it on a trusted local network.
+
+## Documentation
+
+The full index is [docs/README.md](docs/README.md).
+
+- [docs/self-hosting.md](docs/self-hosting.md): Docker, images and releases, installing the web app.
+- [docs/users.md](docs/users.md): security model, per-user settings, your data and deleting an account.
+- [docs/public-pages.md](docs/public-pages.md): the public pages of each library.
+- [docs/jellyfin-sync.md](docs/jellyfin-sync.md): Jellyfin viewing sync.
+- [docs/release-alerts.md](docs/release-alerts.md): release alerts over ntfy.
+- [docs/backups.md](docs/backups.md): backups, restore and copy to another disk.
+- [docs/mirror.md](docs/mirror.md): mirroring to the Obsidian vault.
+- [docs/worker.md](docs/worker.md): the Cloudflare Worker deployment.
+- [docs/connector.md](docs/connector.md): the home connector.
+- [docs/api.md](docs/api.md): the HTTP API.
+- [docs/development.md](docs/development.md): layout, development, dependencies and migrations.
 
 ## License
 
