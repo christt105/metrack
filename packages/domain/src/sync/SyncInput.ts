@@ -8,6 +8,12 @@ export interface SyncInput {
   movies: readonly LibraryMovie[];
   series: readonly LibrarySeries[];
   plays: readonly PlayRecord[];
+  /**
+   * Playback of the companion accounts. When present (even empty), an item the tracked account marked as played with no
+   * playback of its own counts as watched: on the day a companion played it completely in the `COMPANION_WINDOW_DAYS`
+   * days up to the mark, or on no known day. Absent, such items are ignored.
+   */
+  companionPlays?: readonly PlayRecord[];
   state: SyncState;
   /**
    * What TMDB says about each series, by Jellyfin series id. A series with an index records its viewings by TMDB

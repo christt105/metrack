@@ -15,6 +15,11 @@ export function formatSyncReport(plan: SyncPlan, verbose: boolean): string {
     `Finished items still without a rating: ${plan.movies.filter((m) => m.missingRating).length + seasons.filter((s) => s.missingRating).length}`,
   ];
   if (verbose) {
+    if (plan.handMarked) {
+      lines.push(
+        `Marked as played with no playback of the account: ${plan.handMarked.dated} dated from a companion account, ${plan.handMarked.undated} left undated`,
+      );
+    }
     for (const m of plan.movies) {
       lines.push(
         `movie ${m.action}: ${m.title} finished ${m.finishedAt ?? '-'} rewatches ${m.rewatches.join(',') || '-'}`,

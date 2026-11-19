@@ -34,13 +34,18 @@ export class UserSync {
 
   async run(user: ConnectorUser, apply: boolean): Promise<UserSyncOutcome> {
     const { library, playback, indexes } = this.sources(user.jellyfinUser);
-    const [{ movies, series }, plays] = await Promise.all([library.load(), playback.listPlays()]);
+    const [{ movies, series }, plays, companionPlays] = await Promise.all([
+      library.load(),
+      playback.listPlays(),
+      playback.listCompanionPlays?.(),
+    ]);
     for (let attempt = 1; ; attempt += 1) {
       const { contentVersion, state, unfetched } = await this.cloud.syncState(user.id);
       const input = {
         movies,
         series,
         plays,
+        ...(companionPlays ? { companionPlays } : {}),
         state: fromWireSyncState(state),
         today: this.now().toISOString().slice(0, 10),
         timeZone: this.timeZone,

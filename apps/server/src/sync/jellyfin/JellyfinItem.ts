@@ -11,5 +11,5 @@ export interface JellyfinItem {
   SeasonId?: string;
   LocationType?: string;
   ProviderIds?: Record<string, string>;
-  UserData?: { Played?: boolean };
+  UserData?: { Played?: boolean; LastPlayedDate?: string | null };
 }

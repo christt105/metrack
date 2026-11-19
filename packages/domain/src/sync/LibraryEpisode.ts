@@ -9,6 +9,8 @@ export interface LibraryEpisode {
   available: boolean;
   /** Whether the tracked account has the episode marked as played. */
   played?: boolean;
+  /** When the tracked account last played or marked the episode (ISO timestamp). */
+  playedAt?: string | null;
   /** TheTVDB id of the episode, when the media server has one. */
   tvdbId?: number | null;
   /** TMDB id of the episode, when the media server has one. */
