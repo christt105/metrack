@@ -6,6 +6,12 @@ API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker fir
 
 Every response carries the same fixed security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, and `Strict-Transport-Security` over HTTPS). The Hono app and `serveAsset` add them from `apps/server/src/api/securityHeaders.ts`; the paths the assets binding answers without running the Worker cannot, so `apps/web/public/_headers` (copied into the build output, never served as a file) lists the same headers for them, and a test keeps both lists equal. The home server adds them through the same Hono middleware.
 
+### Content security policy (report only)
+
+Every response also carries `Content-Security-Policy-Report-Only`, which reports what a policy would block without blocking it. There are two policies, both defined once in `apps/server/src/api`: `APP_CONTENT_SECURITY_POLICY` (the single-page app, the API and every other path) and `PUBLIC_CONTENT_SECURITY_POLICY` (`/u/*` and `/privacy`, which need inline styles and the giscus script and frame). `contentSecurityPolicyFor` picks one by request path and `withSecurityHeaders` adds it, never replacing a policy a response already sets, on the home server and in the Worker alike. The paths the assets binding answers without the Worker get the app policy from `apps/web/public/_headers`, and a test keeps that string equal to the constant.
+
+There is no report endpoint (no `report-uri` or `report-to`). Violations show in the browser console, so check a policy by walking the app and the public pages in a real browser and reading the console messages. The policies are meant to be enforced (`Content-Security-Policy`) in a later release, once a walk shows no violations.
+
 ## Run it locally
 
 Local D1 and R2 live under `apps/server/.wrangler` (Miniflare); nothing reaches a Cloudflare account.

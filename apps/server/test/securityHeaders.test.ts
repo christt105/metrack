@@ -6,6 +6,10 @@ import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { signedInAs } from './support/signedInAs.js';
 import { OWNER_SCOPE } from './support/ownerScope.js';
+import { APP_CONTENT_SECURITY_POLICY } from '../src/api/appContentSecurityPolicy.js';
+import { PUBLIC_CONTENT_SECURITY_POLICY } from '../src/api/publicContentSecurityPolicy.js';
+import { CONTENT_SECURITY_POLICY_HEADER } from '../src/api/contentSecurityPolicyHeader.js';
+import { contentSecurityPolicyFor } from '../src/api/contentSecurityPolicyFor.js';
 import { HSTS_HEADER, SECURITY_HEADERS, withSecurityHeaders } from '../src/api/securityHeaders.js';
 import { serveAsset } from '../src/worker/serveAsset.js';
 import type { WorkerEnv } from '../src/worker/WorkerEnv.js';
@@ -71,7 +75,7 @@ describe('security headers middleware', () => {
 describe('withSecurityHeaders', () => {
   it('copies a response whose headers are immutable', () => {
     const original = Response.redirect('https://example.org/', 302);
-    const result = withSecurityHeaders(original, true);
+    const result = withSecurityHeaders(original, true, '/');
     expectFixedHeaders(result);
     expect(result.headers.get(HSTS_HEADER[0])).toBe(HSTS_HEADER[1]);
     expect(result.status).toBe(302);
@@ -109,7 +113,65 @@ describe('_headers file', () => {
       .split('\n')
       .filter((line) => /^\s+\S/.test(line))
       .map((line) => line.trim());
-    const expected = [...SECURITY_HEADERS, HSTS_HEADER].map(([name, value]) => `${name}: ${value}`);
+    const expected = [
+      ...SECURITY_HEADERS,
+      HSTS_HEADER,
+      [CONTENT_SECURITY_POLICY_HEADER, APP_CONTENT_SECURITY_POLICY],
+    ].map(([name, value]) => `${name}: ${value}`);
     expect(listed.sort()).toEqual(expected.sort());
+  });
+});
+
+describe('content security policy', () => {
+  it.each([
+    ['/', APP_CONTENT_SECURITY_POLICY],
+    ['/index.html', APP_CONTENT_SECURITY_POLICY],
+    ['/api/health', APP_CONTENT_SECURITY_POLICY],
+    ['/assets/x', APP_CONTENT_SECURITY_POLICY],
+    ['/users', APP_CONTENT_SECURITY_POLICY],
+    ['/privacy', PUBLIC_CONTENT_SECURITY_POLICY],
+    ['/privacy/', PUBLIC_CONTENT_SECURITY_POLICY],
+    ['/u/x/', PUBLIC_CONTENT_SECURITY_POLICY],
+    ['/u/assets/x.js', PUBLIC_CONTENT_SECURITY_POLICY],
+    ['/u', PUBLIC_CONTENT_SECURITY_POLICY],
+  ])('picks the policy for %s', (path, policy) => {
+    expect(contentSecurityPolicyFor(path)).toBe(policy);
+  });
+
+  it('is report-only and never the enforcing header', async () => {
+    const response = await setup().request('http://localhost/api/health');
+    expect(response.headers.get(CONTENT_SECURITY_POLICY_HEADER)).toBe(APP_CONTENT_SECURITY_POLICY);
+    expect(response.headers.has('Content-Security-Policy')).toBe(false);
+  });
+
+  it('gives a route under /u the public policy', async () => {
+    const response = await setup().request('http://localhost/u/nobody/');
+    expect(response.headers.get(CONTENT_SECURITY_POLICY_HEADER)).toBe(
+      PUBLIC_CONTENT_SECURITY_POLICY,
+    );
+  });
+
+  it('keeps a policy the route set itself, without adding a second value', async () => {
+    const response = withSecurityHeaders(
+      new Response('x', { headers: { [CONTENT_SECURITY_POLICY_HEADER]: "default-src 'none'" } }),
+      false,
+      '/',
+    );
+    expect(response.headers.get(CONTENT_SECURITY_POLICY_HEADER)).toBe("default-src 'none'");
+  });
+
+  it('adds the policy to a Worker asset by its path', async () => {
+    const env = {
+      ASSETS: { fetch: async () => new Response('x', { headers: { 'content-type': 'text/css' } }) },
+    } as unknown as WorkerEnv;
+    const response = await serveAsset(new Request('https://example.org/assets/app.css'), env);
+    expect(response.headers.get(CONTENT_SECURITY_POLICY_HEADER)).toBe(APP_CONTENT_SECURITY_POLICY);
+  });
+
+  it('keeps the public policy free of inline scripts and the app policy of inline styles', () => {
+    expect(PUBLIC_CONTENT_SECURITY_POLICY).toContain("style-src 'self' 'unsafe-inline'");
+    expect(PUBLIC_CONTENT_SECURITY_POLICY).not.toMatch(/script-src[^;]*unsafe-inline/);
+    expect(APP_CONTENT_SECURITY_POLICY).not.toContain('unsafe-inline');
+    expect(APP_CONTENT_SECURITY_POLICY).not.toContain('giscus');
   });
 });

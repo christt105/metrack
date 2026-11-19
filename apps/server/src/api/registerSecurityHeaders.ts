@@ -9,6 +9,10 @@ import { isSecureRequest, withSecurityHeaders } from './securityHeaders.js';
 export function registerSecurityHeaders(app: Hono<ApiEnv>): void {
   app.use('*', async (context, next) => {
     await next();
-    context.res = withSecurityHeaders(context.res, isSecureRequest(context.req.raw));
+    context.res = withSecurityHeaders(
+      context.res,
+      isSecureRequest(context.req.raw),
+      context.req.path,
+    );
   });
 }

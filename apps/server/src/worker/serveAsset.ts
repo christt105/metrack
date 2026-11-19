@@ -9,9 +9,10 @@ const MISSING = JSON.stringify({ error: 'Not found', code: 'not_found' });
  * that is never cached, instead of an `index.html` a script or stylesheet tag would choke on.
  */
 export async function serveAsset(request: Request, env: WorkerEnv): Promise<Response> {
+  const path = new URL(request.url).pathname;
   const response = env.ASSETS ? await env.ASSETS.fetch(request) : undefined;
   if (response && response.status < 400 && !isHtml(response)) {
-    return withSecurityHeaders(response, true);
+    return withSecurityHeaders(response, true, path);
   }
   return withSecurityHeaders(
     new Response(MISSING, {
@@ -19,6 +20,7 @@ export async function serveAsset(request: Request, env: WorkerEnv): Promise<Resp
       headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
     }),
     true,
+    path,
   );
 }
 

@@ -9,6 +9,7 @@ import { migrations } from '../src/storage/migrations/index.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
 import { signedInAs } from './support/signedInAs.js';
 import { OWNER_SCOPE } from './support/ownerScope.js';
+import { APP_CONTENT_SECURITY_POLICY } from '../src/api/appContentSecurityPolicy.js';
 
 function setup() {
   const dir = mkdtempSync(join(tmpdir(), 'metrack-web-'));
@@ -27,6 +28,16 @@ function setup() {
 }
 
 describe('web app files', () => {
+  it('gives the index and the static files the app policy once', async () => {
+    const app = setup();
+    for (const url of ['/', '/assets/app.js', '/movies/3']) {
+      const response = await app.inject({ method: 'GET', url });
+      expect(response.headers['content-security-policy-report-only']).toBe(
+        APP_CONTENT_SECURITY_POLICY,
+      );
+    }
+  });
+
   it('serves files with validators and the index for every other address', async () => {
     const app = setup();
     const file = await app.inject({ method: 'GET', url: '/assets/app.js' });
