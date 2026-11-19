@@ -169,7 +169,9 @@ describe('content security policy', () => {
   });
 
   it('keeps the public policy free of inline scripts and the app policy of inline styles', () => {
-    expect(PUBLIC_CONTENT_SECURITY_POLICY).toContain("style-src 'self' 'unsafe-inline'");
+    expect(PUBLIC_CONTENT_SECURITY_POLICY).toContain(
+      "style-src 'self' 'unsafe-inline' https://giscus.app",
+    );
     expect(PUBLIC_CONTENT_SECURITY_POLICY).not.toMatch(/script-src[^;]*unsafe-inline/);
     expect(APP_CONTENT_SECURITY_POLICY).not.toContain('unsafe-inline');
     expect(APP_CONTENT_SECURITY_POLICY).not.toContain('giscus');

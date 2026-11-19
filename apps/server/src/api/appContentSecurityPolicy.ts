@@ -3,7 +3,7 @@ export const APP_CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self'",
-  "img-src 'self' data: blob: https://image.tmdb.org https://images.igdb.com https://steamcdn-a.akamaihd.net https://*.steamstatic.com https://*.steamgriddb.com https://covers.openlibrary.org https://artworks.thetvdb.com",
+  "img-src 'self' data: blob: https://image.tmdb.org https://images.igdb.com https://steamcdn-a.akamaihd.net https://*.steamstatic.com https://*.steamgriddb.com https://covers.openlibrary.org https://archive.org https://*.us.archive.org https://artworks.thetvdb.com",
   "font-src 'self'",
   "connect-src 'self'",
   "manifest-src 'self'",
