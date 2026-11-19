@@ -198,7 +198,7 @@ The privacy page, `GET /privacy`, is outside `/api` and needs no sign-in. The er
 
 ## Not in the API
 
-Importing the Obsidian notes stays a command of the server CLI (`metrack import`), and the export is run by the publisher or by `metrack export`. Both read and write the same database and image store as the server.
+The export is run by the publisher or by `metrack export`. Both read the same database and image store as the server.
 
 ## Settings
 

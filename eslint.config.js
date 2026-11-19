@@ -16,7 +16,6 @@ export default tseslint.config(
     files: [
       'apps/server/**/*.ts',
       'packages/export/**/*.ts',
-      'tools/**/*.ts',
       '*.js',
       '**/*.config.ts',
     ],
