@@ -16,7 +16,10 @@ import type { TvdbEpisodeIdCache } from './TvdbEpisodeIdCache.js';
 
 const LOOKUP_BATCH = 10;
 
-type Input = Pick<SyncInput, 'movies' | 'series' | 'plays' | 'timeZone' | 'state' | 'today'>;
+type Input = Pick<
+  SyncInput,
+  'movies' | 'series' | 'plays' | 'companionPlays' | 'timeZone' | 'state' | 'today'
+>;
 
 /**
  * Builds, for each watched series linked to TMDB, what the planner needs to record its viewings by TMDB episode id:

@@ -29,11 +29,16 @@ export class SyncService {
   }
 
   async report(): Promise<SyncPlan> {
-    const [library, plays] = await Promise.all([this.library.load(), this.playback.listPlays()]);
+    const [library, plays, companionPlays] = await Promise.all([
+      this.library.load(),
+      this.playback.listPlays(),
+      this.playback.listCompanionPlays?.(),
+    ]);
     const input = {
       movies: library.movies,
       series: library.series,
       plays,
+      ...(companionPlays ? { companionPlays } : {}),
       state: await loadSyncState(this.targets),
       today: this.now().toISOString().slice(0, 10),
       timeZone: this.options.timeZone,

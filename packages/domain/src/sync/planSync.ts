@@ -9,7 +9,7 @@ import type { SyncPlan } from './SyncPlan.js';
  * Pure: it reads nothing and writes nothing.
  */
 export function planSync(input: SyncInput): SyncPlan {
-  const { days, playCount, ignored, unmatched } = collectSyncWatchDays(input);
+  const { days, playCount, ignored, unmatched, handMarked } = collectSyncWatchDays(input);
   const movies = planMovies(input.movies, days, playCount, input.state);
   const series = planSeries(
     input.series,
@@ -26,6 +26,7 @@ export function planSync(input: SyncInput): SyncPlan {
     unlinked: [...movies.unlinked, ...series.unlinked],
     warnings: [...movies.warnings, ...series.warnings],
     ignoredPlays: ignored,
+    ...(handMarked ? { handMarked } : {}),
     unmatchedTitles: [...unmatched]
       .map(([title, plays]) => ({ title, plays }))
       .sort((a, b) => b.plays - a.plays || a.title.localeCompare(b.title)),

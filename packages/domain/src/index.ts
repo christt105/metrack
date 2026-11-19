@@ -146,6 +146,8 @@ export type { LibrarySeason } from './sync/LibrarySeason.js';
 export type { LibraryMovie } from './sync/LibraryMovie.js';
 export type { LibrarySeries } from './sync/LibrarySeries.js';
 export type { PlayRecord } from './sync/PlayRecord.js';
+export type { HandMarkedCounts } from './sync/HandMarkedCounts.js';
+export { COMPANION_WINDOW_DAYS } from './sync/COMPANION_WINDOW_DAYS.js';
 export type { SyncState } from './sync/SyncState.js';
 export type { SeriesWatches } from './sync/SeriesWatches.js';
 export type { OrderedEpisode } from './sync/OrderedEpisode.js';

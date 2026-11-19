@@ -10,6 +10,11 @@ function dateOf(value: string | null | undefined): string | null {
   return value ? value.slice(0, 10) : null;
 }
 
+function playedAtOf(item: JellyfinItem): { playedAt?: string } {
+  const playedAt = item.UserData?.LastPlayedDate;
+  return playedAt ? { playedAt } : {};
+}
+
 function toEpisode(item: JellyfinItem): LibraryEpisode {
   return {
     jellyfinId: item.Id,
@@ -19,6 +24,7 @@ function toEpisode(item: JellyfinItem): LibraryEpisode {
     runtimeSeconds: ticksToSeconds(item.RunTimeTicks),
     available: item.LocationType !== 'Virtual',
     played: item.UserData?.Played === true,
+    ...playedAtOf(item),
     tvdbId: providerId(item, 'Tvdb'),
     tmdbId: providerId(item, 'Tmdb'),
   };
@@ -36,6 +42,7 @@ export class JellyfinLibrarySource implements LibrarySource {
       tmdbId: providerId(item, 'Tmdb'),
       runtimeSeconds: ticksToSeconds(item.RunTimeTicks),
       played: item.UserData?.Played === true,
+      ...playedAtOf(item),
     }));
     const series: LibrarySeries[] = [];
     for (const item of await this.client.listSeries()) {

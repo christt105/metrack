@@ -45,6 +45,10 @@ export function loadSyncConfig(env: Record<string, string | undefined>): SyncCon
         password: env.JELLYSTAT_DB_PASSWORD!,
         database: env.JELLYSTAT_DB_NAME || 'jellystat',
       },
+      companionAccounts: (env.SYNC_COMPANION_ACCOUNTS ?? '')
+        .split(',')
+        .map((name) => name.trim())
+        .filter((name) => name !== ''),
       timeZone: env.SYNC_TIME_ZONE || 'Europe/Madrid',
       webhookDelayMs: delaySeconds * 1000,
       webhookSecret,

@@ -1,3 +1,4 @@
+import type { HandMarkedCounts } from './HandMarkedCounts.js';
 import type { MovieChange } from './MovieChange.js';
 import type { SeriesChange } from './SeriesChange.js';
 import type { SyncWarning } from './SyncWarning.js';
@@ -12,6 +13,8 @@ export interface SyncPlan {
   warnings: SyncWarning[];
   /** Playback records that match no movie or episode of the library. */
   ignoredPlays: number;
+  /** Present when companion accounts are configured: what became of the items marked as played with no playback of the account. */
+  handMarked?: HandMarkedCounts;
   /** Titles behind the ignored playback, most played first. These were removed from the library or re-added under new ids. */
   unmatchedTitles: UnmatchedTitle[];
 }

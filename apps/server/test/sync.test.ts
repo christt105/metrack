@@ -155,6 +155,26 @@ describe('JellyfinLibrarySource', () => {
     ];
   };
 
+  it('maps the day the account marked an item as played', async () => {
+    const source = new JellyfinLibrarySource(
+      new JellyfinClient(
+        jellyfinFetch((url) =>
+          url.searchParams.get('IncludeItemTypes') === 'Movie'
+            ? [
+                {
+                  Id: 'm1',
+                  UserData: { Played: true, LastPlayedDate: '2026-05-10T20:00:00.0000000Z' },
+                },
+              ]
+            : [],
+        ),
+        { url: 'http://jf', token: 't' },
+      ),
+    );
+    const { movies } = await source.load();
+    expect(movies[0]).toMatchObject({ played: true, playedAt: '2026-05-10T20:00:00.0000000Z' });
+  });
+
   it('maps ids, seasons and episodes', async () => {
     const source = new JellyfinLibrarySource(
       new JellyfinClient(jellyfinFetch(handler), { url: 'http://jf', token: 't' }),
@@ -249,6 +269,33 @@ describe('PostgresPlaybackSource', () => {
     expect(calls[0]?.text).toMatch(/^\s*SELECT/);
     expect(calls[0]?.text).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/i);
   });
+
+  it('reads the companion accounts in one read-only query, and nothing without any', async () => {
+    const calls: { text: string; values: unknown[] }[] = [];
+    const db = {
+      query: async (text: string, values: unknown[]) => {
+        calls.push({ text, values });
+        return {
+          rows: [
+            {
+              item_id: 'e1',
+              title: null,
+              played_at: '2026-10-24T20:00:00Z',
+              seconds: 1500,
+            },
+          ],
+        };
+      },
+    };
+    expect(await new PostgresPlaybackSource(db, 'admin').listCompanionPlays()).toBeUndefined();
+    expect(calls).toEqual([]);
+    const source = new PostgresPlaybackSource(db, 'admin', ['laia']);
+    expect(await source.listCompanionPlays()).toEqual([
+      { itemId: 'e1', playedAt: '2026-10-24T20:00:00.000Z', watchedSeconds: 1500 },
+    ]);
+    expect(calls[0]?.values).toEqual([['laia']]);
+    expect(calls[0]?.text).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/i);
+  });
 });
 
 describe('loadSyncConfig', () => {
@@ -273,6 +320,19 @@ describe('loadSyncConfig', () => {
       jellystat: { port: 5432, user: 'postgres', database: 'jellystat' },
       webhookDelayMs: 120_000,
     });
+  });
+
+  it('reads the companion accounts, off by default', () => {
+    const env = {
+      JELLYFIN_URL: 'http://jf',
+      JELLYFIN_TOKEN: 't',
+      JELLYSTAT_DB_HOST: 'db',
+      JELLYSTAT_DB_PASSWORD: 'p',
+    };
+    expect(loadSyncConfig(env).config?.companionAccounts).toEqual([]);
+    expect(
+      loadSyncConfig({ ...env, SYNC_COMPANION_ACCOUNTS: ' laia, ,pau ' }).config?.companionAccounts,
+    ).toEqual(['laia', 'pau']);
   });
 
   it('reads the webhook secret and rejects a short one', () => {
@@ -443,6 +503,12 @@ describe('SyncService', () => {
     expect(await t.targets.movies.list()).toEqual([]);
     expect(await t.targets.unlinked.list()).toEqual([]);
     expect(formatSyncReport(plan, false)).toContain('nothing was written');
+    expect(formatSyncReport(plan, true)).not.toContain('Marked as played');
+    const withCounts = { ...plan, handMarked: { dated: 3, undated: 2 } };
+    expect(formatSyncReport(withCounts, false)).not.toContain('Marked as played');
+    expect(formatSyncReport(withCounts, true)).toContain(
+      'Marked as played with no playback of the account: 3 dated from a companion account, 2 left undated',
+    );
     t.db.close();
   });
 

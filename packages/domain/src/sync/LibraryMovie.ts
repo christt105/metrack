@@ -7,4 +7,6 @@ export interface LibraryMovie {
   runtimeSeconds: number | null;
   /** Whether the tracked account has the movie marked as played. */
   played?: boolean;
+  /** When the tracked account last played or marked the movie (ISO timestamp). */
+  playedAt?: string | null;
 }

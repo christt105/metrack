@@ -31,7 +31,11 @@ export function createSyncSources(
     library: tmdb
       ? new TvdbResolvingLibrarySource(jellyfin, (id) => tmdb.seriesIdForTvdb(id))
       : jellyfin,
-    playback: new PostgresPlaybackSource(pool, jellyfinUser),
+    playback: new PostgresPlaybackSource(
+      pool,
+      jellyfinUser,
+      config.companionAccounts.filter((name) => name.toLowerCase() !== jellyfinUser.toLowerCase()),
+    ),
     ...(tmdb && dataDir
       ? {
           indexes: new SeriesIndexBuilder(
