@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/christt105/metrack/actions/workflows/ci.yml/badge.svg)](https://github.com/christt105/metrack/actions/workflows/ci.yml)
 
-Self-hosted media tracker for movies, series (tracked per season), games and books. One container holds the data in SQLite, serves a web app to edit it and serves public pages with the collection.
+Media tracker for movies, series (tracked per season), games and books: a web app to edit your library and public pages that show it. It runs on Cloudflare (a Worker with D1 and R2) or self-hosted in one container with SQLite.
 
 ## Features
 
