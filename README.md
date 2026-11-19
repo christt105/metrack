@@ -9,7 +9,7 @@ Media tracker for movies, series (tracked per season), games and books: a web ap
 <p>
   <img src="docs/screenshots/mobile-library.jpg" alt="Library on a phone" width="200">
   <img src="docs/screenshots/mobile-season.jpg" alt="Season on a phone" width="200">
-  <img src="docs/screenshots/mobile-public.jpg" alt="Public library on a phone" width="200">
+  <img src="docs/screenshots/mobile-following.jpg" alt="Following on a phone" width="200">
 </p>
 
 More in [docs/screenshots.md](docs/screenshots.md).
