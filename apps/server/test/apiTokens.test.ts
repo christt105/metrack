@@ -5,7 +5,7 @@ import { buildTestApp } from './support/buildTestApp.js';
 import { ApiTokenService } from '../src/auth/ApiTokenService.js';
 import { SessionCookieAuthenticator } from '../src/auth/SessionCookieAuthenticator.js';
 import { SessionService } from '../src/auth/SessionService.js';
-import { PublishQueue } from '../src/publish/PublishQueue.js';
+import type { ImageStore } from '../src/images/ImageStore.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { SqliteApiTokenRepository } from '../src/storage/sqlite/SqliteApiTokenRepository.js';
@@ -14,9 +14,7 @@ import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository
 import { SqlitePublicProfileRepository } from '../src/storage/sqlite/SqlitePublicProfileRepository.js';
 import { SqliteUserSettingsRepository } from '../src/storage/sqlite/SqliteUserSettingsRepository.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
-import { FakeScheduler } from './support/FakeScheduler.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
-import { ownerQueues } from './support/ownerQueues.js';
 
 const DAY_MS = 24 * 3_600_000;
 
@@ -32,12 +30,6 @@ async function setup() {
   };
   const sessions = new SessionService(new SqliteSessionRepository(db), users, () => now);
   const tokens = new ApiTokenService(new SqliteApiTokenRepository(db), users, () => now);
-  const queue = new PublishQueue(
-    async () => 'published',
-    { notify: async () => true },
-    { info: () => {}, error: () => {} },
-    new FakeScheduler(),
-  );
   const app = buildTestApp({
     appVersion: 'test',
     migrationRunner: new MigrationRunner(db, migrations),
@@ -45,7 +37,7 @@ async function setup() {
     scope: new AsyncUserScope(),
     auth: { sessions, users, devLogin: true },
     tokens,
-    publishQueues: ownerQueues(queue),
+    imageStore: { maxUploadBytes: 1024 } as unknown as ImageStore,
     settings: {
       users,
       settings: new SqliteUserSettingsRepository(db),
@@ -131,10 +123,10 @@ describe('personal API tokens', () => {
     const { createToken, call } = await setup();
     const read = await createToken(1, 'read');
     const write = await createToken(1, 'write');
-    const refused = await call('POST', '/api/publish', read.secret);
+    const refused = await call('POST', '/api/images', read.secret);
     expect(refused.statusCode).toBe(403);
     expect(refused.json()).toEqual({ error: 'This token can only read', code: 'read_only_token' });
-    expect((await call('POST', '/api/publish', write.secret)).statusCode).toBe(202);
+    expect((await call('POST', '/api/images', write.secret)).statusCode).toBe(400);
   });
 
   it('never reaches settings, token management or owner-only routes, even the owner’s', async () => {

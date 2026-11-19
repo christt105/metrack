@@ -119,12 +119,12 @@ describe('settings routes', () => {
   it('refuse invalid values, the vault folder and unknown users', async () => {
     const invalid = await request(OWNER, 'PATCH', '/api/users/1/settings', {
       jellyfinUser: 'other',
-      publishBaseUrl: 'javascript:alert(1)',
+      ntfyTopic: 'bad topic',
     });
     expect(invalid.statusCode).toBe(400);
     expect(invalid.json()).toMatchObject({
       code: 'invalid_settings',
-      details: { publishBaseUrl: expect.any(String) },
+      details: { ntfyTopic: expect.any(String) },
     });
     expect((await settings.get(1))?.jellyfinUser).toBe('admin');
 

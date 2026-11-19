@@ -2,14 +2,12 @@
 
 [![CI](https://github.com/christt105/metrack/actions/workflows/ci.yml/badge.svg)](https://github.com/christt105/metrack/actions/workflows/ci.yml)
 
-Self-hosted media tracker for movies, series (tracked per season), games and books. One container holds the data in SQLite, serves a web app to edit it and publishes a static Hugo site with the collection.
+Self-hosted media tracker for movies, series (tracked per season), games and books. One container holds the data in SQLite, serves a web app to edit it and serves public pages with the collection.
 
 ## Features
 
 - Web app to add and edit titles. Movies and series are searched and refreshed from TMDB, games are searched on IGDB and books on Open Library; anything can also be entered by hand. Artwork comes from TMDB, Steam, IGDB, SteamGridDB and Open Library and is stored locally by content hash.
 - Per-season tracking for series: status, dates, rating, review and rewatches.
-- Exporter to the Hugo content tree of [hugo-mediatracker-theme](https://github.com/christt105/hugo-mediatracker-theme).
-- Event-driven publishing to Cloudflare Pages: an edit rebuilds and uploads the site only when the exported content changed.
 - Jellyfin viewing sync through Jellystat, with a report-only pass before anything is written.
 - Release alerts over ntfy for followed series and movies (premieres and Spanish streaming availability).
 - Scheduled, verified backups with retention and a restore command.
@@ -18,18 +16,16 @@ Self-hosted media tracker for movies, series (tracked per season), games and boo
 
 Every API route needs a signed-in session except health, logout and the Jellyfin webhook (which only schedules a sync, and needs `SYNC_WEBHOOK_SECRET` when it is set). Users are listed with `metrack users` and created with `metrack users add <name> [--email <address>]` (in Docker: `docker exec metrack node --disable-warning=ExperimentalWarning apps/server/dist/cli.js users add <name>`); user 1 owns everything stored before users existed. Users that already exist can sign in with Google when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set (see `docs/worker.md`; Google needs an https address, so a plain-http LAN instance cannot use it). The other ways to sign in are an access token and dev login (`DEV_LOGIN=true`), where the sign-in page lists every user and anyone who can open it picks one with no password. With dev login off, nobody can sign in.
 
-Dev login is only safe on a trusted local network, so until there is a real sign-in method do not expose metrack to the internet. Only the published static site is meant to be public. Each user only sees and edits their own library: every personal row (tracking, reviews, notes, hand edits, followed titles, season overrides, the episodes watched of each season, the unlinked inbox and sent alerts) has an owner, and every query filters by the signed-in user. What providers describe about a title (TMDB, IGDB, Open Library) is a shared catalog, so two users who add the same film share one catalog row and keep separate entries; changing an external id of a title someone else also has is refused. Backups and deleting images (images are shared by hash) act on the whole instance and belong to the owner, user 1. The owner can make other users trusted (in Settings or with `metrack users set <id> --role trusted`): only the owner and trusted users add items by hand, the ones no provider knows, which stay private to whoever created them; everyone else adds titles from the providers. Personal API tokens, created in Settings, let a program read or change one user's library with `Authorization: Bearer`; they never reach settings, tokens or owner-only actions (see `docs/api.md`). A `write` token can also be pasted into the login screen ("Sign in with an access token", `POST /api/auth/token-login`), which gives a normal browser session of the token's user; this is how to use the web app on a Worker, where dev login must stay off. Anyone holding a write token can do this, so treat the token like a password; the route has no rate limit.
+Dev login is only safe on a trusted local network, so until there is a real sign-in method do not expose metrack to the internet. Only the public pages are meant to be public. Each user only sees and edits their own library: every personal row (tracking, reviews, notes, hand edits, followed titles, season overrides, the episodes watched of each season, the unlinked inbox and sent alerts) has an owner, and every query filters by the signed-in user. What providers describe about a title (TMDB, IGDB, Open Library) is a shared catalog, so two users who add the same film share one catalog row and keep separate entries; changing an external id of a title someone else also has is refused. Backups and deleting images (images are shared by hash) act on the whole instance and belong to the owner, user 1. The owner can make other users trusted (in Settings or with `metrack users set <id> --role trusted`): only the owner and trusted users add items by hand, the ones no provider knows, which stay private to whoever created them; everyone else adds titles from the providers. Personal API tokens, created in Settings, let a program read or change one user's library with `Authorization: Bearer`; they never reach settings, tokens or owner-only actions (see `docs/api.md`). A `write` token can also be pasted into the login screen ("Sign in with an access token", `POST /api/auth/token-login`), which gives a normal browser session of the token's user; this is how to use the web app on a Worker, where dev login must stay off. Anyone holding a write token can do this, so treat the token like a password; the route has no rate limit.
 
 ### Per-user settings
 
-The background jobs run once for each user whose settings enable them, each as that user, so a job only reads and writes its user's library: the Jellyfin sync reads that user's Jellyfin account, release alerts watch what that user follows and go to their ntfy topic, publishing builds their site from their data into their Cloudflare Pages project, and the vault mirror writes their notes into their folder. The instance keeps the connections and credentials (Jellyfin and Jellystat, the ntfy server and token, the Cloudflare account, the site template); a user's settings only say what to act on:
+The background jobs run once for each user whose settings enable them, each as that user, so a job only reads and writes its user's library: the Jellyfin sync reads that user's Jellyfin account, release alerts watch what that user follows and go to their ntfy topic, and the vault mirror writes their notes into their folder. The instance keeps the connections and credentials (Jellyfin and Jellystat, the ntfy server and token, the Cloudflare account, the site template); a user's settings only say what to act on:
 
 | Setting            | Enables                               | Starts from (user 1)       |
 | ------------------ | ------------------------------------- | -------------------------- |
 | `jellyfinUser`     | Jellyfin sync of that account         | `JELLYFIN_USER`, `admin`   |
 | `ntfyTopic`        | Release alerts and job failure alerts | `NTFY_TOPIC`               |
-| `publishProject`   | Publishing to that Pages project      | `CLOUDFLARE_PAGES_PROJECT` |
-| `publishBaseUrl`   | The site address passed to Hugo       | `PUBLISH_BASE_URL`         |
 | `mirrorDir`        | The vault mirror into that folder     | `VAULT_MIRROR_DIR`         |
 | `mirrorLinkPrefix` | That folder's path inside the vault   | `VAULT_MIRROR_LINK_PREFIX` |
 
@@ -49,7 +45,7 @@ Then open `http://<host>:8097` and sign in as the owner (see the security model 
 
 - `packages/domain`: pure domain logic, no HTTP or database.
 - `packages/site`: pure renderer of the public pages (HTML, RSS and the theme's stylesheet, scripts, font and images) from one user's data; no database, no disk, no Node-only APIs.
-- `packages/export`: pure exporter from stored data to the Hugo content tree, and the redirect pages for the old site.
+- `packages/export`: pure builder of the vault mirror notes from stored data, plus the helpers the public pages share.
 - `apps/server`: Hono API, SQLite storage and migrations; also serves the built web app.
 - `apps/web`: Vue 3 + Vite frontend.
 
@@ -119,7 +115,7 @@ The notes written are recorded in `vault-mirror-state.json` in the data director
 
 ### Automatic mirror
 
-For every user with a vault folder in their settings (`mirrorDir`, see Per-user settings), the server runs the mirror once at start and again a few seconds after every successful write under `/api` (the same trigger as publishing), so the vault follows every edit. `VAULT_MIRROR_WEB_URL` and the `mirrorLinkPrefix` setting work like the CLI options; `metrack mirror --user <id>` mirrors another user's notes. Failures are logged, retried with backoff and reported once through the user's ntfy topic. When the server runs as root (the Docker image), written files and folders take the owner of the folder they are written into, so the vault keeps belonging to its user. In Docker, mount the vault folder and set it for the user (`metrack users set 1 --mirror-dir "/vault/Media Tracker"`, or `VAULT_MIRROR_DIR` before the first start):
+For every user with a vault folder in their settings (`mirrorDir`, see Per-user settings), the server runs the mirror once at start and again a few seconds after every successful write under `/api`, so the vault follows every edit. `VAULT_MIRROR_WEB_URL` and the `mirrorLinkPrefix` setting work like the CLI options; `metrack mirror --user <id>` mirrors another user's notes. Failures are logged, retried with backoff and reported once through the user's ntfy topic. When the server runs as root (the Docker image), written files and folders take the owner of the folder they are written into, so the vault keeps belonging to its user. In Docker, mount the vault folder and set it for the user (`metrack users set 1 --mirror-dir "/vault/Media Tracker"`, or `VAULT_MIRROR_DIR` before the first start):
 
 ```yaml
 environment:
@@ -127,32 +123,6 @@ environment:
 volumes:
   - /path/to/vault/Media Tracker:/vault/Media Tracker
 ```
-
-## Exporting to Hugo
-
-```sh
-npm run metrack -w @metrack/server -- export /path/to/site
-```
-
-`export` reads the database and image store in `DATA_DIR` (or `--data-dir`) and writes `content/movies`, `content/tv`, `content/seasons`, `content/games` and `content/books` under the output directory, replacing those sections and leaving everything else alone. The tree is what the current `hugo-mediatracker-theme` expects: one page bundle per item named like the old note (the vault file name is kept as `slug`, so page addresses stay the same), the cover and banner next to `index.md`, and the review as the page body with wikilinks to known pages turned into `ref` links and YouTube links into shortcodes. The output is deterministic: the same data always produces the same files. Images that came from a remote URL keep the file name the old migration script gave them, other images are named by hash.
-
-A series with season notes exports a `tv` page that only groups its seasons (status `not_started`, plus its review) and one `seasons` page per season; a series whose only season has no note exports a single `tv` page carrying that season's tracking. Items without a stored name get one derived from their title and year. Books are exported to `content/books`, which the theme does not list yet.
-
-`export` does not write the Hugo project itself (`hugo.toml`, layouts, data files, static pages such as `about.md`): those live in a site template directory that is never modified.
-
-## Publishing
-
-The service builds the site and uploads it to Cloudflare Pages by direct upload (`wrangler pages deploy`), so images never go through git. The image ships both tools at pinned versions, set by the `HUGO_VERSION` and `WRANGLER_VERSION` build arguments in the `Dockerfile`: Hugo extended (checksum verified at build time) and wrangler, installed globally, so publishing needs no download at runtime. Wrangler receives the Cloudflare credentials plus only an allowlist of the server's environment (`WRANGLER_INHERITED_ENV`: paths, locale, proxy and CA variables). Each user with a Cloudflare Pages project in their settings (`publishProject`, see Per-user settings) gets their own site, built from their library. Publishing is event driven: any successful write under `/api` marks the sites as changed, `POST /api/publish` does the same for the signed-in user's site, and a short debounce turns a burst of edits into one attempt. An attempt exports the data and compares its fingerprint with the last published one, so nothing is built or uploaded when the site would be identical. Otherwise it copies the site template, adds the export, runs `hugo` and uploads the result. A failed attempt is retried with exponential backoff (1 minute, doubling, up to 1 hour). A run of failures sends one ntfy alert to the user's topic (otherwise only logged), and one more message when a publish succeeds again. `hugo` runs with an allowlist of the environment as well (`HUGO_INHERITED_ENV`: paths, locale, `HUGO_*`, the Go module variables, proxies and CAs), so no credential of the server reaches the theme build.
-
-Publishing stays off, with a log line naming what is missing, unless all of these are set. Credentials are only ever read from the environment; the project and the site address are per-user settings.
-
-- `PUBLISH_SITE_TEMPLATE_DIR`: Hugo project without the exported content sections.
-- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`: the Cloudflare account the Pages projects belong to.
-- `HUGO_BIN` (default `hugo`), `WRANGLER_BIN` (default `wrangler`) and `CLOUDFLARE_PAGES_BRANCH` (default `main`).
-
-The `publishBaseUrl` setting (optional, user 1 starts from `PUBLISH_BASE_URL`) is the public address of the site, passed to Hugo as `--baseURL`. Set it to the address the site is served from (for example `https://my-site.pages.dev/`): without it the template's `baseURL` applies, and a relative one makes the RSS feeds emit relative links and cover URLs that feed readers cannot resolve.
-
-The image does not include Go, so the theme's Hugo modules must be vendored in the site template (`hugo mod vendor`, which writes `_vendor/`); with them vendored the build needs no network. The old MediaTracker site builds this way inside the image. The upload to Cloudflare is not covered by automated tests: the publisher is tested with a fake command runner and the pipeline with a fake publisher. Changes to the site template alone do not trigger a publish, because the fingerprint covers only the exported content.
 
 ## Your data and deleting an account
 
@@ -163,7 +133,7 @@ Every user can take their data with them and delete their account. Both are in S
 - **Deleting someone else's account:** only from the command line, never from the web: `metrack users delete <id>` schedules it with the same 7 days of grace, `metrack users delete <id> --cancel` withdraws it, and the user is told through their ntfy topic (when they have one and `NTFY_URL` is set). `metrack users` shows who has a deletion waiting.
 - **Items added by hand** (fan games and other catalog rows without a provider id) are not deleted with their creator: they stay and their owner becomes user 1. When no user has an entry for one any more, the owner or its trusted owner can delete it: `GET /api/catalog/unreferenced`, `DELETE /api/catalog/{movies|series|games|books}/{id}` (409 `catalog_in_use` while any user still has it), or `metrack catalog` and `metrack catalog delete <collection> <id>`.
 - **Backups:** retention is 14 local backups and 14 copies on the second disk, so the data of a deleted account is gone from them about 14 days after the erasure, about 21 days after the request.
-- **Not removed:** the vault folder a user's notes were mirrored into and the Cloudflare Pages project their site was published to live outside metrack's data and are left to the operator.
+- **Not removed:** the vault folder a user's notes were mirrored into lives outside metrack's data and is left to the operator.
 
 ## Public pages
 
@@ -171,25 +141,7 @@ Each user can serve a read-only page of their library from the app itself, with 
 
 A page is off until its owner picks a handle (lowercase letters, digits and `-`, 3 to 30 characters, not a reserved word, unique whatever the case, changeable) and switches it on, in the web Settings or with `metrack users set <id> --handle <name> --public-page on`. Over the API: `GET /api/settings` includes `publicPage` and `PATCH /api/settings/public-page` takes `{ "handle": "...", "enabled": true }` plus the profile fields `avatar`, `intro`, `description`, `about` and `giscus` (see `docs/api.md`), also editable in the Settings "Public page" panel; `metrack users set` has `--intro` and `--description`. The avatar is an image the user uploads (only the owner and trusted users upload; everyone else shows a neutral default avatar). Comments use giscus and stay off until the user sets all four values (repository, repository id, category, category id). A missing user, a user without that handle and a page that is off all answer the same 404.
 
-The pages show what the Hugo export publishes (ratings on the 1 to 7 scale, confirmed reviews, the five status keys) except that items pending review never appear: not on the home, not on their own page, not in the feed, and a series whose seasons are all pending is left out too. Every response carries `X-Robots-Tag: noindex` and every page `<meta name="robots" content="noindex">`. Linked provider images (TMDB, IGDB, Steam) load from the provider at the size the card needs. Stored images load from `/u/<handle>/images/<hash>`, only for hashes that the user's published pages reference (covers, banners, the avatar and images embedded in shown reviews and the about text), so `/api/images/<hash>` stays private. Feed links use `PUBLIC_URL` (for example `https://metrack.example.org`, trailing slash ignored) as the site address when set, and otherwise the address the visitor used (`X-Forwarded-Proto` and `X-Forwarded-Host` are honoured).
-
-## Redirecting the old site
-
-```sh
-npm run metrack -w @metrack/server -- redirect /path/to/old-site-repo --origin https://new-address.example
-```
-
-Writes `404.html` and `index.html` for the old GitHub Pages site. GitHub Pages serves `404.html` for any missing path, so a single file covers every old address: it has a `<meta http-equiv="refresh">` to the new root, a `rel="canonical"` link, and a script that replaces the location with the same path, query and hash on the new origin (the old base path `/MediaTracker`, configurable with `--old-base`, is removed first) and rewrites the canonical link to that exact address. The command only writes those two files into the given directory.
-
-## Checking parity with the old site
-
-`tools/parity/compareContent.ts` compares the `content` tree of the old repository with an export and reports, per type, pages that are missing or extra, front matter fields that differ (null, empty values, numbers and dates are normalized first), bodies that differ (embedded images are compared by bytes) and images whose bytes or names differ.
-
-```sh
-npm run metrack -w @metrack/server -- import "/path/to/vault/Media Tracker" --apply --data-dir /tmp/parity/data --images-dir /path/to/MediaTracker/static/images_cache
-npm run metrack -w @metrack/server -- export /tmp/parity/out --data-dir /tmp/parity/data
-npx tsx tools/parity/compareContent.ts /path/to/MediaTracker/content /tmp/parity/out/content
-```
+The pages show (ratings on the 1 to 7 scale, confirmed reviews, the five status keys) except that items pending review never appear: not on the home, not on their own page, not in the feed, and a series whose seasons are all pending is left out too. Every response carries `X-Robots-Tag: noindex` and every page `<meta name="robots" content="noindex">`. Linked provider images (TMDB, IGDB, Steam) load from the provider at the size the card needs. Stored images load from `/u/<handle>/images/<hash>`, only for hashes that the user's published pages reference (covers, banners, the avatar and images embedded in shown reviews and the about text), so `/api/images/<hash>` stays private. Feed links use `PUBLIC_URL` (for example `https://metrack.example.org`, trailing slash ignored) as the site address when set, and otherwise the address the visitor used (`X-Forwarded-Proto` and `X-Forwarded-Host` are honoured).
 
 ## Dependencies
 
@@ -197,7 +149,7 @@ npx tsx tools/parity/compareContent.ts /path/to/MediaTracker/content /tmp/parity
 - `hono` (MIT, no dependencies of its own) and `@hono/node-server` (MIT): routing on web-standard `Request` and `Response`, so the same app can later run outside Node; the Node adapter, the static files and `node:sqlite` stay in Node-only modules (`main.ts`, `web/`, `storage/`). Tests send requests in-process through `app.request`.
 - `pg`: the only way to read Jellystat, which exposes its history through its own login-protected API and its Postgres database; used for one read-only query.
 - `vue`, `vite`, `@vitejs/plugin-vue`, `vue-tsc`: the frontend.
-- `yaml`: parses note frontmatter (quoted strings, block lists, multi-line values) and quotes values when writing front matter for Hugo, both of which a hand-written implementation would get subtly wrong; zero dependencies of its own.
+- `yaml`: parses note frontmatter (quoted strings, block lists, multi-line values) and quotes values when writing front matter, both of which a hand-written implementation would get subtly wrong; zero dependencies of its own.
 - `vitest`, `eslint`, `prettier`, `typescript`, `tsx`: tests, lint, formatting, type checking and dev reload.
 
 ## Migrations

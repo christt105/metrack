@@ -1,15 +1,15 @@
-import type { PublishQueue } from '../publish/PublishQueue.js';
+import type { JobQueue } from '../jobs/JobQueue.js';
 
 /**
  * One queue per user whose settings enable the job, created the first time it is needed. Each queue coalesces,
  * retries and alerts on its own, so one user's failures never delay another's runs.
  */
 export class UserQueues {
-  private readonly queues = new Map<number, PublishQueue>();
+  private readonly queues = new Map<number, JobQueue>();
 
   constructor(
     private readonly users: () => Promise<number[]>,
-    private readonly create: (userId: number) => PublishQueue,
+    private readonly create: (userId: number) => JobQueue,
   ) {}
 
   /** Queues a run for the user. Resolves to false, queueing nothing, when their settings do not enable the job. */
@@ -31,7 +31,7 @@ export class UserQueues {
     return this.queues.get(userId)?.failureCount() ?? 0;
   }
 
-  private queue(userId: number): PublishQueue {
+  private queue(userId: number): JobQueue {
     let queue = this.queues.get(userId);
     if (!queue) {
       queue = this.create(userId);

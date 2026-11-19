@@ -46,8 +46,6 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   const settings = {
     jellyfinUser: 'j',
     ntfyTopic: null,
-    publishProject: null,
-    publishBaseUrl: null,
     mirrorDir: null,
     mirrorLinkPrefix: null,
   };

@@ -24,7 +24,7 @@ import { workerFetch } from './workerFetch.js';
 /**
  * The same Hono app as the home server, over D1 and R2. Images are always recoded by the browser
  * (`IMAGE_ENCODED_BY=client`). Everything that needs Node, the disk, a timer or a service at home is left out:
- * reading Jellyfin and Jellystat (the home connector does it and writes through `/api/connector`), the vault mirror, Hugo publishing, backups, and the account export ZIP (the browser
+ * reading Jellyfin and Jellystat (the home connector does it and writes through `/api/connector`), the vault mirror, backups, and the account export ZIP (the browser
  * builds it from `/api/account/export/data`) and release alerts. The erasing of deleted accounts is not a route: it runs
  * from the Worker's `scheduled` handler, over the same services.
  */

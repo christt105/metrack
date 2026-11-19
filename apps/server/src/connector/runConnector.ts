@@ -3,7 +3,7 @@ import { WebhookSecret } from '../api/WebhookSecret.js';
 import type { Config } from '../config/Config.js';
 import type { Logger } from '../notify/Logger.js';
 import { createNotifier } from '../notify/createNotifier.js';
-import { TimerScheduler } from '../publish/TimerScheduler.js';
+import { TimerScheduler } from '../jobs/TimerScheduler.js';
 import type { SyncSources } from '../sync/SyncSources.js';
 import { ReleaseWatchScheduler } from '../alerts/ReleaseWatchScheduler.js';
 import { TmdbReleaseSource } from '../providers/tmdb/TmdbReleaseSource.js';

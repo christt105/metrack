@@ -220,7 +220,6 @@ function enabledJobs(settings: UserSettings): string {
   const jobs = [
     settings.jellyfinUser && 'sync',
     settings.ntfyTopic && 'alerts',
-    settings.publishProject && 'publish',
     settings.mirrorDir && 'mirror',
   ].filter(Boolean);
   return jobs.length > 0 ? `[${jobs.join(', ')}]` : '[no jobs]';

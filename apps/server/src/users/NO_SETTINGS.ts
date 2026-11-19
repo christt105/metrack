@@ -4,8 +4,6 @@ import type { UserSettings } from '@metrack/domain';
 export const NO_SETTINGS: UserSettings = {
   jellyfinUser: null,
   ntfyTopic: null,
-  publishProject: null,
-  publishBaseUrl: null,
   mirrorDir: null,
   mirrorLinkPrefix: null,
 };

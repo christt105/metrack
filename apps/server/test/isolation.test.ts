@@ -220,13 +220,6 @@ describe('instance-wide actions', () => {
       expect(response.json().code).toBe('owner_only');
     }
   });
-
-  it('do not include publishing, which is per user', async () => {
-    expect((await owner.post('/api/publish')).statusCode).toBe(202);
-    const response = await friend.post('/api/publish');
-    expect(response.statusCode).toBe(501);
-    expect(response.json().code).toBe('publish_not_configured');
-  });
 });
 
 describe('repositories as the owner', () => {

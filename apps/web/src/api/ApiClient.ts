@@ -313,10 +313,6 @@ export class ApiClient {
     return this.request('POST', '/images/cleanup');
   }
 
-  publish(): Promise<{ status: string; failures: number }> {
-    return this.request('POST', '/publish');
-  }
-
   listBackups(): Promise<BackupInfo[]> {
     return this.request('GET', '/backups');
   }

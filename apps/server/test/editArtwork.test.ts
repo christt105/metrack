@@ -280,10 +280,4 @@ describe('choosing and removing images', () => {
     expect(await api.store.list()).toHaveLength(1);
     expect((await api.movies.get(second))?.cover).not.toBeNull();
   });
-
-  it('marks the site dirty after choosing an image', async () => {
-    const id = await movie();
-    await call('PUT', `/api/movies/${id}/images/cover`, { url: `${IMG}/a.jpg` });
-    expect(api.scheduler.pending()).toBe(1);
-  });
 });

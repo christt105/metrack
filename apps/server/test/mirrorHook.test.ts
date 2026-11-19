@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildTestApp } from './support/buildTestApp.js';
 import { createImageStore } from '../src/images/createImageStore.js';
-import { PublishQueue } from '../src/publish/PublishQueue.js';
+import { JobQueue } from '../src/jobs/JobQueue.js';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
@@ -22,7 +22,7 @@ describe('vault mirror hook', () => {
       join(mkdtempSync(join(tmpdir(), 'metrack-mirrorhook-')), 'i'),
     );
     const scheduler = new FakeScheduler();
-    const queue = new PublishQueue(
+    const queue = new JobQueue(
       async () => 'done',
       { notify: async () => true },
       { info: () => {}, error: () => {} },

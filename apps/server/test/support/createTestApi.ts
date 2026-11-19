@@ -23,7 +23,6 @@ import { TmdbClient } from '../../src/providers/tmdb/TmdbClient.js';
 import { TmdbMovieSource } from '../../src/providers/tmdb/TmdbMovieSource.js';
 import { SeasonRefresher } from '../../src/seasons/SeasonRefresher.js';
 import { TmdbSeriesSource } from '../../src/providers/tmdb/TmdbSeriesSource.js';
-import { PublishQueue } from '../../src/publish/PublishQueue.js';
 import { MigrationRunner } from '../../src/storage/MigrationRunner.js';
 import { migrations } from '../../src/storage/migrations/index.js';
 import { openDatabase } from '../../src/storage/sqlite/openDatabase.js';
@@ -55,8 +54,6 @@ import { SqliteInviteRepository } from '../../src/storage/sqlite/SqliteInviteRep
 import { SqliteApiTokenRepository } from '../../src/storage/sqlite/SqliteApiTokenRepository.js';
 import { SqliteHandAddedCatalogRepository } from '../../src/storage/sqlite/SqliteHandAddedCatalogRepository.js';
 import { WatchlistService } from '../../src/alerts/WatchlistService.js';
-import { FakeScheduler } from './FakeScheduler.js';
-import { ownerQueues } from './ownerQueues.js';
 import { signedInAs } from './signedInAs.js';
 import type { Authenticator } from '../../src/auth/Authenticator.js';
 import type { UserScope } from '../../src/users/UserScope.js';
@@ -72,7 +69,6 @@ export interface TestApi {
   app: TestApp;
   db: DatabaseSync;
   store: ImageStore;
-  scheduler: FakeScheduler;
   movies: MovieRepository;
   series: SeriesRepository;
   seasons: SeasonRepository;
@@ -148,13 +144,6 @@ export async function createTestApi(
     new SteamGridDbImageProvider(new SteamGridDbClient(fetchFn, 'token')),
   ];
 
-  const scheduler = new FakeScheduler();
-  const queue = new PublishQueue(
-    async () => 'published',
-    { notify: async () => true },
-    { info: () => {}, error: () => {} },
-    scheduler,
-  );
   const alerts = new SqliteReleaseAlertRepository(db, scope);
   const edit = createEditServices({
     sources: {
@@ -199,7 +188,6 @@ export async function createTestApi(
     migrationRunner: runner,
     imageStore: store,
     metadataCache: cache,
-    publishQueues: ownerQueues(queue),
     edit,
     ...(options.contentVersions ? { contentVersions: options.contentVersions } : {}),
     watch: { watchlist: new WatchlistService(edit.editor, movies, series, seasons), alerts },
@@ -244,7 +232,6 @@ export async function createTestApi(
     app,
     db,
     store,
-    scheduler,
     movies,
     series,
     seasons,
