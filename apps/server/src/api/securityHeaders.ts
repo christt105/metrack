@@ -1,3 +1,6 @@
+import { CONTENT_SECURITY_POLICY_HEADER } from './contentSecurityPolicyHeader.js';
+import { contentSecurityPolicyFor } from './contentSecurityPolicyFor.js';
+
 /** The headers every response carries, as `[name, value]` pairs. `apps/web/public/_headers` lists the same ones. */
 export const SECURITY_HEADERS: readonly (readonly [string, string])[] = [
   ['X-Content-Type-Options', 'nosniff'],
@@ -20,11 +23,16 @@ export function isSecureRequest(request: Request): boolean {
 }
 
 /**
- * Adds the security headers a response does not already set. A response with immutable headers (the
+ * Adds the security headers a response does not already set, with the report-only content security
+ * policy that fits the request path. A response with immutable headers (the
  * assets binding's) is copied; any other is changed in place.
  */
-export function withSecurityHeaders(response: Response, secure: boolean): Response {
-  const pairs = secure ? [...SECURITY_HEADERS, HSTS_HEADER] : SECURITY_HEADERS;
+export function withSecurityHeaders(response: Response, secure: boolean, path: string): Response {
+  const fixed = secure ? [...SECURITY_HEADERS, HSTS_HEADER] : SECURITY_HEADERS;
+  const pairs: readonly (readonly [string, string])[] = [
+    ...fixed,
+    [CONTENT_SECURITY_POLICY_HEADER, contentSecurityPolicyFor(path)],
+  ];
   const missing = pairs.filter(([name]) => !response.headers.has(name));
   if (missing.length === 0) return response;
   try {

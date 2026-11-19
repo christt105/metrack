@@ -30,6 +30,25 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: npm audit
+        continue-on-error: true
+        run: |
+          if npm audit --omit=dev --audit-level=high > audit.txt 2>&1; then
+            echo "npm audit found no high or critical vulnerabilities in production dependencies" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=npm audit::High or critical vulnerabilities found in production dependencies, see the job summary"
+            { echo '### npm audit (production dependencies)'; echo '```'; cat audit.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   docker:
     name: Docker image
     needs: check

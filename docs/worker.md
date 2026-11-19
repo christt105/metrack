@@ -6,6 +6,12 @@ API routes, `/u/*` (public pages), `/privacy` and `/assets/*` run the Worker fir
 
 Every response carries the same fixed security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, and `Strict-Transport-Security` over HTTPS). The Hono app and `serveAsset` add them from `apps/server/src/api/securityHeaders.ts`; the paths the assets binding answers without running the Worker cannot, so `apps/web/public/_headers` (copied into the build output, never served as a file) lists the same headers for them, and a test keeps both lists equal. The home server adds them through the same Hono middleware.
 
+### Content security policy (report only)
+
+Every response also carries `Content-Security-Policy-Report-Only`, which reports what a policy would block without blocking it. There are two policies, both defined once in `apps/server/src/api`: `APP_CONTENT_SECURITY_POLICY` (the single-page app, the API and every other path) and `PUBLIC_CONTENT_SECURITY_POLICY` (`/u/*` and `/privacy`, which need inline styles and the giscus script and frame). `contentSecurityPolicyFor` picks one by request path and `withSecurityHeaders` adds it, never replacing a policy a response already sets, on the home server and in the Worker alike. The paths the assets binding answers without the Worker get the app policy from `apps/web/public/_headers`, and a test keeps that string equal to the constant.
+
+There is no report endpoint (no `report-uri` or `report-to`). Violations show in the browser console, so check a policy by walking the app and the public pages in a real browser and reading the console messages. The policies are meant to be enforced (`Content-Security-Policy`) in a later release, once a walk shows no violations.
+
 ## Run it locally
 
 Local D1 and R2 live under `apps/server/.wrangler` (Miniflare); nothing reaches a Cloudflare account.
@@ -156,6 +162,30 @@ Create an account-owned or user API token with Account permissions Workers Scrip
 
 - Code: `npx wrangler rollback <version-id> --env production`, with the version id from the deploy's job summary (or `npx wrangler versions list --env production`).
 - Data: `npx wrangler d1 time-travel restore metrack --bookmark <bookmark> --env production`, with the bookmark from the job summary. It overwrites everything written since the bookmark and cancels in-flight queries, and the history is kept for 7 days on the free plan. Migrations should therefore be additive, so that the previous code keeps working on the new schema and only a code rollback is needed.
+
+### Rate limiting the sign-in and invitation routes
+
+The Worker has no rate limit of its own. A Cloudflare Rate Limiting rule on the zone of the custom domain covers the routes that accept a secret or an invitation code. The free plan allows one rule, matching on the path only, counting by IP, with a 10 second period and a 10 second block, so the values below are the most the plan offers. Create it in the dashboard (the zone, Security, WAF, Rate limiting rules):
+
+| Setting                       | Value                                                                                                                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule name                     | `metrack sign-in and invitations`                                                                                                                                                        |
+| Expression (Edit expression)  | `(http.request.uri.path in {"/api/auth/token-login" "/api/auth/dev-login" "/api/auth/google/start" "/api/auth/google/callback"}) or starts_with(http.request.uri.path, "/api/invites/")` |
+| With the same characteristics | IP                                                                                                                                                                                       |
+| When rate exceeds             | 8 requests per 10 seconds                                                                                                                                                                |
+| Then take action              | Block, default response (429)                                                                                                                                                            |
+| For duration                  | 10 seconds                                                                                                                                                                               |
+
+`/api/auth/me` and `/api/auth/logout` stay out: the app calls `/api/auth/me` on every load. `/api/invites/` with the trailing slash catches the public `GET /api/invites/{code}` and the owner's `DELETE /api/invites/{id}`, not the owner's list (`GET /api/invites`). Joining through an invitation takes about four requests (preview, Google start and callback, sometimes a reload), so 8 leaves room for a person and caps a script at about 8 tries every 20 seconds. The rule only sees traffic through the custom domain; the production Worker has `workers_dev` off, so there is no other way in. Check it from a shell outside Cloudflare's bot challenge (Bot Fight Mode answers 403 to datacenter IPs before the rule counts):
+
+```sh
+for i in $(seq 1 12); do
+  curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' \
+    -d '{"token":"x"}' "$METRACK_URL/api/auth/token-login"
+done
+```
+
+The first 8 answer 401 and the rest 429 until 10 seconds after the last blocked one.
 
 ## What the cloud does not do yet
 

@@ -209,6 +209,7 @@ describe('loadConnectorConfig', () => {
     JELLYFIN_TOKEN: 't',
     JELLYSTAT_DB_HOST: 'db',
     JELLYSTAT_DB_PASSWORD: 'p',
+    SYNC_WEBHOOK_SECRET: 'a-long-enough-secret',
   };
 
   it('lists what is missing', () => {
@@ -219,7 +220,26 @@ describe('loadConnectorConfig', () => {
       'JELLYFIN_TOKEN',
       'JELLYSTAT_DB_HOST',
       'JELLYSTAT_DB_PASSWORD',
+      'SYNC_WEBHOOK_SECRET',
     ]);
+  });
+
+  it('requires the webhook secret and a long enough one', () => {
+    const withoutSecret: Record<string, string> = { ...env };
+    delete withoutSecret.SYNC_WEBHOOK_SECRET;
+    expect(loadConnectorConfig(withoutSecret, '/data')).toEqual({
+      config: undefined,
+      missing: ['SYNC_WEBHOOK_SECRET'],
+    });
+    expect(loadConnectorConfig({ ...env, SYNC_WEBHOOK_SECRET: '' }, '/data').missing).toEqual([
+      'SYNC_WEBHOOK_SECRET',
+    ]);
+    expect(() => loadConnectorConfig({ ...env, SYNC_WEBHOOK_SECRET: 'short' }, '/data')).toThrow(
+      'SYNC_WEBHOOK_SECRET must be at least 16 characters',
+    );
+    expect(loadConnectorConfig(env, '/data').config?.sync.webhookSecret).toBe(
+      'a-long-enough-secret',
+    );
   });
 
   it('reads the address without a trailing slash, the data dir and the pass interval', () => {
