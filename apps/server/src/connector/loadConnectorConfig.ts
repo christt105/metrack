@@ -68,7 +68,8 @@ export function loadConnectorConfig(
 ): ConnectorConfigResult {
   const own = ['METRACK_URL', 'METRACK_CONNECTOR_TOKEN'].filter((name) => !env[name]);
   const { config: sync, missing: syncMissing } = loadSyncConfig(env);
-  const missing = [...own, ...syncMissing];
+  const secret = env.SYNC_WEBHOOK_SECRET ? [] : ['SYNC_WEBHOOK_SECRET'];
+  const missing = [...own, ...syncMissing, ...secret];
   if (missing.length > 0 || !sync) return { config: undefined, missing };
   const hours = Number(env.CONNECTOR_PASS_HOURS ?? DEFAULT_PASS_HOURS);
   if (!Number.isFinite(hours) || hours <= 0 || hours > 168) {

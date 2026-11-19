@@ -13,6 +13,7 @@ const BASE_ENV = {
   JELLYFIN_TOKEN: 'jf-token',
   JELLYSTAT_DB_HOST: 'db.test',
   JELLYSTAT_DB_PASSWORD: 'secret',
+  SYNC_WEBHOOK_SECRET: 'a-long-enough-secret',
 };
 const USAGE_ENV = { CLOUDFLARE_USAGE_TOKEN: 'tok_secret', CLOUDFLARE_ACCOUNT_ID: 'abc123' };
 const NTFY = { url: 'http://ntfy.test', topic: 'servidor' };

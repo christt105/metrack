@@ -82,6 +82,7 @@ describe('loadCloudBackupConfig', () => {
       JELLYFIN_TOKEN: 't',
       JELLYSTAT_DB_HOST: 'h',
       JELLYSTAT_DB_PASSWORD: 'p',
+      SYNC_WEBHOOK_SECRET: 'a-long-enough-secret',
     };
     expect(() => loadConnectorConfig({ ...connector, CLOUD_BACKUP_DIR: '/x' }, '/data')).toThrow(
       'partly configured',
@@ -100,6 +101,7 @@ describe('loadCloudBackupConfig', () => {
       JELLYFIN_TOKEN: 't',
       JELLYSTAT_DB_HOST: 'h',
       JELLYSTAT_DB_PASSWORD: 'p',
+      SYNC_WEBHOOK_SECRET: 'a-long-enough-secret',
     };
     const r2 = {
       ...d1,
