@@ -1,4 +1,5 @@
 import { RATING_LEVELS, type RatingIcon } from '@metrack/domain';
+import type { SiteMessages } from './messages/SiteMessages.js';
 
 export interface RatingTheme {
   label: string;
@@ -6,16 +7,6 @@ export interface RatingTheme {
   /** Font Awesome classes of the rating's icon. */
   icon: string;
 }
-
-const LABELS: Record<RatingIcon, string> = {
-  crown: 'Obra Maestra',
-  heart: 'Increíble',
-  thumbsUp: 'Bueno',
-  smile: 'Decente',
-  thumbsDown: 'Malo',
-  dizzy: 'Terrible',
-  skull: 'Abismal',
-};
 
 const FONT_AWESOME: Record<RatingIcon, string> = {
   crown: 'fa-solid fa-crown',
@@ -28,19 +19,19 @@ const FONT_AWESOME: Record<RatingIcon, string> = {
 };
 
 /** The rating scale, from the best rating to the worst. */
-export const RATING_SCALE: readonly (RatingTheme & { rating: number })[] = RATING_LEVELS.map(
-  (level) => ({
+export function ratingScale(messages: SiteMessages): (RatingTheme & { rating: number })[] {
+  return RATING_LEVELS.map((level) => ({
     rating: level.rating,
-    label: LABELS[level.icon],
+    label: messages.ratingLabels[level.icon],
     color: level.color,
     icon: FONT_AWESOME[level.icon],
-  }),
-);
+  }));
+}
 
 const DEFAULT_THEME: RatingTheme = { label: '', color: '#cccccc', icon: 'fa-solid fa-star' };
 
 /** The label, colour and icon of a rating on the 1 to 7 scale; anything else gets a neutral look. */
-export function ratingTheme(rating: number): RatingTheme {
-  const theme = RATING_SCALE.find((entry) => entry.rating === rating);
+export function ratingTheme(rating: number, messages: SiteMessages): RatingTheme {
+  const theme = ratingScale(messages).find((entry) => entry.rating === rating);
   return theme ?? { ...DEFAULT_THEME, label: String(rating) };
 }

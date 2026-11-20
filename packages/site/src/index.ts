@@ -25,6 +25,8 @@ export {
   statsPath,
 } from './sitePaths.js';
 export type { Library } from './Library.js';
+export type { SiteMessages } from './messages/SiteMessages.js';
+export { es as spanishMessages } from './messages/es.js';
 export type { PublicEntry } from './PublicEntry.js';
 export type { PublicKind } from './PublicKind.js';
 export type { SiteAsset } from './SiteAsset.js';

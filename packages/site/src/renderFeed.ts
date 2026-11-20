@@ -28,12 +28,13 @@ function xml(text: string): string {
 }
 
 function item(library: Library, entry: PublicEntry, date: string, origin: string): string {
+  const { messages } = library;
   const link = `${origin}${entryPath(library.handle, entry.kind, entry.id)}`;
   const cover = imageSrc(entry.cover, library.handle, 'thumb', origin);
   const lead =
     entry.rating === null
       ? ''
-      : `<p>Nota: ${entry.rating} (${escapeHtml(ratingTheme(entry.rating).label)})</p>`;
+      : `<p>${messages.feed.ratingNote(entry.rating, escapeHtml(ratingTheme(entry.rating, messages).label))}</p>`;
   const description = `${lead}${reviewHtml(library, entry, origin)}`;
   return `<item>
 <title>${xml(entry.title)}</title>
@@ -52,9 +53,10 @@ function item(library: Library, entry: PublicEntry, date: string, origin: string
  * its date, so it stays the same however the site is reached.
  */
 export function renderFeed(library: Library, origin: string): string {
-  const viewings = finishedViewings(allEntries(library))
+  const viewings = finishedViewings(allEntries(library), library.messages.collation)
     .filter((viewing) => viewing.date !== null)
     .slice(0, FEED_LIMIT);
+  const { messages } = library;
   const home = `${origin}${homePath(library.handle)}`;
   const items = viewings.map((viewing) =>
     item(library, viewing.entry, viewing.date as string, origin),
@@ -62,10 +64,10 @@ export function renderFeed(library: Library, origin: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
 <channel>
-<title>Acabados · @${xml(library.handle)}</title>
+<title>${messages.feed.title(xml(library.handle))}</title>
 <link>${xml(home)}</link>
-<description>Elementos acabados por @${xml(library.handle)}</description>
-<language>es</language>
+<description>${messages.feed.description(xml(library.handle))}</description>
+<language>${messages.lang}</language>
 <atom:link href="${xml(`${origin}${feedPath(library.handle)}`)}" rel="self" type="application/rss+xml"/>
 ${items.join('\n')}
 </channel>
