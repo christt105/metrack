@@ -564,14 +564,14 @@ export const es: Messages = {
     ownerHint: 'La cuenta del propietario no se puede eliminar.',
     confirmLabel: (handle: string | null) =>
       handle === null
-        ? 'Escribe «eliminar» para confirmar'
-        : `Escribe tu nombre de usuario (${handle}) o «eliminar» para confirmar`,
+        ? 'Escribe «delete» para confirmar'
+        : `Escribe tu nombre de usuario (${handle}) o «delete» para confirmar`,
     delete: 'Eliminar mi cuenta',
     scheduled: (when: string) => `Tu cuenta está programada para eliminarse el ${when}.`,
     cancel: 'Cancelar la eliminación',
     privacy: 'Privacidad',
     errors: {
-      confirmation_mismatch: 'No coincide. Escribe tu nombre de usuario o la palabra «eliminar».',
+      confirmation_mismatch: 'No coincide. Escribe tu nombre de usuario o la palabra «delete».',
       owner_cannot_delete: 'La cuenta del propietario no se puede eliminar.',
     } as Record<string, string>,
     banner: (when: string) =>
