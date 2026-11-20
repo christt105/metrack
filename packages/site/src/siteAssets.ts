@@ -3,7 +3,7 @@ import { CODE_HIGHLIGHT_CSS } from './assets/CODE_HIGHLIGHT_CSS.js';
 import { COLLAGE_CSS } from './assets/COLLAGE_CSS.js';
 import { COLLAGE_JS } from './assets/COLLAGE_JS.js';
 import { DEFAULT_AVATAR_SVG } from './assets/DEFAULT_AVATAR_SVG.js';
-import { DEFAULT_POSTER_WEBP } from './assets/DEFAULT_POSTER_WEBP.js';
+import { DEFAULT_POSTER_SVG } from './assets/DEFAULT_POSTER_SVG.js';
 import { FAVICON_16X16_PNG } from './assets/FAVICON_16X16_PNG.js';
 import { FAVICON_32X32_PNG } from './assets/FAVICON_32X32_PNG.js';
 import { FILTER_JS } from './assets/FILTER_JS.js';
@@ -54,7 +54,7 @@ const ASSETS = new Map<string, SiteAsset>([
   ['stats.js', { contentType: JS, body: STATS_JS }],
   ['html2canvas-pro.js', { contentType: JS, body: HTML2CANVAS_PRO_JS }],
   ['collage.js', { contentType: JS, body: COLLAGE_JS }],
-  ['default-poster.webp', { contentType: 'image/webp', body: bytes(DEFAULT_POSTER_WEBP) }],
+  ['default-poster.svg', { contentType: 'image/svg+xml', body: DEFAULT_POSTER_SVG }],
   ['default-avatar.svg', { contentType: 'image/svg+xml', body: DEFAULT_AVATAR_SVG }],
   ['tmdb-logo.svg', { contentType: 'image/svg+xml', body: TMDB_LOGO_SVG }],
   ['favicon-16x16.png', { contentType: 'image/png', body: bytes(FAVICON_16X16_PNG) }],
