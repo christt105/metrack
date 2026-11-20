@@ -433,6 +433,8 @@ export const es: Messages = {
   unlinked: {
     title: 'Títulos sin enlazar',
     empty: 'La bandeja está vacía.',
+    about:
+      'Aquí llegan las reproducciones que Jellyfin ha comunicado y que metrack no ha podido asociar a un título de tu biblioteca, para que las enlaces a mano o las descartes. Ahora mismo no hay nada pendiente.',
     dismiss: 'Descartar',
     resolve: 'Resolver',
     needsIds: 'Introduce al menos un id.',

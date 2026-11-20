@@ -13,6 +13,8 @@ export class Session {
   readonly publicPage = shallowRef<PublicPage | null>(null);
   /** The interface language the signed-in user chose, or null to follow the browser. */
   readonly language = shallowRef<Language | null>(null);
+  /** True when the signed-in user has a Jellyfin account set, the only source of unlinked titles. */
+  readonly jellyfinLinked = shallowRef(false);
   private known = false;
 
   constructor(private readonly api: ApiClient) {}
@@ -56,12 +58,14 @@ export class Session {
     if (this.user.value === null) {
       this.publicPage.value = null;
       this.language.value = null;
+      this.jellyfinLinked.value = false;
       return;
     }
     try {
       const own = await this.api.ownSettings();
       this.publicPage.value = own.publicPage;
       this.language.value = own.settings.language;
+      this.jellyfinLinked.value = Boolean(own.settings.jellyfinUser);
     } catch {
       this.publicPage.value = null;
     }
@@ -97,6 +101,7 @@ export class Session {
     this.deletion.value = null;
     this.publicPage.value = null;
     this.language.value = null;
+    this.jellyfinLinked.value = false;
     this.needsWelcome.value = false;
     this.known = true;
   }
