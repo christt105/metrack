@@ -1,5 +1,5 @@
 import { shallowRef } from 'vue';
-import type { AccountDeletion, PublicPage, User } from '@metrack/domain';
+import type { AccountDeletion, Language, PublicPage, User } from '@metrack/domain';
 import type { ApiClient } from '../api/ApiClient';
 
 /** Who is signed in. The server is asked once; sign-in, sign-out and a refused call update it. */
@@ -11,6 +11,8 @@ export class Session {
   readonly needsWelcome = shallowRef(false);
   /** The signed-in user's own public page settings, or null while unknown or signed out. */
   readonly publicPage = shallowRef<PublicPage | null>(null);
+  /** The interface language the signed-in user chose, or null to follow the browser. */
+  readonly language = shallowRef<Language | null>(null);
   private known = false;
 
   constructor(private readonly api: ApiClient) {}
@@ -49,17 +51,24 @@ export class Session {
     }
   }
 
-  /** Asks the server for the user's public page settings. A failure leaves them unknown. */
+  /** Asks the server for the user's public page and language. A failure leaves them unknown. */
   async refreshPublicPage(): Promise<void> {
     if (this.user.value === null) {
       this.publicPage.value = null;
+      this.language.value = null;
       return;
     }
     try {
-      this.publicPage.value = (await this.api.ownSettings()).publicPage;
+      const own = await this.api.ownSettings();
+      this.publicPage.value = own.publicPage;
+      this.language.value = own.settings.language;
     } catch {
       this.publicPage.value = null;
     }
+  }
+
+  setLanguage(language: Language | null): void {
+    this.language.value = language;
   }
 
   setPublicPage(page: PublicPage | null): void {
@@ -87,6 +96,7 @@ export class Session {
     this.user.value = null;
     this.deletion.value = null;
     this.publicPage.value = null;
+    this.language.value = null;
     this.needsWelcome.value = false;
     this.known = true;
   }

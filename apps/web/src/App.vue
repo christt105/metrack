@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppIcon from './components/AppIcon.vue';
 import DeletionBanner from './components/DeletionBanner.vue';
 import OfflineNotice from './components/OfflineNotice.vue';
+import { useLocale } from './composables/useLocale';
 import { useSession } from './composables/useSession';
 import { useMessages } from './composables/useMessages';
 import { NAV_ITEMS } from './logic/mainNavItems';
 
 const messages = useMessages();
 const session = useSession();
+const locale = useLocale();
+
+watch(session.language, (language) => locale.prefer(language), { immediate: true });
+watch(locale.language, (language) => (document.documentElement.lang = language), {
+  immediate: true,
+});
 const route = useRoute();
 const router = useRouter();
 

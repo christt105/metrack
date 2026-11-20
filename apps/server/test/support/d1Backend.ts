@@ -17,6 +17,7 @@ const SCHEMA = [
   '0009_season_episodes.sql',
   '0010_season_episodes_refill.sql',
   '0012_unmatched_episodes.sql',
+  '0014_user_language.sql',
 ].flatMap((file) =>
   readFileSync(new URL(`../../d1/migrations/${file}`, import.meta.url), 'utf8')
     .split(/;\s*\n/)

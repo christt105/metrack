@@ -23,6 +23,7 @@ export const ISOLATION_SELF_WRITES: Readonly<Record<string, IsolationSelfWrite>>
   },
   'POST /api/account/deletion': { payload: { confirm: 'delete' }, statuses: [200, 201] },
   'DELETE /api/account/deletion': { statuses: [200] },
+  'PATCH /api/settings': { payload: { language: 'en' }, statuses: [200] },
   'PATCH /api/settings/public-page': { payload: { intro: 'U2 intro' }, statuses: [200] },
   'POST /api/settings/ntfy-topic': { statuses: [200, 201] },
   'DELETE /api/settings/ntfy-topic': { statuses: [200, 204] },

@@ -1,3 +1,4 @@
+import type { EditableSetting } from './EditableSetting.js';
 import type { UserSettings } from '../api/UserSettings.js';
 import type { UserSettingsPatch } from '../api/UserSettingsPatch.js';
 import type { SettingsPatchResult } from './SettingsPatchResult.js';
@@ -9,9 +10,9 @@ export function applySettingsPatch(
   patch: UserSettingsPatch,
 ): SettingsPatchResult {
   const settings: UserSettings = { ...current };
-  const problems: Partial<Record<keyof UserSettings, string>> = {};
+  const problems: Partial<Record<EditableSetting, string>> = {};
   for (const [key, raw] of Object.entries(patch) as [
-    keyof UserSettings,
+    EditableSetting,
     string | null | undefined,
   ][]) {
     if (raw === undefined) continue;

@@ -10,8 +10,11 @@ const DICTIONARIES: Record<Language, Messages> = { en, es };
 export class Locale {
   readonly language: Ref<Language>;
 
+  private readonly browser: Language;
+
   constructor(languages: readonly string[] = []) {
-    this.language = ref(Locale.detect(languages));
+    this.browser = Locale.detect(languages);
+    this.language = ref(this.browser);
   }
 
   get messages(): Messages {
@@ -22,13 +25,18 @@ export class Locale {
     this.language.value = language;
   }
 
-  /** The first browser language the app offers, English when none matches. */
+  /** Uses the language the user chose, or the browser's when they chose none. */
+  prefer(language: Language | null): void {
+    this.language.value = language ?? this.browser;
+  }
+
+  /** The first browser language the app offers, Spanish when none matches. */
   static detect(languages: readonly string[]): Language {
     for (const tag of languages) {
       const base = tag.toLowerCase().split('-')[0];
       if (base === 'es') return 'es';
       if (base === 'en') return 'en';
     }
-    return 'en';
+    return 'es';
   }
 }

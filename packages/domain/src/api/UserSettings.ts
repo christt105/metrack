@@ -1,3 +1,5 @@
+import type { Language } from './Language.js';
+
 /** What a user's background jobs act on. A job runs only for users who set what it needs. */
 export interface UserSettings {
   /** Jellyfin account whose viewings are synced. */
@@ -8,4 +10,6 @@ export interface UserSettings {
   mirrorDir: string | null;
   /** That folder's path inside the vault, for `[[...]]` links. Defaults to "Media Tracker". */
   mirrorLinkPrefix: string | null;
+  /** Interface language the user chose, `null` to follow the browser. */
+  language: Language | null;
 }

@@ -15,6 +15,7 @@ const noSettings: UserSettings = {
   ntfyTopic: null,
   mirrorDir: null,
   mirrorLinkPrefix: null,
+  language: null,
 };
 const owner: User = { id: 1, name: 'Owner', email: null, role: 'owner' };
 

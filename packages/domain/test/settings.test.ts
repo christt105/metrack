@@ -6,6 +6,7 @@ const empty: UserSettings = {
   ntfyTopic: null,
   mirrorDir: null,
   mirrorLinkPrefix: null,
+  language: null,
 };
 
 describe('settingProblem', () => {

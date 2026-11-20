@@ -7,10 +7,21 @@ describe('Locale', () => {
     expect(new Locale(['es-ES', 'en']).language.value).toBe('es');
   });
 
-  it('picks English for English and for unknown languages', () => {
+  it('picks English for English', () => {
     expect(new Locale(['en-GB']).language.value).toBe('en');
-    expect(new Locale(['fr', 'de']).language.value).toBe('en');
-    expect(new Locale([]).language.value).toBe('en');
+  });
+
+  it('falls back to Spanish for unknown or missing languages', () => {
+    expect(new Locale(['fr', 'de']).language.value).toBe('es');
+    expect(new Locale([]).language.value).toBe('es');
+  });
+
+  it('lets a chosen language win over the browser and null go back to it', () => {
+    const locale = new Locale(['en']);
+    locale.prefer('es');
+    expect(locale.language.value).toBe('es');
+    locale.prefer(null);
+    expect(locale.language.value).toBe('en');
   });
 
   it('skips languages the app does not offer', () => {

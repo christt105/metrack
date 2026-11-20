@@ -6,4 +6,5 @@ export const NO_SETTINGS: UserSettings = {
   ntfyTopic: null,
   mirrorDir: null,
   mirrorLinkPrefix: null,
+  language: null,
 };

@@ -8,7 +8,7 @@ import type {
   MediaStatus,
   MediaType,
   RatingIcon,
-  UserSettings,
+  EditableSetting,
 } from '@metrack/domain';
 import type { Messages } from './Messages';
 
@@ -494,7 +494,7 @@ export const es: Messages = {
       ntfyTopic: 'Tema de ntfy',
       mirrorDir: 'Carpeta del vault',
       mirrorLinkPrefix: 'Ruta de la carpeta en el vault',
-    } satisfies Record<keyof UserSettings, string>,
+    } satisfies Record<EditableSetting, string>,
   },
   publicPage: {
     title: 'Página pública',
@@ -533,6 +533,14 @@ export const es: Messages = {
       invalid_giscus:
         'Los comentarios necesitan el repositorio como propietario/nombre y el id del repositorio, la categoría y el id de la categoría.',
     } as Record<string, string>,
+  },
+  languagePanel: {
+    title: 'Idioma',
+    hint: 'El idioma de la aplicación. Automático sigue el de tu navegador.',
+    label: 'Idioma de la interfaz',
+    automatic: 'Automático',
+    spanish: 'Español',
+    english: 'English',
   },
   ntfyAlerts: {
     title: 'Avisos de estrenos',

@@ -48,6 +48,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
     ntfyTopic: null,
     mirrorDir: null,
     mirrorLinkPrefix: null,
+    language: null,
   };
   await owner.settings.save(created.id, settings);
   await owner.settings.get(created.id);

@@ -76,6 +76,11 @@ const dropPublishSettingsSql = readFileSync(
   'utf8',
 );
 
+const userLanguageSql = readFileSync(
+  new URL('../d1/migrations/0014_user_language.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -90,6 +95,7 @@ function fromSql(): DatabaseSync {
   db.exec(dropSeasonOverrideSql);
   db.exec(unmatchedEpisodesSql);
   db.exec(dropPublishSettingsSql);
+  db.exec(userLanguageSql);
   return db;
 }
 
@@ -125,6 +131,16 @@ describe('D1 schema file', () => {
   it('has no views or triggers', () => {
     expect(actual.other).toEqual(expected.other);
     expect(actual.other).toEqual([]);
+  });
+
+  it('has the nullable language column that only accepts es and en', () => {
+    for (const db of [fromMigrations(), fromSql()]) {
+      db.exec('PRAGMA foreign_keys = OFF');
+      db.exec('INSERT INTO user_setting (user_id) VALUES (1)');
+      expect(db.prepare('SELECT language FROM user_setting').get()?.language).toBeNull();
+      db.exec("UPDATE user_setting SET language = 'es'");
+      expect(() => db.exec("UPDATE user_setting SET language = 'fr'")).toThrow();
+    }
   });
 
   it('no longer has the publish settings columns', () => {

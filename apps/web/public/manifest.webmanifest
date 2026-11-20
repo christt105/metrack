@@ -2,7 +2,7 @@
   "id": "/",
   "name": "metrack",
   "short_name": "metrack",
-  "description": "Track the movies, series, books and games you watch, read and play.",
+  "description": "Registra las películas, series, libros y juegos que ves, lees y juegas.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

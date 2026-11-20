@@ -4,6 +4,7 @@ import type { HealthReport, OwnSettings, SyncPlan } from '@metrack/domain';
 import AccountPanel from '../components/AccountPanel.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import InvitationsPanel from '../components/InvitationsPanel.vue';
+import LanguagePanel from '../components/LanguagePanel.vue';
 import NtfyAlertsPanel from '../components/NtfyAlertsPanel.vue';
 import PublicPagePanel from '../components/PublicPagePanel.vue';
 import SettingsList from '../components/SettingsList.vue';
@@ -102,6 +103,7 @@ const groups = computed(() =>
       <div class="groups">
         <div id="profile" class="group">
           <p class="group-title">{{ messages.settings.groups.profile }}</p>
+          <LanguagePanel v-if="own" :language="own.settings.language" />
           <PublicPagePanel v-if="own" :page="own.publicPage" @saved="refreshOwn" />
           <AccountPanel v-if="own" :handle="own.publicPage.handle" />
         </div>
