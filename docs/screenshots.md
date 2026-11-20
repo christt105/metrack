@@ -1,6 +1,6 @@
 # Screenshots
 
-Taken from a local copy of a real library (Cloudflare Worker build run with `wrangler dev`), on a 1440 px wide desktop window and a 390 px wide phone.
+Taken from a local copy of a real library (Cloudflare Worker build run with `wrangler dev`), with the web app in Spanish, on a 1440 px wide desktop window and a 390 px wide phone. The public pages are not localized yet and stay as they were.
 
 ## Web app
 
