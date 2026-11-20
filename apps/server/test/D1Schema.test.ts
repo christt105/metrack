@@ -86,6 +86,11 @@ const timeSpentSql = readFileSync(
   'utf8',
 );
 
+const steamIdSql = readFileSync(
+  new URL('../d1/migrations/0016_steam_id.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -102,6 +107,7 @@ function fromSql(): DatabaseSync {
   db.exec(dropPublishSettingsSql);
   db.exec(userLanguageSql);
   db.exec(timeSpentSql);
+  db.exec(steamIdSql);
   return db;
 }
 
@@ -146,6 +152,16 @@ describe('D1 schema file', () => {
       expect(db.prepare('SELECT language FROM user_setting').get()?.language).toBeNull();
       db.exec("UPDATE user_setting SET language = 'es'");
       expect(() => db.exec("UPDATE user_setting SET language = 'fr'")).toThrow();
+    }
+  });
+
+  it('has the nullable steam_id column that refuses an empty value', () => {
+    for (const db of [fromMigrations(), fromSql()]) {
+      db.exec('PRAGMA foreign_keys = OFF');
+      db.exec('INSERT INTO user_setting (user_id) VALUES (1)');
+      expect(db.prepare('SELECT steam_id FROM user_setting').get()?.steam_id).toBeNull();
+      db.exec("UPDATE user_setting SET steam_id = '76561198000000000'");
+      expect(() => db.exec("UPDATE user_setting SET steam_id = ''")).toThrow();
     }
   });
 

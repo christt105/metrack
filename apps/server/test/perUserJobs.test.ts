@@ -414,6 +414,7 @@ describe('owner settings from the environment', () => {
       mirrorDir: null,
       mirrorLinkPrefix: null,
       language: null,
+      steamId: null,
     });
     expect(await repos.settings.get(FRIEND_ID)).toBeUndefined();
   });

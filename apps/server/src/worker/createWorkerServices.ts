@@ -15,6 +15,7 @@ import { OpenLibraryClient } from '../providers/openlibrary/OpenLibraryClient.js
 import { SteamGridDbClient } from '../providers/steamgriddb/SteamGridDbClient.js';
 import { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import { createD1Repositories } from '../storage/d1/createD1Repositories.js';
+import { createSteamServices } from '../steam/createSteamServices.js';
 import { IgdbGameProvider } from '../titles/IgdbGameProvider.js';
 import { OpenLibraryBookProvider } from '../titles/OpenLibraryBookProvider.js';
 import { TitleProviders } from '../titles/TitleProviders.js';
@@ -84,16 +85,17 @@ export function createWorkerServices(
     ? new SteamGridDbClient(workerFetch, config.steamGridDbToken)
     : null;
   if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
-  if (config.igdb) {
-    titleProviders.register(
-      new IgdbGameProvider(
-        new IgdbClient(workerFetch, config.igdb),
-        videogames,
-        imageStore,
-        steamGridDb,
-      ),
-    );
-  }
+  const igdbClient = config.igdb && new IgdbClient(workerFetch, config.igdb);
+  const igdbGames =
+    igdbClient && new IgdbGameProvider(igdbClient, videogames, imageStore, steamGridDb);
+  if (igdbGames) titleProviders.register(igdbGames);
+  const steam = createSteamServices(
+    config.steamApiKey,
+    workerFetch,
+    videogames,
+    repositories.settings,
+    igdbClient && igdbGames && { client: igdbClient, adder: igdbGames },
+  );
   const openLibrary = new OpenLibraryClient(workerFetch, config.openLibraryLanguage);
   titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
   imageProviders.push(new OpenLibraryImageProvider(openLibrary));
@@ -134,6 +136,7 @@ export function createWorkerServices(
     imageStore,
     metadataCache,
     edit,
+    steam,
     accountDeletion,
     scheduled: new ScheduledTick({
       accounts: accountDeletion,

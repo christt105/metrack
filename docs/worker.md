@@ -98,7 +98,7 @@ npx wrangler d1 migrations apply metrack-test --remote
 npx wrangler d1 execute metrack-test --remote --file d1/seed/test-data.sql
 node d1/seed/makeTestToken.mjs > /tmp/token.sql
 npx wrangler d1 execute metrack-test --remote --file /tmp/token.sql
-npx wrangler secret put TMDB_API_KEY         # likewise IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAMGRIDDB_TOKEN
+npx wrangler secret put TMDB_API_KEY         # likewise IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAMGRIDDB_TOKEN, STEAM_API_KEY
 cd ../..
 npm run worker:deploy
 ```
@@ -151,7 +151,7 @@ npx wrangler d1 create metrack               # put the printed database_id in en
 npx wrangler r2 bucket create metrack-images
 npx wrangler d1 migrations apply metrack --remote --env production
 npx wrangler deploy --env production
-npx wrangler secret put TMDB_API_KEY --env production   # likewise IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAMGRIDDB_TOKEN
+npx wrangler secret put TMDB_API_KEY --env production   # likewise IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, STEAMGRIDDB_TOKEN, STEAM_API_KEY
 ```
 
 Provider keys are Worker secrets set by hand, never by CI. Then attach the custom domain (for example `metrack.example.org`) to the Worker in the dashboard (Workers & Pages, the Worker, Settings, Domains & Routes). Add a Configuration Rule for that host only that turns off Email Obfuscation, Automatic HTTPS Rewrites and Rocket Loader, so the HTML keeps its `ETag`.

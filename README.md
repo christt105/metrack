@@ -45,6 +45,7 @@ The full index is [docs/README.md](docs/README.md).
 - [docs/users.md](docs/users.md): security model, per-user settings, your data and deleting an account.
 - [docs/public-pages.md](docs/public-pages.md): the public pages of each library.
 - [docs/jellyfin-sync.md](docs/jellyfin-sync.md): Jellyfin viewing sync.
+- [docs/steam-import.md](docs/steam-import.md): importing a Steam library.
 - [docs/release-alerts.md](docs/release-alerts.md): release alerts over ntfy.
 - [docs/backups.md](docs/backups.md): backups, restore and copy to another disk.
 - [docs/mirror.md](docs/mirror.md): mirroring to the Obsidian vault.

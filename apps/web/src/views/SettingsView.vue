@@ -8,6 +8,7 @@ import InvitationsPanel from '../components/InvitationsPanel.vue';
 import LanguagePanel from '../components/LanguagePanel.vue';
 import NtfyAlertsPanel from '../components/NtfyAlertsPanel.vue';
 import PublicPagePanel from '../components/PublicPagePanel.vue';
+import SteamPanel from '../components/SteamPanel.vue';
 import SettingsList from '../components/SettingsList.vue';
 import TokensPanel from '../components/TokensPanel.vue';
 import UsersPanel from '../components/UsersPanel.vue';
@@ -122,6 +123,12 @@ const groups = computed(() =>
           <NtfyAlertsPanel
             v-if="own?.ntfyTopicGenerated"
             :topic="own.settings.ntfyTopic"
+            @saved="refreshOwn"
+          />
+          <SteamPanel
+            v-if="own"
+            :steam-id="own.settings.steamId"
+            :can-import="health?.features.steam === true"
             @saved="refreshOwn"
           />
           <TokensPanel :connector="owner" />

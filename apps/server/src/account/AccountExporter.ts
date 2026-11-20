@@ -103,6 +103,7 @@ function withoutTopic(settings: UserSettings): Omit<UserSettings, 'ntfyTopic'> {
     mirrorDir: settings.mirrorDir,
     mirrorLinkPrefix: settings.mirrorLinkPrefix,
     language: settings.language,
+    steamId: settings.steamId,
   };
 }
 

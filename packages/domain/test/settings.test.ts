@@ -7,6 +7,7 @@ const empty: UserSettings = {
   mirrorDir: null,
   mirrorLinkPrefix: null,
   language: null,
+  steamId: null,
 };
 
 describe('settingProblem', () => {

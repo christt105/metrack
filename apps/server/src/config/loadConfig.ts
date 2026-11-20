@@ -23,6 +23,7 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     tmdbLanguage,
     openLibraryLanguage: env.OPENLIBRARY_LANGUAGE || tmdbLanguage.slice(0, 2),
     steamGridDbToken: env.STEAMGRIDDB_TOKEN || undefined,
+    steamApiKey: env.STEAM_API_KEY || undefined,
     backup: {
       enabled: env.BACKUP_ENABLED !== 'false',
       dir: env.BACKUP_DIR || join(dataDir, 'backups'),

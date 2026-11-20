@@ -12,4 +12,6 @@ export interface UserSettings {
   mirrorLinkPrefix: string | null;
   /** Interface language the user chose, `null` to follow the browser. */
   language: Language | null;
+  /** SteamID64 of the Steam account whose library is imported, `null` when none is linked. */
+  steamId: string | null;
 }

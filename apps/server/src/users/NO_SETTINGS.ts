@@ -7,4 +7,5 @@ export const NO_SETTINGS: UserSettings = {
   mirrorDir: null,
   mirrorLinkPrefix: null,
   language: null,
+  steamId: null,
 };

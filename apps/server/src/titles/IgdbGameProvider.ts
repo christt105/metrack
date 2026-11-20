@@ -1,4 +1,4 @@
-import type { EntityRef, SearchResult } from '@metrack/domain';
+import type { EntityRef, SearchResult, Videogame } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import { emptyVideogame } from '../media/emptyEntities.js';
@@ -66,6 +66,11 @@ export class IgdbGameProvider implements TitleProvider {
   }
 
   async add(externalId: string): Promise<EntityRef> {
+    return this.addWith(externalId, {});
+  }
+
+  /** Like `add`, with the user's own fields (status, time spent) written in the same step. */
+  async addWith(externalId: string, entry: Partial<Videogame>): Promise<EntityRef> {
     const igdbId = parseNumericId(externalId);
     const existing = await this.games.findByIgdbId(igdbId);
     if (existing) {
@@ -101,6 +106,7 @@ export class IgdbGameProvider implements TitleProvider {
       platforms: names(game.platforms),
       cover,
       banner,
+      ...entry,
     });
     return { type: 'videogame', id: created.id };
   }

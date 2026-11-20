@@ -48,6 +48,7 @@ import { createCloudflareUsageScheduler } from './cloudflare-usage/createCloudfl
 import { createNotifier } from './notify/createNotifier.js';
 import { MigrationRunner } from './storage/MigrationRunner.js';
 import { migrations } from './storage/migrations/index.js';
+import { createSteamServices } from './steam/createSteamServices.js';
 import { IgdbGameProvider } from './titles/IgdbGameProvider.js';
 import { OpenLibraryBookProvider } from './titles/OpenLibraryBookProvider.js';
 import { TitleProviders } from './titles/TitleProviders.js';
@@ -136,11 +137,18 @@ const steamGridDb = config.steamGridDbToken
   ? new SteamGridDbClient(fetch, config.steamGridDbToken)
   : null;
 if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
-if (config.igdb) {
-  titleProviders.register(
-    new IgdbGameProvider(new IgdbClient(fetch, config.igdb), videogames, imageStore, steamGridDb),
-  );
-}
+const igdb = config.igdb && {
+  client: new IgdbClient(fetch, config.igdb),
+};
+const igdbGames = igdb && new IgdbGameProvider(igdb.client, videogames, imageStore, steamGridDb);
+if (igdbGames) titleProviders.register(igdbGames);
+const steam = createSteamServices(
+  config.steamApiKey,
+  fetch,
+  videogames,
+  repositories.settings,
+  igdb && igdbGames && { client: igdb.client, adder: igdbGames },
+);
 const openLibrary = new OpenLibraryClient(fetch, config.openLibraryLanguage);
 titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
 imageProviders.push(new OpenLibraryImageProvider(openLibrary));
@@ -292,6 +300,7 @@ const app = buildApp({
   edit,
   backup: { service: backupService, job: backupJob },
   sync: syncServices,
+  steam: steam.importer,
   syncQueues,
   connector,
   contentVersions,
@@ -309,6 +318,7 @@ const app = buildApp({
     users: repositories.users,
     settings: repositories.settings,
     profiles: repositories.profiles,
+    steamIds: steam.ids,
   },
   syncWebhookSecret: syncConfig?.webhookSecret
     ? new WebhookSecret(syncConfig.webhookSecret)

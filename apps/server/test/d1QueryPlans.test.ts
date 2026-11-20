@@ -49,6 +49,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
     mirrorDir: null,
     mirrorLinkPrefix: null,
     language: null,
+    steamId: null,
   };
   await owner.settings.save(created.id, settings);
   await owner.settings.get(created.id);
@@ -151,6 +152,7 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   const game = await owner.videogames.create({ ...emptyBookLike(), igdbId: 4 });
   await owner.videogames.findByIgdbId(4);
   await owner.videogames.findBySteamAppId('7');
+  await owner.videogames.listCatalogSteamGames();
   await owner.videogames.list();
   const book = await owner.books.create({ ...emptyBook(), openLibraryId: 'OL1M', isbn: '1' });
   await owner.books.findByOpenLibraryId('OL1M');

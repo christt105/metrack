@@ -10,6 +10,7 @@ import SearchView from '../views/SearchView.vue';
 import SettingsView from '../views/SettingsView.vue';
 import WelcomeView from '../views/WelcomeView.vue';
 import WatchlistView from '../views/WatchlistView.vue';
+import SteamImportView from '../views/SteamImportView.vue';
 import UnlinkedView from '../views/UnlinkedView.vue';
 import './routeMeta';
 
@@ -27,6 +28,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/search', name: 'search', component: SearchView },
   { path: '/watchlist', name: 'watchlist', component: WatchlistView },
   { path: '/unlinked', name: 'unlinked', component: UnlinkedView },
+  { path: '/steam', name: 'steam', component: SteamImportView },
   { path: '/settings', name: 'settings', component: SettingsView },
   { path: '/help', name: 'help', component: HelpView },
   { path: '/new/:collection(games|books)', name: 'new', component: NewMediaView, props: true },
