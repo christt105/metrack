@@ -433,6 +433,21 @@ export const es: Messages = {
     resolved: 'Resuelto.',
     source: (source: string) => `desde ${source}`,
   },
+  about: {
+    title: 'Acerca de metrack',
+    version: 'Versión',
+    source: 'Código fuente',
+    sourceLink: 'github.com/christt105/metrack',
+    dataTitle: 'Proveedores de datos',
+    tmdbNotice:
+      'This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.',
+    tmdbLogo: 'TMDB',
+    credits: 'Datos e imágenes de',
+    igdb: 'IGDB',
+    openLibrary: 'Open Library',
+    steam: 'Steam',
+    steamGridDb: 'SteamGridDB',
+  },
   settings: {
     sections: 'Secciones de ajustes',
     groups: {
@@ -440,6 +455,7 @@ export const es: Messages = {
       connections: 'Conexiones',
       people: 'Personas',
       system: 'Servidor',
+      about: 'Acerca de',
     },
     title: 'Ajustes',
     service: 'Servicio',

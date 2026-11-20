@@ -24,3 +24,8 @@ The public pages serve two more third-party files themselves, so no request leav
 
 - [Font Awesome Free](https://fontawesome.com) 6.4.0 (`FONT_AWESOME_CSS`, `FONT_AWESOME_SOLID_WOFF2`, `FONT_AWESOME_BRANDS_WOFF2` under `packages/site/src/assets`, only the solid and brands styles the pages use): icons CC BY 4.0, fonts SIL OFL 1.1, code MIT. Copyright 2023 Fonticons, Inc. The license is at https://fontawesome.com/license/free.
 - [html2canvas-pro](https://github.com/yorickshan/html2canvas-pro) 1.6.2 (`HTML2CANVAS_PRO_JS`): MIT, Copyright (c) 2024-present yorickshan and html2canvas-pro contributors.
+
+## TMDB logo and data providers
+
+- [TMDB](https://www.themoviedb.org) logo (blue, short version, unmodified, `apps/web/src/assets/tmdb-logo.svg` and `TMDB_LOGO_SVG` under `packages/site/src/assets`): the web app's About section and the public pages' footer and privacy page use it, with the notice "This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB." (the pages say "website"), as TMDB's API terms require. The logo belongs to TMDB and is used under those terms; it is not covered by this project's license.
+- Data and images also come from [IGDB](https://www.igdb.com), [Open Library](https://openlibrary.org), [Steam](https://store.steampowered.com) and [SteamGridDB](https://www.steamgriddb.com), credited by name with a link in the same places. Their wording requirements, if any, are not recorded here.

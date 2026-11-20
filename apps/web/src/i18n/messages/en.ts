@@ -420,6 +420,21 @@ export const en = {
     resolved: 'Resolved.',
     source: (source: string) => `from ${source}`,
   },
+  about: {
+    title: 'About metrack',
+    version: 'Version',
+    source: 'Source code',
+    sourceLink: 'github.com/christt105/metrack',
+    dataTitle: 'Data providers',
+    tmdbNotice:
+      'This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.',
+    tmdbLogo: 'TMDB',
+    credits: 'Data and images from',
+    igdb: 'IGDB',
+    openLibrary: 'Open Library',
+    steam: 'Steam',
+    steamGridDb: 'SteamGridDB',
+  },
   settings: {
     sections: 'Settings sections',
     groups: {
@@ -427,6 +442,7 @@ export const en = {
       connections: 'Connections',
       people: 'People',
       system: 'Server',
+      about: 'About',
     },
     title: 'Settings',
     service: 'Service',

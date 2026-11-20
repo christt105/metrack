@@ -18,7 +18,7 @@ describe('privacy page', () => {
     const api = await createTestApi(fakeFetch({}).fetch);
     const { body } = await api.app.inject({ method: 'GET', url: '/privacy' });
     expect(body).toContain(
-      'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+      'This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.',
     );
     expect(body).toContain('privacy@example.test');
     expect(body).toContain('7 days');
