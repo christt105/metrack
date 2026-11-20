@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { ntfySubscriptionUrl } from '@metrack/domain';
+import { ntfyAppUrl, ntfySubscriptionUrl } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
@@ -13,12 +13,20 @@ const api = useApi();
 const busy = ref(false);
 const error = ref<unknown>(null);
 const copied = ref(false);
+const copyFailed = ref(false);
+const appLink = computed(() => (props.topic === null ? null : ntfyAppUrl(props.topic)));
 const link = computed(() => (props.topic === null ? null : ntfySubscriptionUrl(props.topic)));
 
 async function copy(): Promise<void> {
-  if (link.value === null) return;
-  await navigator.clipboard.writeText(link.value);
-  copied.value = true;
+  if (props.topic === null) return;
+  copied.value = false;
+  copyFailed.value = false;
+  try {
+    await navigator.clipboard.writeText(props.topic);
+    copied.value = true;
+  } catch {
+    copyFailed.value = true;
+  }
 }
 
 async function change(action: () => Promise<unknown>): Promise<void> {
@@ -47,15 +55,24 @@ const turnOff = () => change(() => api.clearNtfyTopic());
     <h2>{{ messages.ntfyAlerts.title }}</h2>
     <p class="muted">{{ messages.ntfyAlerts.hint }}</p>
     <template v-if="link">
+      <p class="muted">{{ messages.ntfyAlerts.android }}</p>
+      <a :href="appLink ?? undefined" data-test="ntfy-app-link">{{
+        messages.ntfyAlerts.openInApp
+      }}</a>
+      <p class="muted">{{ messages.ntfyAlerts.iphone }}</p>
       <p>
-        <span class="muted">{{ messages.ntfyAlerts.link }}</span>
-        <a :href="link" target="_blank" rel="noopener noreferrer" data-test="ntfy-link">{{
-          link
-        }}</a>
+        <span class="muted">{{ messages.ntfyAlerts.topicLabel }}</span>
+        <code data-test="ntfy-topic">{{ topic }}</code>
       </p>
       <button type="button" data-test="ntfy-copy" @click="copy">
         {{ copied ? messages.ntfyAlerts.copied : messages.ntfyAlerts.copy }}
       </button>
+      <p v-if="copyFailed" class="muted" data-test="ntfy-copy-failed">
+        {{ messages.ntfyAlerts.copyFailed }}
+      </p>
+      <a :href="link" target="_blank" rel="noopener noreferrer" data-test="ntfy-link">{{
+        messages.ntfyAlerts.browser
+      }}</a>
       <p class="muted">{{ messages.ntfyAlerts.secret }}</p>
       <button type="button" data-test="ntfy-regenerate" :disabled="busy" @click="regenerate">
         {{ messages.ntfyAlerts.regenerate }}
@@ -72,8 +89,10 @@ const turnOff = () => change(() => api.clearNtfyTopic());
 </template>
 
 <style scoped>
-a {
+a,
+code {
   display: block;
+  margin: 0.5rem 0;
   overflow-wrap: anywhere;
 }
 </style>

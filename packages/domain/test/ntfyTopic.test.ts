@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { generateNtfyTopic, ntfySubscriptionUrl, settingProblem } from '../src/index.js';
+import {
+  generateNtfyTopic,
+  ntfyAppUrl,
+  ntfySubscriptionUrl,
+  settingProblem,
+} from '../src/index.js';
 
 describe('generateNtfyTopic', () => {
   it('encodes the random bytes in lowercase base32 after the prefix', () => {
@@ -33,5 +38,11 @@ describe('generateNtfyTopic', () => {
 describe('ntfySubscriptionUrl', () => {
   it('points at the topic on ntfy.sh', () => {
     expect(ntfySubscriptionUrl('metrack-abc')).toBe('https://ntfy.sh/metrack-abc');
+  });
+});
+
+describe('ntfyAppUrl', () => {
+  it('builds the ntfy:// deep link for the topic on ntfy.sh', () => {
+    expect(ntfyAppUrl('metrack-abc')).toBe('ntfy://ntfy.sh/metrack-abc');
   });
 });

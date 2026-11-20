@@ -567,15 +567,21 @@ export const es: Messages = {
   },
   ntfyAlerts: {
     title: 'Avisos de estrenos',
-    hint: 'Recibe una notificación en el móvil cuando algo que sigues se estrene o esté disponible. ntfy es una app gratuita que entrega notificaciones push. Instálala en el móvil, activa los avisos para obtener un tema privado y abre desde ese móvil el enlace de abajo: se abre ntfy y te suscribe. Abrirlo en un ordenador solo muestra una página web.',
+    hint: 'Recibe una notificación en el móvil cuando algo que sigues se estrene o esté disponible. ntfy es una app gratuita que entrega notificaciones push. Instálala en el móvil y activa los avisos para obtener un tema privado.',
+    android: 'Android: toca el botón de abajo para abrir el tema en la app ntfy.',
+    openInApp: 'Abrir en la app ntfy (Android)',
+    iphone:
+      'iPhone: abre la app ntfy, toca +, escribe el nombre del tema de abajo y deja el servidor ntfy.sh.',
+    topicLabel: 'Nombre del tema',
+    browser: 'Abrir en el navegador',
     copy: 'Copiar',
     copied: 'Copiado.',
-    link: 'Suscríbete en',
-    secret: 'Cualquiera con este enlace puede leer tus avisos, así que no lo compartas.',
+    copyFailed: 'No se pudo copiar. Selecciona el nombre del tema y cópialo a mano.',
+    secret: 'Cualquiera con este nombre de tema puede leer tus avisos, así que no lo compartas.',
     turnOn: 'Activar los avisos de estrenos',
-    regenerate: 'Generar un enlace nuevo',
+    regenerate: 'Generar un tema nuevo',
     regenerateConfirm:
-      '¿Generar un enlace nuevo? La suscripción actual dejará de recibir avisos y tendrás que suscribirte de nuevo.',
+      '¿Generar un tema nuevo? La suscripción actual dejará de recibir avisos y tendrás que suscribirte de nuevo.',
     turnOff: 'Desactivar los avisos de estrenos',
   },
   account: {
@@ -805,7 +811,7 @@ export const es: Messages = {
         title: 'Siguiendo y avisos de estrenos',
         steps: [
           '«Siguiendo» reúne las películas y series que sigues para que sepas cuándo sale algo nuevo. Usa el botón «Seguir estrenos» en un título para añadirlo.',
-          'Para recibir una notificación en el móvil, instala la app gratuita ntfy, abre Ajustes, Conexiones, «Avisos de estrenos» y activa los avisos. Abre desde el móvil el enlace de suscripción que aparece ahí.',
+          'Para recibir una notificación en el móvil, instala la app gratuita ntfy, abre Ajustes, Conexiones, «Avisos de estrenos» y activa los avisos. En Android, toca «Abrir en la app ntfy». En iPhone, abre la app ntfy, toca + y escribe el nombre del tema que aparece ahí, con el servidor ntfy.sh.',
           'Mantén ese enlace en privado: cualquiera que lo tenga puede leer tus avisos.',
         ],
       },

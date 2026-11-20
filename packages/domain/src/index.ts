@@ -222,6 +222,7 @@ export { NTFY_TOPIC_RANDOM_BYTES } from './settings/NTFY_TOPIC_RANDOM_BYTES.js';
 export type { RandomBytes } from './settings/RandomBytes.js';
 export { generateNtfyTopic } from './settings/generateNtfyTopic.js';
 export { ntfySubscriptionUrl } from './settings/ntfySubscriptionUrl.js';
+export { ntfyAppUrl } from './settings/ntfyAppUrl.js';
 export { INVITE_LIMITS } from './api/INVITE_LIMITS.js';
 export type { InviteStatus } from './api/InviteStatus.js';
 export type { InviteUse } from './api/InviteUse.js';

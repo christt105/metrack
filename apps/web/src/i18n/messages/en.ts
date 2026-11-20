@@ -552,15 +552,21 @@ export const en = {
   },
   ntfyAlerts: {
     title: 'Release alerts',
-    hint: 'Get a notification on your phone when something you follow premieres or becomes available. ntfy is a free app that delivers push notifications. Install it on your phone, turn the alerts on to get a private topic, then open the link below on that phone: it opens ntfy and subscribes you. Opening it on a computer only shows a web page.',
+    hint: 'Get a notification on your phone when something you follow premieres or becomes available. ntfy is a free app that delivers push notifications. Install it on your phone and turn the alerts on to get a private topic.',
+    android: 'Android: tap the button below to open the topic in the ntfy app.',
+    openInApp: 'Open in the ntfy app (Android)',
+    iphone:
+      'iPhone: open the ntfy app, tap +, enter the topic name below and keep the server as ntfy.sh.',
+    topicLabel: 'Topic name',
+    browser: 'Open in the browser',
     copy: 'Copy',
     copied: 'Copied.',
-    link: 'Subscribe at',
-    secret: 'Anyone with this link can read your alerts, so do not share it.',
+    copyFailed: 'Could not copy. Select the topic name and copy it by hand.',
+    secret: 'Anyone with this topic name can read your alerts, so do not share it.',
     turnOn: 'Turn on release alerts',
-    regenerate: 'Generate a new link',
+    regenerate: 'Generate a new topic',
     regenerateConfirm:
-      'Generate a new link? The current subscription stops receiving alerts and you must subscribe again.',
+      'Generate a new topic? The current subscription stops receiving alerts and you must subscribe again.',
     turnOff: 'Turn off release alerts',
   },
   account: {
@@ -786,7 +792,7 @@ export const en = {
         title: 'Following and release alerts',
         steps: [
           '"Following" lists the movies and series you follow so you know when something new comes out. Use the "Follow for releases" button on a title to add it.',
-          'To get a notification on your phone, install the free ntfy app, then open Settings, Connections, "Release alerts" and turn the alerts on. Open the subscription link shown there from your phone.',
+          'To get a notification on your phone, install the free ntfy app, then open Settings, Connections, "Release alerts" and turn the alerts on. On Android, tap "Open in the ntfy app". On iPhone, open the ntfy app, tap +, and enter the topic name shown there with the server ntfy.sh.',
           'Keep that link private: anyone who has it can read your alerts.',
         ],
       },

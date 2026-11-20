@@ -364,7 +364,7 @@ describe('SettingsView release alerts', () => {
     ntfyTopicGenerated: true,
   });
 
-  it('offers to turn alerts on in the cloud and shows the new link', async () => {
+  it('offers to turn alerts on in the cloud and shows the new topic', async () => {
     const generateNtfyTopic = vi.fn().mockResolvedValue({ ...noSettings, ntfyTopic: topic });
     const { wrapper } = await mountWithApi(SettingsView, {
       health: vi.fn().mockResolvedValue(cloudHealth),
@@ -378,7 +378,7 @@ describe('SettingsView release alerts', () => {
     expect(generateNtfyTopic).toHaveBeenCalledTimes(1);
     const link = wrapper.find('[data-test="ntfy-link"]');
     expect(link.attributes('href')).toBe(`https://ntfy.sh/${topic}`);
-    expect(link.text()).toBe(`https://ntfy.sh/${topic}`);
+    expect(wrapper.find('[data-test="ntfy-topic"]').text()).toBe(topic);
     expect(wrapper.find('[data-test="ntfy-on"]').exists()).toBe(false);
   });
 
