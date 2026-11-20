@@ -1,5 +1,6 @@
 import { escapeHtml } from '@metrack/export';
 import { entryStatus } from './entryStatus.js';
+import type { SiteMessages } from './messages/SiteMessages.js';
 import type { PublicEntry } from './PublicEntry.js';
 import { countNames } from './StatsCount.js';
 import { percentOf } from './renderStatBars.js';
@@ -48,7 +49,8 @@ function twoWay(
 }
 
 /** The platform, anime and cinema sections for a set of finished items; each appears only when it has something to show. */
-export function renderVariableStats(finished: PublicEntry[]): string {
+export function renderVariableStats(messages: SiteMessages, finished: PublicEntry[]): string {
+  const { stats } = messages;
   const sections: string[] = [];
   const platforms = countNames(
     finished
@@ -59,7 +61,7 @@ export function renderVariableStats(finished: PublicEntry[]): string {
     const max = platforms[0]?.count ?? 1;
     sections.push(
       renderStatsSplit(
-        'Plataformas de juego',
+        stats.platforms,
         platforms.map((entry) => ({
           name: escapeHtml(entry.name),
           percent: percentOf(entry.count, max),
@@ -73,9 +75,9 @@ export function renderVariableStats(finished: PublicEntry[]): string {
   if (anime > 0 && finished.length > 0) {
     sections.push(
       twoWay(
-        'Contenido anime',
-        { name: 'Anime', count: anime, color: '#a855f7' },
-        { name: 'Non-anime', count: finished.length - anime, color: '#4f8cff' },
+        stats.animeContent,
+        { name: stats.anime, count: anime, color: '#a855f7' },
+        { name: stats.nonAnime, count: finished.length - anime, color: '#4f8cff' },
         finished.length,
       ),
     );
@@ -87,9 +89,9 @@ export function renderVariableStats(finished: PublicEntry[]): string {
   if (cinema > 0 && movies.length > 0) {
     sections.push(
       twoWay(
-        'Cine vs. Streaming',
-        { name: 'Cinema', count: cinema, color: '#f59e0b' },
-        { name: 'Streaming / Home', count: movies.length - cinema, color: '#22c55e' },
+        stats.cinemaVsStreaming,
+        { name: stats.cinema, count: cinema, color: '#f59e0b' },
+        { name: stats.streaming, count: movies.length - cinema, color: '#22c55e' },
         movies.length,
       ),
     );
