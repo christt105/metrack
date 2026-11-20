@@ -92,7 +92,10 @@ describe('invitation routes', () => {
     expect(preview.json()).toEqual({ status: 'valid', inviter: 'Owner' });
     await guest.get(`/api/invites/${code}`);
     expect((await owner.get('/api/invites')).json()[0].uses).toBe(0);
-    expect((await guest.get('/api/invites/nonsense')).json().status).toBe('unknown');
+    expect((await guest.get('/api/invites/nonsense')).json()).toEqual({
+      status: 'unknown',
+      inviter: '',
+    });
   });
 
   it('shows a clear status for an expired and a revoked link', async () => {

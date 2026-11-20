@@ -4,6 +4,8 @@ import type { User } from '@metrack/domain';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
+import { Locale } from '../src/i18n/Locale';
+import { localeKey } from '../src/i18n/localeKey';
 import WelcomeView from '../src/views/WelcomeView.vue';
 import { mountWithApi } from './mountWithApi';
 import type { ApiClient } from '../src/api/ApiClient';
@@ -51,6 +53,34 @@ describe('WelcomeView', () => {
     await wrapper.find('input[name="handle"]').setValue('ab');
     expect(wrapper.find('[data-test="handle-problem"]').text()).toContain('3 to 30');
     expect(completeWelcome).not.toHaveBeenCalled();
+  });
+
+  it('shows the full public address and says the page starts turned off', async () => {
+    const { wrapper } = await open({});
+    expect(wrapper.text()).toContain(`${window.location.origin}/u/ana-garcia/`);
+    expect(wrapper.text()).toContain('starts turned off');
+  });
+
+  it('translates the handle problems into Spanish', async () => {
+    const { wrapper } = await open({}).then(async () => {
+      const api: Partial<ApiClient> = {};
+      const session = new Session(api as ApiClient);
+      session.signedIn(joined);
+      session.needsWelcome.value = true;
+      return mountWithApi(
+        WelcomeView,
+        api,
+        {},
+        { [sessionKey as symbol]: session, [localeKey as symbol]: new Locale(['es-ES']) },
+      );
+    });
+    const problem = () => wrapper.find('[data-test="handle-problem"]').text();
+    await wrapper.find('input[name="handle"]').setValue('ab');
+    expect(problem()).toBe('El nombre de la página debe tener de 3 a 30 caracteres.');
+    await wrapper.find('input[name="handle"]').setValue('no_good');
+    expect(problem()).toContain('letras minúsculas, dígitos y «-»');
+    await wrapper.find('input[name="handle"]').setValue('admin');
+    expect(problem()).toBe('Ese nombre de página está reservado. Elige otro.');
   });
 
   it('tells the user when the handle is taken and stays on the form', async () => {

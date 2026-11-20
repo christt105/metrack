@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { handleProblem, normalizeHandle } from '@metrack/domain';
+import { handleProblemKind, normalizeHandle } from '@metrack/domain';
 import { useRouter } from 'vue-router';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import { useApi } from '../composables/useApi';
@@ -19,7 +19,11 @@ const busy = ref(false);
 const error = ref<unknown>(null);
 const problem = computed(() => {
   const wanted = normalizeHandle(handle.value);
-  return wanted === '' ? null : handleProblem(wanted);
+  return wanted === '' ? null : handleProblemKind(wanted);
+});
+const address = computed(() => {
+  const wanted = normalizeHandle(handle.value);
+  return `${window.location.origin}/u/${wanted === '' ? messages.welcome.handlePlaceholder : wanted}/`;
 });
 const taken = computed(
   () => error.value instanceof ApiRequestError && error.value.code === 'handle_taken',
@@ -61,7 +65,7 @@ async function submit(): Promise<void> {
           autocomplete="off"
           autocapitalize="none"
         />
-        <span class="muted hint">{{ messages.welcome.handleHint }}</span>
+        <span class="muted hint">{{ messages.welcome.handleHint(address) }}</span>
         <span v-if="problem" class="hint problem" data-test="handle-problem">{{
           messages.welcome.handleProblem(problem)
         }}</span>

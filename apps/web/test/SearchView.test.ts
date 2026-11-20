@@ -2,6 +2,9 @@ import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import SearchView from '../src/views/SearchView.vue';
+import type { ApiClient } from '../src/api/ApiClient';
+import { Session } from '../src/auth/Session';
+import { sessionKey } from '../src/auth/sessionKey';
 import { mountWithApi } from './mountWithApi';
 
 describe('SearchView', () => {
@@ -18,6 +21,30 @@ describe('SearchView', () => {
     expect(search).toHaveBeenCalledWith('videogame', 'Hades', undefined);
     expect(wrapper.find('[role="alert"]').text()).toContain('not set up');
     expect(wrapper.text()).toContain('Add by hand');
+  });
+
+  it('offers add-by-hand after an empty search only to users who may', async () => {
+    const search = vi.fn().mockResolvedValue({ results: [] });
+    const run = async (role: 'normal' | 'trusted') => {
+      const session = new Session({} as ApiClient);
+      session.signedIn({ id: 2, name: 'U', email: null, role });
+      const { wrapper } = await mountWithApi(
+        SearchView,
+        { search },
+        {},
+        { [sessionKey as symbol]: session },
+      );
+      await wrapper
+        .findAll('.types button')
+        .find((b) => b.text() === 'Game')
+        ?.trigger('click');
+      await wrapper.find('input[type="search"]').setValue('Hades');
+      await wrapper.find('form[role="search"]').trigger('submit');
+      await flushPromises();
+      return wrapper.find('[data-test="manual-hint"]').text();
+    };
+    expect(await run('trusted')).toContain('add the title by hand');
+    expect(await run('normal')).toContain('Ask the owner');
   });
 
   it('adds a result and goes to its page', async () => {

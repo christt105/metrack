@@ -60,8 +60,9 @@ export class InviteService {
   /** What the public invitation page shows. It reads and spends nothing. */
   async preview(code: string): Promise<InvitePreview> {
     const stored = await this.invites.byCodeHash(hashSecret(code));
+    if (!stored) return { status: 'unknown', inviter: '' };
     const inviter = (await this.users.get(OWNER_ID))?.name ?? '';
-    return { status: stored ? inviteStatus(stored, this.now()) : 'unknown', inviter };
+    return { status: inviteStatus(stored, this.now()), inviter };
   }
 
   revoke(id: number): Promise<boolean> {

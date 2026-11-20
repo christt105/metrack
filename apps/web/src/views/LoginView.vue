@@ -64,6 +64,7 @@ async function signInWithToken(): Promise<void> {
   <AuthLayout>
     <h1 class="title">{{ messages.landing.title }}</h1>
     <p class="lead">{{ messages.landing.lead }}</p>
+    <p class="lead google-note" data-test="google-note">{{ messages.landing.googleNote }}</p>
     <ErrorNotice :error="error" />
     <ErrorNotice :error="signInError" />
     <p v-if="googleError" class="notice error" role="alert">{{ googleError }}</p>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { handleProblem, normalizeHandle } from '../src/index.js';
+import { handleProblem, handleProblemKind, normalizeHandle } from '../src/index.js';
 
 describe('normalizeHandle', () => {
   it('trims and lowercases', () => {
@@ -32,5 +32,15 @@ describe('handleProblem', () => {
     expect(handleProblem('admin')).toMatch(/reserved/);
     expect(handleProblem('api')).toMatch(/reserved/);
     expect(handleProblem('assets')).toMatch(/reserved/);
+  });
+});
+
+describe('handleProblemKind', () => {
+  it('names the rule that is broken', () => {
+    expect(handleProblemKind('christian')).toBeNull();
+    expect(handleProblemKind('ab')).toBe('length');
+    expect(handleProblemKind('a'.repeat(31))).toBe('length');
+    expect(handleProblemKind('chris_t')).toBe('characters');
+    expect(handleProblemKind('admin')).toBe('reserved');
   });
 });

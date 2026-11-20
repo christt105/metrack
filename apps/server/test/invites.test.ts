@@ -78,7 +78,7 @@ describe.each(backends)('$name invitations', (backend) => {
     expect(await service.preview(code)).toEqual({ status: 'valid', inviter: 'Owner' });
     expect((await service.list())[0]?.uses).toBe(0);
     expect(invite.uses).toBe(0);
-    expect(await service.preview('not-a-code')).toEqual({ status: 'unknown', inviter: 'Owner' });
+    expect(await service.preview('not-a-code')).toEqual({ status: 'unknown', inviter: '' });
   });
 
   it('redeems a valid invitation into a normal user with the verified email, and records the use', async () => {

@@ -1,14 +1,15 @@
 import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from './HANDLE_LENGTH.js';
-import { RESERVED_HANDLES } from './RESERVED_HANDLES.js';
+import type { HandleProblemRule } from './HandleProblemRule.js';
+import { handleProblemKind } from './handleProblemKind.js';
 
-const HANDLE_PATTERN = /^[a-z0-9-]+$/;
+const DESCRIPTIONS: Record<HandleProblemRule, string> = {
+  length: `${HANDLE_MIN_LENGTH} to ${HANDLE_MAX_LENGTH} characters`,
+  characters: 'lowercase letters, digits and "-"',
+  reserved: 'that word is reserved',
+};
 
 /** Why a normalized handle cannot be used, or null when it can. */
 export function handleProblem(handle: string): string | null {
-  if (handle.length < HANDLE_MIN_LENGTH || handle.length > HANDLE_MAX_LENGTH) {
-    return `${HANDLE_MIN_LENGTH} to ${HANDLE_MAX_LENGTH} characters`;
-  }
-  if (!HANDLE_PATTERN.test(handle)) return 'lowercase letters, digits and "-"';
-  if (RESERVED_HANDLES.has(handle)) return 'that word is reserved';
-  return null;
+  const kind = handleProblemKind(handle);
+  return kind === null ? null : DESCRIPTIONS[kind];
 }

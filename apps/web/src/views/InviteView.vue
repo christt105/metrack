@@ -20,8 +20,17 @@ const signInHref = computed(
     <ErrorNotice :error="error" />
     <p v-if="!preview && !error" class="muted">{{ messages.invites.page.loading }}</p>
     <template v-else-if="preview">
-      <h1 class="title">{{ messages.invites.page.title(preview.inviter) }}</h1>
-      <p class="lead">{{ messages.landing.lead }}</p>
+      <h1 class="title" data-test="invite-title">
+        {{
+          preview.status === 'unknown' || preview.inviter === ''
+            ? messages.invites.page.titleNeutral
+            : messages.invites.page.title(preview.inviter)
+        }}
+      </h1>
+      <template v-if="preview.status === 'valid'">
+        <p class="lead">{{ messages.landing.lead }}</p>
+        <p class="lead" data-test="google-note">{{ messages.landing.googleNote }}</p>
+      </template>
       <a v-if="preview.status === 'valid'" class="google" :href="signInHref">{{
         messages.invites.page.signIn
       }}</a>
