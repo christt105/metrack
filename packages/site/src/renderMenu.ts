@@ -42,5 +42,5 @@ export function renderMenu(library: Library, active: MenuPage | null): string {
       ? ''
       : `<li>${link(aboutPath(library.handle), menu.about, active === 'about')}</li>`,
   ].join('');
-  return `<div class="navbar" role="navigation"><nav class="menu" aria-label="Main Navigation"><a href="${escapeHtml(home)}" class="logo">${HOME_ICON}</a><input type="checkbox" id="menu-trigger" class="menu-trigger"><label for="menu-trigger"><span class="menu-icon">${menuIcon(menu.icon)}</span></label><div class="trigger"><ul class="trigger-container">${items}</ul></div></nav></div>`;
+  return `<div class="navbar" role="navigation"><nav class="menu" aria-label="${menu.ariaLabel}"><a href="${escapeHtml(home)}" class="logo">${HOME_ICON}</a><input type="checkbox" id="menu-trigger" class="menu-trigger"><label for="menu-trigger"><span class="menu-icon">${menuIcon(menu.icon)}</span></label><div class="trigger"><ul class="trigger-container">${items}</ul></div></nav></div>`;
 }

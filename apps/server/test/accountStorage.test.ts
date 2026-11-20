@@ -101,7 +101,11 @@ describe.each(backends)('$name: accounts and settings', (backend) => {
     };
     await repos.profiles.save(1, page);
     expect(await repos.profiles.get(1)).toEqual({ ...page, handle: 'owner' });
-    expect(await repos.profiles.findByHandle('OWNER')).toEqual({ userId: 1, enabled: true });
+    expect(await repos.profiles.findByHandle('OWNER')).toEqual({
+      userId: 1,
+      enabled: true,
+      language: null,
+    });
     expect(await repos.profiles.findByHandle('nobody')).toBeUndefined();
     await expect(repos.profiles.save(2, { ...page, handle: 'owner' })).rejects.toBeInstanceOf(
       HandleTakenError,

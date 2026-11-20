@@ -1,6 +1,9 @@
+import type { Language } from '@metrack/domain';
 import type { Context, Hono } from 'hono';
 import {
   isPublicKind,
+  languageFromAcceptLanguage,
+  messagesFor,
   publishedImageHashes,
   renderAbout,
   renderCollage,
@@ -58,26 +61,37 @@ const MAX_STORED_CHARS = 1_000_000;
  * 404, and every answer asks search engines to stay away.
  */
 export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps): void {
-  app.get('/privacy', () =>
+  const visitorLanguage = (context: Context): Language =>
+    languageFromAcceptLanguage(context.req.header('accept-language'));
+  const notFound = (context: Context): Response => publicNotFound(visitorLanguage(context));
+
+  app.get('/privacy', (context) =>
     publicResponse(
-      renderPrivacy({ contactEmail: deps.contactEmail }),
+      renderPrivacy({ contactEmail: deps.contactEmail }, messagesFor(visitorLanguage(context))),
       'text/html; charset=utf-8',
-      'public, max-age=300',
+      'private, max-age=300',
+      200,
+      undefined,
+      true,
     ),
   );
 
   app.get('/u/assets/*', (context) => {
     const name = decodePath(new URL(context.req.url).pathname.slice('/u/assets/'.length));
     const asset = name === undefined ? undefined : siteAsset(name);
-    if (!asset) return publicNotFound();
+    if (!asset) return notFound(context);
     return publicResponse(asset.body, asset.contentType, 'public, max-age=3600');
   });
 
   const renders = deps.renderCache ?? new UncachedPublicRenders(deps.profiles);
 
-  const libraryOf = async (userId: number, handle: string): Promise<Library> => {
+  const libraryOf = async (
+    userId: number,
+    handle: string,
+    language: Language,
+  ): Promise<Library> => {
     const page = await deps.profiles.get(userId);
-    return loadLibrary(deps.sources, deps.scope, userId, handle.toLowerCase(), page);
+    return loadLibrary(deps.sources, deps.scope, userId, handle.toLowerCase(), page, language);
   };
 
   /**
@@ -92,11 +106,11 @@ export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps
   ): Promise<Response> => {
     const handle = context.req.param('handle') ?? '';
     const found = await renders.lookup(handle, cacheKey);
-    if (!found?.enabled) return publicNotFound();
+    if (!found?.enabled) return notFound(context);
     const tagOf = (renderedAt: number | null): string | undefined =>
       found.version === null || renderedAt === null
         ? undefined
-        : renderEtag(found.userId, found.version, renderedAt, cacheKey);
+        : renderEtag(found.userId, found.version, renderedAt, `${cacheKey}#${found.language}`);
     if (found.cached) {
       const etag = tagOf(found.cached.renderedAt);
       if (etag !== undefined && matchesEtag(context.req.header('if-none-match') ?? null, etag)) {
@@ -104,8 +118,8 @@ export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps
       }
       return publicResponse(found.cached.body, found.cached.contentType, 'no-cache', 200, etag);
     }
-    const body = render(await libraryOf(found.userId, handle));
-    if (body === null) return publicNotFound();
+    const body = render(await libraryOf(found.userId, handle, found.language));
+    if (body === null) return notFound(context);
     const renderedAt = await keep(found, cacheKey, contentType, body);
     return publicResponse(body, contentType, 'no-cache', 200, tagOf(renderedAt));
   };
@@ -118,7 +132,14 @@ export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps
   ): Promise<number | null> => {
     if (found.version === null || body.length > MAX_STORED_CHARS) return null;
     try {
-      return await renders.store(found.userId, cacheKey, found.version, contentType, body);
+      return await renders.store(
+        found.userId,
+        cacheKey,
+        found.language,
+        found.version,
+        contentType,
+        body,
+      );
     } catch {
       return null;
     }
@@ -153,23 +174,25 @@ export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps
 
   app.get('/u/:handle/images/:hash', async (context) => {
     const { handle, hash } = context.req.param();
-    if (!deps.images || !isImageHash(hash)) return publicNotFound();
+    if (!deps.images || !isImageHash(hash)) return notFound(context);
     const found = await renders.lookup(handle, PUBLISHED_IMAGES);
-    if (!found?.enabled) return publicNotFound();
+    if (!found?.enabled) return notFound(context);
     let list = found.cached?.body;
     if (list === undefined) {
-      list = JSON.stringify([...publishedImageHashes(await libraryOf(found.userId, handle))]);
+      list = JSON.stringify([
+        ...publishedImageHashes(await libraryOf(found.userId, handle, found.language)),
+      ]);
       await keep(found, PUBLISHED_IMAGES, JSON_TYPE, list);
     }
-    if (!list.includes(`"${hash}"`)) return publicNotFound();
+    if (!list.includes(`"${hash}"`)) return notFound(context);
     const image = await deps.images.get(hash);
-    if (!image || !(await deps.images.hasFile(image))) return publicNotFound();
+    if (!image || !(await deps.images.hasFile(image))) return notFound(context);
     return publicResponse(await deps.images.read(image), image.mimeType, IMMUTABLE);
   });
 
   app.get('/u/:handle/:type/:id', async (context) => {
     const { type, id } = context.req.param();
-    if (!isPublicKind(type) || !ID.test(id)) return publicNotFound();
+    if (!isPublicKind(type) || !ID.test(id)) return notFound(context);
     return cached(context, `${type}/${Number(id)}`, HTML, (library) =>
       renderDetail(library, type, Number(id)),
     );

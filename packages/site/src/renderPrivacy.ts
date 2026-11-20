@@ -9,7 +9,7 @@ export function renderPrivacy(options: PrivacyOptions, messages: SiteMessages = 
   const email = escapeHtml(options.contactEmail);
   const body = messages.privacy.body(email, assetPath('tmdb-logo.svg'));
   return `<!DOCTYPE html>
-<html lang="${messages.privacy.lang}" class="dark">
+<html lang="${messages.lang}" class="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

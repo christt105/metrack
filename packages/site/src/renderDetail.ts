@@ -134,7 +134,7 @@ export function renderDetail(library: Library, kind: PublicKind, id: number): st
     overview === null
       ? ''
       : `<details class="media-synopsis"><summary><i class="fas fa-chevron-right synopsis-caret" aria-hidden="true"></i> <span class="synopsis-label">${library.messages.detail.synopsis}</span> <span class="synopsis-preview">${overview}</span></summary><p class="synopsis-full">${overview}</p></details>`;
-  const page = `<div class="wrapper post"><main class="page-content" aria-label="Content"><article>${header(library, entry)}${synopsis}<div class="page-content">${reviewHtml(library, entry)}</div>${relations(library, entry)}</article>${renderComments(library)}</main></div>`;
+  const page = `<div class="wrapper post"><main class="page-content" aria-label="${library.messages.contentLabel}"><article>${header(library, entry)}${synopsis}<div class="page-content">${reviewHtml(library, entry)}</div>${relations(library, entry)}</article>${renderComments(library)}</main></div>`;
   return renderLayout({
     library,
     title: `${entry.title} | ${ownerName(library)}`,

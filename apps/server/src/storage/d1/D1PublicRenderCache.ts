@@ -1,4 +1,4 @@
-import { normalizeHandle } from '@metrack/domain';
+import { normalizeHandle, type Language } from '@metrack/domain';
 import type { PublicRenderCache } from '../../site/PublicRenderCache.js';
 import type { PublicRenderLookup } from '../../site/PublicRenderLookup.js';
 import type { D1Database } from './D1Database.js';
@@ -7,7 +7,7 @@ import { execute, queryFirst } from './d1Query.js';
 /** How long a stored render counts as fresh, so changes the version cannot see (shared catalog rows, the year) show up within a day. */
 export const RENDER_MAX_AGE_SECONDS = 24 * 3600;
 
-/** Keeps rendered public pages in the `public_render` table of D1, one row per user and page. */
+/** Keeps rendered public pages in the `public_render` table of D1, one row per user and page, kept in the owner's language. */
 export class D1PublicRenderCache implements PublicRenderCache {
   constructor(
     private readonly db: D1Database,
@@ -18,11 +18,12 @@ export class D1PublicRenderCache implements PublicRenderCache {
   async lookup(handle: string, cacheKey: string): Promise<PublicRenderLookup | undefined> {
     const row = await queryFirst(
       this.db,
-      `SELECT u.id, COALESCE(s.public_page, 0) AS public_page, u.content_version,
+      `SELECT u.id, COALESCE(s.public_page, 0) AS public_page, CASE WHEN s.language = 'en' THEN 'en' ELSE 'es' END AS language,
+              u.content_version,
               r.version AS render_version, r.rendered_at, r.content_type, r.body
          FROM user u
          LEFT JOIN user_setting s ON s.user_id = u.id
-         LEFT JOIN public_render r ON r.user_id = u.id AND r.cache_key = ?
+         LEFT JOIN public_render r ON r.user_id = u.id AND r.cache_key = ? || '#' || CASE WHEN s.language = 'en' THEN 'en' ELSE 'es' END
          WHERE u.handle = ? COLLATE NOCASE`,
       cacheKey,
       normalizeHandle(handle),
@@ -36,6 +37,7 @@ export class D1PublicRenderCache implements PublicRenderCache {
     return {
       userId: Number(row.id),
       enabled: Number(row.public_page) === 1,
+      language: row.language === 'en' ? 'en' : 'es',
       version,
       cached: fresh
         ? {
@@ -50,6 +52,7 @@ export class D1PublicRenderCache implements PublicRenderCache {
   async store(
     userId: number,
     cacheKey: string,
+    language: Language,
     version: number,
     contentType: string,
     body: string,
@@ -59,7 +62,7 @@ export class D1PublicRenderCache implements PublicRenderCache {
       this.db,
       'INSERT OR REPLACE INTO public_render (user_id, cache_key, version, rendered_at, content_type, body) VALUES (?, ?, ?, ?, ?, ?)',
       userId,
-      cacheKey,
+      `${cacheKey}#${language}`,
       version,
       renderedAt,
       contentType,

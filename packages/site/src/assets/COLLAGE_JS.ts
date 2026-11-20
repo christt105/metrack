@@ -1,5 +1,6 @@
 /** The collage page script: filters the items by date and type and renders the cover grid, from the theme. */
-export const COLLAGE_JS = String.raw`    let allMedia = [];
+export const COLLAGE_JS = String.raw`    const texts = JSON.parse(document.getElementById('site-texts').textContent);
+    let allMedia = [];
 
     const canvas = document.getElementById('collage-canvas');
     const scaler = document.querySelector('.canvas-scaler');
@@ -23,7 +24,7 @@ export const COLLAGE_JS = String.raw`    let allMedia = [];
     toggleBtn.addEventListener('click', function() {
         const collapsed = controlsPanel.classList.toggle('is-collapsed');
         toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        toggleLabel.textContent = collapsed ? 'Show Controls' : 'Hide Controls';
+        toggleLabel.textContent = collapsed ? texts.showControls : texts.hideControls;
     });
 
     fetch(document.body.getAttribute('data-index'))
@@ -132,7 +133,7 @@ export const COLLAGE_JS = String.raw`    let allMedia = [];
         const btn = document.getElementById('download-btn');
         const originalText = btn.innerHTML;
 
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + texts.generating;
         btn.disabled = true;
 
         html2canvas(canvas, {
@@ -158,7 +159,7 @@ export const COLLAGE_JS = String.raw`    let allMedia = [];
         }).then(renderedCanvas => {
             renderedCanvas.toBlob(function(blob) {
                 if (!blob) {
-                    alert("Error: Image is too large for the browser.");
+                    alert(texts.tooLarge);
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                     return;
@@ -180,7 +181,7 @@ export const COLLAGE_JS = String.raw`    let allMedia = [];
 
         }).catch(err => {
             console.error("Canvas Error:", err);
-            btn.innerHTML = 'Error :(';
+            btn.innerHTML = texts.failed;
             setTimeout(() => {
                 btn.innerHTML = originalText;
                 btn.disabled = false;

@@ -17,6 +17,13 @@ export function renderCollage(library: Library): string {
     active: 'collage',
     styles: ['collage.css'],
     page: page(library.messages),
+    texts: {
+      showControls: library.messages.collage.showControls,
+      hideControls: library.messages.collage.hideControls,
+      generating: library.messages.collage.generating,
+      tooLarge: library.messages.collage.tooLarge,
+      failed: library.messages.collage.failed,
+    },
     scripts: ['collage.js'],
   });
 }

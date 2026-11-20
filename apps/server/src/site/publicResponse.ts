@@ -7,6 +7,7 @@ export function publicResponse(
   cacheControl?: string,
   status = 200,
   etag?: string,
+  varyByLanguage = false,
 ): Response {
   const bytes = typeof body === 'string' ? new TextEncoder().encode(body) : body;
   const headers = new Headers({
@@ -16,5 +17,6 @@ export function publicResponse(
   });
   if (cacheControl !== undefined) headers.set('Cache-Control', cacheControl);
   if (etag !== undefined) headers.set('ETag', etag);
+  if (varyByLanguage) headers.set('Vary', 'Accept-Language');
   return new Response(bytesBody(bytes), { status, headers });
 }
