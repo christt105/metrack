@@ -2,4 +2,5 @@
 export interface OpenLibraryWorkRecord {
   description?: string | { value?: string };
   first_publish_date?: string;
+  covers?: number[];
 }

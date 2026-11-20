@@ -4,12 +4,13 @@ import { createTestApi, type TestApi } from './support/createTestApi.js';
 import { pathFetch } from './support/pathFetch.js';
 import { png, solidImage } from './support/sampleImages.js';
 import { signedInAs } from './support/signedInAs.js';
-import { emptyMovie } from '../src/media/emptyEntities.js';
+import { emptyBook, emptyMovie } from '../src/media/emptyEntities.js';
 
 const TMDB = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/original';
 const W780 = 'https://image.tmdb.org/t/p/w780';
 const W1280 = 'https://image.tmdb.org/t/p/w1280';
+const OL = 'https://covers.openlibrary.org/b/id';
 const GRID = 'https://cdn2.steamgriddb.com/grid/a.png';
 
 let api: TestApi;
@@ -67,6 +68,11 @@ beforeEach(async () => {
       [`${W780}/a.jpg`]: png(1000, 1500, 1),
       [`${W1280}/b.jpg`]: png(1920, 1080, 2),
       [`${W780}/s2.jpg`]: png(500, 750, 3),
+      'https://openlibrary.org/works/OL1W.json': { covers: [7] },
+      'https://openlibrary.org/works/OL1W/editions.json': {
+        entries: [{ covers: [8], languages: [{ key: '/languages/spa' }] }],
+      },
+      [`${OL}/8-L.jpg`]: await solidImage(300, 450),
       [GRID]: await solidImage(600, 900),
     }).fetch,
   );
@@ -170,6 +176,23 @@ describe('image candidates', () => {
     expect((await call('GET', `/api/games/${bare.id}/images/cover`)).json().candidates).toEqual([]);
   });
 
+  it('lists Open Library covers for books, edition language first', async () => {
+    const book = (
+      await api.app.inject({
+        method: 'POST',
+        url: '/api/books',
+        payload: { title: 'Akira', openLibraryId: 'OL1W' },
+      })
+    ).json();
+    const covers = (await call('GET', `/api/books/${book.id}/images/cover`)).json();
+    expect(covers.failures).toEqual([]);
+    expect(covers.candidates.map((c: { url: string }) => c.url)).toEqual([
+      `${OL}/8-L.jpg?default=false`,
+      `${OL}/7-L.jpg?default=false`,
+    ]);
+    expect(covers.candidates[0]).toMatchObject({ provider: 'openlibrary', language: 'es' });
+  });
+
   it('keeps the other providers when one fails', async () => {
     const game = (
       await api.app.inject({
@@ -250,6 +273,22 @@ describe('choosing and removing images', () => {
       expect(response.json().code).toBe('trusted_only');
     }
     expect(await api.store.list()).toEqual([]);
+  });
+
+  it('lets a normal user choose an Open Library cover for a book', async () => {
+    api = await createTestApi(pathFetch({ [`${OL}/8-L.jpg`]: await solidImage(300, 450) }).fetch, {
+      authenticator: signedInAs({ id: 1, name: 'Normal', email: null, role: 'normal' }),
+    });
+    const { id } = await api.books.create({
+      ...emptyBook(),
+      title: 'Akira',
+      openLibraryId: 'OL1W',
+    });
+    const response = await call('PUT', `/api/books/${id}/images/cover`, {
+      url: `${OL}/8-L.jpg?default=false`,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().cover).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
   });
 
   it('reports a failed download as 502 and leaves the entity alone', async () => {

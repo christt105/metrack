@@ -1,6 +1,7 @@
 import { AccountDeletionService } from '../account/AccountDeletionService.js';
 import { createEditServices } from '../api/createEditServices.js';
 import type { ImageProvider } from '../artwork/ImageProvider.js';
+import { OpenLibraryImageProvider } from '../artwork/OpenLibraryImageProvider.js';
 import { SteamGridDbImageProvider } from '../artwork/SteamGridDbImageProvider.js';
 import { TmdbImageProvider } from '../artwork/TmdbImageProvider.js';
 import { loadConfig } from '../config/loadConfig.js';
@@ -92,13 +93,9 @@ export function createWorkerServices(
       ),
     );
   }
-  titleProviders.register(
-    new OpenLibraryBookProvider(
-      new OpenLibraryClient(workerFetch, config.openLibraryLanguage),
-      books,
-      imageStore,
-    ),
-  );
+  const openLibrary = new OpenLibraryClient(workerFetch, config.openLibraryLanguage);
+  titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
+  imageProviders.push(new OpenLibraryImageProvider(openLibrary));
 
   const edit = createEditServices({
     sources: {
