@@ -4,8 +4,9 @@ import AuthLayout from '../components/AuthLayout.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 const props = defineProps<{ code: string }>();
 const api = useApi();
 const { data: preview, error } = useLoader(() => api.invitePreview(props.code));

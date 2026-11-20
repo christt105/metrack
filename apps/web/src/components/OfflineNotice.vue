@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useConnectivity } from '../composables/useConnectivity';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 const connectivity = useConnectivity();
 </script>
 

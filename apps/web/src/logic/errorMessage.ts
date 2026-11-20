@@ -1,8 +1,8 @@
 import { ApiRequestError } from '../api/ApiRequestError';
-import { messages } from '../i18n/messages';
+import type { Messages } from '../i18n/messages/Messages';
 
 /** A sentence for people describing why a call failed. */
-export function errorMessage(error: unknown): string {
+export function errorMessage(error: unknown, messages: Messages): string {
   if (error instanceof ApiRequestError) {
     if (error.code === 'network_error') return messages.errors.network;
     if (error.code === 'provider_not_configured') return messages.errors.providerNotConfigured;

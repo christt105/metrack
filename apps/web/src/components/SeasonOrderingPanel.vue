@@ -4,11 +4,12 @@ import type { EpisodeGroupOptions } from '@metrack/domain';
 import { sessionKey } from '../auth/sessionKey';
 import { ApiRequestError } from '../api/ApiRequestError';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { saveForAll } from '../logic/saveForAll';
 import ErrorNotice from './ErrorNotice.vue';
 import ManageDisclosure from './ManageDisclosure.vue';
 
+const messages = useMessages();
 const props = defineProps<{ seriesId: number; hasUnlinkedSeasons: boolean }>();
 const emit = defineEmits<{ changed: [] }>();
 

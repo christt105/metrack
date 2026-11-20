@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { RATING_LEVELS } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { ratingDisplay } from '../logic/ratingDisplay';
 import AppIcon from './AppIcon.vue';
 
+const messages = useMessages();
 defineProps<{ id?: string }>();
 const model = defineModel<number | null>({ required: true });
 
@@ -27,7 +28,7 @@ function choose(rating: number | null): void {
       @click="choose(level.rating)"
     >
       <AppIcon :name="level.icon" :size="20" />
-      <span>{{ ratingDisplay(level.rating).label }}</span>
+      <span>{{ ratingDisplay(level.rating, messages).label }}</span>
     </button>
     <button
       type="button"

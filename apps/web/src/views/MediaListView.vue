@@ -9,7 +9,7 @@ import LibraryWelcome from '../components/LibraryWelcome.vue';
 import MediaCard from '../components/MediaCard.vue';
 import { useApi } from '../composables/useApi';
 import { useLibraryCache } from '../composables/useLibraryCache';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { buildCards } from '../logic/buildCards';
 import {
   filtersFromQuery,
@@ -18,6 +18,7 @@ import {
   hasNarrowing,
 } from '../logic/filterQuery';
 
+const messages = useMessages();
 const api = useApi();
 const cache = useLibraryCache();
 const route = useRoute();

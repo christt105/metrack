@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { Viewing } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { todayIso } from '../logic/todayIso';
 import {
   formIsValid,
@@ -13,6 +13,7 @@ import {
 } from '../logic/viewingEdits';
 import ViewingRow from './ViewingRow.vue';
 
+const messages = useMessages();
 const props = defineProps<{ viewings: Viewing[]; busy: boolean }>();
 const emit = defineEmits<{ change: [viewings: Viewing[]] }>();
 

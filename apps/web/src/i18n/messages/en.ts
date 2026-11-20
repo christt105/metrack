@@ -11,8 +11,8 @@ import type {
   UserSettings,
 } from '@metrack/domain';
 
-/** Every user-facing text of the app. Translating the interface means replacing this module. */
-export const messages = {
+/** Every user-facing text of the app. The English dictionary; every other language fills the same shape. */
+export const en = {
   appName: 'metrack',
   offline: 'You are offline. Changes cannot be saved until the connection is back.',
   nav: {
@@ -724,9 +724,4 @@ export const messages = {
     rating: 'Rating',
     review: 'Review',
   },
-} as const;
-
-/** The label of an entity field, falling back to its key. */
-export function fieldLabel(key: string): string {
-  return (messages.fields as Record<string, string>)[key] ?? key;
-}
+};

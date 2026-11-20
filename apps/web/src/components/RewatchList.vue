@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import type { Collection, Viewing } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { todayIso } from '../logic/todayIso';
 import {
   formIsValid,
@@ -17,6 +17,7 @@ import ErrorNotice from './ErrorNotice.vue';
 import UndoToast from './UndoToast.vue';
 import ViewingRow from './ViewingRow.vue';
 
+const messages = useMessages();
 const TOAST_MS = 6000;
 
 const props = defineProps<{

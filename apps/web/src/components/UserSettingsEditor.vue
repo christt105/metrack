@@ -10,9 +10,10 @@ import {
 } from '@metrack/domain';
 import { ApiRequestError } from '../api/ApiRequestError';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{ user: User; settings: UserSettings; topicGenerated?: boolean }>();
 const emit = defineEmits<{ saved: [settings: UserSettings] }>();
 

@@ -4,10 +4,11 @@ import { INVITE_LIMITS, type Invite } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
 import { useSession } from '../composables/useSession';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { inviteUrl } from '../logic/inviteUrl';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const api = useApi();
 const session = useSession();
 const { data: invites, error: loadError, reload } = useLoader(() => api.listInvites());

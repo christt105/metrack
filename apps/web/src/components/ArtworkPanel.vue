@@ -3,11 +3,12 @@ import { computed, ref } from 'vue';
 import { sizedImageUrl, type Collection, type ImageKind } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { imageKindsOf } from '../logic/fieldSchemas';
 import ErrorNotice from './ErrorNotice.vue';
 import ImagePicker from './ImagePicker.vue';
 
+const messages = useMessages();
 const props = defineProps<{
   collection: Collection;
   detail: AnyDetail;

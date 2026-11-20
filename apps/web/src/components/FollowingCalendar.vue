@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { sizedImageUrl } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { addMonths } from '../logic/following/dates';
 import type { FollowingEvent } from '../logic/following/FollowingEvent';
 import { monthGrid } from '../logic/following/monthGrid';
 import AppIcon from './AppIcon.vue';
 import FollowingEventRow from './FollowingEventRow.vue';
 
+const messages = useMessages();
 const props = defineProps<{ events: FollowingEvent[]; today: string }>();
 
 const month = ref(props.today.slice(0, 7));

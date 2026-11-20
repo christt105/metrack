@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue';
 import { useApi } from '../composables/useApi';
 import { useSession } from '../composables/useSession';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const api = useApi();
 const session = useSession();
 const busy = ref(false);

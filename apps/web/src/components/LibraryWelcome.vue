@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 const router = useRouter();
 </script>
 

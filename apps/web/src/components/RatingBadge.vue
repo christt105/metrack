@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useMessages } from '../composables/useMessages';
 import { ratingDisplay } from '../logic/ratingDisplay';
 import AppIcon from './AppIcon.vue';
 
+const messages = useMessages();
+
 const props = defineProps<{ rating: number; compact?: boolean; size?: number }>();
-const display = computed(() => ratingDisplay(props.rating));
+const display = computed(() => ratingDisplay(props.rating, messages));
 </script>
 
 <template>

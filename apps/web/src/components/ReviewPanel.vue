@@ -4,10 +4,11 @@ import type { Collection } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { sessionKey } from '../auth/sessionKey';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { saveForAll } from '../logic/saveForAll';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{ collection: Collection; detail: AnyDetail }>();
 const emit = defineEmits<{ saved: [detail: AnyDetail] }>();
 

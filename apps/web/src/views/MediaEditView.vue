@@ -9,7 +9,8 @@ import ErrorNotice from '../components/ErrorNotice.vue';
 import FieldInput from '../components/FieldInput.vue';
 import FieldRow from '../components/FieldRow.vue';
 import { useApi } from '../composables/useApi';
-import { fieldLabel, messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
+import { fieldLabel } from '../i18n/fieldLabel';
 import { countFormChanges } from '../logic/countFormChanges';
 import type { FieldSchema, FieldSection } from '../logic/FieldSchema';
 import { fieldSchemas, isTracked } from '../logic/fieldSchemas';
@@ -19,6 +20,7 @@ import { openableLink } from '../logic/openableLink';
 import { saveForAll } from '../logic/saveForAll';
 import { statusOptions } from '../logic/statusOptions';
 
+const messages = useMessages();
 const props = defineProps<{ collection: Collection; id: number }>();
 
 const api = useApi();
@@ -147,7 +149,7 @@ async function save(): Promise<void> {
   invalid.value = null;
   let patch: Record<string, unknown>;
   try {
-    patch = buildPatch(schemas.value, current, draft.value);
+    patch = buildPatch(schemas.value, current, draft.value, messages);
   } catch (cause) {
     if (cause instanceof DraftError) invalid.value = { key: cause.key, reason: cause.message };
     else error.value = cause;
@@ -211,7 +213,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
             <FieldRow
               v-if="section === 'tracking' && tracked"
               :id="fieldId('status')"
-              :label="fieldLabel('status')"
+              :label="fieldLabel(messages, 'status')"
             >
               <select :id="fieldId('status')" v-model="status">
                 <option v-for="option in options" :key="option" :value="option">
@@ -223,7 +225,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
               v-for="schema in fieldsOf(section)"
               :id="fieldId(schema.key)"
               :key="schema.key"
-              :label="fieldLabel(schema.key)"
+              :label="fieldLabel(messages, schema.key)"
               :edited="isEdited(schema.key)"
               :released="releases.includes(schema.key)"
               :hint="

@@ -3,10 +3,11 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Collection } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import AppIcon from './AppIcon.vue';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{
   collection: Collection;
   id: number;

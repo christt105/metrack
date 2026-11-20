@@ -5,9 +5,10 @@ import AppIcon from './components/AppIcon.vue';
 import DeletionBanner from './components/DeletionBanner.vue';
 import OfflineNotice from './components/OfflineNotice.vue';
 import { useSession } from './composables/useSession';
-import { messages } from './i18n/messages';
+import { useMessages } from './composables/useMessages';
 import { NAV_ITEMS } from './logic/mainNavItems';
 
+const messages = useMessages();
 const session = useSession();
 const route = useRoute();
 const router = useRouter();

@@ -3,8 +3,9 @@ import ErrorNotice from '../components/ErrorNotice.vue';
 import UnlinkedRow from '../components/UnlinkedRow.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 const api = useApi();
 const { data, error, loading, reload } = useLoader(() => api.listUnlinked());
 </script>

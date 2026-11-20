@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { en } from '../src/i18n/messages/en';
 import { fieldSchemas } from '../src/logic/fieldSchemas';
 import { buildPatch, DraftError, parseList, toDraft } from '../src/logic/formDraft';
 
@@ -32,7 +33,7 @@ describe('parseList', () => {
 
 describe('buildPatch', () => {
   it('is empty when nothing changed', () => {
-    expect(buildPatch(schemas, movie, toDraft(schemas, movie))).toEqual({});
+    expect(buildPatch(schemas, movie, toDraft(schemas, movie), en)).toEqual({});
   });
 
   it('sends only the changed fields with typed values', () => {
@@ -41,7 +42,7 @@ describe('buildPatch', () => {
     draft.genres = 'Crime, Thriller';
     draft.tmdbId = '';
     draft.director = ' Michael Mann ';
-    expect(buildPatch(schemas, movie, draft)).toEqual({
+    expect(buildPatch(schemas, movie, draft, en)).toEqual({
       rating: 7,
       genres: ['Crime', 'Thriller'],
       tmdbId: null,
@@ -52,17 +53,17 @@ describe('buildPatch', () => {
   it('rejects a blank required field', () => {
     const draft = toDraft(schemas, movie);
     draft.title = '  ';
-    expect(() => buildPatch(schemas, movie, draft)).toThrow(DraftError);
+    expect(() => buildPatch(schemas, movie, draft, en)).toThrow(DraftError);
   });
 
   it('rejects an out of range rating and a non integer id', () => {
     const draft = toDraft(schemas, movie);
     for (const bad of ['0', '8', '5.5', '11']) {
       draft.rating = bad;
-      expect(() => buildPatch(schemas, movie, draft)).toThrow(DraftError);
+      expect(() => buildPatch(schemas, movie, draft, en)).toThrow(DraftError);
     }
     draft.rating = '6';
     draft.tmdbId = '1.5';
-    expect(() => buildPatch(schemas, movie, draft)).toThrow(DraftError);
+    expect(() => buildPatch(schemas, movie, draft, en)).toThrow(DraftError);
   });
 });

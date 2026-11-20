@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { MEDIA_TYPE_OF_COLLECTION } from '@metrack/domain';
 import type { Collection, Season, SeriesDetail } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { isTracked } from '../logic/fieldSchemas';
 import ArtworkPanel from './ArtworkPanel.vue';
 import DeleteEntry from './DeleteEntry.vue';
@@ -13,6 +13,7 @@ import MetadataRefresh from './MetadataRefresh.vue';
 import RewatchList from './RewatchList.vue';
 import SeasonOrderingPanel from './SeasonOrderingPanel.vue';
 
+const messages = useMessages();
 const props = defineProps<{
   rewatchesLocked?: boolean;
   collection: Collection;

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { UnmatchedEpisode } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { groupUnmatched, tmdbSeriesUrl } from '../logic/groupUnmatched';
 
+const messages = useMessages();
 const props = defineProps<{
   unmatched: readonly UnmatchedEpisode[];
   tmdbId: number | null;

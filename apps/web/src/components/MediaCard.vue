@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { sizedImageUrl } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import type { LibraryCard } from '../logic/buildCards';
 import { detailPath } from '../logic/mediaRoutes';
 import PendingBadge from './PendingBadge.vue';
 import RatingBadge from './RatingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 
+const messages = useMessages();
 const props = defineProps<{ card: LibraryCard; eager?: boolean }>();
 const to = computed(() => detailPath(props.card.type, props.card.id));
 const meta = computed(() => {

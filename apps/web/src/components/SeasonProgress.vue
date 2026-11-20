@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 const props = defineProps<{
   watched: number | null;
   total: number | null;

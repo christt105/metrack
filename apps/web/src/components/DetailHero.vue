@@ -2,13 +2,14 @@
 import { computed } from 'vue';
 import { sizedImageUrl, type MediaStatus } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { bannerSources } from '../logic/bannerSources';
 import { readDetailFacts } from '../logic/readDetailFacts';
 import PendingBadge from './PendingBadge.vue';
 import RatingBadge from './RatingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
 
+const messages = useMessages();
 const props = defineProps<{
   detail: AnyDetail;
   title: string;

@@ -8,12 +8,15 @@ import { Connectivity } from './connectivity/Connectivity';
 import { connectivityKey } from './connectivity/connectivityKey';
 import { Session } from './auth/Session';
 import { sessionKey } from './auth/sessionKey';
+import { Locale } from './i18n/Locale';
+import { localeKey } from './i18n/localeKey';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { createAppRouter } from './router/createAppRouter';
 import { installAuthGuard } from './router/installAuthGuard';
 import './style.css';
 
 const connectivity = new Connectivity(window, navigator.onLine);
+const locale = new Locale(navigator.languages);
 const libraryCache = new LibraryCache();
 const api = new ApiClient(
   undefined,
@@ -34,6 +37,7 @@ createApp(App)
   .provide(sessionKey, session)
   .provide(libraryCacheKey, libraryCache)
   .provide(connectivityKey, connectivity)
+  .provide(localeKey, locale)
   .use(router)
   .mount('#app');
 

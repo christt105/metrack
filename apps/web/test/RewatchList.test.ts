@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import RewatchList from '../src/components/RewatchList.vue';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { mountWithApi } from './mountWithApi';
-import { messages } from '../src/i18n/messages';
+import { en as messages } from '../src/i18n/messages/en';
 
 enableAutoUnmount(afterEach);
 
