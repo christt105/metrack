@@ -146,16 +146,16 @@ const meta = computed(() =>
   gap: var(--s-6);
   align-items: end;
   padding: 0 var(--s-6);
-  margin-top: -110px;
 }
 
 .no-banner .head {
-  margin-top: 0;
   padding: 0;
 }
 
 .poster {
   position: relative;
+  align-self: start;
+  margin-top: -110px;
   aspect-ratio: 2 / 3;
   overflow: hidden;
   border: 1px solid var(--outline-strong);
@@ -165,6 +165,7 @@ const meta = computed(() =>
 }
 
 .no-banner .poster {
+  margin-top: 0;
   box-shadow: none;
 }
 
@@ -189,7 +190,7 @@ const meta = computed(() =>
   align-items: flex-start;
   gap: var(--s-2);
   min-width: 0;
-  padding-bottom: var(--s-2);
+  padding: var(--s-4) 0 var(--s-2);
   animation: rise 700ms var(--ease-enter) 80ms both;
 }
 
@@ -311,6 +312,9 @@ h1 {
     grid-template-columns: 132px minmax(0, 1fr);
     gap: var(--s-4);
     padding: 0 var(--s-3);
+  }
+
+  .poster {
     margin-top: -64px;
   }
 
@@ -335,15 +339,11 @@ h1 {
     grid-template-columns: 1fr;
     align-items: start;
     padding: 0;
-    margin-top: -56px;
   }
 
   .poster {
     width: 120px;
-  }
-
-  .no-banner .head {
-    margin-top: 0;
+    margin-top: -56px;
   }
 
   .actions {

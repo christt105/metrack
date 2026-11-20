@@ -54,3 +54,16 @@ describe('renderMarkdown', () => {
     );
   });
 });
+
+describe('renderMarkdown image path', () => {
+  it('serves stored images from the given path instead of the public address', () => {
+    const hash = 'c'.repeat(64);
+    const html = renderMarkdown(`![x](/api/images/${hash})`, {
+      handle: 'me',
+      origin: '',
+      imagePath: (value) => `/private/${value}`,
+      linkFor: () => null,
+    });
+    expect(html).toBe(`<p><img src="/private/${hash}" alt="x" loading="lazy"></p>`);
+  });
+});

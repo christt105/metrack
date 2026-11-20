@@ -5,6 +5,7 @@ import type { AnyDetail } from '../api/AnyDetail';
 import { sessionKey } from '../auth/sessionKey';
 import { useApi } from '../composables/useApi';
 import { useMessages } from '../composables/useMessages';
+import { renderReview } from '../logic/renderReview';
 import { saveForAll } from '../logic/saveForAll';
 import ErrorNotice from './ErrorNotice.vue';
 
@@ -21,6 +22,7 @@ const error = ref<unknown>(null);
 
 const pending = computed(() => 'pendingReview' in props.detail && props.detail.pendingReview);
 const review = computed(() => ('review' in props.detail ? props.detail.review : null));
+const reviewHtml = computed(() => (review.value ? renderReview(review.value) : ''));
 
 function edit(): void {
   text.value = review.value ?? '';
@@ -91,7 +93,8 @@ async function save(publish = false): Promise<void> {
     <template v-else>
       <blockquote v-if="review" class="review">
         <span class="eyebrow">{{ messages.hero.yourReview }}</span>
-        {{ review }}
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div class="review-body" v-html="reviewHtml"></div>
       </blockquote>
       <button type="button" class="edit-review" @click="edit">
         {{ review ? messages.hero.editReview : messages.hero.addReview }}
@@ -125,9 +128,32 @@ textarea {
   border-left: 2px solid var(--primary);
   background: var(--surface-low);
   border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  font-style: italic;
+  min-width: 0;
   line-height: 1.7;
-  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.review-body > :deep(:first-child) {
+  margin-top: 0;
+}
+
+.review-body > :deep(:last-child) {
+  margin-bottom: 0;
+}
+
+.review-body :deep(img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-sm);
+}
+
+.review-body :deep(pre) {
+  overflow-x: auto;
+}
+
+.review-body :deep(a) {
+  color: var(--primary);
 }
 
 .review .eyebrow {

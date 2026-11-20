@@ -1,5 +1,5 @@
 import { escapeHtml } from '@metrack/export';
-import { imageSrc } from '../imageSrc.js';
+import { imageSrc, ownImageHash } from '../imageSrc.js';
 import type { MarkdownContext } from './MarkdownContext.js';
 
 const SAFE_LINK = /^(https?:\/\/|mailto:)/i;
@@ -15,7 +15,11 @@ export function renderInline(source: string, context: MarkdownContext): string {
     keep(`<code>${escapeHtml(code)}</code>`),
   );
   text = text.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_whole, alt: string, target: string) => {
-    const src = imageSrc(target, context.handle, 'cover', context.origin);
+    const hash = ownImageHash(target);
+    const src =
+      hash !== null && context.imagePath
+        ? context.imagePath(hash)
+        : imageSrc(target, context.handle, 'cover', context.origin);
     return src === null
       ? escapeHtml(alt)
       : keep(`<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy">`);
