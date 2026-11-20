@@ -130,6 +130,8 @@ export type { PublicPagePatch } from './api/PublicPagePatch.js';
 export { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from './handle/HANDLE_LENGTH.js';
 export { RESERVED_HANDLES } from './handle/RESERVED_HANDLES.js';
 export { handleProblem } from './handle/handleProblem.js';
+export { handleProblemKind } from './handle/handleProblemKind.js';
+export type { HandleProblemRule } from './handle/HandleProblemRule.js';
 export { normalizeHandle } from './handle/normalizeHandle.js';
 export { PUBLIC_PAGE_LIMITS } from './publicPage/PUBLIC_PAGE_LIMITS.js';
 export { isGiscusRepo } from './publicPage/isGiscusRepo.js';

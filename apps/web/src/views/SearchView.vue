@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { SEARCHABLE_TYPES } from '@metrack/domain';
+import { SEARCHABLE_TYPES, canAddByHand } from '@metrack/domain';
 import type { SearchResult, SearchableType } from '@metrack/domain';
 import { ApiRequestError } from '../api/ApiRequestError';
+import { sessionKey } from '../auth/sessionKey';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import ManualAddForm from '../components/ManualAddForm.vue';
 import SearchResultCard from '../components/SearchResultCard.vue';
@@ -21,6 +22,17 @@ const results = ref<SearchResult[] | null>(null);
 const searching = ref(false);
 const adding = ref(false);
 const error = ref<unknown>(null);
+
+const session = inject(sessionKey, null);
+const mayAddByHand = computed(() => {
+  const user = session?.user.value;
+  return user ? canAddByHand(user.role) : true;
+});
+const nothingFound = computed(
+  () =>
+    (results.value !== null && results.value.length === 0) ||
+    (error.value instanceof ApiRequestError && error.value.code === 'provider_not_configured'),
+);
 
 const manualCollection = computed(() =>
   type.value === 'videogame' ? 'games' : type.value === 'book' ? 'books' : null,
@@ -97,6 +109,9 @@ async function add(result: SearchResult): Promise<void> {
     </form>
     <ErrorNotice :error="error" />
     <p v-if="results && results.length === 0" class="muted">{{ messages.search.noResults }}</p>
+    <p v-if="manualCollection && nothingFound" class="muted" data-test="manual-hint">
+      {{ mayAddByHand ? messages.search.manualAfterSearch : messages.search.manualAskOwner }}
+    </p>
     <div class="results">
       <SearchResultCard
         v-for="result in results ?? []"

@@ -12,7 +12,14 @@ const emit = defineEmits<{ saved: [] }>();
 const api = useApi();
 const busy = ref(false);
 const error = ref<unknown>(null);
+const copied = ref(false);
 const link = computed(() => (props.topic === null ? null : ntfySubscriptionUrl(props.topic)));
+
+async function copy(): Promise<void> {
+  if (link.value === null) return;
+  await navigator.clipboard.writeText(link.value);
+  copied.value = true;
+}
 
 async function change(action: () => Promise<unknown>): Promise<void> {
   busy.value = true;
@@ -46,6 +53,9 @@ const turnOff = () => change(() => api.clearNtfyTopic());
           link
         }}</a>
       </p>
+      <button type="button" data-test="ntfy-copy" @click="copy">
+        {{ copied ? messages.ntfyAlerts.copied : messages.ntfyAlerts.copy }}
+      </button>
       <p class="muted">{{ messages.ntfyAlerts.secret }}</p>
       <button type="button" data-test="ntfy-regenerate" :disabled="busy" @click="regenerate">
         {{ messages.ntfyAlerts.regenerate }}

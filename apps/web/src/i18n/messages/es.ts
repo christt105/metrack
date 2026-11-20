@@ -1,4 +1,5 @@
 import type {
+  HandleProblemRule,
   InviteStatus,
   UserRole,
   TokenScope,
@@ -10,6 +11,7 @@ import type {
   RatingIcon,
   EditableSetting,
 } from '@metrack/domain';
+import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from '@metrack/domain';
 import type { Messages } from './Messages';
 
 const LOCALE = 'es-ES';
@@ -44,7 +46,8 @@ export const es: Messages = {
   },
   landing: {
     title: 'Todo lo que ves y juegas, en una sola biblioteca.',
-    lead: 'metrack guarda tus películas, series y juegos con sus carteles, notas y reseñas, sigue las temporadas que están por llegar y se rellena solo con lo que reproduces en Jellyfin.',
+    lead: 'metrack guarda tus películas, series y juegos con sus carteles, notas y reseñas, sigue las temporadas que están por llegar y, si usas Jellyfin, puede rellenarse solo con lo que reproduces allí (opcional).',
+    googleNote: 'Entras con tu cuenta de Google.',
     access: 'Solo se entra con invitación.',
     facts: [
       'Películas',
@@ -95,7 +98,7 @@ export const es: Messages = {
     network: 'No se puede conectar con el servicio.',
     notFound: 'Este elemento no existe.',
     providerNotConfigured:
-      'Este proveedor aún no está configurado en el servidor (TMDB para películas y series, IGDB para juegos). Aun así, puedes añadir el título a mano.',
+      'Este proveedor aún no está configurado en el servidor (TMDB para películas y series, IGDB para juegos).',
     noMetadataSource: 'No hay ninguna fuente de metadatos para este tipo de título.',
     generic: 'Algo ha salido mal.',
   },
@@ -117,7 +120,7 @@ export const es: Messages = {
     welcomePoints: [
       'Busca y añade películas, series, juegos y libros.',
       'Sigue los próximos estrenos y recibe un aviso cuando lleguen.',
-      'Comparte tu biblioteca en una página pública.',
+      'Comparte tu biblioteca en una página pública (está desactivada hasta que la actives en los ajustes).',
     ],
     welcomeHelp: '¿Cómo funciona? Lee la ayuda.',
     welcomeAction: 'Añadir título',
@@ -369,6 +372,8 @@ export const es: Messages = {
     addTitle: 'Añadir a la biblioteca',
     manualHeading: 'Añadir a mano',
     manualHint: 'Crea la entrada ahora y rellena el resto en su página.',
+    manualAfterSearch: '¿No lo encuentras? Puedes añadir el título a mano más abajo.',
+    manualAskOwner: '¿No lo encuentras? Pídele al propietario que lo añada.',
     manualTrustedOnly:
       'Solo los usuarios de confianza pueden añadir elementos que ningún proveedor conoce. Pídeselo al propietario si lo necesitas.',
     manualTitle: 'Título',
@@ -412,6 +417,7 @@ export const es: Messages = {
     waitingTitle: 'Aún sin anunciar',
     dataNote:
       'Los próximos episodios salen de la comprobación de estrenos, que solo se ejecuta en las cuentas con los avisos de estrenos activados. Sin ella, solo se muestra la fecha de una nueva temporada.',
+    dataNoteLink: 'Activa los avisos de estrenos en los ajustes.',
     previousMonth: 'Mes anterior',
     nextMonth: 'Mes siguiente',
     thisMonth: 'Hoy',
@@ -515,7 +521,7 @@ export const es: Messages = {
   },
   publicPage: {
     title: 'Página pública',
-    hint: 'Comparte tu biblioteca, los elementos terminados y las reseñas confirmadas en una dirección pública que no pide iniciar sesión. Los elementos pendientes de revisión nunca aparecen. Se pide a los buscadores que no la indexen.',
+    hint: 'Comparte toda tu biblioteca con sus notas y reseñas en una dirección pública que no pide iniciar sesión, más un feed RSS de lo que has terminado. Está desactivada hasta que la actives abajo. Los elementos pendientes de revisión nunca aparecen. Se pide a los buscadores que no la indexen.',
     handle: 'Nombre de usuario',
     handleHint: 'Letras minúsculas, dígitos y «-», de 3 a 30 caracteres.',
     enabled: 'Activar la página',
@@ -561,7 +567,9 @@ export const es: Messages = {
   },
   ntfyAlerts: {
     title: 'Avisos de estrenos',
-    hint: 'Recibe una notificación en el móvil cuando algo que sigues se estrene o esté disponible. Actívalos para obtener un tema privado de ntfy y suscríbete con el enlace de abajo en la app de ntfy o en el navegador.',
+    hint: 'Recibe una notificación en el móvil cuando algo que sigues se estrene o esté disponible. ntfy es una app gratuita que entrega notificaciones push. Instálala en el móvil, activa los avisos para obtener un tema privado y abre desde ese móvil el enlace de abajo: se abre ntfy y te suscribe. Abrirlo en un ordenador solo muestra una página web.',
+    copy: 'Copiar',
+    copied: 'Copiado.',
     link: 'Suscríbete en',
     secret: 'Cualquiera con este enlace puede leer tus avisos, así que no lo compartas.',
     turnOn: 'Activar los avisos de estrenos',
@@ -659,6 +667,7 @@ export const es: Messages = {
     nobody: 'Nadie la ha usado todavía.',
     page: {
       title: (inviter: string) => `${inviter} te invita a metrack`,
+      titleNeutral: 'Invitación a metrack',
       signIn: 'Iniciar sesión con Google',
       problem: {
         expired: 'Esta invitación ha caducado. Pide una nueva.',
@@ -672,11 +681,18 @@ export const es: Messages = {
   },
   welcome: {
     title: 'Te damos la bienvenida a metrack',
-    hint: 'Confirma cómo apareces en la app y la dirección de tu página pública. Puedes cambiar ambas cosas más tarde en los ajustes.',
+    hint: 'Confirma cómo apareces en la app y el nombre de tu página pública. La página empieza desactivada y nadie la ve hasta que la actives en los ajustes. Puedes cambiar ambas cosas más tarde.',
     name: 'Tu nombre',
     handle: 'El nombre de tu página',
-    handleHint: 'Tu página pública estará en /u/<nombre>/. Letras minúsculas, dígitos y «-».',
-    handleProblem: (problem: string) => `El nombre de la página debe ser ${problem}.`,
+    handleHint: (address: string) =>
+      `Si la activas, tu página pública estará en ${address}. Letras minúsculas, dígitos y «-».`,
+    handlePlaceholder: '<nombre>',
+    handleProblem: (kind: HandleProblemRule) =>
+      ({
+        length: `El nombre de la página debe tener de ${HANDLE_MIN_LENGTH} a ${HANDLE_MAX_LENGTH} caracteres.`,
+        characters: 'El nombre de la página solo puede usar letras minúsculas, dígitos y «-».',
+        reserved: 'Ese nombre de página está reservado. Elige otro.',
+      })[kind],
     submit: 'Continuar',
     errors: {
       handle_taken: 'Otro usuario ya tiene ese nombre de página. Elige otro.',
@@ -806,8 +822,8 @@ export const es: Messages = {
         id: 'public',
         title: 'Tu página pública',
         steps: [
-          'Tu página pública enseña tu biblioteca, los títulos terminados y las reseñas confirmadas en una dirección que no pide iniciar sesión. Los títulos pendientes de revisión nunca aparecen y se pide a los buscadores que no la indexen.',
-          'Para apagarla, abre Ajustes, Perfil, «Página pública» y desmarca «Activar la página».',
+          'Tu página pública enseña toda tu biblioteca con sus notas y reseñas en una dirección que no pide iniciar sesión, y su feed RSS lista lo que has terminado. Los títulos pendientes de revisión nunca aparecen y se pide a los buscadores que no la indexen.',
+          'Empieza desactivada. Para activarla o apagarla, abre Ajustes, Perfil, «Página pública» y marca o desmarca «Activar la página».',
         ],
       },
       {

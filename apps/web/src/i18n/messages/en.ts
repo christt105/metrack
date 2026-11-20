@@ -1,4 +1,5 @@
 import type {
+  HandleProblemRule,
   InviteStatus,
   UserRole,
   TokenScope,
@@ -10,6 +11,7 @@ import type {
   RatingIcon,
   EditableSetting,
 } from '@metrack/domain';
+import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from '@metrack/domain';
 
 /** Every user-facing text of the app. The English dictionary; every other language fills the same shape. */
 export const en = {
@@ -24,7 +26,8 @@ export const en = {
   },
   landing: {
     title: 'Everything you watch and play, in one library.',
-    lead: 'metrack keeps your films, series and games with their posters, ratings and reviews, follows the seasons still to come and fills itself in from what you play on Jellyfin.',
+    lead: 'metrack keeps your films, series and games with their posters, ratings and reviews, follows the seasons still to come and, if you use Jellyfin, can fill itself in from what you play there (optional).',
+    googleNote: 'You sign in with your Google account.',
     access: 'Sign-in is by invitation.',
     facts: ['Films', 'Series', 'Games', 'Books', 'Jellyfin sync', 'Release alerts'],
     otherWays: 'Other ways to sign in',
@@ -67,7 +70,7 @@ export const en = {
     network: 'The service cannot be reached.',
     notFound: 'This item does not exist.',
     providerNotConfigured:
-      'This provider is not set up on the server yet (TMDB for movies and series, IGDB for games). You can still add the title by hand.',
+      'This provider is not set up on the server yet (TMDB for movies and series, IGDB for games).',
     noMetadataSource: 'There is no metadata source for this kind of title.',
     generic: 'Something went wrong.',
   },
@@ -89,7 +92,7 @@ export const en = {
     welcomePoints: [
       'Search and add movies, series, games and books.',
       'Follow upcoming releases and get an alert when they arrive.',
-      'Share your library on a public page.',
+      'Share your library on a public page (it is off until you turn it on in the settings).',
     ],
     welcomeHelp: 'How does it work? Read the help.',
     welcomeAction: 'Add title',
@@ -339,6 +342,8 @@ export const en = {
     addTitle: 'Add to library',
     manualHeading: 'Add by hand',
     manualHint: 'Create the entry now and fill in the rest on its page.',
+    manualAfterSearch: 'Cannot find it? You can still add the title by hand below.',
+    manualAskOwner: 'Cannot find it? Ask the owner to add it.',
     manualTrustedOnly:
       'Only trusted users can add items no provider knows. Ask the owner if you need one.',
     manualTitle: 'Title',
@@ -399,6 +404,7 @@ export const en = {
     waitingTitle: 'Nothing announced yet',
     dataNote:
       'Next episodes come from the release check, which runs for accounts with release alerts on. Without it, only the date of a new season shows.',
+    dataNoteLink: 'Turn on release alerts in the settings.',
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     thisMonth: 'Today',
@@ -502,7 +508,7 @@ export const en = {
   },
   publicPage: {
     title: 'Public page',
-    hint: 'Share your library, finished items and confirmed reviews at a public address that needs no sign-in. Items waiting for review never appear. Search engines are asked to stay away.',
+    hint: 'Share your whole library with its ratings and reviews at a public address that needs no sign-in, plus an RSS feed of what you finished. It is off until you turn it on below. Items waiting for review never appear. Search engines are asked to stay away.',
     handle: 'Handle',
     handleHint: 'Lowercase letters, digits and "-", 3 to 30 characters.',
     enabled: 'Turn the page on',
@@ -546,7 +552,9 @@ export const en = {
   },
   ntfyAlerts: {
     title: 'Release alerts',
-    hint: 'Get a notification on your phone when something you follow premieres or becomes available. Turn them on to get a private ntfy topic, then subscribe to it with the link below in the ntfy app or in the browser.',
+    hint: 'Get a notification on your phone when something you follow premieres or becomes available. ntfy is a free app that delivers push notifications. Install it on your phone, turn the alerts on to get a private topic, then open the link below on that phone: it opens ntfy and subscribes you. Opening it on a computer only shows a web page.',
+    copy: 'Copy',
+    copied: 'Copied.',
     link: 'Subscribe at',
     secret: 'Anyone with this link can read your alerts, so do not share it.',
     turnOn: 'Turn on release alerts',
@@ -640,6 +648,7 @@ export const en = {
     nobody: 'Nobody has used it yet.',
     page: {
       title: (inviter: string) => `${inviter} invites you to metrack`,
+      titleNeutral: 'Invitation to metrack',
       signIn: 'Sign in with Google',
       problem: {
         expired: 'This invitation has expired. Ask for a new one.',
@@ -653,11 +662,18 @@ export const en = {
   },
   welcome: {
     title: 'Welcome to metrack',
-    hint: 'Confirm how you appear in the app and the address of your public page. You can change both later in the settings.',
+    hint: 'Confirm how you appear in the app and the name of your public page. The page starts turned off and nobody can see it until you turn it on in the settings. You can change both later.',
     name: 'Your name',
     handle: 'Your page name',
-    handleHint: 'Your public page will live at /u/<name>/. Lowercase letters, digits and "-".',
-    handleProblem: (problem: string) => `The page name must be ${problem}.`,
+    handleHint: (address: string) =>
+      `If you turn it on, your public page will live at ${address}. Lowercase letters, digits and "-".`,
+    handlePlaceholder: '<name>',
+    handleProblem: (kind: HandleProblemRule) =>
+      ({
+        length: `The page name must be ${HANDLE_MIN_LENGTH} to ${HANDLE_MAX_LENGTH} characters long.`,
+        characters: 'The page name can only use lowercase letters, digits and "-".',
+        reserved: 'That page name is reserved. Pick a different one.',
+      })[kind],
     submit: 'Continue',
     errors: {
       handle_taken: 'Another user already has that page name. Pick a different one.',
@@ -787,8 +803,8 @@ export const en = {
         id: 'public',
         title: 'Your public page',
         steps: [
-          'Your public page shows your library, finished titles and confirmed reviews at an address that needs no sign-in. Titles waiting for review never appear, and search engines are asked not to index it.',
-          'To turn it off, open Settings, Profile, "Public page" and clear "Turn the page on".',
+          'Your public page shows your whole library with its ratings and reviews at an address that needs no sign-in, and its RSS feed lists what you finished. Titles waiting for review never appear, and search engines are asked not to index it.',
+          'It starts turned off. To turn it on or off, open Settings, Profile, "Public page" and tick or clear "Turn the page on".',
         ],
       },
       {

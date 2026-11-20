@@ -105,6 +105,12 @@ describe('LoginView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/watchlist');
   });
 
+  it('says sign-in is with a Google account and that Jellyfin is optional', async () => {
+    const { wrapper } = await mountLogin({ devUsers: async () => null });
+    expect(wrapper.find('[data-test="google-note"]').text()).toContain('Google account');
+    expect(wrapper.text()).toContain('if you use Jellyfin');
+  });
+
   it('offers only the token form when dev login is off', async () => {
     const { wrapper } = await mountLogin({ devUsers: async () => null });
     expect(wrapper.text()).toContain('Sign in with an access token');

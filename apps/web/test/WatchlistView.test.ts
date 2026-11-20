@@ -74,6 +74,9 @@ describe('WatchlistView', () => {
     });
     await flushPromises();
     expect(wrapper.find('.waiting').text()).toContain('Lupin');
+    expect(wrapper.find('[data-test="alerts-settings-link"]').attributes('href')).toBe(
+      '/settings#connections',
+    );
     await showAll(wrapper);
     const text = wrapper.text();
     expect(text).toContain('Lupin');

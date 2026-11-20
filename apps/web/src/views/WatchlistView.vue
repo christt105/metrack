@@ -87,7 +87,12 @@ const sentAt = (iso: string): string => iso.slice(0, 16).replace('T', ' ');
         </section>
         <section v-if="waiting.length" class="group">
           <h2>{{ messages.watchlist.waitingTitle }}</h2>
-          <p class="muted note">{{ messages.watchlist.dataNote }}</p>
+          <p class="muted note">
+            {{ messages.watchlist.dataNote }}
+            <RouterLink to="/settings#connections" data-test="alerts-settings-link">{{
+              messages.watchlist.dataNoteLink
+            }}</RouterLink>
+          </p>
           <ul class="waiting">
             <li v-for="entry in waiting" :key="`${entry.type}-${entry.id}`">
               <RouterLink :to="`/${entry.type === 'movie' ? 'movies' : 'series'}/${entry.id}`">

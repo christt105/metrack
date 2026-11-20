@@ -15,6 +15,7 @@ describe('InviteView', () => {
     const { wrapper, invitePreview } = await open('valid');
     expect(invitePreview).toHaveBeenCalledWith('abc-123');
     expect(wrapper.text()).toContain('Christian invites you to metrack');
+    expect(wrapper.find('[data-test="google-note"]').text()).toContain('Google account');
     const button = wrapper.find('a.google');
     expect(button.text()).toBe('Sign in with Google');
     expect(button.attributes('href')).toBe('/api/auth/google/start?invite=abc-123');
@@ -29,5 +30,12 @@ describe('InviteView', () => {
     const { wrapper } = await open(status);
     expect(wrapper.find('a.google').exists()).toBe(false);
     expect(wrapper.find('[data-test="invite-problem"]').text()).toContain(text);
+  });
+
+  it('shows a neutral title and no inviter name for an unknown link', async () => {
+    const invitePreview = vi.fn().mockResolvedValue({ status: 'unknown', inviter: '' });
+    const { wrapper } = await mountWithApi(InviteView, { invitePreview }, { code: 'nope' });
+    await flushPromises();
+    expect(wrapper.find('[data-test="invite-title"]').text()).toBe('Invitation to metrack');
   });
 });

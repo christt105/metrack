@@ -3,6 +3,7 @@
   "name": "metrack",
   "short_name": "metrack",
   "description": "Registra las películas, series, libros y juegos que ves, lees y juegas.",
+  "lang": "es",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
