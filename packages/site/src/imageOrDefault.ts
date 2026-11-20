@@ -4,5 +4,5 @@ import { assetPath } from './sitePaths.js';
 
 /** Where a cover loads from: the item's own, or the shared placeholder when it has none. */
 export function coverSrc(ref: string | null, handle: string, display: ImageDisplay): string {
-  return imageSrc(ref, handle, display) ?? assetPath('default-poster.webp');
+  return imageSrc(ref, handle, display) ?? assetPath('default-poster.svg');
 }
