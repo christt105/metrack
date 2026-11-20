@@ -19,6 +19,9 @@ import { jsonResponse } from './jsonResponse.js';
 import { ApiRoutes } from './ApiRoutes.js';
 import type { ApiEnv } from './ApiEnv.js';
 import type { StaticFiles } from '../web/StaticFiles.js';
+import { registerSteamRoutes } from './registerSteamRoutes.js';
+import type { SteamIdResolver } from '../steam/SteamIdResolver.js';
+import type { SteamImportService } from '../steam/SteamImportService.js';
 import { registerSyncRoutes } from './registerSyncRoutes.js';
 import { registerWatchlistRoutes } from './registerWatchlistRoutes.js';
 import { registerTitleRoutes } from './registerTitleRoutes.js';
@@ -75,6 +78,8 @@ export interface AppDeps {
   edit?: EditServices;
   backup?: BackupRouteDeps;
   sync?: UserSyncServices;
+  /** Imports the Steam library of the signed-in user; Steam routes answer 501 without it. */
+  steam?: SteamImportService;
   syncQueues?: UserQueues;
   /** Shows each user their settings and lets the owner change everyone's. */
   settings?: {
@@ -83,6 +88,8 @@ export interface AppDeps {
     profiles: PublicProfileRepository;
     /** When set, users turn release alerts on, regenerate and turn them off themselves and the topic is never typed. */
     generateNtfyTopic?: () => string;
+    /** Turns a typed Steam profile into its SteamID64; vanity names need a Steam API key. */
+    steamIds?: SteamIdResolver;
   };
   /** The owner's invitation links, and the public page that previews one. */
   invites?: InviteService;
@@ -134,6 +141,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
         backups: deps.backup !== undefined,
         sync: deps.sync !== undefined,
         googleLogin: deps.auth?.google !== undefined,
+        steam: deps.steam !== undefined,
       },
     );
     return jsonResponse(report, report.status === 'ok' ? 200 : 503);
@@ -158,6 +166,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   }
   if (deps.watch) registerWatchlistRoutes(routes, deps.watch.watchlist, deps.watch.alerts);
   registerSyncRoutes(routes, deps.sync, deps.syncQueues, deps.syncWebhookSecret);
+  registerSteamRoutes(routes, deps.steam);
   if (deps.connector) registerConnectorRoutes(routes, deps.connector);
   if (deps.settings)
     registerSettingsRoutes(
@@ -167,6 +176,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       deps.settings.profiles,
       deps.imageStore,
       deps.settings.generateNtfyTopic,
+      deps.settings.steamIds,
     );
   if (deps.account) registerAccountRoutes(routes, deps.account);
   if (deps.invites) registerInviteRoutes(routes, deps.invites);

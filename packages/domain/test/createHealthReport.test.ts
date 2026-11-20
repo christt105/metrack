@@ -4,18 +4,28 @@ import { createHealthReport } from '../src/index.js';
 describe('createHealthReport', () => {
   it('reports ok once a migration has been applied', () => {
     expect(
-      createHealthReport('1.2.3', 1, { backups: true, sync: true, googleLogin: false }),
+      createHealthReport('1.2.3', 1, {
+        backups: true,
+        sync: true,
+        googleLogin: false,
+        steam: false,
+      }),
     ).toEqual({
       status: 'ok',
       appVersion: '1.2.3',
       schemaVersion: 1,
-      features: { backups: true, sync: true, googleLogin: false },
+      features: { backups: true, sync: true, googleLogin: false, steam: false },
     });
   });
 
   it('reports degraded when the schema is empty', () => {
     expect(
-      createHealthReport('1.2.3', 0, { backups: false, sync: false, googleLogin: false }).status,
+      createHealthReport('1.2.3', 0, {
+        backups: false,
+        sync: false,
+        googleLogin: false,
+        steam: false,
+      }).status,
     ).toBe('degraded');
   });
 });

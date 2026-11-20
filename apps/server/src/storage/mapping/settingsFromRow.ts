@@ -13,5 +13,6 @@ export function settingsFromRow(row: Row): UserSettings {
     mirrorDir: text(row.mirror_dir),
     mirrorLinkPrefix: text(row.mirror_link_prefix),
     language: language(row.language),
+    steamId: text(row.steam_id),
   };
 }

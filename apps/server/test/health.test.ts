@@ -23,7 +23,7 @@ describe('GET /api/health', () => {
       status: 'ok',
       appVersion: 'test',
       schemaVersion: LATEST_SCHEMA_VERSION,
-      features: { backups: false, sync: false, googleLogin: false },
+      features: { backups: false, sync: false, googleLogin: false, steam: false },
     });
   });
 
@@ -41,7 +41,7 @@ describe('GET /api/health', () => {
       status: 'degraded',
       appVersion: 'test',
       schemaVersion: 0,
-      features: { backups: false, sync: false, googleLogin: false },
+      features: { backups: false, sync: false, googleLogin: false, steam: false },
     });
   });
 
@@ -55,7 +55,12 @@ describe('GET /api/health', () => {
       migrationRunner: runner,
     });
     const response = await app.inject({ method: 'GET', url: '/api/health' });
-    expect(response.json().features).toEqual({ backups: false, sync: false, googleLogin: false });
+    expect(response.json().features).toEqual({
+      backups: false,
+      sync: false,
+      googleLogin: false,
+      steam: false,
+    });
   });
 
   it('returns 404 JSON for unknown API routes', async () => {

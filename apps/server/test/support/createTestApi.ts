@@ -101,7 +101,12 @@ export interface TestApiOptions {
   /** Counted when set; the library list and the public pages revalidate by it. */
   contentVersions?: ContentVersions;
   /** Adds or replaces app dependencies once the database exists, to register routes the default app leaves out. */
-  extend?: (parts: { db: DatabaseSync; scope: UserScope; dir: string }) => Partial<AppDeps>;
+  extend?: (parts: {
+    db: DatabaseSync;
+    scope: UserScope;
+    dir: string;
+    store: ImageStore;
+  }) => Partial<AppDeps>;
 }
 
 export async function createTestApi(
@@ -237,7 +242,7 @@ export async function createTestApi(
       publicUrl: options.publicUrl ?? null,
       contactEmail: 'privacy@example.test',
     },
-    ...options.extend?.({ db, scope, dir }),
+    ...options.extend?.({ db, scope, dir, store }),
   });
   return {
     app,

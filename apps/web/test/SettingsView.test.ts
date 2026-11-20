@@ -26,6 +26,7 @@ const noSettings: UserSettings = {
   mirrorDir: null,
   mirrorLinkPrefix: null,
   language: null,
+  steamId: null,
 };
 const ownerSettings: UserSettings = {
   ...noSettings,

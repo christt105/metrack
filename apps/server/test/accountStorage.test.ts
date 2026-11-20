@@ -78,6 +78,7 @@ describe.each(backends)('$name: accounts and settings', (backend) => {
       mirrorDir: null,
       mirrorLinkPrefix: null,
       language: null,
+      steamId: null,
     };
     await repos.settings.save(2, settings);
     await repos.settings.save(2, { ...settings, ntfyTopic: 'other' });

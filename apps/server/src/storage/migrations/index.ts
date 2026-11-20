@@ -31,6 +31,7 @@ import { unmatchedEpisodesMigration } from './0029-unmatched-episodes.js';
 import { dropPublishSettingsMigration } from './0030-drop-publish-settings.js';
 import { userLanguageMigration } from './0031-user-language.js';
 import { timeSpentMigration } from './0032-time-spent.js';
+import { steamIdMigration } from './0033-steam-id.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -65,4 +66,5 @@ export const migrations: readonly Migration[] = [
   dropPublishSettingsMigration,
   userLanguageMigration,
   timeSpentMigration,
+  steamIdMigration,
 ];

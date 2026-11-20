@@ -576,6 +576,38 @@ export const es: Messages = {
     spanish: 'Español',
     english: 'English',
   },
+  steam: {
+    title: 'Steam',
+    hint: 'Vincula tu cuenta de Steam para importar tu biblioteca. Escribe la dirección de tu perfil (steamcommunity.com/profiles/... o /id/...), tu SteamID64 o el nombre personalizado de tu perfil. Tu perfil y sus "Detalles del juego" deben ser públicos mientras importas.',
+    account: 'Perfil de Steam',
+    importLink: 'Importar mi biblioteca de Steam',
+    notConfigured:
+      'Este servidor no tiene clave de la API de Steam, así que la importación está desactivada.',
+    importTitle: 'Importar desde Steam',
+    importHint:
+      'Comprueba qué añadiría tu biblioteca de Steam, elige los juegos e impórtalos. No se escribe nada hasta que importes.',
+    privacy:
+      'Steam solo comparte tus juegos cuando tu perfil y sus "Detalles del juego" son públicos. Ponlos en público en la privacidad de Steam y vuelve a comprobar.',
+    check: 'Comprobar mi biblioteca',
+    summary: (owned: number, rows: number, upToDate: number, unmatched: number) =>
+      `${owned} juegos en tu cuenta: ${rows} por escribir, ${upToDate} ya al día, ${unmatched} sin encontrar en IGDB.`,
+    selectAll: 'Seleccionar todo',
+    selectNone: 'No seleccionar nada',
+    includeNeverPlayed: (n: number) => `Incluir ${n} juegos sin jugar como pendientes`,
+    game: 'Juego',
+    time: 'Tiempo jugado',
+    lastPlayed: 'Última partida',
+    proposal: 'Qué pasa',
+    updateTime: 'Actualizar el tiempo',
+    importAs: (status: string) => `Añadir como ${status}`,
+    importSelected: (n: number) => `Importar ${n} seleccionados`,
+    progress: (done: number, total: number) => `${done} de ${total}`,
+    done: (imported: number, updated: number, skipped: number) =>
+      `Hecho: ${imported} añadidos, ${updated} actualizados, ${skipped} ya estaban.`,
+    failed: (n: number) => `${n} juegos no se pudieron escribir:`,
+    unmatched: (n: number) => `${n} juegos que IGDB no conoce`,
+    unmatchedHint: 'No están en tu biblioteca y no se pueden importar.',
+  },
   ntfyAlerts: {
     title: 'Avisos de estrenos',
     hint: 'Recibe una notificación en el móvil cuando algo que sigues se estrene o esté disponible. ntfy es una app gratuita que entrega notificaciones push. Instálala en el móvil y activa los avisos para obtener un tema privado.',

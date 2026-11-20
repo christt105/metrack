@@ -10,6 +10,7 @@ import type { ApiClient } from '../src/api/ApiClient';
 import { mountWithApi } from './mountWithApi';
 
 const settings: Omit<UserSettings, 'language'> = {
+  steamId: null,
   jellyfinUser: null,
   ntfyTopic: null,
   mirrorDir: null,

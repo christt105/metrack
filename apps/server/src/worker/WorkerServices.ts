@@ -5,6 +5,7 @@ import type { ImageStore } from '../images/ImageStore.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import type { Logger } from '../notify/Logger.js';
 import type { Repositories } from '../storage/repositories/Repositories.js';
+import type { SteamServices } from '../steam/SteamServices.js';
 import type { UserScope } from '../users/UserScope.js';
 import type { ScheduledTick } from './ScheduledTick.js';
 
@@ -17,6 +18,7 @@ export interface WorkerServices {
   imageStore: ImageStore;
   metadataCache: MetadataCache;
   edit: EditServices;
+  steam: SteamServices;
   accountDeletion: AccountDeletionService;
   scheduled: ScheduledTick;
 }

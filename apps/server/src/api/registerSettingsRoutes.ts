@@ -2,7 +2,6 @@ import type { ApiRoutes } from './ApiRoutes.js';
 import {
   ASSIGNABLE_ROLES,
   LANGUAGES,
-  type LanguagePatch,
   PUBLIC_PAGE_LIMITS,
   isGiscusRepo,
   applySettingsPatch,
@@ -10,6 +9,7 @@ import {
   type PublicPage,
   type PublicPagePatch,
   type RoleChange,
+  type SelfSettingsPatch,
   type User,
   WEB_EDITABLE_SETTINGS,
   type OwnSettings,
@@ -24,6 +24,7 @@ import type { UserRepository } from '../storage/repositories/UserRepository.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import { NO_SETTINGS } from '../users/NO_SETTINGS.js';
 import { OWNER_ID } from '../users/OWNER_ID.js';
+import { SteamIdResolver } from '../steam/SteamIdResolver.js';
 import { ApiError } from './ApiError.js';
 import { parseHandle } from './parseHandle.js';
 import { requireUser } from './requireUser.js';
@@ -42,10 +43,13 @@ const roleBody = {
   additionalProperties: false,
 } as const;
 
-const languageBody = {
+const selfSettingsBody = {
   type: 'object',
-  properties: { language: { type: ['string', 'null'], enum: [...LANGUAGES, null] } },
-  required: ['language'],
+  properties: {
+    language: { type: ['string', 'null'], enum: [...LANGUAGES, null] },
+    steamId: { type: ['string', 'null'], maxLength: 200 },
+  },
+  minProperties: 1,
   additionalProperties: false,
 } as const;
 
@@ -140,6 +144,7 @@ export function registerSettingsRoutes(
   profiles: PublicProfileRepository,
   images?: ImageStore,
   generateNtfyTopic?: () => string,
+  steamIds?: SteamIdResolver,
 ): void {
   const patchBody = patchBodyFor(generateNtfyTopic !== undefined);
   const settingsOf = async (userId: number): Promise<UserSettings> =>
@@ -183,12 +188,19 @@ export function registerSettingsRoutes(
     );
   }
 
-  routes.patch<{ Body: LanguagePatch }>(
+  routes.patch<{ Body: SelfSettingsPatch }>(
     '/api/settings',
-    { config: { sessionOnly: true }, schema: { body: languageBody } },
+    { config: { sessionOnly: true }, schema: { body: selfSettingsBody } },
     async (request): Promise<UserSettings> => {
       const userId = request.user?.id ?? 0;
-      const next = { ...(await settingsOf(userId)), language: request.body.language };
+      const { language, steamId } = request.body;
+      const next = { ...(await settingsOf(userId)) };
+      if (language !== undefined) next.language = language;
+      if (steamId !== undefined) {
+        const typed = steamId?.trim() ?? '';
+        next.steamId =
+          typed === '' ? null : await (steamIds ?? new SteamIdResolver(null)).resolve(typed);
+      }
       await settings.save(userId, next);
       return next;
     },

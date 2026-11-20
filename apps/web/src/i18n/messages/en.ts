@@ -561,6 +561,37 @@ export const en = {
     spanish: 'Español',
     english: 'English',
   },
+  steam: {
+    title: 'Steam',
+    hint: 'Link your Steam account to import your library. Enter your profile address (steamcommunity.com/profiles/... or /id/...), your SteamID64 or your custom profile name. Your profile and its "Game details" must be public while you import.',
+    account: 'Steam profile',
+    importLink: 'Import my Steam library',
+    notConfigured: 'This server has no Steam API key, so the import is off.',
+    importTitle: 'Import from Steam',
+    importHint:
+      'Check what your Steam library would add, choose the games and import them. Nothing is written until you import.',
+    privacy:
+      'Steam only shares your games when both your profile and its "Game details" are public. Set them to public in Steam\'s privacy settings and check again.',
+    check: 'Check my library',
+    summary: (owned: number, rows: number, upToDate: number, unmatched: number) =>
+      `${owned} games owned: ${rows} to write, ${upToDate} already up to date, ${unmatched} not found in IGDB.`,
+    selectAll: 'Select all',
+    selectNone: 'Select none',
+    includeNeverPlayed: (n: number) => `Include ${n} never played games as planned`,
+    game: 'Game',
+    time: 'Time played',
+    lastPlayed: 'Last played',
+    proposal: 'What happens',
+    updateTime: 'Update time',
+    importAs: (status: string) => `Add as ${status}`,
+    importSelected: (n: number) => `Import ${n} selected`,
+    progress: (done: number, total: number) => `${done} of ${total}`,
+    done: (imported: number, updated: number, skipped: number) =>
+      `Done: ${imported} added, ${updated} updated, ${skipped} already in place.`,
+    failed: (n: number) => `${n} games could not be written:`,
+    unmatched: (n: number) => `${n} games IGDB does not know`,
+    unmatchedHint: 'These are not in your library and cannot be imported.',
+  },
   ntfyAlerts: {
     title: 'Release alerts',
     hint: 'Get a notification on your phone when something you follow premieres or becomes available. ntfy is a free app that delivers push notifications. Install it on your phone and turn the alerts on to get a private topic.',

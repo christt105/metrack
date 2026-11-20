@@ -33,6 +33,8 @@ import type {
   ResolveUnlinkedRequest,
   ResolveUnlinkedResponse,
   SearchResult,
+  SteamApplyResponse,
+  SteamImportReport,
   SyncApplyResult,
   SyncPlan,
   SearchableType,
@@ -360,6 +362,18 @@ export class ApiClient {
 
   updateLanguage(language: Language | null): Promise<UserSettings> {
     return this.request('PATCH', '/settings', { language });
+  }
+
+  updateSteamId(steamId: string | null): Promise<UserSettings> {
+    return this.request('PATCH', '/settings', { steamId });
+  }
+
+  steamReport(): Promise<SteamImportReport> {
+    return this.request('GET', '/steam/report');
+  }
+
+  applySteam(appIds: string[]): Promise<SteamApplyResponse> {
+    return this.request('POST', '/steam/apply', { appIds });
   }
 
   updatePublicPage(patch: PublicPagePatch): Promise<PublicPage> {

@@ -18,6 +18,8 @@ export interface Config {
   tmdbLanguage: string;
   openLibraryLanguage: string;
   steamGridDbToken: string | undefined;
+  /** Steam Web API key (STEAM_API_KEY); without it Steam imports are off. */
+  steamApiKey: string | undefined;
   igdb?: IgdbClientOptions;
   /** Offers "Sign in with Google" to users that already exist (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET). */
   google?: GoogleLoginConfig;

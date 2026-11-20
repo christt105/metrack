@@ -16,20 +16,22 @@ export class D1UserSettingsRepository implements UserSettingsRepository {
     await execute(
       this.db,
       `INSERT INTO user_setting
-           (user_id, jellyfin_user, ntfy_topic, mirror_dir, mirror_link_prefix, language)
-         VALUES (?, ?, ?, ?, ?, ?)
+           (user_id, jellyfin_user, ntfy_topic, mirror_dir, mirror_link_prefix, language, steam_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (user_id) DO UPDATE SET
            jellyfin_user = excluded.jellyfin_user,
            ntfy_topic = excluded.ntfy_topic,
            mirror_dir = excluded.mirror_dir,
            mirror_link_prefix = excluded.mirror_link_prefix,
-           language = excluded.language`,
+           language = excluded.language,
+           steam_id = excluded.steam_id`,
       userId,
       settings.jellyfinUser,
       settings.ntfyTopic,
       settings.mirrorDir,
       settings.mirrorLinkPrefix,
       settings.language,
+      settings.steamId,
     );
   }
 

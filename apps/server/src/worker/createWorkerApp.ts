@@ -63,6 +63,7 @@ export function createWorkerApp(
     imageStore,
     metadataCache,
     edit,
+    steam: services.steam.importer,
     account: {
       exporter: new AccountExporter(
         { ...repositories, images: imageStore },
@@ -82,6 +83,7 @@ export function createWorkerApp(
       settings: repositories.settings,
       profiles: repositories.profiles,
       generateNtfyTopic: () => generateNtfyTopic(secureRandomBytes),
+      steamIds: services.steam.ids,
     },
     site: {
       profiles: repositories.profiles,

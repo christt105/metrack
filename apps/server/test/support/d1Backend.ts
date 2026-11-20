@@ -4,10 +4,10 @@ import type { D1Database } from '../../src/storage/d1/D1Database.js';
 import { D1Harness } from './D1Harness.js';
 import type { StorageBackend } from './StorageBackend.js';
 
-const OWNER = `INSERT INTO user (id, name, email, created_at, role)
+export const D1_OWNER = `INSERT INTO user (id, name, email, created_at, role)
 VALUES (1, 'Owner', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 'owner')`;
 
-const SCHEMA = [
+export const D1_SCHEMA = [
   '0001_schema.sql',
   '0002_public_render_cache.sql',
   '0004_google_login.sql',
@@ -19,6 +19,7 @@ const SCHEMA = [
   '0012_unmatched_episodes.sql',
   '0014_user_language.sql',
   '0015_time_spent.sql',
+  '0016_steam_id.sql',
 ].flatMap((file) =>
   readFileSync(new URL(`../../d1/migrations/${file}`, import.meta.url), 'utf8')
     .split(/;\s*\n/)
@@ -54,12 +55,12 @@ export function createD1Backend(): StorageBackend {
           .all()
       ).results.map((row) => String(row.name));
       if (tables.length === 0) {
-        await db.batch([...SCHEMA, OWNER].map((sql) => db.prepare(sql)));
+        await db.batch([...D1_SCHEMA, D1_OWNER].map((sql) => db.prepare(sql)));
       } else {
         await db.batch([
           db.prepare('PRAGMA defer_foreign_keys = true'),
           ...tables.map((name) => db.prepare(`DELETE FROM "${name}"`)),
-          db.prepare(OWNER),
+          db.prepare(D1_OWNER),
         ]);
       }
       return new D1Harness(db);
