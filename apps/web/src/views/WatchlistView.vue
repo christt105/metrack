@@ -7,11 +7,12 @@ import FollowingEventRow from '../components/FollowingEventRow.vue';
 import WatchlistRow from '../components/WatchlistRow.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { buildAgenda, RECENT_DAYS } from '../logic/following/buildAgenda';
 import { daysBetween, localDate } from '../logic/following/dates';
 import { followingEvents } from '../logic/following/followingEvents';
 
+const messages = useMessages();
 type View = 'upcoming' | 'calendar' | 'all';
 
 const api = useApi();

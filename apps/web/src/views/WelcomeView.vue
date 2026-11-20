@@ -5,10 +5,11 @@ import { useRouter } from 'vue-router';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import { useApi } from '../composables/useApi';
 import { useSession } from '../composables/useSession';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { ApiRequestError } from '../api/ApiRequestError';
 import { suggestHandle } from '../logic/suggestHandle';
 
+const messages = useMessages();
 const api = useApi();
 const session = useSession();
 const router = useRouter();

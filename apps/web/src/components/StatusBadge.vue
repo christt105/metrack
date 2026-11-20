@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { MediaStatus } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 defineProps<{ status: MediaStatus }>();
 </script>
 

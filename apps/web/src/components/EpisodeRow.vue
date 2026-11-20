@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { SeasonEpisodeItem, Viewing } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { hasAired, hasDatedViewing, isDone } from '../logic/episodeSelection';
 import { stillUrl } from '../logic/stillUrl';
 import AppIcon from './AppIcon.vue';
 import EpisodeViewings from './EpisodeViewings.vue';
 
+const messages = useMessages();
 const props = defineProps<{
   episode: SeasonEpisodeItem;
   numbered: boolean;

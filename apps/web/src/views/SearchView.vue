@@ -8,9 +8,10 @@ import ErrorNotice from '../components/ErrorNotice.vue';
 import ManualAddForm from '../components/ManualAddForm.vue';
 import SearchResultCard from '../components/SearchResultCard.vue';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { detailPath } from '../logic/mediaRoutes';
 
+const messages = useMessages();
 const api = useApi();
 const router = useRouter();
 const type = ref<SearchableType>('movie');

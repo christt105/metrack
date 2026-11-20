@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 defineProps<{ message: string; undoable: boolean }>();
 defineEmits<{ undo: []; dismiss: [] }>();
 </script>

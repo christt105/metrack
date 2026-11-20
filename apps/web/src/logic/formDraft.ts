@@ -1,5 +1,5 @@
 import { RATING_MAX, RATING_MIN } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import type { Messages } from '../i18n/messages/Messages';
 import type { FieldSchema } from './FieldSchema';
 
 export type DraftValue = string | boolean;
@@ -41,7 +41,7 @@ export function parseList(text: string): string[] {
   return [...seen];
 }
 
-function fromDraftValue(schema: FieldSchema, value: DraftValue): unknown {
+function fromDraftValue(schema: FieldSchema, value: DraftValue, messages: Messages): unknown {
   if (schema.kind === 'boolean') return value === true;
   const text = String(value).trim();
   switch (schema.kind) {
@@ -77,13 +77,14 @@ export function buildPatch(
   schemas: FieldSchema[],
   entity: object,
   draft: Draft,
+  messages: Messages,
 ): Record<string, unknown> {
   const record = entity as Record<string, unknown>;
   const patch: Record<string, unknown> = {};
   for (const schema of schemas) {
     const raw = draft[schema.key];
     if (raw === undefined) continue;
-    const value = fromDraftValue(schema, raw);
+    const value = fromDraftValue(schema, raw, messages);
     if (schema.required && value === null) throw new DraftError(schema.key, 'required');
     const current = record[schema.key] ?? (schema.kind === 'list' ? [] : null);
     if (!sameValue(value, current)) patch[schema.key] = value;

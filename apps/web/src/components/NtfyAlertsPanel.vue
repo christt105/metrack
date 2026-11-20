@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue';
 import { ntfySubscriptionUrl } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{ topic: string | null }>();
 const emit = defineEmits<{ saved: [] }>();
 

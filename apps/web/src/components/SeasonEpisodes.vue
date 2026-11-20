@@ -10,7 +10,7 @@ import type {
   Viewing,
 } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import {
   doneOrSkipped,
   isDone,
@@ -25,6 +25,7 @@ import ErrorNotice from './ErrorNotice.vue';
 import SeasonProgress from './SeasonProgress.vue';
 import UndoToast from './UndoToast.vue';
 
+const messages = useMessages();
 const TOAST_MS = 7000;
 const REFILL_MS = 1500;
 const REFILL_ATTEMPTS = 20;

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { sizedImageUrl, type Season } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { seasonWatched } from '../logic/seasonWatched';
 import PendingBadge from './PendingBadge.vue';
 import SeasonProgress from './SeasonProgress.vue';
 import StatusBadge from './StatusBadge.vue';
 
+const messages = useMessages();
 const props = defineProps<{ seasons: Season[]; seriesCover?: string | null }>();
 
 function label(season: Season): string {

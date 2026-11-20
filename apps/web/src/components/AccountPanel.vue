@@ -5,12 +5,13 @@ import { ApiRequestError } from '../api/ApiRequestError';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
 import { useSession } from '../composables/useSession';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import type { ExportProgress } from '../logic/ExportProgress';
 import { buildAccountExport } from '../logic/buildAccountExport';
 import { saveBlob } from '../logic/saveBlob';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{ handle: string | null }>();
 
 const api = useApi();

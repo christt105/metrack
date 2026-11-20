@@ -13,9 +13,10 @@ import UserSettingsEditor from '../components/UserSettingsEditor.vue';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
 import { useSession } from '../composables/useSession';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { countSyncChanges } from '../logic/countSyncChanges';
 
+const messages = useMessages();
 const api = useApi();
 const session = useSession();
 let healthRequest: Promise<HealthReport> | undefined;

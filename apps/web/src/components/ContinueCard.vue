@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { sizedImageUrl } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import type { LibraryCard } from '../logic/buildCards';
 import { detailPath } from '../logic/mediaRoutes';
 import StatusBadge from './StatusBadge.vue';
 
+const messages = useMessages();
 const props = defineProps<{ card: LibraryCard }>();
 const to = computed(() => detailPath(props.card.type, props.card.id));
 const image = computed(() => {

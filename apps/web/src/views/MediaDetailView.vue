@@ -21,11 +21,12 @@ import SeasonEpisodes from '../components/SeasonEpisodes.vue';
 import SeasonList from '../components/SeasonList.vue';
 import UnmatchedEpisodes from '../components/UnmatchedEpisodes.vue';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { isTracked } from '../logic/fieldSchemas';
 import { seasonWatched } from '../logic/seasonWatched';
 import { withTracking } from '../logic/withTracking';
 
+const messages = useMessages();
 const props = defineProps<{ collection: Collection; id: number }>();
 
 const api = useApi();

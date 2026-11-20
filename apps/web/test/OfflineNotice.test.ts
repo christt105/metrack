@@ -4,7 +4,7 @@ import { ApiClient } from '../src/api/ApiClient';
 import OfflineNotice from '../src/components/OfflineNotice.vue';
 import { Connectivity } from '../src/connectivity/Connectivity';
 import { connectivityKey } from '../src/connectivity/connectivityKey';
-import { messages } from '../src/i18n/messages';
+import { en as messages } from '../src/i18n/messages/en';
 
 function setup(online: boolean) {
   const target = new EventTarget();

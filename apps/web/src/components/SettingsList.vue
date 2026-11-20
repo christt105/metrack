@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { UserSettings } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 defineProps<{ settings: UserSettings }>();
 
 const keys = Object.keys(messages.settings.settingLabels) as (keyof UserSettings)[];

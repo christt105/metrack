@@ -2,9 +2,10 @@
 import { ref } from 'vue';
 import type { MediaType, RefreshResult } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { errorMessage } from '../logic/errorMessage';
 
+const messages = useMessages();
 const props = defineProps<{ type: MediaType; id: number; fetchedAt: string | null }>();
 const emit = defineEmits<{ refreshed: [] }>();
 
@@ -38,7 +39,7 @@ async function refresh(): Promise<void> {
     emit('refreshed');
   } catch (cause) {
     failed.value = true;
-    outcome.value = errorMessage(cause);
+    outcome.value = errorMessage(cause, messages);
   } finally {
     busy.value = false;
   }

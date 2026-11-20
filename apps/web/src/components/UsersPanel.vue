@@ -3,9 +3,10 @@ import { ref } from 'vue';
 import type { UserSummary } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const api = useApi();
 const { data: users, error: loadError, reload } = useLoader(() => api.listUserSummaries());
 const error = ref<unknown>(null);

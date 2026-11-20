@@ -4,7 +4,7 @@ import type { Collection, MediaStatus } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import { sessionKey } from '../auth/sessionKey';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import type { QuickChange } from '../logic/QuickChange';
 import {
   publishChange,
@@ -22,6 +22,7 @@ import ErrorNotice from './ErrorNotice.vue';
 import RatingPicker from './RatingPicker.vue';
 import UndoToast from './UndoToast.vue';
 
+const messages = useMessages();
 const TOAST_MS = 6000;
 
 const props = defineProps<{
@@ -110,7 +111,7 @@ function onRating(value: number | null): void {
     ratingChange(tracking.value, value),
     value === null
       ? messages.ratingPicker.cleared
-      : messages.ratingPicker.rated(ratingDisplay(value).label),
+      : messages.ratingPicker.rated(ratingDisplay(value, messages).label),
   );
 }
 

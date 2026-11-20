@@ -9,9 +9,10 @@ import {
 } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{ connector?: boolean }>();
 const scopes = computed(() =>
   TOKEN_SCOPES.filter((scope) => scope !== 'connector' || props.connector === true),

@@ -4,9 +4,10 @@ import { PUBLIC_PAGE_LIMITS, canUseOwnArtwork, type PublicPage } from '@metrack/
 import { ApiRequestError } from '../api/ApiRequestError';
 import { sessionKey } from '../auth/sessionKey';
 import { useApi } from '../composables/useApi';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{ page: PublicPage }>();
 const emit = defineEmits<{ saved: [page: PublicPage] }>();
 

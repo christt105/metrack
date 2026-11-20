@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { Viewing } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { describeViewing, formIsValid, viewingFromForm } from '../logic/viewingEdits';
 
+const messages = useMessages();
 const props = defineProps<{ viewing: Viewing; busy: boolean; readonly?: boolean }>();
 const emit = defineEmits<{ change: [viewing: Viewing]; remove: [] }>();
 

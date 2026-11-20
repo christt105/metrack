@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import ManualAddForm from '../components/ManualAddForm.vue';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 
+const messages = useMessages();
 defineProps<{ collection: 'games' | 'books' }>();
 </script>
 

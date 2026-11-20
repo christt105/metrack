@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { MEDIA_SORT_FIELDS, MEDIA_STATUSES, MEDIA_TYPES } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import AppIcon from './AppIcon.vue';
 import type { LibraryFilterState } from '../logic/LibraryFilterState';
 import { naturalOrder } from '../logic/naturalOrder';
 
+const messages = useMessages();
 const filters = defineModel<LibraryFilterState>({ required: true });
 
 function update<K extends keyof LibraryFilterState>(key: K, value: LibraryFilterState[K]): void {

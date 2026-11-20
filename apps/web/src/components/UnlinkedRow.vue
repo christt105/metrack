@@ -2,11 +2,13 @@
 import { computed, ref } from 'vue';
 import type { UnlinkedTitle } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
-import { fieldLabel, messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
+import { fieldLabel } from '../i18n/fieldLabel';
 import { detailPath } from '../logic/mediaRoutes';
 import { buildIds, idFieldsFor } from '../logic/unlinkedIdFields';
 import ErrorNotice from './ErrorNotice.vue';
 
+const messages = useMessages();
 const props = defineProps<{ title: UnlinkedTitle }>();
 const emit = defineEmits<{ gone: [] }>();
 
@@ -70,7 +72,7 @@ async function resolve(): Promise<void> {
     <p v-else-if="fields.length === 0" class="muted">{{ messages.unlinked.seasonHint }}</p>
     <form v-else class="ids" @submit.prevent="resolve">
       <label v-for="field in fields" :key="field.key">
-        <span class="muted">{{ fieldLabel(field.key) }}</span>
+        <span class="muted">{{ fieldLabel(messages, field.key) }}</span>
         <input
           v-model="texts[field.key]"
           :type="field.numeric ? 'number' : 'text'"

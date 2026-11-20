@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { sizedImageUrl } from '@metrack/domain';
 import type { SearchResult } from '@metrack/domain';
-import { messages } from '../i18n/messages';
+import { useMessages } from '../composables/useMessages';
 import { detailPath } from '../logic/mediaRoutes';
 
+const messages = useMessages();
 defineProps<{ result: SearchResult; busy: boolean }>();
 defineEmits<{ add: [] }>();
 </script>
