@@ -11,7 +11,7 @@ import type { EditServicesDeps } from './EditServicesDeps.js';
 
 export function createEditServices(deps: EditServicesDeps): EditServices {
   const { sources } = deps;
-  const kinds = buildMediaKinds(sources);
+  const kinds = buildMediaKinds(sources, deps.seasonEpisodes);
   const editor = new MediaEditor(kinds, deps.states, deps.images, deps.now);
   const seasonEpisodes = new SeasonEpisodesService({
     seasons: sources.seasons,

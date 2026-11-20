@@ -4,7 +4,7 @@ import type { ScheduledTickDeps } from './ScheduledTickDeps.js';
 export const ERASE_ACCOUNTS_PER_TICK = 1;
 
 /**
- * What one cron trigger does: erase at most one due account. A failure is logged and never rejects, so a
+ * What one cron trigger does: erase at most one due account and fill in the running time of a few movies. A failure is logged and never rejects, so a
  * bad account cannot make the invocation fail.
  */
 export class ScheduledTick {
@@ -21,6 +21,16 @@ export class ScheduledTick {
         `account erasing failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-    logger.info(`scheduled tick ${now.toISOString()}: erased=${erased.length}`);
+    let runtimes: number | undefined;
+    try {
+      runtimes = await this.deps.runtimes?.runBatch();
+    } catch (error) {
+      logger.error(
+        `movie runtime backfill failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    logger.info(
+      `scheduled tick ${now.toISOString()}: erased=${erased.length}${runtimes === undefined ? '' : ` runtimes=${runtimes}`}`,
+    );
   }
 }

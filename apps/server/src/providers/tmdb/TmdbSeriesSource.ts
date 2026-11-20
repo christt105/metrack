@@ -2,7 +2,14 @@ import type { Series } from '@metrack/domain';
 import type { MetadataSource } from '../../metadata/MetadataSource.js';
 import type { ProviderMetadata } from '../../metadata/ProviderMetadata.js';
 import type { SeasonRefresher } from '../../seasons/SeasonRefresher.js';
-import { clean, emptyToNull, imageUrl, mapCast, mapGenres } from './mapTitle.js';
+import {
+  clean,
+  emptyToNull,
+  imageUrl,
+  mapCast,
+  mapGenres,
+  seriesEpisodeRuntime,
+} from './mapTitle.js';
 import type { TmdbClient } from './TmdbClient.js';
 
 export class TmdbSeriesSource implements MetadataSource<Series> {
@@ -21,6 +28,7 @@ export class TmdbSeriesSource implements MetadataSource<Series> {
         originalTitle: emptyToNull(r.original_name),
         firstAirDate: emptyToNull(r.first_air_date),
         overview: clean(r.overview),
+        episodeRuntime: seriesEpisodeRuntime(r.episode_run_time),
         genres: mapGenres(r),
         cast: mapCast(r),
         ...(applied === null ? {} : { tmdbEpisodeGroup: applied }),

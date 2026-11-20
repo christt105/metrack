@@ -15,6 +15,7 @@ const ENTRY_COLUMNS = [
   'review',
   'rewatches',
   'pending_review',
+  'time_spent_minutes',
 ];
 
 function videogameToRow(g: Omit<Videogame, 'id'>): RowValues {
@@ -29,6 +30,7 @@ function videogameToRow(g: Omit<Videogame, 'id'>): RowValues {
     developer: g.developer,
     platforms: JSON.stringify(g.platforms),
     note: g.note,
+    time_spent_minutes: g.timeSpentMinutes,
     cover: g.cover,
     banner: g.banner,
     slug: g.slug,
@@ -50,6 +52,7 @@ function videogameFromRow(row: Row): Videogame {
     developer: text(row.developer),
     platforms: parseList(row.platforms),
     note: text(row.note),
+    timeSpentMinutes: num(row.time_spent_minutes),
     cover: text(row.cover),
     banner: text(row.banner),
     slug: text(row.slug),

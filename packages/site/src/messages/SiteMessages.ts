@@ -88,6 +88,10 @@ export interface SiteMessages {
     cinemaVsStreaming: string;
     cinema: string;
     streaming: string;
+    timeSpent: string;
+    timeSpentPerYear: string;
+    hoursUnit: string;
+    timeMissing: (count: number) => string;
   };
   collage: {
     title: string;

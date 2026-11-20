@@ -107,6 +107,11 @@ export const en: SiteMessages = {
     cinemaVsStreaming: 'Cinema vs. Streaming',
     cinema: 'Cinema',
     streaming: 'Streaming / Home',
+    timeSpent: 'Time spent',
+    timeSpentPerYear: 'Hours per year',
+    hoursUnit: 'h',
+    timeMissing: (count) =>
+      `${count} completed ${count === 1 ? 'game or book' : 'games or books'} without hours`,
   },
   collage: {
     title: 'Collage',

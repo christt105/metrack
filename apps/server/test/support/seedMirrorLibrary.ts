@@ -30,6 +30,7 @@ export async function seedMirrorLibrary(sources: ExportSources): Promise<void> {
     genres: [],
     cast: [],
     director: null,
+    runtime: null,
     follow: false,
     note: null,
     cover: null,
@@ -78,6 +79,7 @@ export async function seedMirrorLibrary(sources: ExportSources): Promise<void> {
     review: null,
     nextEpisode: null,
     nextEpisodeCheckedAt: null,
+    episodeRuntime: null,
   };
   const season = {
     jellyfinId: null,
@@ -126,6 +128,7 @@ export async function seedMirrorLibrary(sources: ExportSources): Promise<void> {
     overview: null,
     genres: [],
     developer: 'Studio',
+    timeSpentMinutes: null,
     platforms: ['PC'],
     note: null,
     cover: null,
@@ -141,6 +144,7 @@ export async function seedMirrorLibrary(sources: ExportSources): Promise<void> {
     authors: ['Someone'],
     publisher: 'Pub',
     pageCount: 320,
+    timeSpentMinutes: null,
     releaseDate: null,
     overview: null,
     genres: [],

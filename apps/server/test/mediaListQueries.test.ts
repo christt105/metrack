@@ -54,7 +54,9 @@ async function listCalls(
     books: counting(repositories.books, calls, 'books'),
     episodeWatches: repositories.episodeWatches,
   };
-  const page = await new MediaCatalog(buildMediaKinds(sources)).list(query);
+  const page = await new MediaCatalog(buildMediaKinds(sources, repositories.seasonEpisodes)).list(
+    query,
+  );
   expect(page.total).toBeGreaterThan(0);
   return calls.length;
 }

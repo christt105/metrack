@@ -8,6 +8,8 @@ const tracking: FieldSchema[] = [
   { key: 'review', kind: 'textarea', section: 'tracking' },
 ];
 
+const hours: FieldSchema = { key: 'timeSpentMinutes', kind: 'hours', section: 'tracking' };
+
 const housekeeping: FieldSchema[] = [
   { key: 'note', kind: 'link', section: 'notes' },
   { key: 'slug', kind: 'text', section: 'notes' },
@@ -65,6 +67,7 @@ export const fieldSchemas: Record<Collection, FieldSchema[]> = {
     { key: 'genres', kind: 'list', section: 'metadata' },
     { key: 'overview', kind: 'textarea', section: 'metadata' },
     ...tracking,
+    hours,
     ...housekeeping,
   ],
   books: [
@@ -78,6 +81,7 @@ export const fieldSchemas: Record<Collection, FieldSchema[]> = {
     { key: 'genres', kind: 'list', section: 'metadata' },
     { key: 'overview', kind: 'textarea', section: 'metadata' },
     ...tracking,
+    hours,
     ...housekeeping,
   ],
 };

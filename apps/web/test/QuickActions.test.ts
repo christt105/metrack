@@ -160,4 +160,57 @@ describe('QuickActions', () => {
     const { wrapper } = await mountActions(vi.fn());
     expect(wrapper.text()).not.toContain('Publish without review');
   });
+
+  describe('hours', () => {
+    const game = { ...movie, id: 9, timeSpentMinutes: 90 } as unknown as AnyDetail;
+
+    it('is offered for games and books only', async () => {
+      const patch = vi.fn();
+      expect((await mountActions(patch, movie)).wrapper.find('form.hours').exists()).toBe(false);
+      const { wrapper } = await mountWithApi(
+        QuickActions,
+        { patch: patch as never },
+        { collection: 'games', detail: game },
+      );
+      expect(wrapper.text()).toContain('1 h 30 min');
+    });
+
+    it('saves typed hours as minutes and undoes to the previous value', async () => {
+      const patch = vi.fn().mockResolvedValue(game);
+      const { wrapper } = await mountWithApi(
+        QuickActions,
+        { patch: patch as never },
+        { collection: 'games', detail: game },
+      );
+      const toggle = wrapper.findAll('button').find((b) => b.text().includes('1 h 30 min'));
+      await toggle?.trigger('click');
+      const input = wrapper.find('form.hours input');
+      expect((input.element as HTMLInputElement).value).toBe('1:30');
+      await input.setValue('12.5');
+      await wrapper.find('form.hours').trigger('submit');
+      await flushPromises();
+      expect(patch).toHaveBeenCalledWith('games', 9, { timeSpentMinutes: 750 }, {});
+      (document.body.querySelector('.undo') as HTMLElement).click();
+      await flushPromises();
+      expect(patch).toHaveBeenLastCalledWith('games', 9, { timeSpentMinutes: 90 }, {});
+    });
+
+    it('rejects text that is not hours without saving', async () => {
+      const patch = vi.fn();
+      const { wrapper } = await mountWithApi(
+        QuickActions,
+        { patch: patch as never },
+        { collection: 'books', detail: game },
+      );
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text().includes('1 h 30 min'))
+        ?.trigger('click');
+      await wrapper.find('form.hours input').setValue('lots');
+      await wrapper.find('form.hours').trigger('submit');
+      await flushPromises();
+      expect(patch).not.toHaveBeenCalled();
+      expect(wrapper.find('.hours-error').exists()).toBe(true);
+    });
+  });
 });

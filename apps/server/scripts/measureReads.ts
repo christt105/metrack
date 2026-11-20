@@ -136,6 +136,7 @@ async function main(): Promise<void> {
       [new URL('../d1/seed/makeBulkData.mjs', import.meta.url).pathname],
       {
         encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
       },
     )
       .split(/;\s*\n/)
@@ -181,11 +182,13 @@ async function main(): Promise<void> {
     await raw.batch([
       raw
         .prepare(
-          'INSERT INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, ?, ?)',
+          'INSERT OR REPLACE INTO season_episodes (season_id, episodes, source, fetched_at) VALUES (?, ?, ?, ?)',
         )
         .bind(seasonId, JSON.stringify(episodes), 'tmdb', new Date().toISOString()),
       raw
-        .prepare('INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (?, ?, ?)')
+        .prepare(
+          'INSERT OR REPLACE INTO series_episode_entry (user_id, series_id, watched) VALUES (?, ?, ?)',
+        )
         .bind(USER_ID, seriesId, JSON.stringify(watched)),
     ]);
 

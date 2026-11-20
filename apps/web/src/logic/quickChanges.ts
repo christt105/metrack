@@ -68,6 +68,11 @@ export function publishChange(current: QuickTracking): QuickChange {
   return { patch: { pendingReview: false }, undo: snapshot(current) };
 }
 
+/** Sets the minutes spent, or clears them with null. The undo puts the previous value back. */
+export function hoursChange(current: number | null, minutes: number | null): QuickChange {
+  return { patch: { timeSpentMinutes: minutes }, undo: { timeSpentMinutes: current } };
+}
+
 /** Saves the review text, blank meaning none. */
 export function reviewChange(current: QuickTracking, text: string): QuickChange {
   const review = text.trim() === '' ? null : text.trim();

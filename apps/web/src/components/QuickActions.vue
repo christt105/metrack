@@ -13,6 +13,10 @@ import {
   watchedTodayChange,
   type QuickTracking,
 } from '../logic/quickChanges';
+import { formatDuration } from '../logic/formatDuration';
+import { formatHoursInput } from '../logic/formatHoursInput';
+import { hoursChange } from '../logic/quickChanges';
+import { parseHours } from '../logic/parseHours';
 import { ratingDisplay } from '../logic/ratingDisplay';
 import { saveForAll } from '../logic/saveForAll';
 import { statusOptions } from '../logic/statusOptions';
@@ -37,6 +41,9 @@ const session = inject(sessionKey, null);
 const busy = ref(false);
 const error = ref<unknown>(null);
 const pickerOpen = ref(false);
+const hoursOpen = ref(false);
+const hoursText = ref('');
+const hoursError = ref(false);
 const toast = ref<{ message: string; undo: Record<string, unknown> | null } | null>(null);
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -115,6 +122,33 @@ function onRating(value: number | null): void {
   );
 }
 
+const hasHours = computed(() => props.collection === 'games' || props.collection === 'books');
+const storedMinutes = computed(
+  () => (props.detail as unknown as { timeSpentMinutes: number | null }).timeSpentMinutes ?? null,
+);
+
+function toggleHours(): void {
+  hoursOpen.value = !hoursOpen.value;
+  hoursError.value = false;
+  hoursText.value = storedMinutes.value === null ? '' : formatHoursInput(storedMinutes.value);
+}
+
+function saveHours(): void {
+  const minutes = parseHours(hoursText.value);
+  if (minutes === undefined) {
+    hoursError.value = true;
+    return;
+  }
+  hoursOpen.value = false;
+  if (minutes === storedMinutes.value) return;
+  void apply(
+    hoursChange(storedMinutes.value, minutes),
+    minutes === null
+      ? messages.quick.hoursCleared
+      : messages.quick.hoursSaved(formatDuration(minutes)),
+  );
+}
+
 function publish(): void {
   void apply(publishChange(tracking.value), messages.pending.published);
 }
@@ -150,6 +184,29 @@ onBeforeUnmount(() => clearTimeout(timer));
       <AppIcon name="check" :size="18" />
       {{ messages.quick.watchedToday }}
     </button>
+    <button
+      v-if="hasHours"
+      type="button"
+      :aria-expanded="hoursOpen"
+      :disabled="busy"
+      @click="toggleHours"
+    >
+      {{ storedMinutes === null ? messages.quick.setHours : formatDuration(storedMinutes) }}
+    </button>
+    <form v-if="hasHours && hoursOpen" class="hours" @submit.prevent="saveHours">
+      <label>
+        <span>{{ messages.quick.hoursLabel }}</span>
+        <input
+          v-model="hoursText"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          :aria-invalid="hoursError"
+        />
+      </label>
+      <button type="submit" :disabled="busy">{{ messages.quick.saveHours }}</button>
+      <p v-if="hoursError" class="hours-error" role="alert">{{ messages.edit.hoursInvalid }}</p>
+    </form>
     <button
       v-if="pending"
       type="button"
@@ -196,5 +253,25 @@ onBeforeUnmount(() => clearTimeout(timer));
 
 .picker {
   flex-basis: 100%;
+}
+
+.hours {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-2) var(--s-3);
+}
+
+.hours label {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.hours-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--t-small);
 }
 </style>

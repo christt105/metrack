@@ -9,6 +9,7 @@ import { D1ImageRepository } from './D1ImageRepository.js';
 import { D1InviteRepository } from './D1InviteRepository.js';
 import { D1MetadataStateRepository } from './D1MetadataStateRepository.js';
 import { D1MovieRepository } from './D1MovieRepository.js';
+import { D1MovieRuntimeRepository } from './D1MovieRuntimeRepository.js';
 import { D1PublicProfileRepository } from './D1PublicProfileRepository.js';
 import { D1ReleaseAlertRepository } from './D1ReleaseAlertRepository.js';
 import { D1EpisodeWatchRepository } from './D1EpisodeWatchRepository.js';
@@ -30,6 +31,7 @@ export function createD1Repositories(db: D1Database, scope: UserScope): Reposito
     seasons: new D1SeasonRepository(db, scope),
     videogames: new D1VideogameRepository(db, scope),
     books: new D1BookRepository(db, scope),
+    movieRuntimes: new D1MovieRuntimeRepository(db),
     seasonEpisodes: new D1SeasonEpisodesRepository(db),
     episodeWatches: new D1EpisodeWatchRepository(db, scope),
     unlinked: new D1UnlinkedTitleRepository(db, scope),

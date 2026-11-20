@@ -36,6 +36,8 @@ import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
 import { UserReleaseWatchers } from './alerts/UserReleaseWatchers.js';
 import { WatchlistService } from './alerts/WatchlistService.js';
 import { TmdbReleaseSource } from './providers/tmdb/TmdbReleaseSource.js';
+import { MovieRuntimeBackfill } from './backfill/MovieRuntimeBackfill.js';
+import { MovieRuntimeScheduler } from './backfill/MovieRuntimeScheduler.js';
 import { AccountDeletionScheduler } from './account/AccountDeletionScheduler.js';
 import { AccountDeletionService } from './account/AccountDeletionService.js';
 import { AccountExporter } from './account/AccountExporter.js';
@@ -229,6 +231,12 @@ const accountDeletion = new AccountDeletionService(
   logger,
 );
 const accountScheduler = new AccountDeletionScheduler(accountDeletion, logger);
+const runtimeScheduler = tmdb
+  ? new MovieRuntimeScheduler(
+      new MovieRuntimeBackfill(repositories.movieRuntimes, tmdb, logger),
+      logger,
+    )
+  : undefined;
 const cloudflareUsageScheduler = createCloudflareUsageScheduler(
   process.env,
   config.ntfy,
@@ -307,7 +315,15 @@ const app = buildApp({
     : undefined,
   site: {
     profiles: repositories.profiles,
-    sources: { movies, series, seasons, videogames, books },
+    sources: {
+      movies,
+      series,
+      seasons,
+      videogames,
+      books,
+      seasonEpisodes: repositories.seasonEpisodes,
+      episodeWatches: repositories.episodeWatches,
+    },
     publicUrl: config.publicUrl,
     contactEmail: config.contactEmail,
   },
@@ -320,6 +336,7 @@ const app = buildApp({
 const shutdown = async (): Promise<void> => {
   scheduler.stop();
   accountScheduler.stop();
+  runtimeScheduler?.stop();
   cloudflareUsageScheduler?.stop();
   releaseScheduler?.stop();
   server.close();
@@ -337,6 +354,7 @@ if (config.backup.enabled) {
 }
 releaseScheduler?.start();
 accountScheduler.start();
+runtimeScheduler?.start();
 cloudflareUsageScheduler?.start();
 if (!releaseScheduler)
   console.log(

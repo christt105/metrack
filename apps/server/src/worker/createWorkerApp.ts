@@ -85,7 +85,15 @@ export function createWorkerApp(
     },
     site: {
       profiles: repositories.profiles,
-      sources: { movies, series, seasons, videogames, books },
+      sources: {
+        movies,
+        series,
+        seasons,
+        videogames,
+        books,
+        seasonEpisodes: repositories.seasonEpisodes,
+        episodeWatches: repositories.episodeWatches,
+      },
       publicUrl: config.publicUrl,
       contactEmail: config.contactEmail,
       renderCache: new D1PublicRenderCache(env.DB, now),

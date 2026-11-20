@@ -1,5 +1,5 @@
 export type FieldKind =
-  'text' | 'link' | 'textarea' | 'date' | 'integer' | 'rating' | 'list' | 'boolean';
+  'text' | 'link' | 'textarea' | 'date' | 'integer' | 'rating' | 'list' | 'boolean' | 'hours';
 
 export type FieldSection = 'ids' | 'metadata' | 'tracking' | 'notes';
 

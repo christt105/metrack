@@ -1,7 +1,7 @@
 import type { Movie } from '@metrack/domain';
 import type { MetadataSource } from '../../metadata/MetadataSource.js';
 import type { ProviderMetadata } from '../../metadata/ProviderMetadata.js';
-import { clean, emptyToNull, imageUrl, mapCast, mapGenres } from './mapTitle.js';
+import { clean, emptyToNull, imageUrl, mapCast, mapGenres, positiveMinutes } from './mapTitle.js';
 import type { TmdbClient } from './TmdbClient.js';
 
 export class TmdbMovieSource implements MetadataSource<Movie> {
@@ -18,6 +18,7 @@ export class TmdbMovieSource implements MetadataSource<Movie> {
         overview: clean(r.overview),
         genres: mapGenres(r),
         cast: mapCast(r),
+        runtime: positiveMinutes(r.runtime),
         director: r.credits?.crew?.find((c) => c.job === 'Director')?.name ?? null,
       },
       coverUrl: imageUrl(r.poster_path),

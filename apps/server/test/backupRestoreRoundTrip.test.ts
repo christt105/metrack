@@ -81,6 +81,7 @@ describe('backup and restore of the whole data directory', () => {
       review: null,
       nextEpisode: null,
       nextEpisodeCheckedAt: null,
+      episodeRuntime: null,
     });
     const season = await new SqliteSeasonRepository(db, OWNER_SCOPE).create({
       seriesId: series.id,
@@ -135,6 +136,7 @@ describe('backup and restore of the whole data directory', () => {
       genres: [],
       cast: [],
       director: null,
+      runtime: null,
       follow: false,
       note: null,
       cover: null,
@@ -152,6 +154,7 @@ describe('backup and restore of the whole data directory', () => {
       overview: null,
       genres: [],
       developer: null,
+      timeSpentMinutes: null,
       platforms: ['PC'],
       note: null,
       cover: null,
@@ -167,6 +170,7 @@ describe('backup and restore of the whole data directory', () => {
       authors: ['A'],
       publisher: null,
       pageCount: null,
+      timeSpentMinutes: null,
       releaseDate: null,
       overview: null,
       genres: [],

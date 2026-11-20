@@ -1,6 +1,8 @@
 import type {
   BookRepository,
+  EpisodeWatchRepository,
   MovieRepository,
+  SeasonEpisodesRepository,
   SeasonRepository,
   SeriesRepository,
   VideogameRepository,
@@ -13,4 +15,6 @@ export interface PublicSiteSources {
   seasons: SeasonRepository;
   videogames: VideogameRepository;
   books: BookRepository;
+  seasonEpisodes: SeasonEpisodesRepository;
+  episodeWatches: EpisodeWatchRepository;
 }

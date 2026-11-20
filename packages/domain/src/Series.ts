@@ -24,6 +24,8 @@ export interface Series extends Artwork {
   slug: string | null;
   tags: string[];
   review: string | null;
+  /** The usual running time of an episode in minutes as TMDB reports it; null when unknown. */
+  episodeRuntime: number | null;
   /** The next episode the last release check announced; null when there is none or it was never checked. */
   nextEpisode: NextEpisode | null;
   /** When the release check last stored `nextEpisode`, as an ISO timestamp; null before the first check. */

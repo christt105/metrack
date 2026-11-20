@@ -15,6 +15,7 @@ const ENTRY_COLUMNS = [
   'review',
   'rewatches',
   'pending_review',
+  'time_spent_minutes',
 ];
 
 function bookToRow(b: Omit<Book, 'id'>): RowValues {
@@ -29,6 +30,7 @@ function bookToRow(b: Omit<Book, 'id'>): RowValues {
     overview: b.overview,
     genres: JSON.stringify(b.genres),
     note: b.note,
+    time_spent_minutes: b.timeSpentMinutes,
     cover: b.cover,
     slug: b.slug,
     tags: JSON.stringify(b.tags),
@@ -49,6 +51,7 @@ function bookFromRow(row: Row): Book {
     overview: text(row.overview),
     genres: parseList(row.genres),
     note: text(row.note),
+    timeSpentMinutes: num(row.time_spent_minutes),
     cover: text(row.cover),
     slug: text(row.slug),
     tags: parseList(row.tags),

@@ -36,6 +36,7 @@ function movie(over: Partial<Movie>): Movie {
     genres: [],
     cast: [],
     director: null,
+    runtime: null,
     follow: false,
     note: null,
     slug: null,
@@ -66,6 +67,7 @@ function series(over: Partial<Series>): Series {
     review: null,
     nextEpisode: null,
     nextEpisodeCheckedAt: null,
+    episodeRuntime: null,
     ...ART,
     ...over,
   };

@@ -463,6 +463,7 @@ async function seedLupin(t: ReturnType<typeof setup>) {
     review: 'series review',
     nextEpisode: null,
     nextEpisodeCheckedAt: null,
+    episodeRuntime: null,
     cover: null,
     banner: null,
   });
@@ -894,6 +895,7 @@ function emptyMovieRow() {
     genres: [],
     cast: [],
     director: null,
+    runtime: null,
     follow: false,
     note: null,
     slug: null,

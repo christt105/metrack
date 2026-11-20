@@ -10,6 +10,8 @@ export interface TmdbTitleResponse {
   release_date?: string;
   first_air_date?: string;
   overview?: string;
+  runtime?: number | null;
+  episode_run_time?: number[];
   poster_path?: string | null;
   backdrop_path?: string | null;
   genres?: { name: string }[];

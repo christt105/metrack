@@ -122,6 +122,9 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   });
   await owner.seasonEpisodes.get(season.id);
   await owner.seasonEpisodes.listForSeries(series.id);
+  await owner.seasonEpisodes.listForUser(1);
+  await owner.movieRuntimes.listMissing(5);
+  await owner.movieRuntimes.set(1, 100);
   await owner.seasonEpisodes.deleteForSeries(series.id);
   await owner.seasons.hasPersonalData(season.id, ['1']);
   await owner.seasons.listCompletedEntries(season.id);
@@ -272,6 +275,7 @@ function emptyBookLike() {
     overview: null,
     genres: [],
     developer: null,
+    timeSpentMinutes: null,
     platforms: [],
     note: null,
     cover: null,
@@ -293,6 +297,11 @@ function emptyBookLike() {
  * of them on a request path. Everything else must search an index.
  */
 const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
+  {
+    sql: /^SELECT id, tmdb_id FROM movie WHERE runtime IS NULL/,
+    scan: /^SCAN movie USING INDEX movie_runtime_missing/,
+    why: 'the runtime backfill walks the partial index of the movies still missing one',
+  },
   {
     sql: /^SELECT 1 FROM season_entry e WHERE e\.season_id = \? AND \( e\.rating IS NOT NULL/,
     scan: /^SCAN (k|json_each) VIRTUAL TABLE/,

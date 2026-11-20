@@ -10,6 +10,7 @@ import type { SiteMessages } from './messages/SiteMessages.js';
 import { ratingScale } from './ratingTheme.js';
 import { percentOf, renderStatBars, type StatBar } from './renderStatBars.js';
 import { renderLayout } from './renderLayout.js';
+import { renderTimeSpent } from './renderTimeSpent.js';
 import { renderVariableStats } from './renderVariableStats.js';
 import { completions, countNames } from './StatsCount.js';
 import { TYPE_ICONS, themeType, type ThemeType } from './themeType.js';
@@ -133,6 +134,7 @@ function allTime(
   return [
     cards,
     ratingBars(messages, counts, false),
+    renderTimeSpent(messages, media, null),
     section(messages.stats.finishedPerYear, renderStatBars(yearBars)),
     ratedYears.length === 0
       ? ''
@@ -158,6 +160,7 @@ function oneYear(
   year: string,
   dated: Map<string, PublicEntry[]>,
   finished: PublicEntry[],
+  media: PublicEntry[],
 ): string {
   const inYear = [
     ...(dated.get(year) ?? []),
@@ -169,7 +172,7 @@ function oneYear(
   const counts = new Map<number, number>();
   for (const rating of ratings) counts.set(rating, (counts.get(rating) ?? 0) + 1);
   const cards = `<section class="stats-cards">${card(formatInteger(inYear.length, messages), messages.stats.finished)}${typeCards(messages, inYear, true)}${averageCard(messages, ratings)}</section>`;
-  return `<div data-stats-year="${year}" hidden>${cards}${ratingBars(messages, counts, true)}${renderVariableStats(messages, inYear)}</div>`;
+  return `<div data-stats-year="${year}" hidden>${cards}${ratingBars(messages, counts, true)}${renderTimeSpent(messages, media, year)}${renderVariableStats(messages, inYear)}</div>`;
 }
 
 /** The statistics page: totals, ratings, finished per year, genres, platforms and more, all computed here, with a year selector. */
@@ -187,7 +190,7 @@ export function renderStats(library: Library): string {
     years.length === 0
       ? ''
       : `<div class="stats-year-filter"><label for="stats-year-select">${messages.stats.yearSelector}</label><select id="stats-year-select"><option value="all">${messages.stats.allYears}</option>${years.map((year) => `<option value="${year}">${year}</option>`).join('')}</select></div>`;
-  const blocks = `<div data-stats-year="all">${allTime(messages, media, finished, dated)}</div>${years.map((year) => oneYear(messages, year, dated, finished)).join('')}`;
+  const blocks = `<div data-stats-year="all">${allTime(messages, media, finished, dated)}</div>${years.map((year) => oneYear(messages, year, dated, finished, media)).join('')}`;
   return renderLayout({
     library,
     title: `${messages.stats.title} | ${ownerName(library)}`,

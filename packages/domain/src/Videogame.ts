@@ -13,6 +13,8 @@ export interface Videogame extends Tracking, Artwork {
   developer: string | null;
   platforms: string[];
   note: string | null;
+  /** Minutes the user has spent on the game; null when unknown. */
+  timeSpentMinutes: number | null;
   /** File name the item had in the vault. It keeps exported page addresses stable. */
   slug: string | null;
   tags: string[];
