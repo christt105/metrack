@@ -21,6 +21,7 @@ export const movie = (over: Partial<Movie> = {}): Movie => ({
   genres: ['Drama'],
   cast: [],
   director: null,
+  runtime: null,
   follow: false,
   note: null,
   cover: null,
@@ -52,6 +53,7 @@ export const series = (over: Partial<Series> = {}): Series => ({
   review: null,
   nextEpisode: null,
   nextEpisodeCheckedAt: null,
+  episodeRuntime: null,
   ...over,
 });
 
@@ -85,6 +87,7 @@ export const game = (over: Partial<Videogame> = {}): Videogame => ({
   overview: null,
   genres: [],
   developer: 'Dev',
+  timeSpentMinutes: null,
   platforms: ['PC'],
   note: null,
   cover: null,
@@ -103,6 +106,7 @@ export const book = (over: Partial<Book> = {}): Book => ({
   authors: ['A'],
   publisher: null,
   pageCount: null,
+  timeSpentMinutes: null,
   releaseDate: null,
   overview: null,
   genres: [],

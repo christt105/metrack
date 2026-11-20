@@ -1,4 +1,4 @@
-import type { MediaStatus } from '@metrack/domain';
+import type { MediaStatus, TimeSpent } from '@metrack/domain';
 import type { PublicKind } from './PublicKind.js';
 
 /** One item that may be shown on a public page: a piece of the library that is not pending review. */
@@ -26,6 +26,8 @@ export interface PublicEntry {
   /** Address of the item at its provider, when it has an id there. */
   externalUrl: string | null;
   externalLabel: string | null;
+  /** Time spent on the item; null when there is no data. */
+  timeSpent: TimeSpent | null;
   /** The series a season belongs to. */
   seriesId: number | null;
 }

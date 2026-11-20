@@ -2,6 +2,7 @@ import type { SeasonEpisodes } from '@metrack/domain';
 import {
   DELETE_SERIES_CATALOGS_SQL,
   SELECT_SERIES_CATALOGS_SQL,
+  SELECT_USER_CATALOGS_SQL,
   UPSERT_CATALOG_SQL,
 } from '../mapping/episodeWatchesSql.js';
 import { seasonEpisodesFromRow, seasonEpisodesToRow } from '../mapping/seasonEpisodesFromRow.js';
@@ -23,6 +24,11 @@ export class D1SeasonEpisodesRepository implements SeasonEpisodesRepository {
 
   async listForSeries(seriesId: number): Promise<SeasonEpisodes[]> {
     const rows = await queryAll(this.db, SELECT_SERIES_CATALOGS_SQL, seriesId);
+    return rows.map(seasonEpisodesFromRow);
+  }
+
+  async listForUser(userId: number): Promise<SeasonEpisodes[]> {
+    const rows = await queryAll(this.db, SELECT_USER_CATALOGS_SQL, userId);
     return rows.map(seasonEpisodesFromRow);
   }
 

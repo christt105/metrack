@@ -28,6 +28,10 @@ export function loadLibrary(
         seasons: await sources.seasons.list(),
         videogames: await sources.videogames.list(),
         books: await sources.books.list(),
+        seasonEpisodes: await sources.seasonEpisodes.listForUser(userId),
+        episodeWatches: (await sources.episodeWatches.list()).map(
+          ({ seriesId, watched, skipped }) => ({ seriesId, watched, skipped }),
+        ),
       },
       messagesFor(language),
     ),

@@ -1,4 +1,10 @@
-import { MEDIA_STATUSES, RATING_MAX, RATING_MIN, type Collection } from '@metrack/domain';
+import {
+  MAX_TIME_SPENT_MINUTES,
+  MEDIA_STATUSES,
+  RATING_MAX,
+  RATING_MIN,
+  type Collection,
+} from '@metrack/domain';
 import {
   nullableDate,
   nullableInteger,
@@ -19,6 +25,12 @@ const tracking: Properties = {
   review: nullableString,
   rewatches: { type: 'array', items: viewingItem },
   pendingReview: { type: 'boolean' },
+};
+
+const timeSpentMinutes = {
+  type: ['integer', 'null'],
+  minimum: 0,
+  maximum: MAX_TIME_SPENT_MINUTES,
 };
 
 const common: Properties = { slug: nullableSlug, tags: stringList };
@@ -79,6 +91,7 @@ export const MEDIA_PROPERTIES: Record<Collection, Properties> = {
     developer: nullableString,
     platforms: stringList,
     note: nullableString,
+    timeSpentMinutes,
   },
   books: {
     ...common,
@@ -93,5 +106,6 @@ export const MEDIA_PROPERTIES: Record<Collection, Properties> = {
     overview: nullableString,
     genres: stringList,
     note: nullableString,
+    timeSpentMinutes,
   },
 };

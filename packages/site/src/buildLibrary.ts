@@ -1,13 +1,19 @@
 import {
   finishDates,
+  manualTimeSpent,
+  movieTimeSpent,
+  seasonTimeSpent,
   type Artwork,
   Book,
+  episodeKey,
   Movie,
   Season,
+  SeasonEpisodes,
   Series,
   Tracking,
   Videogame,
 } from '@metrack/domain';
+import type { EpisodeWatchesOfSeries } from './EpisodeWatchesOfSeries.js';
 import type { Library } from './Library.js';
 import type { PublicEntry } from './PublicEntry.js';
 import type { SiteInput } from './SiteInput.js';
@@ -34,6 +40,7 @@ const NOTHING: Omit<PublicEntry, 'kind' | 'id' | 'title' | 'status'> = {
   externalUrl: null,
   externalLabel: null,
   seriesId: null,
+  timeSpent: null,
 };
 
 function tracked(tracking: Tracking, artwork: Artwork): Partial<PublicEntry> {
@@ -58,6 +65,7 @@ function movieEntry(movie: Movie): PublicEntry {
     title: movie.title,
     slug: movie.slug,
     status: movie.status,
+    timeSpent: movieTimeSpent(movie),
     releaseDate: movie.releaseDate,
     overview: movie.overview,
     genres: movie.genres,
@@ -92,6 +100,8 @@ function seasonEntry(
   series: Series | undefined,
   onlySeason: boolean,
   messages: SiteMessages,
+  catalog: SeasonEpisodes | undefined,
+  watches: EpisodeWatchesOfSeries | undefined,
 ): PublicEntry {
   return {
     ...NOTHING,
@@ -104,6 +114,20 @@ function seasonEntry(
     title: seasonTitle(season, series, onlySeason, messages),
     slug: season.slug,
     status: season.status,
+    timeSpent: seasonTimeSpent({
+      episodes:
+        catalog === undefined
+          ? null
+          : catalog.episodes.map((episode) => ({
+              key: episodeKey(episode, season.number),
+              runtime: episode.runtime,
+            })),
+      watches: watches?.watched ?? {},
+      skipped: new Set(watches?.skipped ?? []),
+      seriesRuntime: series?.episodeRuntime ?? null,
+      watchedCount: season.watchedCount,
+      finishedAt: season.finishedAt,
+    }),
     releaseDate: season.firstAirDate,
     overview: season.overview,
     genres: series?.genres ?? [],
@@ -121,6 +145,7 @@ function gameEntry(game: Videogame): PublicEntry {
     title: game.title,
     slug: game.slug,
     status: game.status,
+    timeSpent: manualTimeSpent(game),
     releaseDate: game.releaseDate,
     overview: game.overview,
     genres: game.genres,
@@ -142,6 +167,7 @@ function bookEntry(book: Book): PublicEntry {
     title: book.title,
     slug: book.slug,
     status: book.status,
+    timeSpent: manualTimeSpent(book),
     releaseDate: book.releaseDate,
     overview: book.overview,
     genres: book.genres,
@@ -161,6 +187,8 @@ export function buildLibrary(input: SiteInput, messages: SiteMessages = es): Lib
   for (const season of input.seasons) {
     seasonCount.set(season.seriesId, (seasonCount.get(season.seriesId) ?? 0) + 1);
   }
+  const catalogs = new Map(input.seasonEpisodes.map((catalog) => [catalog.seasonId, catalog]));
+  const watchesBySeries = new Map(input.episodeWatches.map((entry) => [entry.seriesId, entry]));
   const seasons = input.seasons
     .filter((season) => !season.pendingReview)
     .sort((a, b) => a.number - b.number || a.id - b.id)
@@ -170,6 +198,8 @@ export function buildLibrary(input: SiteInput, messages: SiteMessages = es): Lib
         seriesById.get(season.seriesId),
         seasonCount.get(season.seriesId) === 1,
         messages,
+        catalogs.get(season.id),
+        watchesBySeries.get(season.seriesId),
       ),
     );
   const shown = new Set(seasons.map((season) => season.seriesId));

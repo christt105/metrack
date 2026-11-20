@@ -188,16 +188,41 @@ for (let i = 0; i < COUNTS.series; i++) {
     `INSERT INTO series_entry (user_id, series_id, slug, review, tags) VALUES (${USER_ID}, ${id}, ${quote(slugOf(name))}, ${quote(chance(0.3) ? paragraph() : null)}, ${json(tags())})`,
   );
   const seasons = extraList.includes(i) ? int(2, 3) : 1;
+  const watched = {};
   for (let n = 1; n <= seasons; n++) {
     const t = tracking();
+    const episodeCount = int(6, 24);
     sql(
-      `INSERT INTO season (id, series_id, number, title, overview, first_air_date, episode_count, cover) VALUES (${seasonId}, ${id}, ${n}, ${quote(`Season ${n}`)}, ${quote(paragraph())}, ${quote(date(1995, 2025))}, ${int(6, 24)}, ${quote(image('season', seasonId, 'poster'))})`,
+      `INSERT INTO season (id, series_id, number, title, overview, first_air_date, episode_count, cover) VALUES (${seasonId}, ${id}, ${n}, ${quote(`Season ${n}`)}, ${quote(paragraph())}, ${quote(date(1995, 2025))}, ${episodeCount}, ${quote(image('season', seasonId, 'poster'))})`,
     );
+    const episodes = Array.from({ length: episodeCount }, (_, k) => ({
+      number: k + 1,
+      title: `Episode ${k + 1}`,
+      airDate: `2020-01-${pad(1 + (k % 28))}`,
+      runtime: k % 5 === 4 ? null : 22 + (k % 4) * 8,
+      tmdbId: seasonId * 100 + k,
+      overview: `About episode ${k + 1}.`,
+      stillPath: `/still${seasonId}-${k}.jpg`,
+    }));
+    sql(
+      `INSERT INTO season_episodes (season_id, episodes, source, fetched_at, complete) VALUES (${seasonId}, ${json(episodes)}, 'tmdb', '2026-01-01T00:00:00.000Z', 1)`,
+    );
+    if (t.status !== 'planned') {
+      for (const episode of episodes) {
+        if (chance(0.8)) {
+          const day = date(2021, 2026);
+          watched[String(episode.tmdbId)] = [{ startedAt: day, finishedAt: day }];
+        }
+      }
+    }
     sql(
       `INSERT INTO season_entry (user_id, season_id, slug, ${entryColumns()}) VALUES (${USER_ID}, ${seasonId}, ${quote(`${slugOf(name)}-s${n}`)}, ${entryValues(t)})`,
     );
     seasonId++;
   }
+  sql(
+    `INSERT INTO series_episode_entry (user_id, series_id, watched, skipped) VALUES (${USER_ID}, ${id}, ${json(watched)}, '[]')`,
+  );
 }
 
 for (let i = 0; i < COUNTS.games; i++) {

@@ -1,6 +1,8 @@
 import { RATING_MAX, RATING_MIN } from '@metrack/domain';
 import type { Messages } from '../i18n/messages/Messages';
 import type { FieldSchema } from './FieldSchema';
+import { formatHoursInput } from './formatHoursInput';
+import { parseHours } from './parseHours';
 
 export type DraftValue = string | boolean;
 export type Draft = Record<string, DraftValue>;
@@ -20,6 +22,7 @@ function toDraftValue(schema: FieldSchema, value: unknown): DraftValue {
   if (schema.kind === 'boolean') return value === true;
   if (schema.kind === 'list') return Array.isArray(value) ? value.join(', ') : '';
   if (value === null || value === undefined) return '';
+  if (schema.kind === 'hours') return formatHoursInput(Number(value));
   return String(value);
 }
 
@@ -52,6 +55,11 @@ function fromDraftValue(schema: FieldSchema, value: DraftValue, messages: Messag
       const number = Number(text);
       if (!Number.isInteger(number) || number < 0) throw new DraftError(schema.key, 'whole number');
       return number;
+    }
+    case 'hours': {
+      const minutes = parseHours(text);
+      if (minutes === undefined) throw new DraftError(schema.key, messages.edit.hoursInvalid);
+      return minutes;
     }
     case 'rating': {
       if (!text) return null;

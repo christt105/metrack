@@ -225,7 +225,15 @@ export async function createTestApi(
     settings: { users, settings, profiles },
     site: {
       profiles,
-      sources: { movies, series, seasons, videogames, books },
+      sources: {
+        movies,
+        series,
+        seasons,
+        videogames,
+        books,
+        seasonEpisodes,
+        episodeWatches: new SqliteEpisodeWatchRepository(db, scope),
+      },
       publicUrl: options.publicUrl ?? null,
       contactEmail: 'privacy@example.test',
     },

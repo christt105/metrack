@@ -5,6 +5,7 @@ import type { BookRepository } from './BookRepository.js';
 import type { ImageRepository } from './ImageRepository.js';
 import type { InviteRepository } from './InviteRepository.js';
 import type { MetadataStateRepository } from './MetadataStateRepository.js';
+import type { MovieRuntimeRepository } from './MovieRuntimeRepository.js';
 import type { MovieRepository } from './MovieRepository.js';
 import type { ReleaseAlertRepository } from './ReleaseAlertRepository.js';
 import type { EpisodeWatchRepository } from './EpisodeWatchRepository.js';
@@ -25,6 +26,7 @@ export interface Repositories {
   seasons: SeasonRepository;
   videogames: VideogameRepository;
   books: BookRepository;
+  movieRuntimes: MovieRuntimeRepository;
   seasonEpisodes: SeasonEpisodesRepository;
   episodeWatches: EpisodeWatchRepository;
   unlinked: UnlinkedTitleRepository;

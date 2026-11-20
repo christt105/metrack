@@ -41,6 +41,7 @@ const newSeries = (over: Partial<Omit<Series, 'id'>> = {}): Omit<Series, 'id'> =
   review: null,
   nextEpisode: null,
   nextEpisodeCheckedAt: null,
+  episodeRuntime: null,
   ...over,
 });
 
@@ -93,6 +94,7 @@ describe.each(backends)('$name repositories', (backend) => {
       genres: ['Drama'],
       cast: ['Paul Mescal'],
       director: 'Charlotte Wells',
+      runtime: null,
       follow: false,
       note: null,
       cover: 'cover.jpg',
@@ -177,6 +179,7 @@ describe.each(backends)('$name repositories', (backend) => {
         overview: null,
         genres: ['Arcade'],
         developer: 'Gabe Cuzzillo',
+        timeSpentMinutes: null,
         platforms: ['PC'],
         note: null,
         cover: null,
@@ -198,6 +201,7 @@ describe.each(backends)('$name repositories', (backend) => {
         authors: ['A', 'B'],
         publisher: 'Pub',
         pageCount: 300,
+        timeSpentMinutes: null,
         releaseDate: null,
         overview: null,
         genres: [],

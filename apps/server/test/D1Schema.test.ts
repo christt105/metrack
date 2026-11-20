@@ -81,6 +81,11 @@ const userLanguageSql = readFileSync(
   'utf8',
 );
 
+const timeSpentSql = readFileSync(
+  new URL('../d1/migrations/0015_time_spent.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -96,6 +101,7 @@ function fromSql(): DatabaseSync {
   db.exec(unmatchedEpisodesSql);
   db.exec(dropPublishSettingsSql);
   db.exec(userLanguageSql);
+  db.exec(timeSpentSql);
   return db;
 }
 
@@ -140,6 +146,25 @@ describe('D1 schema file', () => {
       expect(db.prepare('SELECT language FROM user_setting').get()?.language).toBeNull();
       db.exec("UPDATE user_setting SET language = 'es'");
       expect(() => db.exec("UPDATE user_setting SET language = 'fr'")).toThrow();
+    }
+  });
+
+  it('has nullable time and runtime columns that refuse negative minutes', () => {
+    for (const db of [fromMigrations(), fromSql()]) {
+      db.exec('PRAGMA foreign_keys = OFF');
+      db.exec('INSERT INTO videogame_entry (user_id, videogame_id) VALUES (1, 1)');
+      db.exec('INSERT INTO book_entry (user_id, book_id) VALUES (1, 1)');
+      db.exec("INSERT INTO movie (id, title) VALUES (1, 'M')");
+      db.exec("INSERT INTO series (id, title) VALUES (1, 'S')");
+      expect(db.prepare('SELECT time_spent_minutes AS v FROM videogame_entry').get()?.v).toBeNull();
+      expect(db.prepare('SELECT time_spent_minutes AS v FROM book_entry').get()?.v).toBeNull();
+      expect(db.prepare('SELECT runtime AS v FROM movie').get()?.v).toBeNull();
+      expect(db.prepare('SELECT episode_runtime AS v FROM series').get()?.v).toBeNull();
+      db.exec('UPDATE book_entry SET time_spent_minutes = 0');
+      expect(() => db.exec('UPDATE book_entry SET time_spent_minutes = -1')).toThrow();
+      expect(() => db.exec('UPDATE videogame_entry SET time_spent_minutes = -1')).toThrow();
+      expect(() => db.exec('UPDATE movie SET runtime = -1')).toThrow();
+      expect(() => db.exec('UPDATE series SET episode_runtime = -1')).toThrow();
     }
   });
 

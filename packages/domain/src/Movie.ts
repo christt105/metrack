@@ -12,6 +12,8 @@ export interface Movie extends Tracking, Artwork {
   genres: string[];
   cast: string[];
   director: string | null;
+  /** Running time in minutes as TMDB reports it; null before it is known and 0 when TMDB has none. */
+  runtime: number | null;
   follow: boolean;
   note: string | null;
   /** File name the item had in the vault. It keeps exported page addresses stable. */

@@ -90,10 +90,16 @@ Editable fields per collection:
 - `movies`: `tmdbId`, `jellyfinId`, `title`, `originalTitle`, `releaseDate`, `overview`, `genres`, `cast`, `director`, `follow`, `note`, `slug`, `tags` and the tracking fields.
 - `series`: `tmdbId`, `tvdbId`, `jellyfinId`, `title`, `originalTitle`, `firstAirDate`, `overview`, `genres`, `cast`, `follow`, `note`, `review`, `slug`, `tags`.
 - `seasons`: `number`, `tmdbSeasonNumber`, `jellyfinId`, `title`, `overview`, `firstAirDate`, `episodeCount`, `slug`, `tags` and the tracking fields.
-- `games`: `igdbId`, `steamAppId`, `steamGridDbId`, `title`, `releaseDate`, `overview`, `genres`, `developer`, `platforms`, `note`, `slug`, `tags` and the tracking fields.
-- `books`: `openLibraryId`, `isbn`, `title`, `authors`, `publisher`, `pageCount`, `releaseDate`, `overview`, `genres`, `note`, `slug`, `tags` and the tracking fields.
+- `games`: `igdbId`, `steamAppId`, `steamGridDbId`, `title`, `releaseDate`, `overview`, `genres`, `developer`, `platforms`, `note`, `timeSpentMinutes`, `slug`, `tags` and the tracking fields.
+- `books`: `openLibraryId`, `isbn`, `title`, `authors`, `publisher`, `pageCount`, `releaseDate`, `overview`, `genres`, `note`, `timeSpentMinutes`, `slug`, `tags` and the tracking fields.
 
 The tracking fields are `status`, `startedAt`, `finishedAt`, `rating`, `review`, `rewatches` and `pendingReview`. `pendingReview` is set by the Jellyfin sync on every viewing it records and cleared by patching it to `false`; while it is set, the exported page carries `pending_review: true` and the site feeds leave it out.
+
+### Time spent
+
+`timeSpentMinutes` on games and books is the time the user has spent on the item, in whole minutes: an integer from 0 to 6000000 (100000 hours) or `null` for no data, which is not the same as 0. The web app asks for hours (`12.5` or `12:30`) and sends minutes. Games and books without it do not count in the statistics, which say how many finished ones are missing.
+
+Movies and series have no field of their own: their time is computed when read. A movie counts its `runtime` (minutes, from TMDB `/movie/{id}`, filled in when the movie is created or refreshed and by a background backfill of the movies stored before it existed; `0` means TMDB has none) once for the first viewing of a completed movie and once for each finished rewatch, and counts nothing without a running time. A season counts the `runtime` of every viewing of every watched episode in `series_episode_entry`, rewatches included and skipped episodes left out; an episode without a running time takes the season's average, then the series' `episodeRuntime` (TMDB `episode_run_time`), and counts for nothing when there is neither. A season without an episode catalog counts its watched episodes at the series' `episodeRuntime`. `GET /api/series/{id}` and `GET /api/seasons/{id}` carry the result as `timeSpentMinutes` (`null` when there is no data); `runtime` and `episodeRuntime` are read-only catalog fields.
 
 ### Editing rules
 

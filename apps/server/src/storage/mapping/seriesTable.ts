@@ -30,6 +30,7 @@ function seriesToRow(s: Omit<Series, 'id'>): RowValues {
     slug: s.slug,
     tags: JSON.stringify(s.tags),
     review: s.review,
+    episode_runtime: s.episodeRuntime,
     next_episode_season: s.nextEpisode?.seasonNumber ?? null,
     next_episode_number: s.nextEpisode?.episodeNumber ?? null,
     next_episode_air_date: s.nextEpisode?.airDate ?? null,
@@ -66,6 +67,7 @@ function seriesFromRow(row: Row): Series {
     slug: text(row.slug),
     tags: parseList(row.tags),
     review: text(row.review),
+    episodeRuntime: num(row.episode_runtime),
     nextEpisode: nextEpisodeFromRow(row),
     nextEpisodeCheckedAt: text(row.next_episode_checked_at),
   };

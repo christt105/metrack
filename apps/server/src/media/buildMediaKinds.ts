@@ -1,13 +1,15 @@
-import type {
-  Book,
-  Collection,
-  MediaSummary,
-  Movie,
-  Season,
-  Series,
-  Tracking,
-  Videogame,
+import {
+  sumTimeSpent,
+  type Book,
+  type Collection,
+  type MediaSummary,
+  type Movie,
+  type Season,
+  type Series,
+  type Tracking,
+  type Videogame,
 } from '@metrack/domain';
+import type { SeasonEpisodesRepository } from '../storage/repositories/SeasonEpisodesRepository.js';
 import { ApiError } from '../api/ApiError.js';
 import { asMediaRepository } from './asMediaRepository.js';
 import {
@@ -17,6 +19,7 @@ import {
   emptySeries,
   emptyVideogame,
 } from './emptyEntities.js';
+import { seasonTimeSpentOf } from './seasonTimeSpentOf.js';
 import type { MediaKind } from './MediaKind.js';
 import type { MediaKindSources } from './MediaKindSources.js';
 
@@ -51,7 +54,10 @@ function trackingOf(
 }
 
 /** The five entity collections, wired to their repositories. */
-export function buildMediaKinds(sources: MediaKindSources): Record<Collection, MediaKind> {
+export function buildMediaKinds(
+  sources: MediaKindSources,
+  catalogs: SeasonEpisodesRepository,
+): Record<Collection, MediaKind> {
   return {
     movies: {
       collection: 'movies',
@@ -104,8 +110,27 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
       },
       extend: async (entity) => {
         const seasons = await sources.seasons.listBySeries(entity.id);
-        const unmatched = (await sources.episodeWatches.getEntry(entity.id))?.unmatched ?? [];
-        return { seasons, unmatched };
+        const entry = await sources.episodeWatches.getEntry(entity.id);
+        const series = entity as Series;
+        const byId = new Map(
+          (await catalogs.listForSeries(entity.id)).map((catalog) => [catalog.seasonId, catalog]),
+        );
+        const timeSpent = sumTimeSpent(
+          seasons.map((season) =>
+            seasonTimeSpentOf(
+              season,
+              series,
+              byId.get(season.id),
+              entry?.watched ?? {},
+              entry?.skipped ?? [],
+            ),
+          ),
+        );
+        return {
+          seasons,
+          unmatched: entry?.unmatched ?? [],
+          timeSpentMinutes: timeSpent?.minutes ?? null,
+        };
       },
     },
     seasons: {
@@ -123,6 +148,18 @@ export function buildMediaKinds(sources: MediaKindSources): Record<Collection, M
             `Series ${String(values.seriesId)} does not exist`,
           );
         }
+      },
+      extend: async (entity) => {
+        const season = entity as Season;
+        const entry = await sources.episodeWatches.getEntry(season.seriesId);
+        const timeSpent = seasonTimeSpentOf(
+          season,
+          await sources.series.get(season.seriesId),
+          await catalogs.get(season.id),
+          entry?.watched ?? {},
+          entry?.skipped ?? [],
+        );
+        return { timeSpentMinutes: timeSpent?.minutes ?? null };
       },
       summarize: (entity, context) => {
         const s = entity as Season;

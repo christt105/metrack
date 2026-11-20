@@ -5,6 +5,8 @@ export interface SeasonEpisodesRepository {
   get(seasonId: number): Promise<SeasonEpisodes | undefined>;
   /** The catalogs of the series' seasons that have one, ordered by season. */
   listForSeries(seriesId: number): Promise<SeasonEpisodes[]>;
+  /** The catalogs of every season the user has an entry for; not scoped. */
+  listForUser(userId: number): Promise<SeasonEpisodes[]>;
   /** Inserts or replaces the catalog of the season. */
   put(catalog: SeasonEpisodes): Promise<void>;
   /** Drops the catalogs of every season of the series, so each is fetched again the next time it is opened. */

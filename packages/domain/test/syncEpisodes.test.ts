@@ -59,6 +59,7 @@ function storedSeries(over: Partial<Series> = {}): Series {
     review: null,
     nextEpisode: null,
     nextEpisodeCheckedAt: null,
+    episodeRuntime: null,
     cover: null,
     banner: null,
     ...over,

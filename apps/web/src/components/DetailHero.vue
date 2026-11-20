@@ -5,6 +5,7 @@ import type { AnyDetail } from '../api/AnyDetail';
 import { useMessages } from '../composables/useMessages';
 import { bannerSources } from '../logic/bannerSources';
 import { readDetailFacts } from '../logic/readDetailFacts';
+import { formatDuration } from '../logic/formatDuration';
 import PendingBadge from './PendingBadge.vue';
 import RatingBadge from './RatingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
@@ -20,6 +21,9 @@ const props = defineProps<{
 }>();
 
 const facts = computed(() => readDetailFacts(props.detail));
+const timeText = computed(() =>
+  facts.value.timeSpentMinutes === null ? null : formatDuration(facts.value.timeSpentMinutes),
+);
 const cover = computed(() => {
   const own = 'cover' in props.detail ? props.detail.cover : null;
   return own ?? props.fallback?.cover ?? null;
@@ -87,12 +91,21 @@ const meta = computed(() =>
         </div>
       </div>
     </div>
-    <div v-if="facts.overview || $slots.review || facts.genres.length" class="about">
+    <div
+      v-if="
+        facts.overview || $slots.review || facts.genres.length || timeText || facts.durationUnknown
+      "
+      class="about"
+    >
       <div class="text">
         <p v-if="facts.overview" class="overview">{{ facts.overview }}</p>
         <slot name="review" />
       </div>
       <dl class="facts">
+        <template v-if="timeText || facts.durationUnknown">
+          <dt>{{ messages.hero.timeSpent }}</dt>
+          <dd>{{ timeText ?? messages.hero.noDuration }}</dd>
+        </template>
         <template v-if="facts.genres.length">
           <dt>{{ messages.hero.genres }}</dt>
           <dd class="tags">

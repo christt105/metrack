@@ -11,4 +11,8 @@ export interface DetailFacts {
   episodeCount: number | null;
   rating: number | null;
   review: string | null;
+  /** Minutes spent, stored for games and books, computed for the rest; null when there is no data. */
+  timeSpentMinutes: number | null;
+  /** A completed movie that has no running time, so its time cannot be computed. */
+  durationUnknown: boolean;
 }

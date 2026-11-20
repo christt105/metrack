@@ -36,6 +36,7 @@ const series: Series = {
   review: null,
   nextEpisode: null,
   nextEpisodeCheckedAt: null,
+  episodeRuntime: null,
   cover: null,
   banner: null,
 };

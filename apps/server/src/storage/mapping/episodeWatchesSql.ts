@@ -19,5 +19,8 @@ export const UPSERT_CATALOG_SQL = `INSERT INTO season_episodes (season_id, episo
 export const DELETE_SERIES_CATALOGS_SQL =
   'DELETE FROM season_episodes WHERE season_id IN (SELECT id FROM season WHERE series_id = ?)';
 
+export const SELECT_USER_CATALOGS_SQL =
+  'SELECT * FROM season_episodes WHERE season_id IN (SELECT season_id FROM season_entry WHERE user_id = ?) ORDER BY season_id';
+
 export const SELECT_SERIES_CATALOGS_SQL =
   'SELECT * FROM season_episodes WHERE season_id IN (SELECT id FROM season WHERE series_id = ?) ORDER BY season_id';

@@ -51,6 +51,15 @@ const checked = computed({
     inputmode="numeric"
     :required="required"
   />
+  <input
+    v-else-if="kind === 'hours'"
+    :id="id"
+    v-model="text"
+    type="text"
+    inputmode="decimal"
+    placeholder="12.5 / 12:30"
+    autocomplete="off"
+  />
   <RatingPicker v-else-if="kind === 'rating'" :id="id" v-model="ratingValue" />
   <input v-else :id="id" v-model="text" type="text" :required="required" autocomplete="off" />
 </template>

@@ -33,5 +33,6 @@ export { languageFromAcceptLanguage } from './languageFromAcceptLanguage.js';
 export type { PublicEntry } from './PublicEntry.js';
 export type { PublicKind } from './PublicKind.js';
 export type { SiteAsset } from './SiteAsset.js';
+export type { EpisodeWatchesOfSeries } from './EpisodeWatchesOfSeries.js';
 export type { SiteInput } from './SiteInput.js';
 export type { SiteProfile } from './SiteProfile.js';
