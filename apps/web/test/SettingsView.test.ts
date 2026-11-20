@@ -246,13 +246,30 @@ describe('SettingsView user settings', () => {
       listUsers,
     });
     await flushPromises();
-    expect(wrapper.text()).toContain('Your background jobs');
-    expect(wrapper.text()).toContain('haku');
+    expect(wrapper.find('[data-test="jobs"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="service"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Your background jobs');
+    expect(wrapper.text()).not.toContain('Vault folder');
+    expect(wrapper.text()).not.toContain('Schema');
     expect(wrapper.text()).toContain('Jellyfin viewings');
+    expect(wrapper.find('[data-test="about-version"]').text()).toBe('dev');
+    expect(wrapper.text()).toContain('API tokens');
     expect(wrapper.text()).not.toContain('Backups');
     expect(wrapper.find('form.user').exists()).toBe(false);
     expect(listBackups).not.toHaveBeenCalled();
     expect(listUsers).not.toHaveBeenCalled();
+  });
+
+  it('shows the owner their jobs, the service panel and the version', async () => {
+    const { wrapper } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
+      listBackups: vi.fn().mockResolvedValue([]),
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-test="jobs"]').text()).toContain('Vault folder');
+    expect(wrapper.find('[data-test="service"]').text()).toContain('Schema');
+    expect(wrapper.find('[data-test="about-version"]').text()).toBe('dev');
   });
 
   it('lets the owner change what can be changed from the web', async () => {
