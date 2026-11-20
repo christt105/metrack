@@ -88,7 +88,10 @@ describe('SteamImportView', () => {
         })),
       };
     });
-    const { wrapper } = await loaded({ applySteam });
+    const { wrapper } = await loaded({
+      applySteam,
+      prepareSteamArtwork: async () => ({ processed: 1, remaining: 0 }),
+    });
     await wrapper.findAll('tbody input[type="checkbox"]')[1]?.setValue(false);
     await wrapper.find('[data-test="steam-import"]').trigger('click');
     await flushPromises();
@@ -101,6 +104,58 @@ describe('SteamImportView', () => {
     expect(applySteam.mock.calls.map(([ids]) => ids)).toEqual([['1', '3'], ['1']]);
     expect(wrapper.find('progress').exists()).toBe(false);
     expect(wrapper.find('[data-test="steam-result"]').text()).toContain('2 added');
+  });
+
+  it('prepares the artwork after importing, showing how many are left, and not when nothing was added', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const answers = [
+      { processed: 1, remaining: 1 },
+      { processed: 1, remaining: 0 },
+    ];
+    const prepareSteamArtwork = vi.fn(async () => {
+      if (prepareSteamArtwork.mock.calls.length === 1) await gate;
+      return answers.shift() ?? { processed: 0, remaining: 0 };
+    });
+    const applySteam = async (appIds: string[]) => ({
+      outcomes: appIds.map((appId) => ({ appId, result: 'imported' as const })),
+    });
+    const { wrapper } = await loaded({ applySteam, prepareSteamArtwork });
+    await wrapper.find('[data-test="steam-import"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-test="steam-artwork"]').text()).toBe('Preparing artwork, 3 left');
+    expect(wrapper.find('[data-test="steam-import"]').attributes('disabled')).toBeDefined();
+    release();
+    await flushPromises();
+    expect(prepareSteamArtwork).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-test="steam-artwork"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="steam-result"]').text()).toContain('3 added');
+
+    const skipped = vi.fn();
+    const none = await loaded({
+      applySteam: async (appIds: string[]) => ({
+        outcomes: appIds.map((appId) => ({ appId, result: 'skipped' as const })),
+      }),
+      prepareSteamArtwork: skipped,
+    });
+    await none.wrapper.find('[data-test="steam-import"]').trigger('click');
+    await flushPromises();
+    expect(skipped).not.toHaveBeenCalled();
+  });
+
+  it('keeps the import result and shows the error when preparing the artwork fails', async () => {
+    const applySteam = async (appIds: string[]) => ({
+      outcomes: appIds.map((appId) => ({ appId, result: 'imported' as const })),
+    });
+    const prepareSteamArtwork = async () => {
+      throw new ApiRequestError('Steam could not be reached', 502, 'steam_unavailable');
+    };
+    const { wrapper } = await loaded({ applySteam, prepareSteamArtwork });
+    await wrapper.find('[data-test="steam-import"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-test="steam-result"]').text()).toContain('3 added');
+    expect(wrapper.text()).toContain('Steam could not be reached');
+    expect(wrapper.find('[data-test="steam-artwork"]').exists()).toBe(false);
   });
 
   it('lists the games that failed', async () => {

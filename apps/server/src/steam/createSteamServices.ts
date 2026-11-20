@@ -1,3 +1,4 @@
+import type { GameArtworkBackfill } from '../backfill/GameArtworkBackfill.js';
 import type { IgdbClient } from '../providers/igdb/IgdbClient.js';
 import { SteamClient } from '../providers/steam/SteamClient.js';
 import type { FetchFn } from '../http/FetchFn.js';
@@ -14,13 +15,22 @@ export function createSteamServices(
   fetchFn: FetchFn,
   games: VideogameRepository,
   settings: UserSettingsRepository,
-  igdb: { client: IgdbClient; adder: SteamGameAdder } | undefined,
+  igdb: { client: IgdbClient; adder: SteamGameAdder; artwork: GameArtworkBackfill } | undefined,
 ): SteamServices {
   const client = apiKey ? new SteamClient(fetchFn, apiKey) : null;
   return {
     ids: new SteamIdResolver(client),
     ...(client && igdb
-      ? { importer: new SteamImportService(client, igdb.client, games, igdb.adder, settings) }
+      ? {
+          importer: new SteamImportService(
+            client,
+            igdb.client,
+            games,
+            igdb.adder,
+            settings,
+            igdb.artwork,
+          ),
+        }
       : {}),
   };
 }

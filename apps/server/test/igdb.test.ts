@@ -7,6 +7,7 @@ import type { FetchFn } from '../src/http/FetchFn.js';
 import { IgdbClient } from '../src/providers/igdb/IgdbClient.js';
 import type { IgdbGame } from '../src/providers/igdb/IgdbGame.js';
 import { SteamGridDbClient } from '../src/providers/steamgriddb/SteamGridDbClient.js';
+import { SqliteGameArtworkRepository } from '../src/storage/sqlite/SqliteGameArtworkRepository.js';
 import { SqliteVideogameRepository } from '../src/storage/sqlite/SqliteVideogameRepository.js';
 import { IgdbGameProvider } from '../src/titles/IgdbGameProvider.js';
 import { openTestDatabase } from './support/openTestDatabase.js';
@@ -85,7 +86,15 @@ function setup(fetchFn: FetchFn, withSteamGridDb = true) {
   const images = createImageStore(db, mkdtempSync(join(tmpdir(), 'metrack-igdb-')), fetchFn);
   const client = new IgdbClient(fetchFn, { clientId: 'cid', clientSecret: 'secret' });
   const steamGridDb = withSteamGridDb ? new SteamGridDbClient(fetchFn, 'sgdb') : null;
-  return { games, images, provider: new IgdbGameProvider(client, games, images, steamGridDb) };
+  const artwork = new SqliteGameArtworkRepository(db);
+  return {
+    games,
+    images,
+    artwork,
+    client,
+    steamGridDb,
+    provider: new IgdbGameProvider(client, games, images, steamGridDb, artwork),
+  };
 }
 
 describe('IgdbClient', () => {

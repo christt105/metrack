@@ -22,6 +22,7 @@ import { TitleProviders } from '../titles/TitleProviders.js';
 import { TmdbMovieProvider } from '../titles/TmdbMovieProvider.js';
 import { TmdbSeriesProvider } from '../titles/TmdbSeriesProvider.js';
 import { AsyncUserScope } from '../users/AsyncUserScope.js';
+import { GameArtworkBackfill } from '../backfill/GameArtworkBackfill.js';
 import { MovieRuntimeBackfill } from '../backfill/MovieRuntimeBackfill.js';
 import { ScheduledTick } from './ScheduledTick.js';
 import { stringsOf } from './stringsOf.js';
@@ -87,14 +88,20 @@ export function createWorkerServices(
   if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
   const igdbClient = config.igdb && new IgdbClient(workerFetch, config.igdb);
   const igdbGames =
-    igdbClient && new IgdbGameProvider(igdbClient, videogames, imageStore, steamGridDb);
+    igdbClient &&
+    new IgdbGameProvider(igdbClient, videogames, imageStore, steamGridDb, repositories.gameArtwork);
+  const gameArtwork =
+    igdbClient &&
+    new GameArtworkBackfill(repositories.gameArtwork, imageStore, igdbClient, steamGridDb, logger);
   if (igdbGames) titleProviders.register(igdbGames);
   const steam = createSteamServices(
     config.steamApiKey,
     workerFetch,
     videogames,
     repositories.settings,
-    igdbClient && igdbGames && { client: igdbClient, adder: igdbGames },
+    igdbClient &&
+      igdbGames &&
+      gameArtwork && { client: igdbClient, adder: igdbGames, artwork: gameArtwork },
   );
   const openLibrary = new OpenLibraryClient(workerFetch, config.openLibraryLanguage);
   titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
@@ -143,6 +150,7 @@ export function createWorkerServices(
       ...(tmdb
         ? { runtimes: new MovieRuntimeBackfill(repositories.movieRuntimes, tmdb, logger) }
         : {}),
+      ...(gameArtwork ? { artwork: gameArtwork } : {}),
       logger,
     }),
   };

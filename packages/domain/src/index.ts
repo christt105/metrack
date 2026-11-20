@@ -127,6 +127,7 @@ export type { SteamApplyRequest } from './api/SteamApplyRequest.js';
 export type { SteamApplyOutcome } from './api/SteamApplyOutcome.js';
 export type { SteamApplyResponse } from './api/SteamApplyResponse.js';
 export { STEAM_APPLY_BATCH_SIZE } from './api/STEAM_APPLY_BATCH_SIZE.js';
+export type { SteamArtworkResponse } from './api/SteamArtworkResponse.js';
 export { LANGUAGES } from './settings/LANGUAGES.js';
 export type { EditableSetting } from './settings/EditableSetting.js';
 export type { UserSettingsPatch } from './api/UserSettingsPatch.js';

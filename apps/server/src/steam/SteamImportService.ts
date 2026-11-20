@@ -1,6 +1,12 @@
-import type { SteamApplyOutcome, SteamImportReport, SteamImportRow } from '@metrack/domain';
+import type {
+  SteamApplyOutcome,
+  SteamArtworkResponse,
+  SteamImportReport,
+  SteamImportRow,
+} from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
 import { HttpError } from '../http/HttpError.js';
+import type { GameArtworkBackfill } from '../backfill/GameArtworkBackfill.js';
 import type { IgdbClient } from '../providers/igdb/IgdbClient.js';
 import type { SteamClient } from '../providers/steam/SteamClient.js';
 import type { SteamOwnedGame } from '../providers/steam/SteamOwnedGame.js';
@@ -26,6 +32,7 @@ export class SteamImportService {
     private readonly games: VideogameRepository,
     private readonly adder: SteamGameAdder,
     private readonly settings: UserSettingsRepository,
+    private readonly artwork: GameArtworkBackfill,
   ) {}
 
   async report(userId: number): Promise<SteamImportReport> {
@@ -67,6 +74,15 @@ export class SteamImportService {
     return outcomes;
   }
 
+  /**
+   * Prepares the artwork of the games the user imported, as many as fit in one request, and answers how many it
+   * finished and how many are left. Call it again until nothing remains.
+   */
+  async prepareArtwork(userId: number): Promise<SteamArtworkResponse> {
+    const processed = await this.artwork.runBatch({ userId });
+    return { processed, remaining: await this.artwork.remaining(userId) };
+  }
+
   private async write(
     appId: string,
     row: SteamImportRow,
@@ -90,7 +106,7 @@ export class SteamImportService {
           ...entry,
         });
       } else {
-        await this.adder.addWith(String(target.igdbId), entry);
+        await this.adder.addWithDeferredArtwork(String(target.igdbId), entry);
       }
       return { appId, result: 'imported' };
     } catch (error) {

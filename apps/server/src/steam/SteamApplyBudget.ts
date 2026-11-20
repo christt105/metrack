@@ -10,6 +10,6 @@ export const STEAM_APPLY_BUDGET = {
   update: 3,
   /** Adding a game the shared catalog already has. */
   catalog: 3,
-  /** Adding a game from IGDB: its metadata, two Steam images, SteamGridDB, and the rows and files that store them. */
-  igdb: 18,
+  /** Adding a game from IGDB with its artwork deferred: its metadata and the rows that store it and mark it pending. */
+  igdb: 5,
 } as const;

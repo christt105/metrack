@@ -605,6 +605,7 @@ export const es: Messages = {
     done: (imported: number, updated: number, skipped: number) =>
       `Hecho: ${imported} añadidos, ${updated} actualizados, ${skipped} ya estaban.`,
     failed: (n: number) => `${n} juegos no se pudieron escribir:`,
+    artwork: (n: number) => `Preparando las portadas, quedan ${n}`,
     unmatched: (n: number) => `${n} juegos que IGDB no conoce`,
     unmatchedHint: 'No están en tu biblioteca y no se pueden importar.',
   },

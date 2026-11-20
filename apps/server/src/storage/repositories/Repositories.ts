@@ -1,4 +1,5 @@
 import type { AccountRepository } from './AccountRepository.js';
+import type { GameArtworkRepository } from './GameArtworkRepository.js';
 import type { HandAddedCatalogRepository } from './HandAddedCatalogRepository.js';
 import type { ApiTokenRepository } from './ApiTokenRepository.js';
 import type { BookRepository } from './BookRepository.js';
@@ -26,6 +27,7 @@ export interface Repositories {
   seasons: SeasonRepository;
   videogames: VideogameRepository;
   books: BookRepository;
+  gameArtwork: GameArtworkRepository;
   movieRuntimes: MovieRuntimeRepository;
   seasonEpisodes: SeasonEpisodesRepository;
   episodeWatches: EpisodeWatchRepository;
