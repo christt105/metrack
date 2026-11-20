@@ -113,12 +113,12 @@ const groups = computed(() =>
         </div>
         <div id="connections" class="group">
           <p class="group-title">{{ messages.settings.groups.connections }}</p>
-          <div class="panel">
+          <div v-if="owner" class="panel" data-test="jobs">
             <h2>{{ messages.settings.jobs }}</h2>
             <p class="muted">{{ messages.settings.jobsHint }}</p>
-            <ErrorNotice :error="ownError" />
             <SettingsList v-if="own" :settings="own.settings" />
           </div>
+          <ErrorNotice :error="ownError" />
           <NtfyAlertsPanel
             v-if="own?.ntfyTopicGenerated"
             :topic="own.settings.ntfyTopic"
@@ -174,9 +174,8 @@ const groups = computed(() =>
         </div>
         <div id="system" class="group">
           <p class="group-title">{{ messages.settings.groups.system }}</p>
-          <div class="panel">
+          <div v-if="owner" class="panel" data-test="service">
             <h2>{{ messages.settings.service }}</h2>
-            <ErrorNotice :error="healthError" />
             <dl v-if="health">
               <dt class="muted">{{ messages.settings.status }}</dt>
               <dd>{{ health.status }}</dd>
@@ -232,6 +231,7 @@ const groups = computed(() =>
           <p class="group-title">{{ messages.settings.groups.about }}</p>
           <AboutPanel :version="health?.appVersion ?? null" />
         </div>
+        <ErrorNotice v-if="owner" :error="healthError" />
         <p v-if="actionResult" class="notice success" role="status">{{ actionResult }}</p>
         <ErrorNotice :error="actionError" />
       </div>
