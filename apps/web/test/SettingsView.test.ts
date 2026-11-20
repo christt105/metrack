@@ -53,6 +53,18 @@ function ownerApi() {
 const created: BackupInfo = { ...existing, name: 'metrack-20261002T000000000Z' };
 
 describe('SettingsView backups', () => {
+  it('links to the help page', async () => {
+    const { wrapper, router } = await mountWithApi(SettingsView, {
+      health: vi.fn().mockResolvedValue(health),
+      ...ownerApi(),
+      listBackups: vi.fn().mockResolvedValue([]),
+    });
+    await flushPromises();
+    await wrapper.get('[data-test="help-link"]').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe('help');
+  });
+
   it('lists stored backups', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       health: vi.fn().mockResolvedValue(health),

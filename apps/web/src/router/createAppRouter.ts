@@ -7,6 +7,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
   return createRouter({
     history,
     routes,
-    scrollBehavior: (_to, _from, savedPosition) => savedPosition ?? { top: 0 },
+    scrollBehavior: (to, _from, savedPosition) =>
+      savedPosition ?? (to.hash ? { el: to.hash } : { top: 0 }),
   });
 }
