@@ -75,7 +75,7 @@ export function renderHome(library: Library): string {
     everything.length === 0
       ? `<p>${library.messages.home.emptyLibrary}</p>`
       : `${renderFilterBar(everything, shownTypes, library.messages)}${current}${completed(library, entries, current !== '')}${setAside(library, entries)}`;
-  const main = `<main aria-label="Content">${body}</main>`;
+  const main = `<main aria-label="${library.messages.contentLabel}">${body}</main>`;
   return renderLayout({
     library,
     title: ownerName(library),

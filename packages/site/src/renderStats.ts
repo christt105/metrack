@@ -2,6 +2,7 @@ import { escapeHtml } from '@metrack/export';
 import { allEntries } from './allEntries.js';
 import { entryStatus } from './entryStatus.js';
 import { formatDecimal } from './formatDecimal.js';
+import { formatInteger } from './formatInteger.js';
 import type { Library } from './Library.js';
 import { ownerName } from './ownerName.js';
 import type { PublicEntry } from './PublicEntry.js';
@@ -30,7 +31,12 @@ function typeCards(messages: SiteMessages, entries: PublicEntry[], hideEmpty: bo
   return TYPE_ORDER.flatMap((type) => {
     const count = entries.filter((entry) => themeType(entry.kind) === type).length;
     if (count === 0 && (hideEmpty || type === 'book')) return [];
-    return [card(`<i class="${TYPE_ICONS[type]}"></i> ${count}`, messages.typePlurals[type])];
+    return [
+      card(
+        `<i class="${TYPE_ICONS[type]}"></i> ${formatInteger(count, messages)}`,
+        messages.typePlurals[type],
+      ),
+    ];
   }).join('');
 }
 
@@ -47,7 +53,7 @@ function ratingBars(
       {
         name: `<i class="${theme.icon}" style="color:${theme.color}"></i> ${escapeHtml(theme.label)}`,
         percent: percentOf(count, max),
-        value: String(count),
+        value: formatInteger(count, messages),
         color: theme.color,
       },
     ];
@@ -65,7 +71,7 @@ function averageCard(messages: SiteMessages, ratings: number[]): string {
   const mean = average(ratings);
   return mean === null
     ? ''
-    : card(formatDecimal(mean), messages.stats.averageRating, maxRating(messages));
+    : card(formatDecimal(mean, messages), messages.stats.averageRating, maxRating(messages));
 }
 
 function weightedRatings(finished: PublicEntry[]): number[] {
@@ -84,7 +90,7 @@ function allTime(
   const counts = new Map<number, number>();
   for (const rating of ratings) counts.set(rating, (counts.get(rating) ?? 0) + 1);
   const total = finished.reduce((sum, entry) => sum + completions(entry), 0);
-  const cards = `<section class="stats-cards">${card(String(media.length), messages.stats.total)}${card(String(total), messages.stats.finished)}${typeCards(messages, media, false)}${averageCard(messages, ratings)}</section>`;
+  const cards = `<section class="stats-cards">${card(formatInteger(media.length, messages), messages.stats.total)}${card(formatInteger(total, messages), messages.stats.finished)}${typeCards(messages, media, false)}${averageCard(messages, ratings)}</section>`;
 
   const perYear = new Map<string, number>();
   for (const entry of finished) {
@@ -98,7 +104,7 @@ function allTime(
   const yearBars: StatBar[] = yearList.map(([year, count]) => ({
     name: year,
     percent: percentOf(count, maxYear),
-    value: String(count),
+    value: formatInteger(count, messages),
   }));
 
   const scale = ratingScale(messages);
@@ -114,7 +120,7 @@ function allTime(
         {
           name: year,
           percent: percentOf(mean, maxRating(messages)),
-          value: formatDecimal(mean),
+          value: formatDecimal(mean, messages),
           color: theme?.color ?? 'var(--primary-color,#4f8cff)',
           valueColor: theme?.color,
         } satisfies StatBar,
@@ -139,7 +145,7 @@ function allTime(
             genres.map((genre) => ({
               name: escapeHtml(genre.name),
               percent: percentOf(genre.count, maxGenre),
-              value: String(genre.count),
+              value: formatInteger(genre.count, messages),
             })),
           ),
         ),
@@ -162,7 +168,7 @@ function oneYear(
   const ratings = inYear.flatMap((entry) => (entry.rating === null ? [] : [entry.rating]));
   const counts = new Map<number, number>();
   for (const rating of ratings) counts.set(rating, (counts.get(rating) ?? 0) + 1);
-  const cards = `<section class="stats-cards">${card(String(inYear.length), messages.stats.finished)}${typeCards(messages, inYear, true)}${averageCard(messages, ratings)}</section>`;
+  const cards = `<section class="stats-cards">${card(formatInteger(inYear.length, messages), messages.stats.finished)}${typeCards(messages, inYear, true)}${averageCard(messages, ratings)}</section>`;
   return `<div data-stats-year="${year}" hidden>${cards}${ratingBars(messages, counts, true)}${renderVariableStats(messages, inYear)}</div>`;
 }
 
@@ -186,7 +192,7 @@ export function renderStats(library: Library): string {
     library,
     title: `${messages.stats.title} | ${ownerName(library)}`,
     active: 'stats',
-    page: `<div class="wrapper stats-page"><header class="header"><h1 class="header-title center">${messages.stats.title}</h1></header><main class="page-content" aria-label="Content">${selector}${blocks}</main></div>`,
+    page: `<div class="wrapper stats-page"><header class="header"><h1 class="header-title center">${messages.stats.title}</h1></header><main class="page-content" aria-label="${messages.contentLabel}">${selector}${blocks}</main></div>`,
     scripts: ['stats.js'],
   });
 }

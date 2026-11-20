@@ -8,7 +8,15 @@ export class UncachedPublicRenders implements PublicRenderCache {
 
   async lookup(handle: string): Promise<PublicRenderLookup | undefined> {
     const profile = await this.profiles.findByHandle(handle);
-    return profile ? { ...profile, version: null, cached: null } : undefined;
+    return profile
+      ? {
+          userId: profile.userId,
+          enabled: profile.enabled,
+          language: profile.language ?? 'es',
+          version: null,
+          cached: null,
+        }
+      : undefined;
   }
 
   async store(): Promise<null> {

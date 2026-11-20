@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { createHealthReport } from '@metrack/domain';
+import { languageFromAcceptLanguage } from '@metrack/site';
 import { registerAuthGuard } from './registerAuthGuard.js';
 import { registerAuthRoutes } from './registerAuthRoutes.js';
 import { registerArtworkRoutes } from './registerArtworkRoutes.js';
@@ -184,7 +185,8 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
     const reads = request.method === 'GET' || request.method === 'HEAD';
     const file = web && reads ? await web.file(pathname, request) : undefined;
     if (file) return file;
-    if (pathname === '/u' || pathname.startsWith('/u/')) return publicNotFound();
+    if (pathname === '/u' || pathname.startsWith('/u/'))
+      return publicNotFound(languageFromAcceptLanguage(request.headers.get('accept-language')));
     if (web && request.method === 'GET' && !pathname.startsWith('/api/')) {
       const index = await web.index(request);
       if (index) return index;

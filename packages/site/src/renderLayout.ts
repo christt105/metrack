@@ -18,6 +18,8 @@ export interface LayoutOptions {
   scripts?: string[];
   /** Names of extra shared stylesheets. */
   styles?: string[];
+  /** Texts the page's scripts read, written into the page as JSON. */
+  texts?: Record<string, string>;
   /** Markup for the end of the head, such as a script that must load first. */
   headExtra?: string;
 }
@@ -35,6 +37,10 @@ export function renderLayout(options: LayoutOptions): string {
   ]
     .map((name) => `<link href="${assetPath(name)}" rel="stylesheet">`)
     .join('\n');
+  const texts =
+    options.texts === undefined
+      ? ''
+      : `<script type="application/json" id="site-texts">${JSON.stringify(options.texts).replace(/</g, '\\u003c')}</script>\n`;
   const scripts = ['main.js', ...(options.scripts ?? [])]
     .map((name) => `<script src="${assetPath(name)}"></script>`)
     .join('\n');
@@ -58,7 +64,7 @@ ${options.headExtra ?? ''}</head>
 ${renderMenu(library, options.active)}
 ${options.beforePage ?? ''}${options.page}
 ${renderFooter(library)}
-${scripts}
+${texts}${scripts}
 </body>
 </html>
 `;

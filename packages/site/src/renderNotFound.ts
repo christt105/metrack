@@ -15,7 +15,7 @@ export function renderNotFound(messages: SiteMessages = es): string {
 <meta name="color-scheme" content="light dark">
 </head>
 <body data-theme="dark">
-<div class="wrapper"><main aria-label="Content"><h1>${messages.notFound.title}</h1><p>${messages.notFound.body}</p></main></div>
+<div class="wrapper"><main aria-label="${messages.contentLabel}"><h1>${messages.notFound.title}</h1><p>${messages.notFound.body}</p></main></div>
 </body>
 </html>
 `;

@@ -1,4 +1,9 @@
-/** A number with one decimal and a comma, as the Spanish pages write it. */
-export function formatDecimal(value: number): string {
-  return value.toFixed(1).replace('.', ',');
+import type { SiteMessages } from './messages/SiteMessages.js';
+
+/** A number with one decimal, written the way the language does ("7,5", "7.5"). */
+export function formatDecimal(value: number, messages: SiteMessages): string {
+  return new Intl.NumberFormat(messages.numberLocale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
 }

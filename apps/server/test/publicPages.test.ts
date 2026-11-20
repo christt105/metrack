@@ -330,6 +330,56 @@ describe('the public routes', () => {
   });
 });
 
+describe('the language of the public pages', () => {
+  const setLanguage = async (language: 'en' | 'es' | null) =>
+    expect((await owner.patch('/api/settings', { language })).statusCode).toBe(200);
+
+  beforeEach(async () => {
+    await publish(OWNER, 'christian');
+    await addMovie(OWNER, {
+      title: 'Dune',
+      status: 'completed',
+      finishedAt: '2026-03-05',
+      rating: 7,
+    });
+  });
+
+  it('is Spanish while the owner has not chosen one', async () => {
+    for (const path of ['/u/christian/', '/u/christian/stats', '/u/christian/movie/1']) {
+      const body = (await visitor(path)).body;
+      expect(body).toContain('<html lang="es" class="dark">');
+      expect(body).not.toContain('Library');
+    }
+  });
+
+  it('is the owner language on every page, whatever the visitor asks for', async () => {
+    await setLanguage('en');
+    const asked = { 'accept-language': 'es-ES' };
+    for (const path of ['/u/christian/', '/u/christian/stats', '/u/christian/collage']) {
+      const response = await api.app.inject({ method: 'GET', url: path, headers: asked });
+      expect(response.body, path).toContain('<html lang="en" class="dark">');
+    }
+    const home = await visitor('/u/christian/');
+    expect(home.body).toContain('Mar 5, 2026');
+    expect(home.body).toContain('Masterpiece');
+    const detail = await visitor('/u/christian/movie/1');
+    expect(detail.body).toContain('<html lang="en" class="dark">');
+    expect(detail.body).toContain('Mar 5, 2026');
+    expect((await visitor('/u/christian/feed.xml')).body).toContain('<language>en</language>');
+    expect((await visitor('/u/christian/feed.xml')).body).toContain('Rating: 7 (Masterpiece)');
+  });
+
+  it('follows the owner when they change it back and forth', async () => {
+    await setLanguage('en');
+    expect((await visitor('/u/christian/')).body).toContain('<html lang="en"');
+    await setLanguage('es');
+    expect((await visitor('/u/christian/')).body).toContain('5 mar 2026');
+    await setLanguage('en');
+    await setLanguage(null);
+    expect((await visitor('/u/christian/')).body).toContain('<html lang="es"');
+  });
+});
+
 describe('the public images', () => {
   const uploadAs = async (userId: number, shade: number) =>
     api.store.upload(

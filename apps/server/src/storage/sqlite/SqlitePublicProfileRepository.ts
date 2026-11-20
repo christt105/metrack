@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { normalizeHandle, type PublicPage } from '@metrack/domain';
+import { normalizeHandle, type Language, type PublicPage } from '@metrack/domain';
 import { HandleTakenError } from '../HandleTakenError.js';
 import type { PublicProfileRepository } from '../repositories/PublicProfileRepository.js';
 import {
@@ -17,15 +17,23 @@ export class SqlitePublicProfileRepository implements PublicProfileRepository {
     return publicPageFromRow(row);
   }
 
-  async findByHandle(handle: string): Promise<{ userId: number; enabled: boolean } | undefined> {
+  async findByHandle(
+    handle: string,
+  ): Promise<{ userId: number; enabled: boolean; language: Language | null } | undefined> {
     const row = this.db
       .prepare(
-        `SELECT u.id, COALESCE(s.public_page, 0) AS public_page
+        `SELECT u.id, COALESCE(s.public_page, 0) AS public_page, s.language
          FROM user u LEFT JOIN user_setting s ON s.user_id = u.id
          WHERE u.handle = ? COLLATE NOCASE`,
       )
       .get(normalizeHandle(handle));
-    return row ? { userId: Number(row.id), enabled: Number(row.public_page) === 1 } : undefined;
+    return row
+      ? {
+          userId: Number(row.id),
+          enabled: Number(row.public_page) === 1,
+          language: row.language === 'en' || row.language === 'es' ? row.language : null,
+        }
+      : undefined;
   }
 
   async save(userId: number, page: PublicPage): Promise<void> {

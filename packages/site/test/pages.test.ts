@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FEED_LIMIT,
+  englishMessages,
   buildLibrary,
   renderDetail,
   renderFeed,
@@ -293,7 +294,7 @@ describe('renderNotFound', () => {
 
 describe('renderPrivacy', () => {
   it('is an English page that escapes the contact and carries the required TMDB wording', () => {
-    const page = renderPrivacy({ contactEmail: 'a&b@example.com' });
+    const page = renderPrivacy({ contactEmail: 'a&b@example.com' }, englishMessages);
     expect(page).toContain('<html lang="en" class="dark">');
     expect(page).toContain('a&amp;b@example.com');
     expect(page).toContain(
@@ -306,7 +307,7 @@ describe('renderPrivacy', () => {
   });
 
   it('says the email Google verified is stored for users who joined by invitation', () => {
-    const page = renderPrivacy({ contactEmail: 'a@example.com' });
+    const page = renderPrivacy({ contactEmail: 'a@example.com' }, englishMessages);
     expect(page).toContain('the email address Google verified for your Google account is stored');
     expect(page).not.toContain('no sign-ups are created');
   });

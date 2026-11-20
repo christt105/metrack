@@ -42,6 +42,7 @@ beforeAll(async () => {
       ...statements('../d1/migrations/0002_public_render_cache.sql'),
       ...statements('../d1/migrations/0005_invites.sql'),
       ...statements('../d1/migrations/0009_season_episodes.sql'),
+      ...statements('../d1/migrations/0014_user_language.sql'),
     ].map((sql) => DB.prepare(sql)),
   );
   const spy = {
@@ -151,7 +152,7 @@ describe('a public page', () => {
   it('answers 304 to a matching If-None-Match, with a strong ETag of user, version and page', async () => {
     const first = await get('/u/test/');
     const etag = first.headers.get('etag');
-    expect(etag).toBe(renderEtag(1, 0, RENDERED_AT, 'home'));
+    expect(etag).toBe(renderEtag(1, 0, RENDERED_AT, 'home#es'));
     expect(etag).not.toMatch(/^W\//);
     const again = await get('/u/test/', { 'if-none-match': etag ?? '' });
     expect(again.status).toBe(304);
@@ -176,7 +177,7 @@ describe('a public page', () => {
     clock = START + 24 * 3_600_000;
     const expired = await get('/u/test/', { 'if-none-match': etag });
     expect(expired.status).toBe(200);
-    expect(expired.headers.get('etag')).toBe(renderEtag(1, 0, RENDERED_AT + 86_400, 'home'));
+    expect(expired.headers.get('etag')).toBe(renderEtag(1, 0, RENDERED_AT + 86_400, 'home#es'));
     expect(expired.headers.get('etag')).not.toBe(etag);
     expect(await expired.text()).toContain('Changed behind the cache');
     const again = await get('/u/test/', { 'if-none-match': expired.headers.get('etag') ?? '' });
@@ -190,7 +191,7 @@ describe('a public page', () => {
       'if-none-match': first.headers.get('etag') ?? '',
     });
     expect(stale.status).toBe(200);
-    expect(stale.headers.get('etag')).toBe(renderEtag(1, 1, RENDERED_AT, 'movie/1'));
+    expect(stale.headers.get('etag')).toBe(renderEtag(1, 1, RENDERED_AT, 'movie/1#es'));
     expect(await stale.text()).toContain('Rewritten after the first visit');
   });
 
@@ -218,6 +219,23 @@ describe('a public page', () => {
     await get('/u/test/feed.xml');
     const other = await get('/u/test/feed.xml', { host: 'other.example' });
     expect(await other.text()).toContain('http://other.example');
+  });
+
+  it('is rendered again in the new language as soon as the owner changes it, and each language has its own ETag', async () => {
+    const spanish = await get('/u/test/');
+    expect(await spanish.text()).toContain('<html lang="es"');
+    expect(await get('/u/test/')).toHaveProperty('status', 200);
+    await DB.prepare("UPDATE user_setting SET language = 'en' WHERE user_id = 1").run();
+    const english = await get('/u/test/', { 'if-none-match': spanish.headers.get('etag') ?? '' });
+    expect(english.status).toBe(200);
+    expect(await english.text()).toContain('<html lang="en"');
+    expect(english.headers.get('etag')).toBe(renderEtag(1, 0, RENDERED_AT, 'home#en'));
+    expect(english.headers.get('etag')).not.toBe(spanish.headers.get('etag'));
+    expect(await stored()).toBe(2);
+    const hit = await get('/u/test/');
+    expect(await hit.text()).toContain('<html lang="en"');
+    await DB.prepare('UPDATE user_setting SET language = NULL WHERE user_id = 1').run();
+    expect(await (await get('/u/test/')).text()).toContain('<html lang="es"');
   });
 
   it('is not stored when it is over 1 MB, but is still served', async () => {

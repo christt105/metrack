@@ -1,4 +1,4 @@
-import { normalizeHandle, type PublicPage } from '@metrack/domain';
+import { normalizeHandle, type Language, type PublicPage } from '@metrack/domain';
 import { HandleTakenError } from '../HandleTakenError.js';
 import {
   PUBLIC_PAGE_SQL,
@@ -17,15 +17,23 @@ export class D1PublicProfileRepository implements PublicProfileRepository {
     return publicPageFromRow(await queryFirst(this.db, PUBLIC_PAGE_SQL, userId));
   }
 
-  async findByHandle(handle: string): Promise<{ userId: number; enabled: boolean } | undefined> {
+  async findByHandle(
+    handle: string,
+  ): Promise<{ userId: number; enabled: boolean; language: Language | null } | undefined> {
     const row = await queryFirst(
       this.db,
-      `SELECT u.id, COALESCE(s.public_page, 0) AS public_page
+      `SELECT u.id, COALESCE(s.public_page, 0) AS public_page, s.language
          FROM user u LEFT JOIN user_setting s ON s.user_id = u.id
          WHERE u.handle = ? COLLATE NOCASE`,
       normalizeHandle(handle),
     );
-    return row ? { userId: Number(row.id), enabled: Number(row.public_page) === 1 } : undefined;
+    return row
+      ? {
+          userId: Number(row.id),
+          enabled: Number(row.public_page) === 1,
+          language: row.language === 'en' || row.language === 'es' ? row.language : null,
+        }
+      : undefined;
   }
 
   async save(userId: number, page: PublicPage): Promise<void> {
