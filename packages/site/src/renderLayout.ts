@@ -39,7 +39,7 @@ export function renderLayout(options: LayoutOptions): string {
     .map((name) => `<script src="${assetPath(name)}"></script>`)
     .join('\n');
   return `<!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="${library.messages.lang}" class="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

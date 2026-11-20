@@ -14,6 +14,7 @@ const UP_ICON =
 
 /** The footer with the feed link, the copyright and the TMDB attribution, and the go-to-top button. */
 export function renderFooter(library: Library): string {
+  const { messages } = library;
   const year = new Date().getFullYear();
-  return `<footer class="footer"><span class="footer_item"> </span>&nbsp;<div class="footer_social-icons"><a href="${escapeHtml(feedPath(library.handle))}" target="_blank" rel="noopener noreferrer me" title="Rss">${RSS_ICON}</a></div><small class="footer_copyright">© ${year} ${escapeHtml(library.handle)}. Servido por <a href="${REPOSITORY}" target="_blank" rel="noopener noreferrer">metrack</a>.</small><small class="footer_credits"><a href="${TMDB_URL}" target="_blank" rel="noopener noreferrer" title="TMDB"><img src="${assetPath('tmdb-logo.svg')}" alt="TMDB" height="10"></a> This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</small></footer><a href="#" title="Ir arriba" id="totop">${UP_ICON}</a>`;
+  return `<footer class="footer"><span class="footer_item"> </span>&nbsp;<div class="footer_social-icons"><a href="${escapeHtml(feedPath(library.handle))}" target="_blank" rel="noopener noreferrer me" title="${messages.footer.rss}">${RSS_ICON}</a></div><small class="footer_copyright">© ${year} ${escapeHtml(library.handle)}. ${messages.footer.servedBy(`<a href="${REPOSITORY}" target="_blank" rel="noopener noreferrer">metrack</a>`)}</small><small class="footer_credits"><a href="${TMDB_URL}" target="_blank" rel="noopener noreferrer" title="TMDB"><img src="${assetPath('tmdb-logo.svg')}" alt="TMDB" height="10"></a> ${messages.footer.tmdbNotice}</small></footer><a href="#" title="${messages.footer.toTop}" id="totop">${UP_ICON}</a>`;
 }

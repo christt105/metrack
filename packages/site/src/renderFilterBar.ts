@@ -1,7 +1,7 @@
 import { escapeHtml } from '@metrack/export';
+import type { SiteMessages } from './messages/SiteMessages.js';
 import type { PublicEntry } from './PublicEntry.js';
-import { RATING_SCALE } from './ratingTheme.js';
-import { STATUS_LABELS, TYPE_LABELS } from './labels.js';
+import { ratingScale } from './ratingTheme.js';
 import { TYPE_ICONS, type ThemeType } from './themeType.js';
 
 const FILTER_TYPES: ThemeType[] = ['movie', 'tv', 'videogame', 'book'];
@@ -12,7 +12,7 @@ interface Choice {
   value: string;
 }
 
-function distinct(values: string[]): Choice[] {
+function distinct(values: string[], collation: string): Choice[] {
   const seen = new Map<string, string>();
   for (const value of values) {
     const key = value.toLowerCase();
@@ -20,7 +20,7 @@ function distinct(values: string[]): Choice[] {
   }
   return [...seen]
     .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+    .sort((a, b) => a.label.localeCompare(b.label, collation));
 }
 
 const ALL = (label: string): string =>
@@ -30,33 +30,46 @@ const chip = (value: string, label: string): string =>
   `<button type="button" class="filter-chip" data-value="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
 
 /** The search box and the filter chips of the home; the filtering itself is done by the shared script over the rendered cards. */
-export function renderFilterBar(entries: PublicEntry[], shownTypes: ThemeType[]): string {
+export function renderFilterBar(
+  entries: PublicEntry[],
+  shownTypes: ThemeType[],
+  messages: SiteMessages,
+): string {
+  const { filter } = messages;
   const types = FILTER_TYPES.filter((type) => shownTypes.includes(type))
     .map(
       (type) =>
-        `<button type="button" class="filter-chip" data-value="${type}"><i class="${TYPE_ICONS[type]}" aria-hidden="true"></i> ${TYPE_LABELS[type]}</button>`,
+        `<button type="button" class="filter-chip" data-value="${type}"><i class="${TYPE_ICONS[type]}" aria-hidden="true"></i> ${messages.typeLabels[type]}</button>`,
     )
     .join('');
   const statuses = FILTER_STATUSES.map((status) =>
-    chip(status, STATUS_LABELS[status] ?? status),
+    chip(status, messages.statusLabels[status] ?? status),
   ).join('');
-  const ratings = RATING_SCALE.map(
-    (theme) =>
-      `<button type="button" class="filter-chip" data-value="${theme.rating}" title="${escapeHtml(theme.label)}" style="--chip-accent: ${theme.color}"><i class="${theme.icon}" aria-hidden="true"></i></button>`,
-  ).join('');
-  const platforms = distinct(entries.flatMap((entry) => entry.platforms));
-  const tags = distinct(entries.flatMap((entry) => entry.tags));
+  const ratings = ratingScale(messages)
+    .map(
+      (theme) =>
+        `<button type="button" class="filter-chip" data-value="${theme.rating}" title="${escapeHtml(theme.label)}" style="--chip-accent: ${theme.color}"><i class="${theme.icon}" aria-hidden="true"></i></button>`,
+    )
+    .join('');
+  const platforms = distinct(
+    entries.flatMap((entry) => entry.platforms),
+    messages.collation,
+  );
+  const tags = distinct(
+    entries.flatMap((entry) => entry.tags),
+    messages.collation,
+  );
   const advanced =
     platforms.length === 0 && tags.length === 0
       ? ''
-      : `<details class="filter-advanced"><summary>Más</summary>${
+      : `<details class="filter-advanced"><summary>${filter.more}</summary>${
           platforms.length === 0
             ? ''
-            : `<div class="filter-chips" data-filter-group="platform">${ALL('Plataformas')}${platforms.map((entry) => chip(entry.value, entry.label)).join('')}</div>`
+            : `<div class="filter-chips" data-filter-group="platform">${ALL(filter.platforms)}${platforms.map((entry) => chip(entry.value, entry.label)).join('')}</div>`
         }${
           tags.length === 0
             ? ''
-            : `<div class="filter-chips" data-filter-group="tag">${ALL('Etiquetas')}${tags.map((entry) => chip(entry.value, `#${entry.label}`)).join('')}</div>`
+            : `<div class="filter-chips" data-filter-group="tag">${ALL(filter.tags)}${tags.map((entry) => chip(entry.value, `#${entry.label}`)).join('')}</div>`
         }</details>`;
-  return `<div class="filter-bar" id="filter-bar"><div class="filter-search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="media-search" autocomplete="off" placeholder="Buscar por título o género..." aria-label="Buscar por título o género..."></div><div class="filter-row"><div class="filter-chips" data-filter-group="type">${ALL('Todos')}${types}</div><div class="filter-chips" data-filter-group="status">${ALL('Todos')}${statuses}</div><div class="filter-chips filter-ratings" data-filter-group="rating">${ALL('Todos')}${ratings}</div></div>${advanced}<p class="filter-noresults" id="filter-noresults" hidden>No hay resultados.</p></div>`;
+  return `<div class="filter-bar" id="filter-bar"><div class="filter-search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="media-search" autocomplete="off" placeholder="${filter.search}" aria-label="${filter.search}"></div><div class="filter-row"><div class="filter-chips" data-filter-group="type">${ALL(filter.all)}${types}</div><div class="filter-chips" data-filter-group="status">${ALL(filter.all)}${statuses}</div><div class="filter-chips filter-ratings" data-filter-group="rating">${ALL(filter.all)}${ratings}</div></div>${advanced}<p class="filter-noresults" id="filter-noresults" hidden>${filter.noResults}</p></div>`;
 }

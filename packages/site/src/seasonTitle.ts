@@ -1,4 +1,5 @@
 import type { Season, Series } from '@metrack/domain';
+import type { SiteMessages } from './messages/SiteMessages.js';
 
 /**
  * The title of a season page: the season's own title, prefixed with the series title unless it already
@@ -9,10 +10,11 @@ export function seasonTitle(
   season: Season,
   series: Series | undefined,
   onlySeason: boolean,
+  messages: SiteMessages,
 ): string {
-  if (!series) return season.title || `Temporada ${season.number}`;
+  if (!series) return season.title || messages.seasonNumber(season.number);
   if (!season.title)
-    return onlySeason ? series.title : `${series.title} - Temporada ${season.number}`;
+    return onlySeason ? series.title : `${series.title} - ${messages.seasonNumber(season.number)}`;
   return season.title.toLowerCase().includes(series.title.toLowerCase())
     ? season.title
     : `${series.title} - ${season.title}`;

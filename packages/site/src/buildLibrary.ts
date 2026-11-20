@@ -11,6 +11,8 @@ import {
 import type { Library } from './Library.js';
 import type { PublicEntry } from './PublicEntry.js';
 import type { SiteInput } from './SiteInput.js';
+import { es } from './messages/es.js';
+import type { SiteMessages } from './messages/SiteMessages.js';
 import { seasonTitle } from './seasonTitle.js';
 
 const NOTHING: Omit<PublicEntry, 'kind' | 'id' | 'title' | 'status'> = {
@@ -85,7 +87,12 @@ function seriesEntry(series: Series): PublicEntry {
   };
 }
 
-function seasonEntry(season: Season, series: Series | undefined, onlySeason: boolean): PublicEntry {
+function seasonEntry(
+  season: Season,
+  series: Series | undefined,
+  onlySeason: boolean,
+  messages: SiteMessages,
+): PublicEntry {
   return {
     ...NOTHING,
     ...tracked(season, {
@@ -94,7 +101,7 @@ function seasonEntry(season: Season, series: Series | undefined, onlySeason: boo
     }),
     kind: 'season',
     id: season.id,
-    title: seasonTitle(season, series, onlySeason),
+    title: seasonTitle(season, series, onlySeason, messages),
     slug: season.slug,
     status: season.status,
     releaseDate: season.firstAirDate,
@@ -148,7 +155,7 @@ function bookEntry(book: Book): PublicEntry {
  * review, which are left out whole. A series whose seasons are all pending is left out too, so it
  * does not give away a viewing that has not been confirmed.
  */
-export function buildLibrary(input: SiteInput): Library {
+export function buildLibrary(input: SiteInput, messages: SiteMessages = es): Library {
   const seriesById = new Map(input.series.map((series) => [series.id, series]));
   const seasonCount = new Map<number, number>();
   for (const season of input.seasons) {
@@ -158,7 +165,12 @@ export function buildLibrary(input: SiteInput): Library {
     .filter((season) => !season.pendingReview)
     .sort((a, b) => a.number - b.number || a.id - b.id)
     .map((season) =>
-      seasonEntry(season, seriesById.get(season.seriesId), seasonCount.get(season.seriesId) === 1),
+      seasonEntry(
+        season,
+        seriesById.get(season.seriesId),
+        seasonCount.get(season.seriesId) === 1,
+        messages,
+      ),
     );
   const shown = new Set(seasons.map((season) => season.seriesId));
   const series = input.series
@@ -166,6 +178,7 @@ export function buildLibrary(input: SiteInput): Library {
     .map(seriesEntry);
   return {
     handle: input.handle,
+    messages,
     profile: input.profile,
     movies: input.movies.filter((movie) => !movie.pendingReview).map(movieEntry),
     series,

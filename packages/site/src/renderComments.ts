@@ -16,7 +16,7 @@ export function renderComments(library: Library): string {
     ['data-emit-metadata', '0'],
     ['data-input-position', 'bottom'],
     ['data-theme', 'preferred_color_scheme'],
-    ['data-lang', 'es'],
+    ['data-lang', library.messages.lang],
   ]
     .map(([name, value]) => `${name}="${escapeHtml(value as string)}"`)
     .join(' ');
