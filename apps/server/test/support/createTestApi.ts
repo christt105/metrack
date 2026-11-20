@@ -6,6 +6,7 @@ import type { AppDeps } from '../../src/api/buildApp.js';
 import type { TestApp } from './TestApp.js';
 import { createEditServices } from '../../src/api/createEditServices.js';
 import type { ImageProvider } from '../../src/artwork/ImageProvider.js';
+import { OpenLibraryImageProvider } from '../../src/artwork/OpenLibraryImageProvider.js';
 import { SteamGridDbImageProvider } from '../../src/artwork/SteamGridDbImageProvider.js';
 import { TmdbImageProvider } from '../../src/artwork/TmdbImageProvider.js';
 import type { FetchFn } from '../../src/http/FetchFn.js';
@@ -26,6 +27,7 @@ import { TmdbSeriesSource } from '../../src/providers/tmdb/TmdbSeriesSource.js';
 import { MigrationRunner } from '../../src/storage/MigrationRunner.js';
 import { migrations } from '../../src/storage/migrations/index.js';
 import { openDatabase } from '../../src/storage/sqlite/openDatabase.js';
+import { OpenLibraryClient } from '../../src/providers/openlibrary/OpenLibraryClient.js';
 import { SqliteBookRepository } from '../../src/storage/sqlite/SqliteBookRepository.js';
 import type { BookRepository } from '../../src/storage/repositories/BookRepository.js';
 import { SqliteMovieRepository } from '../../src/storage/sqlite/SqliteMovieRepository.js';
@@ -142,6 +144,7 @@ export async function createTestApi(
   const imageProviders: ImageProvider[] = [
     new TmdbImageProvider(tmdb),
     new SteamGridDbImageProvider(new SteamGridDbClient(fetchFn, 'token')),
+    new OpenLibraryImageProvider(new OpenLibraryClient(fetchFn, 'es')),
   ];
 
   const alerts = new SqliteReleaseAlertRepository(db, scope);

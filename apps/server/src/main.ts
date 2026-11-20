@@ -13,6 +13,7 @@ import { seedOwnerSettings } from './users/seedOwnerSettings.js';
 import { UserJobContext } from './users/UserJobContext.js';
 import { createEditServices } from './api/createEditServices.js';
 import type { ImageProvider } from './artwork/ImageProvider.js';
+import { OpenLibraryImageProvider } from './artwork/OpenLibraryImageProvider.js';
 import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js';
 import { TmdbImageProvider } from './artwork/TmdbImageProvider.js';
 import { loadConfig } from './config/loadConfig.js';
@@ -138,13 +139,9 @@ if (config.igdb) {
     new IgdbGameProvider(new IgdbClient(fetch, config.igdb), videogames, imageStore, steamGridDb),
   );
 }
-titleProviders.register(
-  new OpenLibraryBookProvider(
-    new OpenLibraryClient(fetch, config.openLibraryLanguage),
-    books,
-    imageStore,
-  ),
-);
+const openLibrary = new OpenLibraryClient(fetch, config.openLibraryLanguage);
+titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
+imageProviders.push(new OpenLibraryImageProvider(openLibrary));
 
 const edit = createEditServices({
   sources: {

@@ -1,5 +1,6 @@
 import type { FetchFn } from '../../http/FetchFn.js';
 import { HttpError } from '../../http/HttpError.js';
+import type { OpenLibraryEditionRecord } from './OpenLibraryEditionRecord.js';
 import type { OpenLibraryWork } from './OpenLibraryWork.js';
 import type { OpenLibraryWorkRecord } from './OpenLibraryWorkRecord.js';
 
@@ -30,7 +31,7 @@ const SEARCH_FIELDS = [
 export class OpenLibraryClient {
   constructor(
     private readonly fetchFn: FetchFn,
-    private readonly language: string,
+    readonly language: string,
   ) {}
 
   /** Works matching `query`, optionally first published in `year`. */
@@ -47,6 +48,13 @@ export class OpenLibraryClient {
   /** The parts of the work record the search does not return, such as the description. */
   workRecord(workId: string): Promise<OpenLibraryWorkRecord> {
     return this.get<OpenLibraryWorkRecord>(new URL(`/works/${workId}.json`, BASE_URL));
+  }
+
+  /** Up to 100 editions of the work, with their cover ids and languages. */
+  async editions(workId: string): Promise<OpenLibraryEditionRecord[]> {
+    const url = new URL(`/works/${workId}/editions.json`, BASE_URL);
+    url.searchParams.set('limit', '100');
+    return (await this.get<{ entries?: OpenLibraryEditionRecord[] }>(url)).entries ?? [];
   }
 
   private async find(q: string, limit: number): Promise<OpenLibraryWork[]> {
