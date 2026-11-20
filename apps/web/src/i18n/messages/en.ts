@@ -259,7 +259,7 @@ export const en = {
     metadata: 'Metadata',
     dangerZone: 'Danger zone',
     delete: (title: string) => `Delete ${title}…`,
-    deleteWarning: (series: boolean) =>
+    deleteWarning: (series: boolean): string =>
       series
         ? 'This permanently deletes the series with its seasons, your tracking, review and rewatches. It cannot be undone.'
         : 'This permanently deletes the entry with your tracking, review and rewatches. It cannot be undone.',

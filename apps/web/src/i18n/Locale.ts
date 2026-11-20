@@ -1,9 +1,10 @@
 import { ref, type Ref } from 'vue';
 import { en } from './messages/en';
+import { es } from './messages/es';
 import type { Messages } from './messages/Messages';
 import type { Language } from './Language';
 
-const DICTIONARIES: Record<Language, Messages> = { en, es: en };
+const DICTIONARIES: Record<Language, Messages> = { en, es };
 
 /** The language of the interface and the dictionary that goes with it. */
 export class Locale {
