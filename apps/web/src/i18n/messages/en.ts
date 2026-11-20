@@ -8,7 +8,7 @@ import type {
   MediaStatus,
   MediaType,
   RatingIcon,
-  UserSettings,
+  EditableSetting,
 } from '@metrack/domain';
 
 /** Every user-facing text of the app. The English dictionary; every other language fills the same shape. */
@@ -481,7 +481,7 @@ export const en = {
       ntfyTopic: 'ntfy topic',
       mirrorDir: 'Vault folder',
       mirrorLinkPrefix: 'Folder path in the vault',
-    } satisfies Record<keyof UserSettings, string>,
+    } satisfies Record<EditableSetting, string>,
   },
   publicPage: {
     title: 'Public page',
@@ -518,6 +518,14 @@ export const en = {
       invalid_giscus:
         'Comments need the repository as owner/name and the repository id, category and category id.',
     } as Record<string, string>,
+  },
+  languagePanel: {
+    title: 'Language',
+    hint: 'The language of the app. Automatic follows your browser.',
+    label: 'Interface language',
+    automatic: 'Automatic',
+    spanish: 'Español',
+    english: 'English',
   },
   ntfyAlerts: {
     title: 'Release alerts',

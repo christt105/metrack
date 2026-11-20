@@ -413,6 +413,7 @@ describe('owner settings from the environment', () => {
       ntfyTopic: 'metrack',
       mirrorDir: null,
       mirrorLinkPrefix: null,
+      language: null,
     });
     expect(await repos.settings.get(FRIEND_ID)).toBeUndefined();
   });

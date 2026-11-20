@@ -1,1 +1,1 @@
-export type Language = 'en' | 'es';
+export type { Language } from '@metrack/domain';

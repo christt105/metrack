@@ -25,6 +25,7 @@ const noSettings: UserSettings = {
   ntfyTopic: null,
   mirrorDir: null,
   mirrorLinkPrefix: null,
+  language: null,
 };
 const ownerSettings: UserSettings = {
   ...noSettings,

@@ -9,5 +9,6 @@ export function ownerSettingsFromEnv(env: Record<string, string | undefined>): U
     ntfyTopic: env.NTFY_TOPIC || null,
     mirrorDir: env.VAULT_MIRROR_DIR || null,
     mirrorLinkPrefix: env.VAULT_MIRROR_LINK_PREFIX || null,
+    language: null,
   };
 }

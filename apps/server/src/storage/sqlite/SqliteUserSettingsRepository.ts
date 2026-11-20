@@ -15,13 +15,14 @@ export class SqliteUserSettingsRepository implements UserSettingsRepository {
     this.db
       .prepare(
         `INSERT INTO user_setting
-           (user_id, jellyfin_user, ntfy_topic, mirror_dir, mirror_link_prefix)
-         VALUES (?, ?, ?, ?, ?)
+           (user_id, jellyfin_user, ntfy_topic, mirror_dir, mirror_link_prefix, language)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (user_id) DO UPDATE SET
            jellyfin_user = excluded.jellyfin_user,
            ntfy_topic = excluded.ntfy_topic,
            mirror_dir = excluded.mirror_dir,
-           mirror_link_prefix = excluded.mirror_link_prefix`,
+           mirror_link_prefix = excluded.mirror_link_prefix,
+           language = excluded.language`,
       )
       .run(
         userId,
@@ -29,6 +30,7 @@ export class SqliteUserSettingsRepository implements UserSettingsRepository {
         settings.ntfyTopic,
         settings.mirrorDir,
         settings.mirrorLinkPrefix,
+        settings.language,
       );
   }
 

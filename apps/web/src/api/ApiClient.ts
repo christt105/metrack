@@ -1,5 +1,6 @@
 import type {
   EpisodeOperation,
+  Language,
   SeasonEpisodesResponse,
   SeasonEpisodesUpdateResponse,
   AccountDeletion,
@@ -355,6 +356,10 @@ export class ApiClient {
 
   clearNtfyTopic(): Promise<UserSettings> {
     return this.request('DELETE', '/settings/ntfy-topic');
+  }
+
+  updateLanguage(language: Language | null): Promise<UserSettings> {
+    return this.request('PATCH', '/settings', { language });
   }
 
   updatePublicPage(patch: PublicPagePatch): Promise<PublicPage> {

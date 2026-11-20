@@ -66,7 +66,7 @@ async function setup() {
     expect(response.statusCode).toBe(201);
     return response.json<CreatedToken>();
   };
-  const call = (method: 'GET' | 'POST' | 'DELETE', url: string, secret: string) =>
+  const call = (method: 'GET' | 'POST' | 'DELETE' | 'PATCH', url: string, secret: string) =>
     app.inject({ method, url, headers: { authorization: `Bearer ${secret}` } });
   return { db, app, clock, cookieFor, createToken, call };
 }
@@ -134,6 +134,7 @@ describe('personal API tokens', () => {
     const { secret } = await createToken(1, 'write');
     for (const [method, url] of [
       ['GET', '/api/settings'],
+      ['PATCH', '/api/settings'],
       ['GET', '/api/tokens'],
       ['POST', '/api/tokens'],
       ['DELETE', '/api/tokens/1'],

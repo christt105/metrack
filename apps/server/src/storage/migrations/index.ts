@@ -29,6 +29,7 @@ import { seasonEpisodesRefillMigration } from './0027-season-episodes-refill.js'
 import { dropSeasonOverrideMigration } from './0028-drop-season-override.js';
 import { unmatchedEpisodesMigration } from './0029-unmatched-episodes.js';
 import { dropPublishSettingsMigration } from './0030-drop-publish-settings.js';
+import { userLanguageMigration } from './0031-user-language.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -61,4 +62,5 @@ export const migrations: readonly Migration[] = [
   dropSeasonOverrideMigration,
   unmatchedEpisodesMigration,
   dropPublishSettingsMigration,
+  userLanguageMigration,
 ];

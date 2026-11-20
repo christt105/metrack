@@ -102,6 +102,7 @@ function withoutTopic(settings: UserSettings): Omit<UserSettings, 'ntfyTopic'> {
     jellyfinUser: settings.jellyfinUser,
     mirrorDir: settings.mirrorDir,
     mirrorLinkPrefix: settings.mirrorLinkPrefix,
+    language: settings.language,
   };
 }
 

@@ -28,7 +28,7 @@ async function mountApp(publicPage: PublicPage) {
   const api = {
     me: async () => USER,
     accountStatus: async () => ({ deletion: null, needsWelcome: false }),
-    ownSettings: async () => ({ publicPage }),
+    ownSettings: async () => ({ publicPage, settings: { language: null } }),
   } as unknown as ApiClient;
   const session = new Session(api);
   await session.current();

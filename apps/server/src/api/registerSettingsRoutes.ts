@@ -1,6 +1,8 @@
 import type { ApiRoutes } from './ApiRoutes.js';
 import {
   ASSIGNABLE_ROLES,
+  LANGUAGES,
+  type LanguagePatch,
   PUBLIC_PAGE_LIMITS,
   isGiscusRepo,
   applySettingsPatch,
@@ -37,6 +39,13 @@ const roleBody = {
   type: 'object',
   properties: { role: { type: 'string', enum: [...ASSIGNABLE_ROLES] } },
   required: ['role'],
+  additionalProperties: false,
+} as const;
+
+const languageBody = {
+  type: 'object',
+  properties: { language: { type: ['string', 'null'], enum: [...LANGUAGES, null] } },
+  required: ['language'],
   additionalProperties: false,
 } as const;
 
@@ -173,6 +182,17 @@ export function registerSettingsRoutes(
       },
     );
   }
+
+  routes.patch<{ Body: LanguagePatch }>(
+    '/api/settings',
+    { config: { sessionOnly: true }, schema: { body: languageBody } },
+    async (request): Promise<UserSettings> => {
+      const userId = request.user?.id ?? 0;
+      const next = { ...(await settingsOf(userId)), language: request.body.language };
+      await settings.save(userId, next);
+      return next;
+    },
+  );
 
   routes.patch<{ Body: PublicPagePatch }>(
     '/api/settings/public-page',
