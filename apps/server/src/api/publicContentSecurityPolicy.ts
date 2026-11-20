@@ -3,7 +3,7 @@ export const PUBLIC_CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' https://giscus.app",
   "style-src 'self' 'unsafe-inline' https://giscus.app",
-  "img-src 'self' data: blob: https://image.tmdb.org https://images.igdb.com https://steamcdn-a.akamaihd.net https://*.steamstatic.com https://www.themoviedb.org",
+  "img-src 'self' data: blob: https://image.tmdb.org https://images.igdb.com https://steamcdn-a.akamaihd.net https://*.steamstatic.com",
   "font-src 'self'",
   "connect-src 'self'",
   "manifest-src 'self'",

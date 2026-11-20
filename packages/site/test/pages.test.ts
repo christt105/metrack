@@ -264,8 +264,10 @@ describe('renderPrivacy', () => {
     expect(page).toContain('<html lang="en" class="dark">');
     expect(page).toContain('a&amp;b@example.com');
     expect(page).toContain(
-      'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+      'This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.',
     );
+    expect(page).toContain('src="/u/assets/tmdb-logo.svg"');
+    expect(page).not.toContain('https://www.themoviedb.org/assets');
     expect(page).toContain('Served by metrack');
     expect(page).not.toContain('<script');
   });

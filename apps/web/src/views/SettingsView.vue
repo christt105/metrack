@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { HealthReport, OwnSettings, SyncPlan } from '@metrack/domain';
+import AboutPanel from '../components/AboutPanel.vue';
 import AccountPanel from '../components/AccountPanel.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import InvitationsPanel from '../components/InvitationsPanel.vue';
@@ -85,7 +86,7 @@ const backup = () =>
     return messages.settings.backupDone(created.name);
   });
 const groups = computed(() =>
-  (['profile', 'connections', 'people', 'system'] as const)
+  (['profile', 'connections', 'people', 'system', 'about'] as const)
     .filter((id) => id !== 'people' || owner.value)
     .map((id) => ({ id })),
 );
@@ -223,6 +224,10 @@ const groups = computed(() =>
               {{ messages.settings.backupNow }}
             </button>
           </div>
+        </div>
+        <div id="about" class="group">
+          <p class="group-title">{{ messages.settings.groups.about }}</p>
+          <AboutPanel :version="health?.appVersion ?? null" />
         </div>
         <p v-if="actionResult" class="notice success" role="status">{{ actionResult }}</p>
         <ErrorNotice :error="actionError" />

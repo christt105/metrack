@@ -272,6 +272,17 @@ describe('vendored assets', () => {
     expect(siteAsset('html2canvas-pro.js')?.contentType).toContain('javascript');
   });
 
+  it('credits TMDB in the footer with the vendored logo', () => {
+    const html = renderHome(library);
+    expect(html).toContain(
+      'This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.',
+    );
+    expect(html).toContain('<a href="https://www.themoviedb.org"');
+    expect(html).toContain('src="/u/assets/tmdb-logo.svg"');
+    expect(siteAsset('tmdb-logo.svg')?.contentType).toBe('image/svg+xml');
+    expect(String(siteAsset('tmdb-logo.svg')?.body)).toContain('<svg');
+  });
+
   it('links the footer name to the repository', () => {
     expect(renderHome(library)).toContain(
       '<a href="https://github.com/christt105/metrack" target="_blank" rel="noopener noreferrer">metrack</a>',

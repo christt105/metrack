@@ -17,6 +17,7 @@ import { ROBOTO_WOFF2 } from './assets/ROBOTO_WOFF2.js';
 import { STATS_JS } from './assets/STATS_JS.js';
 import { THEME_CSS } from './assets/THEME_CSS.js';
 import { THEME_JS } from './assets/THEME_JS.js';
+import { TMDB_LOGO_SVG } from './assets/TMDB_LOGO_SVG.js';
 import { YEAR_NAV_JS } from './assets/YEAR_NAV_JS.js';
 import type { SiteAsset } from './SiteAsset.js';
 
@@ -55,6 +56,7 @@ const ASSETS = new Map<string, SiteAsset>([
   ['collage.js', { contentType: JS, body: COLLAGE_JS }],
   ['default-poster.webp', { contentType: 'image/webp', body: bytes(DEFAULT_POSTER_WEBP) }],
   ['default-avatar.svg', { contentType: 'image/svg+xml', body: DEFAULT_AVATAR_SVG }],
+  ['tmdb-logo.svg', { contentType: 'image/svg+xml', body: TMDB_LOGO_SVG }],
   ['favicon-16x16.png', { contentType: 'image/png', body: bytes(FAVICON_16X16_PNG) }],
   ['favicon-32x32.png', { contentType: 'image/png', body: bytes(FAVICON_32X32_PNG) }],
 ]);

@@ -2,9 +2,6 @@ import { escapeHtml } from '@metrack/export';
 import type { PrivacyOptions } from './PrivacyOptions.js';
 import { assetPath } from './sitePaths.js';
 
-const TMDB_LOGO =
-  'https://www.themoviedb.org/assets/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg';
-
 /** The privacy page: what is stored and where, why, how to export and delete it, how long it is kept, and the data sources' credits. */
 export function renderPrivacy(options: PrivacyOptions): string {
   const email = escapeHtml(options.contactEmail);
@@ -43,7 +40,7 @@ export function renderPrivacy(options: PrivacyOptions): string {
 <p>For questions or requests about your data, write to <a href="mailto:${email}">${email}</a>.</p>
 
 <h2>Credits</h2>
-<p><a href="https://www.themoviedb.org/" rel="noopener"><img src="${TMDB_LOGO}" alt="TMDB" height="16"></a> This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+<p><a href="https://www.themoviedb.org" rel="noopener"><img src="${assetPath('tmdb-logo.svg')}" alt="TMDB" height="16"></a> This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
 <ul>
 <li>Game data comes from <a href="https://www.igdb.com/" rel="noopener">IGDB</a>, a Twitch company, using the Twitch API.</li>
 <li>Book data and covers come from <a href="https://openlibrary.org/" rel="noopener">Open Library</a>, a project of the Internet Archive.</li>
