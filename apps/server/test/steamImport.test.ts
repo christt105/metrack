@@ -1,6 +1,8 @@
+import { GameArtworkBackfill } from '../src/backfill/GameArtworkBackfill.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { FetchFn } from '../src/http/FetchFn.js';
 import { IgdbClient } from '../src/providers/igdb/IgdbClient.js';
+import { SqliteGameArtworkRepository } from '../src/storage/sqlite/SqliteGameArtworkRepository.js';
 import { SqlitePublicProfileRepository } from '../src/storage/sqlite/SqlitePublicProfileRepository.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
 import { SqliteUserSettingsRepository } from '../src/storage/sqlite/SqliteUserSettingsRepository.js';
@@ -10,6 +12,7 @@ import { IgdbGameProvider } from '../src/titles/IgdbGameProvider.js';
 import { createTestApi, type TestApi } from './support/createTestApi.js';
 import { png } from './support/sampleImages.js';
 
+const logger = { info: () => {}, error: () => {} };
 const STEAM_ID = '76561198012345678';
 const OWNED = 'https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/';
 const VANITY = 'https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/';
@@ -102,13 +105,15 @@ async function build(options: { steam?: boolean } = {}): Promise<void> {
       const videogames = new SqliteVideogameRepository(db, scope);
       const settings = new SqliteUserSettingsRepository(db);
       const client = new IgdbClient(net.fetch, { clientId: 'c', clientSecret: 's' });
-      const provider = new IgdbGameProvider(client, videogames, store, null);
+      const gameArtwork = new SqliteGameArtworkRepository(db);
+      const provider = new IgdbGameProvider(client, videogames, store, null, gameArtwork);
+      const artwork = new GameArtworkBackfill(gameArtwork, store, client, null, logger);
       const steam = createSteamServices(
         options.steam === false ? undefined : 'steam-key',
         net.fetch,
         videogames,
         settings,
-        { client, adder: provider },
+        { client, adder: provider, artwork },
       );
       return {
         steam: steam.importer,
@@ -263,6 +268,41 @@ describe('GET /api/steam/report', () => {
   });
 });
 
+describe('POST /api/steam/artwork', () => {
+  const pending = () =>
+    api.db.prepare('SELECT steam_appid AS app FROM videogame WHERE artwork_pending = 1').all();
+
+  it('imports with the artwork linked and pending, then prepares it on request', async () => {
+    await link();
+    await post('/api/steam/apply', { appIds: ['50', '70'] });
+    expect(pending().map((row) => String(row.app))).toEqual(['50', '70']);
+    const imageCalls = () => net.calls.filter((url) => url.includes('steamstatic.com')).length;
+    expect(imageCalls()).toBe(0);
+    const response = await post('/api/steam/artwork', {});
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ processed: 2, remaining: 0 });
+    expect(imageCalls()).toBe(4);
+    expect(pending()).toEqual([]);
+    expect(await post('/api/steam/artwork', {})).toMatchObject({ statusCode: 200 });
+  });
+
+  it('only prepares the games in the library of the caller', async () => {
+    await link();
+    api.db.exec(
+      "INSERT OR IGNORE INTO user (id, name, role, created_at) VALUES (2, 'Other', 'normal', 'now')",
+    );
+    api.db.exec("INSERT INTO videogame (id, title, artwork_pending) VALUES (900, 'Theirs', 1)");
+    api.db.exec('INSERT INTO videogame_entry (user_id, videogame_id) VALUES (2, 900)');
+    expect((await post('/api/steam/artwork', {})).json()).toEqual({ processed: 0, remaining: 0 });
+    expect(pending()).toHaveLength(1);
+  });
+
+  it('answers 501 when Steam is not configured', async () => {
+    await build({ steam: false });
+    expect((await post('/api/steam/artwork', {})).statusCode).toBe(501);
+  });
+});
+
 describe('POST /api/steam/apply', () => {
   const entries = () =>
     api.db
@@ -273,7 +313,7 @@ describe('POST /api/steam/apply', () => {
       )
       .all();
 
-  it('updates the time, imports from the catalog and from IGDB, and defers what does not fit the budget', async () => {
+  it('updates the time and imports from the catalog and from IGDB', async () => {
     await link();
     const response = await post('/api/steam/apply', { appIds: ['10', '40', '50', '70', '60'] });
     expect(response.statusCode).toBe(200);
@@ -281,11 +321,9 @@ describe('POST /api/steam/apply', () => {
       { appId: '10', result: 'updated' },
       { appId: '40', result: 'imported' },
       { appId: '50', result: 'imported' },
-      { appId: '70', result: 'deferred' },
+      { appId: '70', result: 'imported' },
       { appId: '60', result: 'skipped' },
     ]);
-    const next = await post('/api/steam/apply', { appIds: ['70'] });
-    expect(next.json().outcomes).toEqual([{ appId: '70', result: 'imported' }]);
     const stored = Object.fromEntries(entries().map((row) => [String(row.app), row]));
     expect(stored['10']).toMatchObject({ status: 'paused', minutes: 500 });
     expect(stored['40']).toMatchObject({

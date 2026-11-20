@@ -5,6 +5,7 @@ import ErrorNotice from '../components/ErrorNotice.vue';
 import { useApi } from '../composables/useApi';
 import { useMessages } from '../composables/useMessages';
 import { applySteamRows } from '../logic/applySteamRows';
+import { prepareSteamArtwork } from '../logic/prepareSteamArtwork';
 import { formatDuration } from '../logic/formatDuration';
 import type { SteamApplyProgress } from '../logic/SteamApplyProgress';
 import type { SteamApplyTally } from '../logic/SteamApplyTally';
@@ -18,7 +19,8 @@ const error = ref<unknown>(null);
 const checking = ref(false);
 const progress = ref<SteamApplyProgress | null>(null);
 const result = ref<SteamApplyTally | null>(null);
-const importing = computed(() => progress.value !== null);
+const artworkLeft = ref<number | null>(null);
+const importing = computed(() => progress.value !== null || artworkLeft.value !== null);
 
 const rows = computed(() => report.value?.rows ?? []);
 const neverPlayed = computed(() => rows.value.filter((row) => row.playtimeMinutes === 0));
@@ -77,6 +79,19 @@ async function importSelected(): Promise<void> {
     error.value = cause;
   } finally {
     progress.value = null;
+  }
+  const imported = result.value?.imported ?? 0;
+  if (imported === 0) return;
+  artworkLeft.value = imported;
+  try {
+    await prepareSteamArtwork(
+      () => api.prepareSteamArtwork(),
+      (left) => (artworkLeft.value = left),
+    );
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    artworkLeft.value = null;
   }
 }
 
@@ -191,6 +206,10 @@ const lastPlayed = (row: SteamImportRow): string =>
       <progress :value="progress.done" :max="progress.total"></progress>
       <span class="muted">{{ messages.steam.progress(progress.done, progress.total) }}</span>
     </div>
+
+    <p v-if="artworkLeft !== null" class="muted" data-test="steam-artwork">
+      {{ messages.steam.artwork(artworkLeft) }}
+    </p>
 
     <div v-if="result" data-test="steam-result">
       <p>{{ messages.steam.done(result.imported, result.updated, result.skipped) }}</p>

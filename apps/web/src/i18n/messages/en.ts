@@ -589,6 +589,7 @@ export const en = {
     done: (imported: number, updated: number, skipped: number) =>
       `Done: ${imported} added, ${updated} updated, ${skipped} already in place.`,
     failed: (n: number) => `${n} games could not be written:`,
+    artwork: (n: number) => `Preparing artwork, ${n} left`,
     unmatched: (n: number) => `${n} games IGDB does not know`,
     unmatchedHint: 'These are not in your library and cannot be imported.',
   },

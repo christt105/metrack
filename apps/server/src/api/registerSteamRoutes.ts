@@ -21,7 +21,8 @@ const applyBody = {
  * Steam and the library and writes nothing. `POST /api/steam/apply` takes at most `STEAM_APPLY_BATCH_SIZE` app ids, so
  * one request stays under the Workers subrequest limit; it recomputes what each id does from Steam's current answer
  * and writes it, and an id that is already in the library with at least Steam's time is skipped, so repeating a batch
- * adds nothing. Both answer 501 when the server has no Steam API key or no IGDB credentials.
+ * adds nothing. `POST /api/steam/artwork` prepares the artwork of the games that import added with it deferred, as many as
+ * fit in one request, and answers how many it finished and how many remain. All answer 501 when the server has no Steam API key or no IGDB credentials.
  */
 export function registerSteamRoutes(
   routes: ApiRoutes,
@@ -38,6 +39,10 @@ export function registerSteamRoutes(
   };
 
   routes.get('/api/steam/report', async (request) => ready().report(requireUser(request.user).id));
+
+  routes.post('/api/steam/artwork', async (request) =>
+    ready().prepareArtwork(requireUser(request.user).id),
+  );
 
   routes.post<{ Body: SteamApplyRequest }>(
     '/api/steam/apply',

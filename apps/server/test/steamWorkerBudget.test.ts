@@ -2,6 +2,7 @@ import { Miniflare } from 'miniflare';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { STEAM_APPLY_BATCH_SIZE } from '@metrack/domain';
 import { hashSecret } from '../src/auth/hashSecret.js';
+import { GAME_ARTWORK_COST } from '../src/backfill/GameArtworkCost.js';
 import { STEAM_APPLY_BUDGET } from '../src/steam/SteamApplyBudget.js';
 import type { D1Database } from '../src/storage/d1/D1Database.js';
 import { createWorkerApp } from '../src/worker/createWorkerApp.js';
@@ -19,6 +20,8 @@ const GAMES = Array.from({ length: 40 }, (_, index) => ({
   playtime_forever: 60 + index,
   playtime_2weeks: index % 2 === 0 ? 5 : 0,
 }));
+
+const MISSING_STEAM_ART = new Set([1002, 1003, 1019]);
 
 let miniflare: Miniflare;
 let rawDb: D1Database;
@@ -45,7 +48,8 @@ async function network(input: string | URL | Request, init?: RequestInit): Promi
       {
         id,
         name: `IGDB ${id}`,
-        cover: { url: '//images.igdb.com/igdb/image/upload/t_thumb/c.jpg' },
+        cover: { url: `//images.igdb.com/igdb/image/upload/t_thumb/c${id}.jpg` },
+        screenshots: [{ url: `//images.igdb.com/igdb/image/upload/t_thumb/s${id}.jpg` }],
         genres: [{ name: 'Indie' }],
         external_games: [{ external_game_source: 1, uid: String(id - 100_000) }],
       },
@@ -54,6 +58,9 @@ async function network(input: string | URL | Request, init?: RequestInit): Promi
   if (url.startsWith('https://www.steamgriddb.com/api/v2/games/steam/')) {
     return Response.json({ data: { id: 7 } });
   }
+  const steamApp = /\/steam\/apps\/(\d+)\//.exec(url)?.[1];
+  if (steamApp && MISSING_STEAM_ART.has(Number(steamApp)))
+    return new Response('gone', { status: 404 });
   const shade = [...url].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 200;
   return new Response(new Uint8Array(await solidImage(8, 8, 'webp', { r: shade, g: 40, b: 90 })));
 }
@@ -116,6 +123,39 @@ async function run(appIds: number[]): Promise<{ outcomes: Outcome[]; subrequests
   return { outcomes, subrequests: counter.total };
 }
 
+const ARTWORK_ROUTE_OVERHEAD = 5;
+
+async function artwork(): Promise<{
+  body: { processed: number; remaining: number };
+  subrequests: number;
+}> {
+  counter.reset();
+  const response = await app.request('http://localhost/api/steam/artwork', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${SECRET}` },
+  });
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as { processed: number; remaining: number };
+  return { body, subrequests: counter.total };
+}
+
+async function pendingRows(): Promise<Record<string, unknown>[]> {
+  const { results } = await rawDb
+    .prepare(
+      'SELECT id, steam_appid, cover, banner, steamgriddb_id FROM videogame WHERE artwork_pending = 1 ORDER BY id',
+    )
+    .all();
+  return results as Record<string, unknown>[];
+}
+
+async function importAndPrepare(appId: number): Promise<number> {
+  const imported = await run([appId]);
+  expect(imported.outcomes.map((outcome) => outcome.result)).toEqual(['imported']);
+  const { body, subrequests } = await artwork();
+  expect(body).toEqual({ processed: 1, remaining: 0 });
+  return subrequests - ARTWORK_ROUTE_OVERHEAD;
+}
+
 const appIdsOf = (from: number, to: number) => GAMES.slice(from, to).map((game) => game.appid);
 const IGDB_GAMES = appIdsOf(0, 20);
 const UPDATE_GAMES = appIdsOf(20, 30);
@@ -144,6 +184,13 @@ describe('Steam import against the Workers free plan subrequest limit', () => {
 
   it('keeps each kind of game within its budgeted cost', async () => {
     const igdb = await run(IGDB_GAMES.slice(0, 1));
+    const igdbOne = await run(IGDB_GAMES.slice(11, 12));
+    const igdbTwo = await run(IGDB_GAMES.slice(12, 14));
+    const marginal = igdbTwo.subrequests - igdbOne.subrequests;
+    expect(
+      marginal,
+      `one game ${igdbOne.subrequests}, two games ${igdbTwo.subrequests}`,
+    ).toBeLessThanOrEqual(STEAM_APPLY_BUDGET.igdb);
     const update = await run(UPDATE_GAMES.slice(0, 1));
     const catalog = await run(CATALOG_GAMES.slice(0, 1));
     expect([igdb, update, catalog].map((r) => r.outcomes[0]?.result)).toEqual([
@@ -177,7 +224,63 @@ describe('Steam import against the Workers free plan subrequest limit', () => {
       pending = outcomes.filter((o) => o.result === 'deferred').map((o) => Number(o.appId));
     }
     expect(imported.size).toBe(STEAM_APPLY_BATCH_SIZE);
-    expect(sizes.length).toBeGreaterThan(1);
+    expect(sizes[0], `games per request: ${sizes.join(', ')}`).toBeGreaterThanOrEqual(7);
+  });
+
+  it('stores the imported games with linked artwork and marks them as waiting for it', async () => {
+    const rows = await pendingRows();
+    const all = await rawDb
+      .prepare('SELECT COUNT(*) AS n FROM videogame WHERE igdb_id >= 100000')
+      .first();
+    expect(rows.length).toBe(Number(all?.n));
+    expect(rows.length).toBeGreaterThanOrEqual(1 + STEAM_APPLY_BATCH_SIZE);
+    expect(rows.every((row) => String(row.cover).includes('steamstatic.com'))).toBe(true);
+    expect(rows.every((row) => row.steamgriddb_id === null)).toBe(true);
+  });
+
+  it(
+    'prepares the artwork of the imported games on request without passing the limit',
+    { timeout: 60_000 },
+    async () => {
+      const idle = await artwork();
+      expect(idle.body.processed).toBeGreaterThan(0);
+      const measured: string[] = [`first ${idle.subrequests}`];
+      let remaining = idle.body.remaining;
+      expect(idle.subrequests).toBeLessThanOrEqual(FREE_PLAN_SUBREQUESTS);
+      while (remaining > 0) {
+        const next = await artwork();
+        measured.push(`${next.body.processed} games ${next.subrequests}`);
+        expect(next.subrequests, measured.join(', ')).toBeLessThanOrEqual(FREE_PLAN_SUBREQUESTS);
+        expect(next.body.processed).toBeGreaterThan(0);
+        remaining = next.body.remaining;
+      }
+      expect(await pendingRows()).toHaveLength(0);
+      const finished = await rawDb
+        .prepare(
+          'SELECT steam_appid, cover, banner, steamgriddb_id FROM videogame WHERE igdb_id >= 100000 ORDER BY id',
+        )
+        .all();
+      for (const row of finished.results as Record<string, unknown>[]) {
+        expect(row.steamgriddb_id).toBe(7);
+        const missing = MISSING_STEAM_ART.has(Number(row.steam_appid));
+        expect(String(row.cover).includes('images.igdb.com')).toBe(missing);
+        expect(String(row.banner).includes('images.igdb.com')).toBe(missing);
+      }
+    },
+  );
+
+  it('measures the fixed cost of an artwork request with nothing to prepare', async () => {
+    const idle = await artwork();
+    expect(idle.body).toEqual({ processed: 0, remaining: 0 });
+    expect(idle.subrequests).toBeLessThanOrEqual(ARTWORK_ROUTE_OVERHEAD);
+  });
+
+  it('costs no more than budgeted for one game, with Steam art and with the IGDB fallback', async () => {
+    const linked = await importAndPrepare(1018);
+    const fallback = await importAndPrepare(1019);
+    const note = `linked ${linked}, fallback ${fallback}`;
+    expect(linked, note).toBeLessThanOrEqual(GAME_ARTWORK_COST.linked);
+    expect(fallback, note).toBeLessThanOrEqual(GAME_ARTWORK_COST.fallback);
   });
 
   it('raises the time of a full batch of games in one request', async () => {

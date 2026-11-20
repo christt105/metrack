@@ -150,6 +150,12 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.episodeWatches.replace(1, series.id, {}, [], ['1']);
 
   const game = await owner.videogames.create({ ...emptyBookLike(), igdbId: 4 });
+  await owner.gameArtwork.markPending(game.id);
+  await owner.gameArtwork.listPending(5);
+  await owner.gameArtwork.listPending(5, 1);
+  await owner.gameArtwork.countPending();
+  await owner.gameArtwork.countPending(1);
+  await owner.gameArtwork.complete(game.id, { cover: null, banner: null, steamGridDbId: null });
   await owner.videogames.findByIgdbId(4);
   await owner.videogames.findBySteamAppId('7');
   await owner.videogames.listCatalogSteamGames();
@@ -303,6 +309,16 @@ const ACCEPTED_SCANS: { sql: RegExp; scan: RegExp; why: string }[] = [
     sql: /^SELECT id, tmdb_id FROM movie WHERE runtime IS NULL/,
     scan: /^SCAN movie USING INDEX movie_runtime_missing/,
     why: 'the runtime backfill walks the partial index of the movies still missing one',
+  },
+  {
+    sql: /^SELECT id, igdb_id, steam_appid, cover, banner FROM videogame WHERE artwork_pending = 1 ORDER BY id LIMIT \?$/,
+    scan: /^SCAN videogame USING INDEX videogame_artwork_pending/,
+    why: 'the artwork backfill walks the partial index of the games still waiting for artwork',
+  },
+  {
+    sql: /^SELECT COUNT\(\*\) AS n FROM videogame WHERE artwork_pending = 1$/,
+    scan: /^SCAN videogame USING COVERING INDEX videogame_artwork_pending/,
+    why: 'the pending artwork count walks the partial index of the games still waiting for artwork',
   },
   {
     sql: /^SELECT 1 FROM season_entry e WHERE e\.season_id = \? AND \( e\.rating IS NOT NULL/,

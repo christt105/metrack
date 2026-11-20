@@ -36,6 +36,8 @@ import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
 import { UserReleaseWatchers } from './alerts/UserReleaseWatchers.js';
 import { WatchlistService } from './alerts/WatchlistService.js';
 import { TmdbReleaseSource } from './providers/tmdb/TmdbReleaseSource.js';
+import { GameArtworkBackfill } from './backfill/GameArtworkBackfill.js';
+import { GameArtworkScheduler } from './backfill/GameArtworkScheduler.js';
 import { MovieRuntimeBackfill } from './backfill/MovieRuntimeBackfill.js';
 import { MovieRuntimeScheduler } from './backfill/MovieRuntimeScheduler.js';
 import { AccountDeletionScheduler } from './account/AccountDeletionScheduler.js';
@@ -140,14 +142,21 @@ if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
 const igdb = config.igdb && {
   client: new IgdbClient(fetch, config.igdb),
 };
-const igdbGames = igdb && new IgdbGameProvider(igdb.client, videogames, imageStore, steamGridDb);
+const igdbGames =
+  igdb &&
+  new IgdbGameProvider(igdb.client, videogames, imageStore, steamGridDb, repositories.gameArtwork);
+const gameArtwork =
+  igdb &&
+  new GameArtworkBackfill(repositories.gameArtwork, imageStore, igdb.client, steamGridDb, logger);
 if (igdbGames) titleProviders.register(igdbGames);
 const steam = createSteamServices(
   config.steamApiKey,
   fetch,
   videogames,
   repositories.settings,
-  igdb && igdbGames && { client: igdb.client, adder: igdbGames },
+  igdb &&
+    igdbGames &&
+    gameArtwork && { client: igdb.client, adder: igdbGames, artwork: gameArtwork },
 );
 const openLibrary = new OpenLibraryClient(fetch, config.openLibraryLanguage);
 titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
@@ -244,6 +253,9 @@ const runtimeScheduler = tmdb
       new MovieRuntimeBackfill(repositories.movieRuntimes, tmdb, logger),
       logger,
     )
+  : undefined;
+const gameArtworkScheduler = gameArtwork
+  ? new GameArtworkScheduler(gameArtwork, logger)
   : undefined;
 const cloudflareUsageScheduler = createCloudflareUsageScheduler(
   process.env,
@@ -347,6 +359,7 @@ const shutdown = async (): Promise<void> => {
   scheduler.stop();
   accountScheduler.stop();
   runtimeScheduler?.stop();
+  gameArtworkScheduler?.stop();
   cloudflareUsageScheduler?.stop();
   releaseScheduler?.stop();
   server.close();
@@ -365,6 +378,7 @@ if (config.backup.enabled) {
 releaseScheduler?.start();
 accountScheduler.start();
 runtimeScheduler?.start();
+gameArtworkScheduler?.start();
 cloudflareUsageScheduler?.start();
 if (!releaseScheduler)
   console.log(

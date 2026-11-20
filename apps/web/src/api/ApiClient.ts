@@ -34,6 +34,7 @@ import type {
   ResolveUnlinkedResponse,
   SearchResult,
   SteamApplyResponse,
+  SteamArtworkResponse,
   SteamImportReport,
   SyncApplyResult,
   SyncPlan,
@@ -374,6 +375,10 @@ export class ApiClient {
 
   applySteam(appIds: string[]): Promise<SteamApplyResponse> {
     return this.request('POST', '/steam/apply', { appIds });
+  }
+
+  prepareSteamArtwork(): Promise<SteamArtworkResponse> {
+    return this.request('POST', '/steam/artwork');
   }
 
   updatePublicPage(patch: PublicPagePatch): Promise<PublicPage> {

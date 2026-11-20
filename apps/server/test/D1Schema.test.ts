@@ -91,6 +91,11 @@ const steamIdSql = readFileSync(
   'utf8',
 );
 
+const artworkPendingSql = readFileSync(
+  new URL('../d1/migrations/0017_artwork_pending.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -108,6 +113,7 @@ function fromSql(): DatabaseSync {
   db.exec(userLanguageSql);
   db.exec(timeSpentSql);
   db.exec(steamIdSql);
+  db.exec(artworkPendingSql);
   return db;
 }
 
@@ -162,6 +168,15 @@ describe('D1 schema file', () => {
       expect(db.prepare('SELECT steam_id FROM user_setting').get()?.steam_id).toBeNull();
       db.exec("UPDATE user_setting SET steam_id = '76561198000000000'");
       expect(() => db.exec("UPDATE user_setting SET steam_id = ''")).toThrow();
+    }
+  });
+
+  it('has the artwork_pending flag that defaults to 0 and only accepts 0 and 1', () => {
+    for (const db of [fromMigrations(), fromSql()]) {
+      db.exec("INSERT INTO videogame (id, title) VALUES (1, 'G')");
+      expect(db.prepare('SELECT artwork_pending AS v FROM videogame').get()?.v).toBe(0);
+      db.exec('UPDATE videogame SET artwork_pending = 1');
+      expect(() => db.exec('UPDATE videogame SET artwork_pending = 2')).toThrow();
     }
   });
 

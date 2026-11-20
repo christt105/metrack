@@ -12,6 +12,7 @@ import type { Repositories } from '../repositories/Repositories.js';
 import { SqlitePublicProfileRepository } from './SqlitePublicProfileRepository.js';
 import { SqliteReleaseAlertRepository } from './SqliteReleaseAlertRepository.js';
 import { SqliteEpisodeWatchRepository } from './SqliteEpisodeWatchRepository.js';
+import { SqliteGameArtworkRepository } from './SqliteGameArtworkRepository.js';
 import { SqliteMovieRuntimeRepository } from './SqliteMovieRuntimeRepository.js';
 import { SqliteSeasonEpisodesRepository } from './SqliteSeasonEpisodesRepository.js';
 import { SqliteSeasonRepository } from './SqliteSeasonRepository.js';
@@ -31,6 +32,7 @@ export function createSqliteRepositories(db: DatabaseSync, scope: UserScope): Re
     seasons: new SqliteSeasonRepository(db, scope),
     videogames: new SqliteVideogameRepository(db, scope),
     books: new SqliteBookRepository(db, scope),
+    gameArtwork: new SqliteGameArtworkRepository(db),
     movieRuntimes: new SqliteMovieRuntimeRepository(db),
     seasonEpisodes: new SqliteSeasonEpisodesRepository(db),
     episodeWatches: new SqliteEpisodeWatchRepository(db, scope),

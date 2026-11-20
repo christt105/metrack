@@ -32,6 +32,7 @@ import { dropPublishSettingsMigration } from './0030-drop-publish-settings.js';
 import { userLanguageMigration } from './0031-user-language.js';
 import { timeSpentMigration } from './0032-time-spent.js';
 import { steamIdMigration } from './0033-steam-id.js';
+import { artworkPendingMigration } from './0034-artwork-pending.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -67,4 +68,5 @@ export const migrations: readonly Migration[] = [
   userLanguageMigration,
   timeSpentMigration,
   steamIdMigration,
+  artworkPendingMigration,
 ];
