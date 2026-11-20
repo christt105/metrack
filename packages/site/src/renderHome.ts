@@ -70,7 +70,12 @@ export function renderHome(library: Library): string {
   const shownTypes = [
     ...new Set(allEntries(library).map((entry) => themeType(entry.kind))),
   ] as ThemeType[];
-  const main = `<main aria-label="Content">${renderFilterBar(allEntries(library), shownTypes, library.messages)}${current}${completed(library, entries, current !== '')}${setAside(library, entries)}</main>`;
+  const everything = allEntries(library);
+  const body =
+    everything.length === 0
+      ? `<p>${library.messages.home.emptyLibrary}</p>`
+      : `${renderFilterBar(everything, shownTypes, library.messages)}${current}${completed(library, entries, current !== '')}${setAside(library, entries)}`;
+  const main = `<main aria-label="Content">${body}</main>`;
   return renderLayout({
     library,
     title: ownerName(library),

@@ -1,4 +1,5 @@
 import { escapeHtml } from '@metrack/export';
+import { entryStatus } from './entryStatus.js';
 import type { SiteMessages } from './messages/SiteMessages.js';
 import type { PublicEntry } from './PublicEntry.js';
 import { ratingScale } from './ratingTheme.js';
@@ -26,6 +27,11 @@ function distinct(values: string[], collation: string): Choice[] {
 const ALL = (label: string): string =>
   `<button type="button" class="filter-chip active" data-value="">${label}</button>`;
 
+const group = (name: string, all: string, chips: string, extraClass = ''): string =>
+  chips === ''
+    ? ''
+    : `<div class="filter-chips${extraClass}" data-filter-group="${name}">${ALL(all)}${chips}</div>`;
+
 const chip = (value: string, label: string): string =>
   `<button type="button" class="filter-chip" data-value="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
 
@@ -42,10 +48,17 @@ export function renderFilterBar(
         `<button type="button" class="filter-chip" data-value="${type}"><i class="${TYPE_ICONS[type]}" aria-hidden="true"></i> ${messages.typeLabels[type]}</button>`,
     )
     .join('');
-  const statuses = FILTER_STATUSES.map((status) =>
-    chip(status, messages.statusLabels[status] ?? status),
-  ).join('');
+  const present = new Set(entries.map(entryStatus));
+  const statuses = FILTER_STATUSES.filter((status) => present.has(status))
+    .map((status) => chip(status, messages.statusLabels[status] ?? status))
+    .join('');
+  const rated = new Set(
+    entries
+      .filter((entry) => entryStatus(entry) === 'finished' && entry.rating !== null)
+      .map((entry) => entry.rating),
+  );
   const ratings = ratingScale(messages)
+    .filter((theme) => rated.has(theme.rating))
     .map(
       (theme) =>
         `<button type="button" class="filter-chip" data-value="${theme.rating}" title="${escapeHtml(theme.label)}" style="--chip-accent: ${theme.color}"><i class="${theme.icon}" aria-hidden="true"></i></button>`,
@@ -62,14 +75,14 @@ export function renderFilterBar(
   const advanced =
     platforms.length === 0 && tags.length === 0
       ? ''
-      : `<details class="filter-advanced"><summary>${filter.more}</summary>${
-          platforms.length === 0
-            ? ''
-            : `<div class="filter-chips" data-filter-group="platform">${ALL(filter.platforms)}${platforms.map((entry) => chip(entry.value, entry.label)).join('')}</div>`
-        }${
-          tags.length === 0
-            ? ''
-            : `<div class="filter-chips" data-filter-group="tag">${ALL(filter.tags)}${tags.map((entry) => chip(entry.value, `#${entry.label}`)).join('')}</div>`
-        }</details>`;
-  return `<div class="filter-bar" id="filter-bar"><div class="filter-search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="media-search" autocomplete="off" placeholder="${filter.search}" aria-label="${filter.search}"></div><div class="filter-row"><div class="filter-chips" data-filter-group="type">${ALL(filter.all)}${types}</div><div class="filter-chips" data-filter-group="status">${ALL(filter.all)}${statuses}</div><div class="filter-chips filter-ratings" data-filter-group="rating">${ALL(filter.all)}${ratings}</div></div>${advanced}<p class="filter-noresults" id="filter-noresults" hidden>${filter.noResults}</p></div>`;
+      : `<details class="filter-advanced"><summary>${filter.more}</summary>${group(
+          'platform',
+          filter.platforms,
+          platforms.map((entry) => chip(entry.value, entry.label)).join(''),
+        )}${group(
+          'tag',
+          filter.tags,
+          tags.map((entry) => chip(entry.value, `#${entry.label}`)).join(''),
+        )}</details>`;
+  return `<div class="filter-bar" id="filter-bar"><div class="filter-search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="media-search" autocomplete="off" placeholder="${filter.search}" aria-label="${filter.search}"></div><div class="filter-row">${group('type', filter.all, types)}${group('status', filter.all, statuses)}${group('rating', filter.all, ratings, ' filter-ratings')}</div>${advanced}<p class="filter-noresults" id="filter-noresults" hidden>${filter.noResults}</p></div>`;
 }

@@ -435,6 +435,10 @@ describe('the public page profile', () => {
     expect(home).toContain('<p class="author-bio">Lo que veo</p>');
     expect(home).toContain('src="/u/assets/default-avatar.svg"');
     expect((await visitor('/u/assets/default-avatar.svg')).statusCode).toBe(200);
+    const poster = await visitor('/u/assets/default-poster.svg');
+    expect(poster.statusCode).toBe(200);
+    expect(poster.headers['content-type']).toBe('image/svg+xml');
+    expect((await visitor('/u/assets/default-poster.webp')).statusCode).toBe(404);
   });
 
   it('keeps the about page and its menu entry out until there is a text', async () => {

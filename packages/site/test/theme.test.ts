@@ -98,7 +98,7 @@ describe('renderIndex', () => {
     expect(items.find((item) => item.title === 'Lupin')?.type).toBe('tv');
     expect(items.find((item) => item.title === 'Dune')?.banner).toContain('/t/p/w1280/banner.jpg');
     expect(items.find((item) => item.title === 'Alien')?.image).toBe(
-      '/u/assets/default-poster.webp',
+      '/u/assets/default-poster.svg',
     );
   });
 });
@@ -111,7 +111,7 @@ describe('renderStats', () => {
       '<span class="stat-number">5</span><span class="stat-label">Total</span>',
     );
     expect(html).toContain(
-      '<span class="stat-number">5</span><span class="stat-label">Acabados</span>',
+      '<span class="stat-number">5</span><span class="stat-label">Completados</span>',
     );
     expect(html).toContain('<option value="2026">2026</option>');
     expect(html).toContain('data-stats-year="2025" hidden');
@@ -204,6 +204,8 @@ describe('siteAsset', () => {
     expect(siteAsset('fonts/Roboto/roboto-v30-latin-regular.woff2')?.body).toBeInstanceOf(
       Uint8Array,
     );
+    expect(siteAsset('default-poster.svg')?.contentType).toBe('image/svg+xml');
+    expect(siteAsset('default-poster.webp')).toBeUndefined();
     expect(siteAsset('../secret')).toBeUndefined();
     expect(siteAsset('nope.js')).toBeUndefined();
   });

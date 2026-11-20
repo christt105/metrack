@@ -1,6 +1,6 @@
 # Third-party notices
 
-The public pages (`packages/site`) reuse the compiled stylesheet, scripts, font and default images of the author's Hugo theme, [hugo-mediatracker-theme](https://github.com/christt105/hugo-mediatracker-theme) (MIT, Copyright (c) 2026 christt105), which is built on [hugo-blog-awesome](https://github.com/hugo-sid/hugo-blog-awesome) (MIT, Copyright (c) the hugo-blog-awesome authors).
+The public pages (`packages/site`) reuse the compiled stylesheet, scripts and font of the author's Hugo theme, [hugo-mediatracker-theme](https://github.com/christt105/hugo-mediatracker-theme) (MIT, Copyright (c) 2026 christt105), which is built on [hugo-blog-awesome](https://github.com/hugo-sid/hugo-blog-awesome) (MIT, Copyright (c) the hugo-blog-awesome authors).
 
 The files under `packages/site/src/assets` that come from them are `THEME_CSS`, `CODE_HIGHLIGHT_CSS`, `THEME_JS`, `MAIN_JS`, `FILTER_JS`, `YEAR_NAV_JS`, `STATS_JS`, `COLLAGE_JS`, `COLLAGE_CSS` and the Roboto font in `ROBOTO_WOFF2` (Roboto is licensed under the Apache License 2.0).
 
