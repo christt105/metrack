@@ -278,6 +278,44 @@ export const en = {
         : 'This permanently deletes the entry with your tracking, review and rewatches. It cannot be undone.',
     deleteConfirm: 'Delete permanently',
   },
+  filler: {
+    action: 'Skip the filler',
+    title: 'Skip the filler',
+    intro:
+      "Marks the filler episodes of this anime as skipped, using AnimeFillerList's list. Skipped episodes are not owed for a season to be complete, and you can undo it right after.",
+    loading: 'Reading the episode list...',
+    source: 'Source',
+    counts: {
+      filler: 'Filler',
+      mixed: 'Mixed canon and filler',
+      mangaCanon: 'Manga canon',
+      animeCanon: 'Anime canon',
+    },
+    keptNote: (canon: number) => `${canon} canon episodes are never skipped.`,
+    selectAll: (label: string, selected: number, total: number) =>
+      `${label}: skip ${selected} of ${total}`,
+    episode: (absolute: number, season: number, number: number, title: string | null) =>
+      `${absolute}. S${season}E${number}${title ? ` ${title}` : ''}`,
+    watchedTag: 'Watched',
+    skippedTag: 'Already skipped',
+    nothing: 'There is nothing left to skip.',
+    confirm: (n: number) => (n === 1 ? 'Skip 1 episode' : `Skip ${n} episodes`),
+    close: 'Close',
+    applied: (n: number) => (n === 1 ? 'Skipped 1 episode' : `Skipped ${n} episodes`),
+    undone: 'Skips undone',
+    notFoundTitle: 'AnimeFillerList has no list for this series',
+    notFoundHint:
+      'Paste its address on AnimeFillerList (for example https://www.animefillerlist.com/shows/naruto) or the name at the end of it.',
+    slugLabel: 'AnimeFillerList address or name',
+    retry: 'Look it up',
+    invalidSlug: 'That is not an AnimeFillerList address or show name.',
+    mismatch: (ours: number, theirs: number) =>
+      `This series has ${ours} episodes in metrack and AnimeFillerList lists ${theirs}, so they cannot be matched safely. This happens with series that are still airing or numbered differently.`,
+    incomplete: (season: number) =>
+      `The episodes of season ${season} are not available yet. Open that season and try again later.`,
+    unavailable: 'AnimeFillerList could not be read right now. Try again later.',
+    invalidList: 'The list on AnimeFillerList is not numbered in order, so it cannot be used.',
+  },
   ordering: {
     title: 'Season order',
     description:
@@ -452,6 +490,7 @@ export const en = {
     openLibrary: 'Open Library',
     steam: 'Steam',
     steamGridDb: 'SteamGridDB',
+    animeFillerList: 'AnimeFillerList',
   },
   settings: {
     sections: 'Settings sections',
@@ -847,6 +886,14 @@ export const en = {
           'Android (Chrome): open the browser menu and choose "Install app" or "Add to Home screen".',
           'iPhone (Safari): tap Share, then "Add to Home Screen".',
           'metrack then opens from its own icon, like any other app.',
+        ],
+      },
+      {
+        id: 'filler',
+        title: 'Skip the filler of an anime',
+        steps: [
+          'On the page of an animated series, open "Skip the filler". metrack reads the series\' list on AnimeFillerList and shows what it would skip before doing anything: filler is preselected, mixed episodes can be added, and canon, watched and already skipped episodes are left alone.',
+          'It only works when the series has the same number of episodes in metrack as the list, which is usually not the case while a series is still airing. If the series is not found, paste its AnimeFillerList address and look it up again. After applying you can undo it from the notice that appears.',
         ],
       },
       {

@@ -19,6 +19,7 @@ More in [docs/screenshots.md](docs/screenshots.md).
 - Web app to add and edit titles, searched and refreshed from TMDB, IGDB and Open Library, or entered by hand.
 - Per-season tracking for series: status, dates, rating, review and rewatches.
 - Jellyfin viewing sync through Jellystat, with a report-only pass before anything is written.
+- Skip the filler of an anime in one step, from AnimeFillerList's episode lists, with a preview and undo ([docs/skip-filler.md](docs/skip-filler.md)).
 - Release alerts over ntfy for followed series and movies.
 - Scheduled, verified backups with retention and a restore command.
 

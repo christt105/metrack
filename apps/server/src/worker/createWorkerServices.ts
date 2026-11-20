@@ -125,6 +125,7 @@ export function createWorkerServices(
     episodeWatches: repositories.episodeWatches,
     titleProviders,
     imageProviders,
+    fetchFn: workerFetch,
   });
 
   const accountDeletion = new AccountDeletionService(

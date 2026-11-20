@@ -9,6 +9,7 @@ import { registerErrorHandler } from './registerErrorHandler.js';
 import { registerImageRoutes } from './registerImageRoutes.js';
 import { registerMetadataRoutes } from './registerMetadataRoutes.js';
 import { registerEpisodeGroupRoutes } from './registerEpisodeGroupRoutes.js';
+import { registerFillerRoutes } from './registerFillerRoutes.js';
 import { registerSeasonEpisodeRoutes } from './registerSeasonEpisodeRoutes.js';
 import { registerMediaRoutes } from './registerMediaRoutes.js';
 import { bumpContentVersionOnWrite } from './bumpContentVersionOnWrite.js';
@@ -155,6 +156,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
       registerEpisodeGroupRoutes(routes, deps.edit.episodeGroups, editor);
     }
     registerSeasonEpisodeRoutes(routes, deps.edit.seasonEpisodes, deps.contentVersions);
+    registerFillerRoutes(routes, deps.edit.filler, deps.contentVersions);
     registerMediaRoutes(
       routes,
       editor,

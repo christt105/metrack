@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { MEDIA_TYPE_OF_COLLECTION } from '@metrack/domain';
+import { MEDIA_TYPE_OF_COLLECTION, isAnimatedGenres } from '@metrack/domain';
 import type {
   Collection,
   Season,
@@ -18,6 +18,7 @@ import ManagePanel from '../components/ManagePanel.vue';
 import QuickActions from '../components/QuickActions.vue';
 import ReviewPanel from '../components/ReviewPanel.vue';
 import SeasonEpisodes from '../components/SeasonEpisodes.vue';
+import SkipFiller from '../components/SkipFiller.vue';
 import SeasonList from '../components/SeasonList.vue';
 import UnmatchedEpisodes from '../components/UnmatchedEpisodes.vue';
 import { useApi } from '../composables/useApi';
@@ -41,6 +42,7 @@ const followCollection = computed(() =>
 const series = computed(() =>
   props.collection === 'series' ? (detail.value as SeriesDetail | null) : null,
 );
+const animated = computed(() => series.value !== null && isAnimatedGenres(series.value.genres));
 const seasonOf = computed(() =>
   props.collection === 'seasons' ? (detail.value as unknown as Season | null) : null,
 );
@@ -191,6 +193,8 @@ watch(() => [props.collection, props.id], load, { immediate: true });
     />
 
     <SeasonList v-if="series" :seasons="series.seasons" :series-cover="series.cover" />
+
+    <SkipFiller v-if="series && animated" :series-id="series.id" @changed="load" />
 
     <SeasonEpisodes
       v-if="seasonOf"

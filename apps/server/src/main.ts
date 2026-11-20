@@ -180,6 +180,7 @@ const edit = createEditServices({
   episodeWatches: repositories.episodeWatches,
   titleProviders,
   imageProviders,
+  fetchFn: fetch,
 });
 
 const contentVersions = new MemoryContentVersions();

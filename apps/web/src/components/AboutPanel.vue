@@ -38,10 +38,13 @@ const REPOSITORY = 'https://github.com/christt105/metrack';
       }}</a>,
       <a href="https://store.steampowered.com" target="_blank" rel="noopener noreferrer">{{
         messages.about.steam
-      }}</a>
-      &amp;
+      }}</a>,
       <a href="https://www.steamgriddb.com" target="_blank" rel="noopener noreferrer">{{
         messages.about.steamGridDb
+      }}</a>
+      &amp;
+      <a href="https://www.animefillerlist.com" target="_blank" rel="noopener noreferrer">{{
+        messages.about.animeFillerList
       }}</a>.
     </p>
   </div>

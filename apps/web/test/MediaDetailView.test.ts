@@ -67,6 +67,18 @@ describe('MediaDetailView', () => {
     expect(groups(wrapper)).toEqual(['Images', 'Season order', 'Metadata', 'Danger zone']);
   });
 
+  it('offers to skip the filler only on animated series', async () => {
+    const plain = await mountDetail('series', series);
+    await flushPromises();
+    expect(plain.wrapper.find('[data-test="filler-open"]').exists()).toBe(false);
+    const anime = await mountDetail('series', { ...series, genres: ['Drama', 'Animación'] });
+    await flushPromises();
+    expect(anime.wrapper.find('[data-test="filler-open"]').exists()).toBe(true);
+    const film = await mountDetail('movies', { ...movie, genres: ['Animation'] });
+    await flushPromises();
+    expect(film.wrapper.find('[data-test="filler-open"]').exists()).toBe(false);
+  });
+
   it('lists the manage groups of a season, a game and a book', async () => {
     const seasonView = await mountDetail('seasons', season);
     await flushPromises();

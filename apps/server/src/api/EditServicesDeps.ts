@@ -1,4 +1,5 @@
 import type { ImageProvider } from '../artwork/ImageProvider.js';
+import type { FetchFn } from '../http/FetchFn.js';
 import type { ImageStore } from '../images/ImageStore.js';
 import type { MediaKindSources } from '../media/MediaKindSources.js';
 import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
@@ -20,5 +21,7 @@ export interface EditServicesDeps {
   episodeWatches: EpisodeWatchRepository;
   titleProviders: TitleProviders;
   imageProviders: readonly ImageProvider[];
+  /** Used to read AnimeFillerList for the filler preview. */
+  fetchFn: FetchFn;
   now?: () => Date;
 }

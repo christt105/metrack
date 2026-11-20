@@ -1,5 +1,7 @@
 import { ArtworkService } from '../artwork/ArtworkService.js';
 import { buildMediaKinds } from '../media/buildMediaKinds.js';
+import { FillerListClient } from '../filler/FillerListClient.js';
+import { FillerService } from '../filler/FillerService.js';
 import { MediaCatalog } from '../media/MediaCatalog.js';
 import { MediaEditor } from '../media/MediaEditor.js';
 import { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
@@ -30,6 +32,12 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     series: sources.series,
     unlinked: deps.unlinked,
     seasonEpisodes,
+    filler: new FillerService({
+      series: sources.series,
+      seasons: sources.seasons,
+      episodes: seasonEpisodes,
+      list: new FillerListClient(deps.fetchFn),
+    }),
     ...(deps.tmdb
       ? {
           episodeGroups: new EpisodeGroupService(

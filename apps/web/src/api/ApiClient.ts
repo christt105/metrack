@@ -1,6 +1,7 @@
 import type {
   EpisodeOperation,
   Language,
+  FillerPreviewResponse,
   SeasonEpisodesResponse,
   SeasonEpisodesUpdateResponse,
   AccountDeletion,
@@ -190,6 +191,11 @@ export class ApiClient {
   ): Promise<Detail<C>> {
     const query = options.forAll ? '?forAll=true' : '';
     return this.request('PATCH', `/${collection}/${id}${query}`, patch);
+  }
+
+  fillerPreview(seriesId: number, slug?: string): Promise<FillerPreviewResponse> {
+    const query = slug ? `?slug=${encodeURIComponent(slug)}` : '';
+    return this.request('GET', `/series/${seriesId}/filler${query}`);
   }
 
   seasonEpisodes(seasonId: number): Promise<SeasonEpisodesResponse> {

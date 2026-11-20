@@ -171,6 +171,7 @@ export async function createTestApi(
     episodeWatches: new SqliteEpisodeWatchRepository(db, scope),
     titleProviders,
     imageProviders,
+    fetchFn,
     now: () => NOW,
   });
   const profiles = new SqlitePublicProfileRepository(db);

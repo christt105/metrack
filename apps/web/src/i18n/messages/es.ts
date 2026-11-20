@@ -307,6 +307,44 @@ export const es: Messages = {
         : 'Se eliminará para siempre el elemento con tu seguimiento, tu reseña y tus revisionados. No se puede deshacer.',
     deleteConfirm: 'Eliminar para siempre',
   },
+  filler: {
+    action: 'Saltar el relleno',
+    title: 'Saltar el relleno',
+    intro:
+      'Marca como saltados los episodios de relleno de este anime con la lista de AnimeFillerList. Los episodios saltados no cuentan para completar una temporada, y puedes deshacerlo justo después.',
+    loading: 'Leyendo la lista de episodios...',
+    source: 'Fuente',
+    counts: {
+      filler: 'Relleno',
+      mixed: 'Mixto (canon y relleno)',
+      mangaCanon: 'Canon del manga',
+      animeCanon: 'Canon del anime',
+    },
+    keptNote: (canon: number) => `Los ${canon} episodios canon nunca se saltan.`,
+    selectAll: (label: string, selected: number, total: number) =>
+      `${label}: saltar ${selected} de ${total}`,
+    episode: (absolute: number, season: number, number: number, title: string | null) =>
+      `${absolute}. T${season}E${number}${title ? ` ${title}` : ''}`,
+    watchedTag: 'Visto',
+    skippedTag: 'Ya saltado',
+    nothing: 'No queda nada por saltar.',
+    confirm: (n: number) => (n === 1 ? 'Saltar 1 episodio' : `Saltar ${n} episodios`),
+    close: 'Cerrar',
+    applied: (n: number) => (n === 1 ? 'Saltado 1 episodio' : `Saltados ${n} episodios`),
+    undone: 'Saltos deshechos',
+    notFoundTitle: 'AnimeFillerList no tiene lista para esta serie',
+    notFoundHint:
+      'Pega su dirección en AnimeFillerList (por ejemplo https://www.animefillerlist.com/shows/naruto) o el nombre del final.',
+    slugLabel: 'Dirección o nombre en AnimeFillerList',
+    retry: 'Buscar',
+    invalidSlug: 'Eso no es una dirección ni un nombre de serie de AnimeFillerList.',
+    mismatch: (ours: number, theirs: number) =>
+      `Esta serie tiene ${ours} episodios en metrack y AnimeFillerList lista ${theirs}, así que no se pueden emparejar con seguridad. Pasa con series que siguen en emisión o que se numeran de otra forma.`,
+    incomplete: (season: number) =>
+      `Los episodios de la temporada ${season} aún no están disponibles. Abre esa temporada y vuelve a intentarlo más tarde.`,
+    unavailable: 'No se ha podido leer AnimeFillerList ahora mismo. Inténtalo más tarde.',
+    invalidList: 'La lista de AnimeFillerList no está numerada en orden, así que no se puede usar.',
+  },
   ordering: {
     title: 'Orden de temporadas',
     description:
@@ -465,6 +503,7 @@ export const es: Messages = {
     openLibrary: 'Open Library',
     steam: 'Steam',
     steamGridDb: 'SteamGridDB',
+    animeFillerList: 'AnimeFillerList',
   },
   settings: {
     sections: 'Secciones de ajustes',
@@ -867,6 +906,14 @@ export const es: Messages = {
           'Android (Chrome): abre el menú del navegador y elige «Instalar aplicación» o «Añadir a la pantalla de inicio».',
           'iPhone (Safari): toca Compartir y después «Añadir a pantalla de inicio».',
           'Después metrack se abre desde su propio icono, como cualquier otra app.',
+        ],
+      },
+      {
+        id: 'filler',
+        title: 'Saltar el relleno de un anime',
+        steps: [
+          'En la página de una serie de animación, abre «Saltar el relleno». metrack lee la lista de la serie en AnimeFillerList y te enseña lo que saltaría antes de hacer nada: el relleno viene marcado, los episodios mixtos se pueden añadir, y los canon, los vistos y los ya saltados no se tocan.',
+          'Solo funciona cuando la serie tiene en metrack el mismo número de episodios que la lista, cosa que normalmente no ocurre mientras la serie sigue en emisión. Si no encuentra la serie, pega su dirección de AnimeFillerList y vuelve a buscar. Tras aplicarlo puedes deshacerlo desde el aviso que aparece.',
         ],
       },
       {
