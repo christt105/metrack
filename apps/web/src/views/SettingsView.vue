@@ -95,6 +95,9 @@ const groups = computed(() =>
 <template>
   <section>
     <h1>{{ messages.settings.title }}</h1>
+    <p>
+      <RouterLink :to="{ name: 'help' }" data-test="help-link">{{ messages.help.link }}</RouterLink>
+    </p>
     <div class="settings">
       <nav class="index" :aria-label="messages.settings.sections">
         <a v-for="group in groups" :key="group.id" :href="`#${group.id}`" class="chip">

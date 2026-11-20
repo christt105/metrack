@@ -88,6 +88,7 @@ async function signOut(): Promise<void> {
     <RouterView />
   </main>
   <footer v-if="!bare" class="foot" :class="{ focused }">
+    <RouterLink to="/help">{{ messages.help.link }}</RouterLink>
     <a href="/privacy">{{ messages.account.privacy }}</a>
   </footer>
   <nav
@@ -257,6 +258,7 @@ async function signOut(): Promise<void> {
 
 .foot a {
   color: var(--muted);
+  margin-right: var(--s-4);
 }
 
 .tabbar {

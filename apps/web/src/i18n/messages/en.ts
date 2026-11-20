@@ -91,6 +91,7 @@ export const en = {
       'Follow upcoming releases and get an alert when they arrive.',
       'Share your library on a public page.',
     ],
+    welcomeHelp: 'How does it work? Read the help.',
     welcomeAction: 'Add title',
     seasons: (n: number) => (n === 1 ? '1 season' : `${n} seasons`),
     count: (n: number) => (n === 1 ? '1 title' : `${n} titles`),
@@ -747,5 +748,69 @@ export const en = {
     finishedAt: 'Finished',
     rating: 'Rating',
     review: 'Review',
+  },
+  help: {
+    title: 'Help',
+    intro:
+      'A short guide to getting started with metrack. If something is unclear, ask the person who invited you.',
+    link: 'Help',
+    openSettings: 'Open Settings',
+    sections: [
+      {
+        id: 'add',
+        title: 'Add and rate a title',
+        steps: [
+          'Open "Add title" in the menu and search for a movie, series, game or book.',
+          'Pick the right result to add it to your library.',
+          'Open it from the library to set its status and give it a rating or a review.',
+        ],
+      },
+      {
+        id: 'following',
+        title: 'Following and release alerts',
+        steps: [
+          '"Following" lists the movies and series you follow so you know when something new comes out. Use the "Follow for releases" button on a title to add it.',
+          'To get a notification on your phone, install the free ntfy app, then open Settings, Connections, "Release alerts" and turn the alerts on. Open the subscription link shown there from your phone.',
+          'Keep that link private: anyone who has it can read your alerts.',
+        ],
+      },
+      {
+        id: 'install',
+        title: 'Install the app on your phone',
+        steps: [
+          'Android (Chrome): open the browser menu and choose "Install app" or "Add to Home screen".',
+          'iPhone (Safari): tap Share, then "Add to Home Screen".',
+          'metrack then opens from its own icon, like any other app.',
+        ],
+      },
+      {
+        id: 'public',
+        title: 'Your public page',
+        steps: [
+          'Your public page shows your library, finished titles and confirmed reviews at an address that needs no sign-in. Titles waiting for review never appear, and search engines are asked not to index it.',
+          'To turn it off, open Settings, Profile, "Public page" and clear "Turn the page on".',
+        ],
+      },
+      {
+        id: 'jellyfin',
+        title: 'Jellyfin sync',
+        steps: [
+          "Syncing what you watch from Jellyfin only works for people who have an account on the owner's Jellyfin server. If you do not have one, you add and update titles by hand and can ignore this.",
+        ],
+      },
+      {
+        id: 'account',
+        title: 'Export and delete your account',
+        steps: [
+          'In Settings, Profile, "Your data and account", "Download my data" gives you a ZIP with everything you have in metrack.',
+          '"Delete my account" removes your account after 7 days, and you can cancel before then by signing in.',
+        ],
+      },
+      {
+        id: 'contact',
+        title: 'Need a hand?',
+        steps: ['Ask the person who invited you to metrack.'],
+      },
+    ],
   },
 };

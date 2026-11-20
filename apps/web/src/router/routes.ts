@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router';
+import HelpView from '../views/HelpView.vue';
 import InviteView from '../views/InviteView.vue';
 import LoginView from '../views/LoginView.vue';
 import MediaDetailView from '../views/MediaDetailView.vue';
@@ -27,6 +28,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/watchlist', name: 'watchlist', component: WatchlistView },
   { path: '/unlinked', name: 'unlinked', component: UnlinkedView },
   { path: '/settings', name: 'settings', component: SettingsView },
+  { path: '/help', name: 'help', component: HelpView },
   { path: '/new/:collection(games|books)', name: 'new', component: NewMediaView, props: true },
   {
     path: '/:collection(movies|series|seasons|games|books)/:id(\\d+)',

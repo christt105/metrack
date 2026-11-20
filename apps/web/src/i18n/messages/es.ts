@@ -119,6 +119,7 @@ export const es: Messages = {
       'Sigue los próximos estrenos y recibe un aviso cuando lleguen.',
       'Comparte tu biblioteca en una página pública.',
     ],
+    welcomeHelp: '¿Cómo funciona? Lee la ayuda.',
     welcomeAction: 'Añadir título',
     seasons: (n: number) => plural(n, 'temporada', 'temporadas'),
     count: (n: number) => plural(n, 'título', 'títulos'),
@@ -766,5 +767,69 @@ export const es: Messages = {
     finishedAt: 'Final',
     rating: 'Nota',
     review: 'Reseña',
+  },
+  help: {
+    title: 'Ayuda',
+    intro:
+      'Una guía corta para empezar con metrack. Si algo no queda claro, pregunta a quien te invitó.',
+    link: 'Ayuda',
+    openSettings: 'Abrir Ajustes',
+    sections: [
+      {
+        id: 'add',
+        title: 'Añadir y puntuar un título',
+        steps: [
+          'Abre «Añadir título» en el menú y busca una película, serie, juego o libro.',
+          'Elige el resultado correcto para añadirlo a tu biblioteca.',
+          'Ábrelo desde la biblioteca para cambiar su estado y darle una nota o una reseña.',
+        ],
+      },
+      {
+        id: 'following',
+        title: 'Siguiendo y avisos de estrenos',
+        steps: [
+          '«Siguiendo» reúne las películas y series que sigues para que sepas cuándo sale algo nuevo. Usa el botón «Seguir estrenos» en un título para añadirlo.',
+          'Para recibir una notificación en el móvil, instala la app gratuita ntfy, abre Ajustes, Conexiones, «Avisos de estrenos» y activa los avisos. Abre desde el móvil el enlace de suscripción que aparece ahí.',
+          'Mantén ese enlace en privado: cualquiera que lo tenga puede leer tus avisos.',
+        ],
+      },
+      {
+        id: 'install',
+        title: 'Instalar la app en el móvil',
+        steps: [
+          'Android (Chrome): abre el menú del navegador y elige «Instalar aplicación» o «Añadir a la pantalla de inicio».',
+          'iPhone (Safari): toca Compartir y después «Añadir a pantalla de inicio».',
+          'Después metrack se abre desde su propio icono, como cualquier otra app.',
+        ],
+      },
+      {
+        id: 'public',
+        title: 'Tu página pública',
+        steps: [
+          'Tu página pública enseña tu biblioteca, los títulos terminados y las reseñas confirmadas en una dirección que no pide iniciar sesión. Los títulos pendientes de revisión nunca aparecen y se pide a los buscadores que no la indexen.',
+          'Para apagarla, abre Ajustes, Perfil, «Página pública» y desmarca «Activar la página».',
+        ],
+      },
+      {
+        id: 'jellyfin',
+        title: 'Sincronización con Jellyfin',
+        steps: [
+          'Sincronizar lo que ves desde Jellyfin solo funciona para quien tiene una cuenta en el servidor Jellyfin del propietario. Si no tienes una, añade y actualiza los títulos a mano y puedes ignorar esto.',
+        ],
+      },
+      {
+        id: 'account',
+        title: 'Exportar y eliminar tu cuenta',
+        steps: [
+          'En Ajustes, Perfil, «Tus datos y tu cuenta», «Descargar mis datos» te da un ZIP con todo lo que tienes en metrack.',
+          '«Eliminar mi cuenta» borra tu cuenta pasados 7 días, y puedes cancelarlo antes iniciando sesión.',
+        ],
+      },
+      {
+        id: 'contact',
+        title: '¿Necesitas ayuda?',
+        steps: ['Pregunta a quien te invitó a metrack.'],
+      },
+    ],
   },
 };

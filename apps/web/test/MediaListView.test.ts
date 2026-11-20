@@ -68,6 +68,15 @@ describe('MediaListView empty states', () => {
     expect(router.currentRoute.value.name).toBe('search');
   });
 
+  it('links the welcome to the help page', async () => {
+    const listMedia = vi.fn().mockResolvedValue({ total: 0, items: [] });
+    const { wrapper, router } = await mountWithApi(MediaListView, { listMedia });
+    await flushPromises();
+    await wrapper.find('.welcome a').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe('help');
+  });
+
   it('keeps the filters and the plain message when filters match nothing', async () => {
     const listMedia = vi
       .fn()

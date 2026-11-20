@@ -16,6 +16,9 @@ const router = useRouter();
     <button type="button" class="primary" @click="router.push({ name: 'search' })">
       {{ messages.list.welcomeAction }}
     </button>
+    <p>
+      <RouterLink :to="{ name: 'help' }">{{ messages.list.welcomeHelp }}</RouterLink>
+    </p>
   </div>
 </template>
 
