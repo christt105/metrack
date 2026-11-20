@@ -18,6 +18,24 @@ describe('ReviewPanel', () => {
     expect(wrapper.find('.edit-review').text()).toBe('Edit review');
   });
 
+  it('renders the review as Markdown inside the quote', async () => {
+    const hash = 'b'.repeat(64);
+    const detail = {
+      id: 5,
+      title: 'Wind Waker',
+      review: `## 2019-01-30\n\n![Hall](/api/images/${hash})\n\nSee [[Diario Zelda]] <script>alert(1)</script><img src=x onerror=alert(2)>`,
+    } as unknown as AnyDetail;
+    const { wrapper } = await mountWithApi(ReviewPanel, {}, { collection: 'games', detail });
+    const quote = wrapper.find('blockquote.review');
+    expect(quote.find('h3').text()).toBe('2019-01-30');
+    expect(quote.find('img').attributes('src')).toBe(`/api/images/${hash}`);
+    expect(quote.text()).toContain('See Diario Zelda');
+    expect(quote.text()).not.toContain('[[');
+    expect(quote.find('script').exists()).toBe(false);
+    expect(quote.findAll('img')).toHaveLength(1);
+    expect(quote.html()).toContain('&lt;img src=x onerror=alert(2)&gt;');
+  });
+
   it('turns the quote into a textarea in place and saves it', async () => {
     const patch = vi.fn().mockResolvedValue({ ...movie, review: 'Better.' });
     const { wrapper } = await mountWithApi(
