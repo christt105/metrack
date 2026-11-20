@@ -111,7 +111,7 @@ describe('renderStats', () => {
       '<span class="stat-number">5</span><span class="stat-label">Total</span>',
     );
     expect(html).toContain(
-      '<span class="stat-number">5</span><span class="stat-label">Acabados</span>',
+      '<span class="stat-number">5</span><span class="stat-label">Completados</span>',
     );
     expect(html).toContain('<option value="2026">2026</option>');
     expect(html).toContain('data-stats-year="2025" hidden');

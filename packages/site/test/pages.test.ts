@@ -61,6 +61,43 @@ const library = buildLibrary(
   }),
 );
 
+describe('renderHome filters and empty states', () => {
+  it('lists only the statuses, ratings and groups that have items', () => {
+    const html = renderHome(
+      buildLibrary(
+        input({
+          movies: [
+            movie({ id: 1, title: 'A', status: 'completed', finishedAt: '2026-01-01', rating: 7 }),
+            movie({ id: 2, title: 'B', status: 'planned' }),
+          ],
+        }),
+      ),
+    );
+    expect(html).toContain('data-value="finished">Completado<');
+    expect(html).toContain('data-value="not_started">Pendiente<');
+    expect(html).not.toContain('data-value="paused"');
+    expect(html).not.toContain('data-value="dropped"');
+    expect(html).toContain('data-value="7"');
+    expect(html).not.toContain('data-value="6"');
+    expect(html).not.toContain('data-value="book"');
+    expect(html).not.toContain('data-filter-group="platform"');
+  });
+
+  it('shows a short message instead of the filter bar when the library is empty', () => {
+    const html = renderHome(buildLibrary(input()));
+    expect(html).toContain('Esta biblioteca está vacía.');
+    expect(html).not.toContain('id="filter-bar"');
+    expect(html).not.toContain('Aún no hay elementos completados.');
+  });
+
+  it('uses the status names of the app', () => {
+    const html = renderHome(library);
+    expect(html).toContain('>En pausa<');
+    expect(html).not.toContain('Pausado');
+    expect(html).not.toContain('Acabado');
+  });
+});
+
 describe('renderHome', () => {
   const html = renderHome(library);
 
@@ -81,7 +118,7 @@ describe('renderHome', () => {
     expect(html).toContain('<a href="#year-2026" class="year-nav-link">2026</a>');
     expect(html).toContain('<a href="#year-unknown" class="year-nav-link">?</a>');
     expect(html).toContain('id="year-unknown"');
-    expect(html).toContain('Ver Pausados y Abandonados (1)');
+    expect(html).toContain('Ver en pausa y abandonados (1)');
     expect(html).toContain('/u/assets/filter.js');
     expect(html).toContain('/u/assets/banner.js');
   });
@@ -126,10 +163,6 @@ describe('renderHome', () => {
     expect(custom).not.toContain('Acerca de');
     expect(html).not.toContain('Acerca de');
   });
-
-  it('says so when the library is empty', () => {
-    expect(renderHome(buildLibrary(input()))).toContain('Aún no hay elementos completados.');
-  });
 });
 
 describe('renderDetail', () => {
@@ -138,7 +171,7 @@ describe('renderDetail', () => {
     expect(html).toContain('<strong>obra</strong>');
     expect(html).toContain(`/u/ana/images/${HASH_A}`);
     expect(html).toContain(
-      '<div class="media-rating-badge" style="background: #a855f7; color: white">Obra Maestra</div>',
+      '<div class="media-rating-badge" style="background: #a855f7; color: white">Obra maestra</div>',
     );
     expect(html).toContain('<div class="page-content">');
     expect(html).toContain('https://www.themoviedb.org/movie/438631');
