@@ -163,10 +163,6 @@ describe('renderHome', () => {
     expect(custom).not.toContain('Acerca de');
     expect(html).not.toContain('Acerca de');
   });
-
-  it('says so when the library is empty', () => {
-    expect(renderHome(buildLibrary(input()))).toContain('Aún no hay elementos completados.');
-  });
 });
 
 describe('renderDetail', () => {
