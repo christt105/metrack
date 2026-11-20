@@ -28,6 +28,7 @@ Run the API with `npm run dev:server` (port 8097, data in `./data`) and the web 
 
 ## Dependencies
 
+- The web app's packages (`vue`, `vue-router`, Vite and the rest) are dev dependencies because Vite bundles them into static files, so the image ships none of them.
 - `node:sqlite` (built into Node 22): avoids a native module and a build toolchain in the image; it is still marked experimental, so it is confined to `apps/server/src/storage` and the image silences its warning.
 - `hono` (MIT, no dependencies of its own) and `@hono/node-server` (MIT): routing on web-standard `Request` and `Response`, so the same app can later run outside Node; the Node adapter, the static files and `node:sqlite` stay in Node-only modules (`main.ts`, `web/`, `storage/`). Tests send requests in-process through `app.request`.
 - `pg`: the only way to read Jellystat, which exposes its history through its own login-protected API and its Postgres database; used for one read-only query.

@@ -10,7 +10,7 @@ RUN npm ci
 COPY packages packages
 COPY apps apps
 RUN npm run build
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev && rm -rf node_modules/@img/sharp-libvips-linuxmusl-* node_modules/@img/sharp-linuxmusl-* node_modules/@img/sharp-wasm32
 
 FROM node:22-slim AS runtime
 ENV NODE_ENV=production \
