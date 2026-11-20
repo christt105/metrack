@@ -15,7 +15,10 @@ const { data, error, loading, reload } = useLoader(() => api.listUnlinked());
     <h1>{{ messages.unlinked.title }}</h1>
     <ErrorNotice :error="error" />
     <p v-if="loading && !data" class="muted">{{ messages.common.loading }}</p>
-    <p v-else-if="data && data.length === 0" class="muted">{{ messages.unlinked.empty }}</p>
+    <template v-else-if="data && data.length === 0">
+      <p class="muted">{{ messages.unlinked.empty }}</p>
+      <p class="muted">{{ messages.unlinked.about }}</p>
+    </template>
     <UnlinkedRow v-for="title in data ?? []" :key="title.id" :title="title" @gone="reload" />
   </section>
 </template>

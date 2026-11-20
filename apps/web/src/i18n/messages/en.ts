@@ -414,6 +414,8 @@ export const en = {
   unlinked: {
     title: 'Titles without a link',
     empty: 'The inbox is empty.',
+    about:
+      'Plays that Jellyfin reported but metrack could not match to a title in your library land here, so you can link them by hand or dismiss them. Nothing is waiting right now.',
     dismiss: 'Dismiss',
     resolve: 'Resolve',
     needsIds: 'Enter at least one id.',

@@ -26,6 +26,9 @@ const publicUrl = computed(() => {
   const page = session.publicPage.value;
   return page?.enabled && page.handle ? `/u/${page.handle}/` : null;
 });
+const navItems = computed(() =>
+  NAV_ITEMS.filter((item) => item.label !== 'unlinked' || session.jellyfinLinked.value),
+);
 const bare = computed(() => !session.user.value || route.meta.public === true);
 
 function isCurrent(names: readonly string[]): boolean {
@@ -48,7 +51,7 @@ async function signOut(): Promise<void> {
       </RouterLink>
       <nav v-if="signedIn" class="nav__links" :aria-label="messages.shell.mainNav">
         <RouterLink
-          v-for="item in NAV_ITEMS"
+          v-for="item in navItems"
           :key="item.to"
           :to="item.to"
           class="nav__link"
@@ -98,7 +101,7 @@ async function signOut(): Promise<void> {
     :aria-label="messages.shell.mainNav"
   >
     <RouterLink
-      v-for="item in NAV_ITEMS"
+      v-for="item in navItems"
       :key="item.to"
       :to="item.to"
       class="tab"
@@ -284,7 +287,8 @@ async function signOut(): Promise<void> {
     inset: auto 0 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
     height: var(--tabbar);
     padding-bottom: var(--safe-bottom);
     background: var(--bg);
