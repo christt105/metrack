@@ -1,4 +1,6 @@
 import {
+  normalizePlatforms,
+  steamPlatforms,
   isLinkedImageUrl,
   type EntityRef,
   type SearchResult,
@@ -115,6 +117,7 @@ export class IgdbGameProvider implements TitleProvider {
       banner: linked(steam?.banner ?? igdbImageUrl(game.screenshots?.[0]?.url, 'screenshot_huge')),
       steamGridDbId: null,
       entry,
+      platforms: steamPlatforms(names(game.platforms)),
     });
     await this.artwork.markPending(ref.id);
     return ref;
@@ -147,6 +150,7 @@ export class IgdbGameProvider implements TitleProvider {
       banner: string | null;
       steamGridDbId: number | null;
       entry: Partial<Videogame>;
+      platforms?: string[];
     },
   ): Promise<EntityRef> {
     const created = await this.games.create({
@@ -160,7 +164,7 @@ export class IgdbGameProvider implements TitleProvider {
       genres: names(game.genres),
       developer:
         game.involved_companies?.find((c) => c.developer && c.company?.name)?.company?.name ?? null,
-      platforms: names(game.platforms),
+      platforms: artwork.platforms ?? normalizePlatforms(names(game.platforms)),
       cover: artwork.cover,
       banner: artwork.banner,
       ...artwork.entry,

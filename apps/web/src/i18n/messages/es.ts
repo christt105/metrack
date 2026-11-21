@@ -140,6 +140,8 @@ export const es: Messages = {
     published: 'Publicado sin reseña',
   },
   edit: {
+    ownPlatform: 'Plataforma propia',
+    addPlatform: 'Añadir',
     title: (name: string) => `Editar ${name}`,
     back: 'Volver a los detalles',
     datesDerived:
@@ -264,11 +266,23 @@ export const es: Messages = {
   quick: {
     label: 'Acciones rápidas',
     status: 'Estado',
-    watchedToday: 'Visto hoy',
+    watchedToday: {
+      movies: 'Visto hoy',
+      series: 'Visto hoy',
+      seasons: 'Visto hoy',
+      games: 'Jugado hoy',
+      books: 'Leído hoy',
+    } satisfies Record<Collection, string>,
     undo: 'Deshacer',
     dismiss: 'Descartar',
     statusChanged: (label: string) => `Estado cambiado a «${label}»`,
-    watchedDone: 'Marcado como visto hoy',
+    watchedDone: {
+      movies: 'Marcado como visto hoy',
+      series: 'Marcado como visto hoy',
+      seasons: 'Marcado como visto hoy',
+      games: 'Marcado como jugado hoy',
+      books: 'Marcado como leído hoy',
+    } satisfies Record<Collection, string>,
     hours: 'Horas',
     setHours: 'Poner horas',
     hoursLabel: 'Horas dedicadas (12,5 o 12:30)',
@@ -297,7 +311,10 @@ export const es: Messages = {
     title: 'Gestionar',
     intro: 'Los cambios de esta sección se aplican al momento. Nada de aquí espera a Guardar.',
     rewatches: 'Revisionados',
-    viewings: 'Visionados',
+    viewings: {
+      games: 'Partidas',
+      books: 'Lecturas',
+    } satisfies Partial<Record<Collection, string>>,
     images: 'Imágenes',
     imagesHint: 'Elige o sube la portada y el banner',
     metadata: 'Metadatos',

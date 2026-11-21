@@ -1,3 +1,4 @@
+import { normalizePlatforms } from '@metrack/domain';
 import { RATING_MAX, RATING_MIN } from '@metrack/domain';
 import type { Messages } from '../i18n/messages/Messages';
 import type { FieldSchema } from './FieldSchema';
@@ -20,7 +21,8 @@ export class DraftError extends Error {
 
 function toDraftValue(schema: FieldSchema, value: unknown): DraftValue {
   if (schema.kind === 'boolean') return value === true;
-  if (schema.kind === 'list') return Array.isArray(value) ? value.join(', ') : '';
+  if (schema.kind === 'list' || schema.kind === 'platforms')
+    return Array.isArray(value) ? value.join(', ') : '';
   if (value === null || value === undefined) return '';
   if (schema.kind === 'hours') return formatHoursInput(Number(value));
   return String(value);
@@ -50,6 +52,8 @@ function fromDraftValue(schema: FieldSchema, value: DraftValue, messages: Messag
   switch (schema.kind) {
     case 'list':
       return parseList(text);
+    case 'platforms':
+      return normalizePlatforms(parseList(text));
     case 'integer': {
       if (!text) return null;
       const number = Number(text);
@@ -94,7 +98,8 @@ export function buildPatch(
     if (raw === undefined) continue;
     const value = fromDraftValue(schema, raw, messages);
     if (schema.required && value === null) throw new DraftError(schema.key, 'required');
-    const current = record[schema.key] ?? (schema.kind === 'list' ? [] : null);
+    const current =
+      record[schema.key] ?? (schema.kind === 'list' || schema.kind === 'platforms' ? [] : null);
     if (!sameValue(value, current)) patch[schema.key] = value;
   }
   return patch;

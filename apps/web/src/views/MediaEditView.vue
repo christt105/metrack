@@ -236,7 +236,12 @@ watch(() => [props.collection, props.id], load, { immediate: true });
                     : undefined
               "
               :invalid="invalid?.key === schema.key ? invalid.reason : undefined"
-              :class="{ wide: schema.kind === 'textarea' || schema.kind === 'list' }"
+              :class="{
+                wide:
+                  schema.kind === 'textarea' ||
+                  schema.kind === 'list' ||
+                  schema.kind === 'platforms',
+              }"
               @release="toggleRelease(schema.key)"
             >
               <FieldInput
