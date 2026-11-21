@@ -1,5 +1,14 @@
 export type FieldKind =
-  'text' | 'link' | 'textarea' | 'date' | 'integer' | 'rating' | 'list' | 'boolean' | 'hours';
+  | 'text'
+  | 'link'
+  | 'textarea'
+  | 'date'
+  | 'integer'
+  | 'rating'
+  | 'list'
+  | 'platforms'
+  | 'boolean'
+  | 'hours';
 
 export type FieldSection = 'ids' | 'metadata' | 'tracking' | 'notes';
 

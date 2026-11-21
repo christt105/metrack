@@ -63,7 +63,7 @@ export const fieldSchemas: Record<Collection, FieldSchema[]> = {
     { key: 'title', kind: 'text', section: 'metadata', required: true },
     { key: 'releaseDate', kind: 'date', section: 'metadata' },
     { key: 'developer', kind: 'text', section: 'metadata' },
-    { key: 'platforms', kind: 'list', section: 'metadata' },
+    { key: 'platforms', kind: 'platforms', section: 'metadata' },
     { key: 'genres', kind: 'list', section: 'metadata' },
     { key: 'overview', kind: 'textarea', section: 'metadata' },
     ...tracking,

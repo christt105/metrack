@@ -154,7 +154,10 @@ function publish(): void {
 }
 
 function watchedToday(): void {
-  void apply(watchedTodayChange(tracking.value, todayIso()), messages.quick.watchedDone);
+  void apply(
+    watchedTodayChange(tracking.value, todayIso()),
+    messages.quick.watchedDone[props.collection],
+  );
 }
 
 onBeforeUnmount(() => clearTimeout(timer));
@@ -182,7 +185,7 @@ onBeforeUnmount(() => clearTimeout(timer));
     </button>
     <button v-if="!episodeMode" type="button" :disabled="busy" @click="watchedToday">
       <AppIcon name="check" :size="18" />
-      {{ messages.quick.watchedToday }}
+      {{ messages.quick.watchedToday[collection] }}
     </button>
     <button
       v-if="hasHours"

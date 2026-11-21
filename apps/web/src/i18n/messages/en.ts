@@ -111,6 +111,8 @@ export const en = {
     published: 'Published without a review',
   },
   edit: {
+    ownPlatform: 'Your own platform',
+    addPlatform: 'Add',
     title: (name: string) => `Edit ${name}`,
     back: 'Back to details',
     datesDerived:
@@ -235,11 +237,23 @@ export const en = {
   quick: {
     label: 'Quick actions',
     status: 'Status',
-    watchedToday: 'Watched today',
+    watchedToday: {
+      movies: 'Watched today',
+      series: 'Watched today',
+      seasons: 'Watched today',
+      games: 'Played today',
+      books: 'Read today',
+    } satisfies Record<Collection, string>,
     undo: 'Undo',
     dismiss: 'Dismiss',
     statusChanged: (label: string) => `Status set to ${label}`,
-    watchedDone: 'Marked as watched today',
+    watchedDone: {
+      movies: 'Marked as watched today',
+      series: 'Marked as watched today',
+      seasons: 'Marked as watched today',
+      games: 'Marked as played today',
+      books: 'Marked as read today',
+    } satisfies Record<Collection, string>,
     hours: 'Hours',
     setHours: 'Set hours',
     hoursLabel: 'Hours spent (12.5 or 12:30)',
@@ -268,7 +282,10 @@ export const en = {
     title: 'Manage',
     intro: 'Changes in this section apply right away. Nothing here waits for Save.',
     rewatches: 'Rewatches',
-    viewings: 'Viewings',
+    viewings: {
+      games: 'Playthroughs',
+      books: 'Readings',
+    } satisfies Partial<Record<Collection, string>>,
     images: 'Images',
     imagesHint: 'Choose or upload the cover and banner',
     metadata: 'Metadata',

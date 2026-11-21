@@ -166,7 +166,7 @@ describe('IgdbGameProvider', () => {
       overview: 'Defy the god of the dead.',
       genres: ['Role-playing (RPG)', 'Indie'],
       developer: 'Supergiant Games',
-      platforms: ['PC (Microsoft Windows)'],
+      platforms: ['PC'],
       status: 'planned',
     });
     expect(game?.cover).toBe(`${STEAM}/1145360/library_600x900_2x.jpg`);

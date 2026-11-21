@@ -37,7 +37,7 @@ const trackedStatus = computed(() =>
 const rewatches = computed(() => ('rewatches' in props.detail ? props.detail.rewatches : []));
 const viewingsTitle = computed(() =>
   props.collection === 'games' || props.collection === 'books'
-    ? messages.manage.viewings
+    ? messages.manage.viewings[props.collection]
     : messages.manage.rewatches,
 );
 const hasUnlinkedSeasons = computed(() =>

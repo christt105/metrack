@@ -266,3 +266,7 @@ export { parseFillerSlug } from './filler/parseFillerSlug.js';
 export { fillerSlugCandidates } from './filler/fillerSlugCandidates.js';
 export { matchFillerEpisodes } from './filler/matchFillerEpisodes.js';
 export { isAnimatedGenres } from './filler/isAnimatedGenres.js';
+export { KNOWN_PLATFORMS } from './platforms/KNOWN_PLATFORMS.js';
+export { canonicalPlatform } from './platforms/canonicalPlatform.js';
+export { normalizePlatforms } from './platforms/normalizePlatforms.js';
+export { steamPlatforms } from './platforms/steamPlatforms.js';

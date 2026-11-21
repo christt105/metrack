@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { DraftValue } from '../logic/formDraft';
 import type { FieldKind } from '../logic/FieldSchema';
+import PlatformPicker from './PlatformPicker.vue';
 import RatingPicker from './RatingPicker.vue';
 
 defineProps<{ id: string; kind: FieldKind; required?: boolean; disabled?: boolean }>();
@@ -60,6 +61,7 @@ const checked = computed({
     placeholder="12.5 / 12:30"
     autocomplete="off"
   />
+  <PlatformPicker v-else-if="kind === 'platforms'" :id="id" v-model="text" />
   <RatingPicker v-else-if="kind === 'rating'" :id="id" v-model="ratingValue" />
   <input v-else :id="id" v-model="text" type="text" :required="required" autocomplete="off" />
 </template>
