@@ -1,8 +1,22 @@
-import { STEAM_APPLY_BATCH_SIZE, type SteamApplyRequest } from '@metrack/domain';
+import {
+  STEAM_APPLY_BATCH_SIZE,
+  type SteamAchievementsRequest,
+  type SteamApplyRequest,
+} from '@metrack/domain';
+import type { SteamAchievementsService } from '../steam/SteamAchievementsService.js';
 import type { SteamImportService } from '../steam/SteamImportService.js';
 import { ApiError } from './ApiError.js';
 import type { ApiRoutes } from './ApiRoutes.js';
 import { requireUser } from './requireUser.js';
+
+const achievementsBody = {
+  type: 'object',
+  properties: {
+    gameId: { type: 'integer', minimum: 1 },
+    asOf: { type: 'string', minLength: 1, maxLength: 40 },
+  },
+  additionalProperties: false,
+} as const;
 
 const applyBody = {
   type: 'object',
@@ -22,11 +36,12 @@ const applyBody = {
  * one request stays under the Workers subrequest limit; it recomputes what each id does from Steam's current answer
  * and writes it, and an id that is already in the library with at least Steam's time is skipped, so repeating a batch
  * adds nothing. `POST /api/steam/artwork` prepares the artwork of the games that import added with it deferred, as many as
- * fit in one request, and answers how many it finished and how many remain. All answer 501 when the server has no Steam API key or no IGDB credentials.
+ * fit in one request, and answers how many it finished and how many remain. `POST /api/steam/achievements` asks Steam for the achievements of the user's games with a Steam app id, a few per request, and answers `{ processed, failed, remaining, asOf }`; it needs only the Steam API key. All answer 501 when the server has no Steam API key or no IGDB credentials.
  */
 export function registerSteamRoutes(
   routes: ApiRoutes,
   steam: SteamImportService | undefined,
+  achievements: SteamAchievementsService | undefined,
 ): void {
   const ready = (): SteamImportService => {
     if (!steam) {
@@ -42,6 +57,20 @@ export function registerSteamRoutes(
 
   routes.post('/api/steam/artwork', async (request) =>
     ready().prepareArtwork(requireUser(request.user).id),
+  );
+
+  routes.post<{ Body: SteamAchievementsRequest }>(
+    '/api/steam/achievements',
+    { schema: { body: achievementsBody } },
+    async (request) => {
+      if (!achievements) {
+        throw ApiError.notImplemented(
+          'steam_not_configured',
+          'Steam achievements need STEAM_API_KEY',
+        );
+      }
+      return achievements.refresh(requireUser(request.user).id, request.body ?? {});
+    },
   );
 
   routes.post<{ Body: SteamApplyRequest }>(

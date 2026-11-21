@@ -64,6 +64,7 @@ export function createWorkerApp(
     metadataCache,
     edit,
     steam: services.steam.importer,
+    steamAchievements: services.steam.achievements,
     account: {
       exporter: new AccountExporter(
         { ...repositories, images: imageStore },

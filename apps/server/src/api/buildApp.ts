@@ -22,6 +22,7 @@ import type { ApiEnv } from './ApiEnv.js';
 import type { StaticFiles } from '../web/StaticFiles.js';
 import { registerSteamRoutes } from './registerSteamRoutes.js';
 import type { SteamIdResolver } from '../steam/SteamIdResolver.js';
+import type { SteamAchievementsService } from '../steam/SteamAchievementsService.js';
 import type { SteamImportService } from '../steam/SteamImportService.js';
 import { registerSyncRoutes } from './registerSyncRoutes.js';
 import { registerWatchlistRoutes } from './registerWatchlistRoutes.js';
@@ -81,6 +82,8 @@ export interface AppDeps {
   sync?: UserSyncServices;
   /** Imports the Steam library of the signed-in user; Steam routes answer 501 without it. */
   steam?: SteamImportService;
+  /** Checks the Steam achievements of the signed-in user's games; the route answers 501 without it. */
+  steamAchievements?: SteamAchievementsService;
   syncQueues?: UserQueues;
   /** Shows each user their settings and lets the owner change everyone's. */
   settings?: {
@@ -168,7 +171,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
   }
   if (deps.watch) registerWatchlistRoutes(routes, deps.watch.watchlist, deps.watch.alerts);
   registerSyncRoutes(routes, deps.sync, deps.syncQueues, deps.syncWebhookSecret);
-  registerSteamRoutes(routes, deps.steam);
+  registerSteamRoutes(routes, deps.steam, deps.steamAchievements);
   if (deps.connector) registerConnectorRoutes(routes, deps.connector);
   if (deps.settings)
     registerSettingsRoutes(

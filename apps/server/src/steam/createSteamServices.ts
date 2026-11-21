@@ -4,6 +4,7 @@ import { SteamClient } from '../providers/steam/SteamClient.js';
 import type { FetchFn } from '../http/FetchFn.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import type { VideogameRepository } from '../storage/repositories/VideogameRepository.js';
+import { SteamAchievementsService } from './SteamAchievementsService.js';
 import type { SteamGameAdder } from './SteamGameAdder.js';
 import { SteamIdResolver } from './SteamIdResolver.js';
 import { SteamImportService } from './SteamImportService.js';
@@ -20,6 +21,7 @@ export function createSteamServices(
   const client = apiKey ? new SteamClient(fetchFn, apiKey) : null;
   return {
     ids: new SteamIdResolver(client),
+    ...(client ? { achievements: new SteamAchievementsService(client, games, settings) } : {}),
     ...(client && igdb
       ? {
           importer: new SteamImportService(

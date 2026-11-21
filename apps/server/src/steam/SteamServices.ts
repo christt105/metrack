@@ -1,3 +1,4 @@
+import type { SteamAchievementsService } from './SteamAchievementsService.js';
 import type { SteamIdResolver } from './SteamIdResolver.js';
 import type { SteamImportService } from './SteamImportService.js';
 
@@ -5,4 +6,6 @@ import type { SteamImportService } from './SteamImportService.js';
 export interface SteamServices {
   ids: SteamIdResolver;
   importer?: SteamImportService;
+  /** Needs only the Steam API key. */
+  achievements?: SteamAchievementsService;
 }
