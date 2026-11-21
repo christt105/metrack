@@ -172,6 +172,57 @@ describe('GET /api/series/:id/filler', () => {
     expect((await preview(9999)).statusCode).toBe(404);
   });
 
+  it('stores the categories and the slug on a successful preview and replaces them on the next', async () => {
+    const { series, seasons } = addSeries('My Show', [3, 2]);
+    expect((await preview(series)).statusCode).toBe(200);
+    const stored = (id: number) =>
+      api.db.prepare('SELECT slug, categories FROM season_filler WHERE season_id = ?').get(id) as
+        { slug: string; categories: string } | undefined;
+    expect(stored(seasons[0]!)).toEqual({
+      slug: 'my-show',
+      categories: JSON.stringify({
+        [seasons[0]! * 100 + 1]: 'filler',
+        [seasons[0]! * 100 + 2]: 'mangaCanon',
+        [seasons[0]! * 100 + 3]: 'mixed',
+      }),
+    });
+    api.db
+      .prepare('UPDATE season_filler SET slug = \'old\', categories = \'{"x":"filler"}\'')
+      .run();
+    api.db.prepare('DELETE FROM season_filler WHERE season_id = ?').run(seasons[1]!);
+    api.db
+      .prepare("INSERT INTO season_filler (season_id, slug, categories) VALUES (?, 'old', '{}')")
+      .run(seasons[1]!);
+    expect((await preview(series)).statusCode).toBe(200);
+    expect(JSON.parse(stored(seasons[0]!)!.categories)).toHaveProperty(
+      String(seasons[0]! * 100 + 1),
+      'filler',
+    );
+    expect(stored(seasons[1]!)?.slug).toBe('my-show');
+  });
+
+  it('does not store anything when the preview fails', async () => {
+    const mismatch = addSeries('Short Show', [3]);
+    expect((await preview(mismatch.series)).statusCode).toBe(409);
+    const missing = addSeries('Unknown Show', [2]);
+    expect((await preview(missing.series)).statusCode).toBe(404);
+    expect(api.db.prepare('SELECT * FROM season_filler').all()).toEqual([]);
+  });
+
+  it('flags the episodes of a season with the stored category and null before any preview', async () => {
+    const { series, seasons } = addSeries('My Show', [3, 2]);
+    const season = async (id: number) =>
+      (
+        (await api.app.inject({ method: 'GET', url: `/api/seasons/${id}/episodes` })).json() as {
+          episodes: { filler: string | null }[];
+        }
+      ).episodes.map((episode) => episode.filler);
+    expect(await season(seasons[0]!)).toEqual([null, null, null]);
+    await preview(series);
+    expect(await season(seasons[0]!)).toEqual(['filler', 'mangaCanon', 'mixed']);
+    expect(await season(seasons[1]!)).toEqual(['filler', 'animeCanon']);
+  });
+
   it('does not show a series of another user', async () => {
     const { series } = addSeries('My Show', [3, 2]);
     api.db.prepare('DELETE FROM series_entry WHERE series_id = ?').run(series);

@@ -11,6 +11,7 @@ import {
   type Episode,
   type EpisodeOperation,
   type EpisodeWatches,
+  type FillerCategory,
   type SeasonEpisodesUpdateResponse,
   type SeasonTracking,
   type Season,
@@ -65,9 +66,10 @@ export class SeasonEpisodesService {
     const entry = await this.deps.watches.getEntry(season.seriesId);
     const watched = await this.withIds(season, catalog, episodes, entry?.watched);
     const skipped = new Set(entry?.skipped ?? []);
+    const filler = (await this.deps.filler.get(seasonId))?.categories ?? {};
     return {
       response: {
-        ...this.respond(season, catalog, episodes, watched, skipped),
+        ...this.respond(season, catalog, episodes, watched, skipped, filler),
         unmatched: entry?.unmatched ?? [],
       },
       episodeCountChanged: loaded.episodeCountChanged,
@@ -145,6 +147,7 @@ export class SeasonEpisodesService {
           episodes,
           watches,
           new Set(skipped),
+          (await this.deps.filler.get(season.id))?.categories ?? {},
         ),
         tracking,
       },
@@ -291,6 +294,7 @@ export class SeasonEpisodesService {
     episodes: readonly Episode[],
     stored: EpisodeWatches | undefined,
     skipped: ReadonlySet<string>,
+    filler: Readonly<Record<string, FillerCategory>>,
   ): SeasonEpisodesResult['response'] {
     const watched = stored ?? {};
     const counted = countWatchedEpisodes(episodes, season.number, watched);
@@ -325,6 +329,7 @@ export class SeasonEpisodesService {
           watched: (allWatched && !skipped.has(key)) || viewings !== undefined,
           skipped: skipped.has(key),
           viewings: viewings ?? [],
+          filler: filler[key] ?? null,
         };
       }),
     };

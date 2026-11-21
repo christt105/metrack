@@ -36,6 +36,7 @@ import { SqliteReleaseAlertRepository } from '../../src/storage/sqlite/SqliteRel
 import type { ReleaseAlertRepository } from '../../src/storage/repositories/ReleaseAlertRepository.js';
 import { SqliteEpisodeWatchRepository } from '../../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
 import { SqliteSeasonEpisodesRepository } from '../../src/storage/sqlite/SqliteSeasonEpisodesRepository.js';
+import { SqliteSeasonFillerRepository } from '../../src/storage/sqlite/SqliteSeasonFillerRepository.js';
 import { SqliteSeasonRepository } from '../../src/storage/sqlite/SqliteSeasonRepository.js';
 import type { SeasonRepository } from '../../src/storage/repositories/SeasonRepository.js';
 import { SqliteSeriesRepository } from '../../src/storage/sqlite/SqliteSeriesRepository.js';
@@ -130,6 +131,7 @@ export async function createTestApi(
     ...options.images,
   });
   const seasonEpisodes = new SqliteSeasonEpisodesRepository(db);
+  const seasonFiller = new SqliteSeasonFillerRepository(db);
   const states = new SqliteMetadataStateRepository(db, scope);
   const cache = new MetadataCache(states, store, undefined, () => NOW);
   const tmdb = new TmdbClient(fetchFn, { apiKey: 'key', language: 'es-ES' });
@@ -168,6 +170,7 @@ export async function createTestApi(
     cache,
     tmdb,
     seasonEpisodes,
+    seasonFiller,
     episodeWatches: new SqliteEpisodeWatchRepository(db, scope),
     titleProviders,
     imageProviders,

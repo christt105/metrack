@@ -1,3 +1,4 @@
+import type { FillerCategory } from '../filler/FillerCategory.js';
 import type { Viewing } from '../Viewing.js';
 
 /** One episode in the answer for a season, with the signed-in user's watches of it. */
@@ -15,4 +16,6 @@ export interface SeasonEpisodeItem {
   /** Skipped by the user: not watched, and not owed for the season to be complete. */
   skipped: boolean;
   viewings: Viewing[];
+  /** What AnimeFillerList says of the episode, once the filler preview has been opened for the series; null before. */
+  filler: FillerCategory | null;
 }

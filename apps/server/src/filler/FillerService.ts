@@ -10,6 +10,7 @@ import {
 import { ApiError } from '../api/ApiError.js';
 import type { SeasonEpisodesService } from '../seasons/SeasonEpisodesService.js';
 import type { SeasonRepository } from '../storage/repositories/SeasonRepository.js';
+import type { SeasonFillerRepository } from '../storage/repositories/SeasonFillerRepository.js';
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
 import { fillerListUrl, type FillerListClient } from './FillerListClient.js';
 
@@ -18,11 +19,14 @@ export interface FillerServiceDeps {
   seasons: SeasonRepository;
   episodes: SeasonEpisodesService;
   list: FillerListClient;
+  stored: SeasonFillerRepository;
 }
 
 /**
  * Classifies the episodes of a series as filler, mixed or canon with the list AnimeFillerList keeps for the show,
- * read on demand and never stored. The show is found by an explicit slug or, without one, by the slug of the
+ * read on demand. When the match succeeds and the caller may write, the category of every episode and the slug are
+ * stored against the seasons, replacing what was there, so the season lists can flag the episodes; a failed
+ * preview stores nothing. The show is found by an explicit slug or, without one, by the slug of the
  * series' title and then of its original title. The pairing is by absolute number and is refused unless the
  * series' episodes (seasons from 1, each in catalog order) are as many as the list's; see `matchFillerEpisodes`.
  * It costs one request to AnimeFillerList per slug tried plus the TMDB requests of seasons without a complete
@@ -34,6 +38,7 @@ export class FillerService {
   async preview(
     seriesId: number,
     explicitSlug?: string,
+    persist = false,
   ): Promise<{ response: FillerPreviewResponse; episodeCountChanged: boolean }> {
     const series = await this.deps.series.get(seriesId);
     if (!series) throw ApiError.notFound();
@@ -93,6 +98,20 @@ export class FillerService {
           slug: found.slug,
           sourceUrl: fillerListUrl(found.slug),
         },
+      );
+    }
+    if (persist) {
+      await this.deps.stored.replaceForSeries(
+        seriesId,
+        seasons.map((season) => ({
+          seasonId: season.seasonId,
+          slug: found.slug,
+          categories: Object.fromEntries(
+            match.episodes
+              .filter((episode) => episode.seasonId === season.seasonId)
+              .map((episode) => [episode.key, episode.category]),
+          ),
+        })),
       );
     }
     const counts: FillerCounts = { filler: 0, mixed: 0, mangaCanon: 0, animeCanon: 0 };

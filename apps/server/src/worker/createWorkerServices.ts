@@ -122,6 +122,7 @@ export function createWorkerServices(
     cache: metadataCache,
     ...(tmdb ? { tmdb } : {}),
     seasonEpisodes: repositories.seasonEpisodes,
+    seasonFiller: repositories.seasonFiller,
     episodeWatches: repositories.episodeWatches,
     titleProviders,
     imageProviders,

@@ -19,6 +19,7 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     seasons: sources.seasons,
     series: sources.series,
     catalog: deps.seasonEpisodes,
+    filler: deps.seasonFiller,
     watches: deps.episodeWatches,
     ...(deps.tmdb ? { tmdb: deps.tmdb } : {}),
     ...(deps.now ? { now: deps.now } : {}),
@@ -36,6 +37,7 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
       series: sources.series,
       seasons: sources.seasons,
       episodes: seasonEpisodes,
+      stored: deps.seasonFiller,
       list: new FillerListClient(deps.fetchFn),
     }),
     ...(deps.tmdb

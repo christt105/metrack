@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { SeasonEpisodes } from '@metrack/domain';
 import { emptySeason, emptySeries } from '../src/media/emptyEntities.js';
+import type { SeasonFiller } from '../src/storage/repositories/SeasonFiller.js';
 import type { Repositories } from '../src/storage/repositories/Repositories.js';
 import { FixedUserScope } from '../src/users/FixedUserScope.js';
 import { createBackends } from './support/backends.js';
@@ -60,6 +61,45 @@ describe.each(backends)('$name episode repositories', (backend) => {
     });
     await friend.seasons.create({ ...emptySeason(), seriesId: series.id });
     seasonId = season.id;
+  });
+
+  describe('SeasonFillerRepository', () => {
+    let seriesOfSeason: number;
+
+    beforeEach(async () => {
+      seriesOfSeason = (await owner.seasons.get(seasonId))!.seriesId;
+    });
+
+    it('round-trips the categories of a season and replaces them', async () => {
+      expect(await owner.seasonFiller.get(seasonId)).toBeUndefined();
+      const first: SeasonFiller = {
+        seasonId,
+        slug: 'show',
+        categories: { '11': 'filler', '12': 'animeCanon' },
+      };
+      await owner.seasonFiller.replaceForSeries(seriesOfSeason, [first]);
+      expect(await friend.seasonFiller.get(seasonId)).toEqual(first);
+      const second: SeasonFiller = { seasonId, slug: 'other', categories: { '11': 'mixed' } };
+      await owner.seasonFiller.replaceForSeries(seriesOfSeason, [second]);
+      expect(await owner.seasonFiller.get(seasonId)).toEqual(second);
+      expect(await harness.query('SELECT season_id FROM season_filler')).toHaveLength(1);
+    });
+
+    it('drops the seasons that are no longer in the replacement', async () => {
+      await owner.seasonFiller.replaceForSeries(seriesOfSeason, [
+        { seasonId, slug: 'show', categories: { '1': 'filler' } },
+      ]);
+      await owner.seasonFiller.replaceForSeries(seriesOfSeason, []);
+      expect(await owner.seasonFiller.get(seasonId)).toBeUndefined();
+    });
+
+    it('disappears with its season', async () => {
+      await owner.seasonFiller.replaceForSeries(seriesOfSeason, [
+        { seasonId, slug: 'show', categories: { '1': 'filler' } },
+      ]);
+      await harness.run('DELETE FROM season WHERE id = ?', seasonId);
+      expect(await harness.query('SELECT season_id FROM season_filler')).toEqual([]);
+    });
   });
 
   describe('SeasonEpisodesRepository', () => {

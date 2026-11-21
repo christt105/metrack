@@ -6,6 +6,7 @@ import type { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import type { MetadataCache } from '../metadata/MetadataCache.js';
 import type { EpisodeWatchRepository } from '../storage/repositories/EpisodeWatchRepository.js';
 import type { SeasonEpisodesRepository } from '../storage/repositories/SeasonEpisodesRepository.js';
+import type { SeasonFillerRepository } from '../storage/repositories/SeasonFillerRepository.js';
 import type { MetadataStateRepository } from '../storage/repositories/MetadataStateRepository.js';
 import type { UnlinkedTitleRepository } from '../storage/repositories/UnlinkedTitleRepository.js';
 import type { TitleProviders } from '../titles/TitleProviders.js';
@@ -18,6 +19,7 @@ export interface EditServicesDeps {
   cache: MetadataCache;
   tmdb?: TmdbClient;
   seasonEpisodes: SeasonEpisodesRepository;
+  seasonFiller: SeasonFillerRepository;
   episodeWatches: EpisodeWatchRepository;
   titleProviders: TitleProviders;
   imageProviders: readonly ImageProvider[];

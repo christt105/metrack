@@ -8,6 +8,8 @@ export type { MovieRepository } from './MovieRepository.js';
 export type { NewReleaseAlert } from './NewReleaseAlert.js';
 export type { ReleaseAlertRepository } from './ReleaseAlertRepository.js';
 export type { SeasonEpisodesRepository } from './SeasonEpisodesRepository.js';
+export type { SeasonFiller } from './SeasonFiller.js';
+export type { SeasonFillerRepository } from './SeasonFillerRepository.js';
 export type { EpisodeWatchRepository } from './EpisodeWatchRepository.js';
 export type { StoredEpisodeWatches } from './StoredEpisodeWatches.js';
 export type { SeasonRepository } from './SeasonRepository.js';

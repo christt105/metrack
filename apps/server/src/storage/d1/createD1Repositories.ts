@@ -15,6 +15,7 @@ import { D1PublicProfileRepository } from './D1PublicProfileRepository.js';
 import { D1ReleaseAlertRepository } from './D1ReleaseAlertRepository.js';
 import { D1EpisodeWatchRepository } from './D1EpisodeWatchRepository.js';
 import { D1SeasonEpisodesRepository } from './D1SeasonEpisodesRepository.js';
+import { D1SeasonFillerRepository } from './D1SeasonFillerRepository.js';
 import { D1SeasonRepository } from './D1SeasonRepository.js';
 import { D1SeriesRepository } from './D1SeriesRepository.js';
 import { D1SessionRepository } from './D1SessionRepository.js';
@@ -35,6 +36,7 @@ export function createD1Repositories(db: D1Database, scope: UserScope): Reposito
     gameArtwork: new D1GameArtworkRepository(db),
     movieRuntimes: new D1MovieRuntimeRepository(db),
     seasonEpisodes: new D1SeasonEpisodesRepository(db),
+    seasonFiller: new D1SeasonFillerRepository(db),
     episodeWatches: new D1EpisodeWatchRepository(db, scope),
     unlinked: new D1UnlinkedTitleRepository(db, scope),
     releaseAlerts: new D1ReleaseAlertRepository(db, scope),

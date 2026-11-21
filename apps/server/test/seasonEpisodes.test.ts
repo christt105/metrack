@@ -228,6 +228,7 @@ describe('GET /api/seasons/:id/episodes', () => {
         watched: false,
         skipped: false,
         viewings: [],
+        filler: null,
       },
       {
         key: '12',
@@ -241,6 +242,7 @@ describe('GET /api/seasons/:id/episodes', () => {
         watched: true,
         skipped: false,
         viewings: [viewing],
+        filler: null,
       },
     ]);
   });
