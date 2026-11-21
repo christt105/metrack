@@ -295,13 +295,15 @@ onBeforeUnmount(() => clearTimeout(timer));
       </template>
     </template>
     <ErrorNotice v-if="!opened" :error="error" />
-    <UndoToast
-      v-if="toast"
-      :message="toast.message"
-      :undoable="toast.undo.length > 0"
-      @undo="undo"
-      @dismiss="dismiss"
-    />
+    <Teleport to="body">
+      <UndoToast
+        v-if="toast"
+        :message="toast.message"
+        :undoable="toast.undo.length > 0"
+        @undo="undo"
+        @dismiss="dismiss"
+      />
+    </Teleport>
   </section>
 </template>
 

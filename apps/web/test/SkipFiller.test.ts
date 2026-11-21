@@ -68,7 +68,7 @@ describe('SkipFiller', () => {
     ]);
     expect(wrapper.emitted('changed')).toHaveLength(1);
 
-    await wrapper.get('.undo').trigger('click');
+    (document.body.querySelector('.undo') as HTMLButtonElement).click();
     await flushPromises();
     expect(updateSeasonEpisodes.mock.calls.slice(2)).toEqual([
       [1, { op: 'unskip', keys: ['12', '13'] }],
