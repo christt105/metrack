@@ -36,3 +36,18 @@ One run prepares as many games as fit in a subrequest budget, using the measured
 - The home server, at start and then hourly, with a budget large enough for many games at once (no subrequest limit there).
 
 So leftovers (a closed tab, a failed request) finish on their own without the user doing anything.
+
+## Achievements
+
+Steam achievements are stored per game of the user's library that has a Steam app id, from `ISteamUserStats/GetPlayerAchievements` with the same `STEAM_API_KEY` and the stored SteamID64. The list it answers holds every achievement of the game with whether the player unlocked it and when, so one request per game gives the total, the unlocked count and the date of the latest unlock, with no schema request. Like the import, it needs the profile's Game details to be public.
+
+Each library entry has `achievements_unlocked`, `achievements_total`, `achievements_last_unlocked_at` (a `YYYY-MM-DD` date) and `achievements_checked_at` (migration 36, D1 `0019_steam_achievements.sql`), exposed on games as `achievementsUnlocked`, `achievementsTotal`, `achievementsLastUnlockedAt` and `achievementsCheckedAt`. What they mean:
+
+- Total `null`: unknown. The game was never checked or every check failed. It is shown as "Not checked yet".
+- Total 0 (unlocked 0): Steam says the game has no achievements or no stats (a 400 "Requested app has no stats", or a list with no achievements). It is shown as "This game has no achievements" and is never complete.
+- Total N above 0: "unlocked of N".
+- A failed request (private game details, a Steam error, a malformed answer) never writes counts, so it cannot turn into "0 of N" or into a complete game; the previous counts stay and only `achievements_checked_at` is stamped.
+
+Anything that wants "all achievements" must require a total above 0 and unlocked equal to total.
+
+`POST /api/steam/achievements` refreshes them in batches from the browser, in a pass: the first request has no `asOf` and the server answers one, the browser sends it back, and a pass checks the games not checked since then (every game asked is stamped, answered or not, so it always ends). Games with playtime go first. Measured by `steamWorkerBudget.test.ts`, a request costs 5 subrequests before checking anything and each game 4 (the Steam request and the write of its entry), so `STEAM_ACHIEVEMENTS_BUDGET` allows 11 games per request on the Worker's free plan (49 measured) and a library of a few hundred games takes a few dozen requests. The game detail page has a button for one game, and Settings, Steam has one for all of them, both with a progress indicator. There is no scheduled refresh: the hourly Worker tick and the home server do not call it.
