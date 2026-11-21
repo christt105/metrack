@@ -665,6 +665,20 @@ export const es: Messages = {
     failed: (n: number) => `${n} juegos no se pudieron escribir:`,
     artwork: (n: number) => `Preparando las portadas, quedan ${n}`,
     unmatched: (n: number) => `${n} juegos que IGDB no conoce`,
+    achievements: {
+      title: 'Logros',
+      progress: (unlocked: number, total: number) => `${unlocked} de ${total}`,
+      lastUnlock: (date: string) => `último desbloqueado ${date}`,
+      none: 'Este juego no tiene logros',
+      unknown: 'Sin comprobar',
+      refresh: 'Actualizar logros',
+      refreshAll: 'Actualizar los logros de todos mis juegos',
+      checking: (done: number, total: number) => `Comprobando logros, ${done} de ${total}`,
+      done: (processed: number, failed: number) =>
+        failed === 0
+          ? `${processed} juegos comprobados.`
+          : `${processed} juegos comprobados, ${failed} no se pudieron leer (¿están públicos tus detalles del juego?).`,
+    },
     unmatchedHint: 'No están en tu biblioteca y no se pueden importar.',
   },
   ntfyAlerts: {

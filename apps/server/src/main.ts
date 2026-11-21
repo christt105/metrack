@@ -315,6 +315,7 @@ const app = buildApp({
   backup: { service: backupService, job: backupJob },
   sync: syncServices,
   steam: steam.importer,
+  steamAchievements: steam.achievements,
   syncQueues,
   connector,
   contentVersions,

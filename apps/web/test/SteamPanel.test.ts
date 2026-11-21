@@ -47,4 +47,26 @@ describe('SteamPanel', () => {
     const unlinked = await mountWithApi(SteamPanel, {}, { steamId: null, canImport: true });
     expect(unlinked.wrapper.find(link).exists()).toBe(false);
   });
+
+  it('checks the achievements of every game in passes with progress', async () => {
+    const answers = [
+      { processed: 11, failed: 0, remaining: 4, asOf: 'T0' },
+      { processed: 4, failed: 1, remaining: 0, asOf: 'T0' },
+    ];
+    const refreshSteamAchievements = vi.fn(async () => answers.shift()!);
+    const { wrapper } = await mountWithApi(
+      SteamPanel,
+      { refreshSteamAchievements },
+      { steamId: '1', canImport: true },
+    );
+    await wrapper.find('[data-test="achievements-button"]').trigger('click');
+    await flushPromises();
+    expect(refreshSteamAchievements).toHaveBeenNthCalledWith(1, {});
+    expect(refreshSteamAchievements).toHaveBeenNthCalledWith(2, { asOf: 'T0' });
+    expect(wrapper.find('[data-test="achievements-summary"]').text()).toContain(
+      'Checked 15 games, 1 could not',
+    );
+    const off = await mountWithApi(SteamPanel, {}, { steamId: '1', canImport: false });
+    expect(off.wrapper.find('[data-test="achievements-button"]').exists()).toBe(false);
+  });
 });

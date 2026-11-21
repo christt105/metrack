@@ -34,6 +34,8 @@ import type {
   ResolveUnlinkedRequest,
   ResolveUnlinkedResponse,
   SearchResult,
+  SteamAchievementsRequest,
+  SteamAchievementsResponse,
   SteamApplyResponse,
   SteamArtworkResponse,
   SteamImportReport,
@@ -385,6 +387,12 @@ export class ApiClient {
 
   prepareSteamArtwork(): Promise<SteamArtworkResponse> {
     return this.request('POST', '/steam/artwork');
+  }
+
+  refreshSteamAchievements(
+    request: SteamAchievementsRequest = {},
+  ): Promise<SteamAchievementsResponse> {
+    return this.request('POST', '/steam/achievements', request);
   }
 
   updatePublicPage(patch: PublicPagePatch): Promise<PublicPage> {

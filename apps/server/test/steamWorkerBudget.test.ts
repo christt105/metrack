@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { STEAM_APPLY_BATCH_SIZE } from '@metrack/domain';
 import { hashSecret } from '../src/auth/hashSecret.js';
 import { GAME_ARTWORK_COST } from '../src/backfill/GameArtworkCost.js';
+import { STEAM_ACHIEVEMENTS_BUDGET } from '../src/steam/SteamAchievementsBudget.js';
 import { STEAM_APPLY_BUDGET } from '../src/steam/SteamApplyBudget.js';
 import type { D1Database } from '../src/storage/d1/D1Database.js';
 import { createWorkerApp } from '../src/worker/createWorkerApp.js';
@@ -34,6 +35,25 @@ async function network(input: string | URL | Request, init?: RequestInit): Promi
   const url = `${target.origin}${target.pathname}`;
   if (url.endsWith('/GetOwnedGames/v1/')) {
     return Response.json({ response: { games: GAMES } });
+  }
+  if (url.endsWith('/GetPlayerAchievements/v1/')) {
+    const appId = Number(target.searchParams.get('appid'));
+    if (appId % 3 === 0) {
+      return Response.json(
+        { playerstats: { error: 'Requested app has no stats', success: false } },
+        { status: 400 },
+      );
+    }
+    if (appId % 3 === 1) return new Response('down', { status: 500 });
+    return Response.json({
+      playerstats: {
+        success: true,
+        achievements: [
+          { apiname: 'A', achieved: 1, unlocktime: 1_700_000_000 },
+          { apiname: 'B', achieved: 0, unlocktime: 0 },
+        ],
+      },
+    });
   }
   if (url === 'https://id.twitch.tv/oauth2/token') {
     return Response.json({ access_token: 't', expires_in: 3600 });
@@ -293,5 +313,83 @@ describe('Steam import against the Workers free plan subrequest limit', () => {
     const { outcomes, subrequests } = await run(CATALOG_GAMES.slice(1));
     expect(outcomes.map((o) => o.result)).toEqual(CATALOG_GAMES.slice(1).map(() => 'imported'));
     expect(subrequests).toBeLessThanOrEqual(FREE_PLAN_SUBREQUESTS);
+  });
+});
+
+describe('Steam achievements against the Workers free plan subrequest limit', () => {
+  async function refresh(body: object): Promise<{
+    processed: number;
+    failed: number;
+    remaining: number;
+    asOf: string;
+    subrequests: number;
+  }> {
+    counter.reset();
+    const response = await app.request('http://localhost/api/steam/achievements', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${SECRET}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as {
+      processed: number;
+      failed: number;
+      remaining: number;
+      asOf: string;
+    };
+    return { ...json, subrequests: counter.total };
+  }
+
+  it('keeps one game within its budgeted cost, answered or not', async () => {
+    const ids = (
+      (await rawDb.prepare('SELECT id, steam_appid FROM videogame ORDER BY id').all()).results as {
+        id: number;
+        steam_appid: string;
+      }[]
+    ).filter((row) => row.steam_appid !== null);
+    const answered = ids.find((row) => Number(row.steam_appid) % 3 === 2);
+    const failed = ids.find((row) => Number(row.steam_appid) % 3 === 1);
+    expect(answered && failed).toBeTruthy();
+    const ok = await refresh({ gameId: answered?.id });
+    const down = await refresh({ gameId: failed?.id });
+    const note = `answered ${ok.subrequests}, failed ${down.subrequests}`;
+    expect(ok.failed + down.failed).toBe(1);
+    expect(ok.subrequests, note).toBeLessThanOrEqual(
+      STEAM_ACHIEVEMENTS_BUDGET.overhead + STEAM_ACHIEVEMENTS_BUDGET.game,
+    );
+    expect(down.subrequests, note).toBeLessThanOrEqual(
+      STEAM_ACHIEVEMENTS_BUDGET.overhead + STEAM_ACHIEVEMENTS_BUDGET.game,
+    );
+  });
+
+  it('checks the whole library in passes that never go over the limit', async () => {
+    let asOf: string | undefined;
+    const sizes: string[] = [];
+    let checked = 0;
+    for (;;) {
+      const next = await refresh(asOf === undefined ? {} : { asOf });
+      asOf = next.asOf;
+      sizes.push(`${next.processed} games ${next.subrequests}`);
+      expect(next.subrequests, sizes.join(', ')).toBeLessThanOrEqual(FREE_PLAN_SUBREQUESTS);
+      expect(next.processed).toBeGreaterThan(0);
+      checked += next.processed;
+      if (next.remaining === 0) break;
+    }
+    const total = await rawDb
+      .prepare('SELECT COUNT(*) AS n FROM videogame_entry WHERE user_id = 1')
+      .first();
+    expect(checked).toBe(Number(total?.n));
+    const unchecked = await rawDb
+      .prepare(
+        'SELECT COUNT(*) AS n FROM videogame_entry WHERE user_id = 1 AND achievements_checked_at IS NULL',
+      )
+      .first();
+    expect(Number(unchecked?.n)).toBe(0);
+  });
+
+  it('measures the fixed cost of a request that checks nothing', async () => {
+    const idle = await refresh({ asOf: '2000-01-01T00:00:00.000Z' });
+    expect(idle.processed).toBe(0);
+    expect(idle.subrequests).toBeLessThanOrEqual(STEAM_ACHIEVEMENTS_BUDGET.overhead);
   });
 });

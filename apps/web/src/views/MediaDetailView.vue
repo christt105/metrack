@@ -8,6 +8,7 @@ import type {
   SeasonEpisodesUpdateResponse,
   SeriesDetail,
   UnmatchedEpisode,
+  Videogame,
 } from '@metrack/domain';
 import type { AnyDetail } from '../api/AnyDetail';
 import AppIcon from '../components/AppIcon.vue';
@@ -18,6 +19,7 @@ import ManagePanel from '../components/ManagePanel.vue';
 import QuickActions from '../components/QuickActions.vue';
 import ReviewPanel from '../components/ReviewPanel.vue';
 import SeasonEpisodes from '../components/SeasonEpisodes.vue';
+import SteamAchievements from '../components/SteamAchievements.vue';
 import SkipFiller from '../components/SkipFiller.vue';
 import SeasonList from '../components/SeasonList.vue';
 import UnmatchedEpisodes from '../components/UnmatchedEpisodes.vue';
@@ -43,6 +45,11 @@ const series = computed(() =>
   props.collection === 'series' ? (detail.value as SeriesDetail | null) : null,
 );
 const animated = computed(() => series.value !== null && isAnimatedGenres(series.value.genres));
+const steamGame = computed(() =>
+  props.collection === 'games' && detail.value && (detail.value as Videogame).steamAppId
+    ? (detail.value as Videogame)
+    : null,
+);
 const seasonOf = computed(() =>
   props.collection === 'seasons' ? (detail.value as unknown as Season | null) : null,
 );
@@ -183,6 +190,8 @@ watch(() => [props.collection, props.id], load, { immediate: true });
         <ReviewPanel :collection="collection" :detail="detail" @saved="onSaved" />
       </template>
     </DetailHero>
+
+    <SteamAchievements v-if="steamGame" :game="steamGame" @refreshed="load" />
 
     <UnmatchedEpisodes
       v-if="unmatchedSource"
