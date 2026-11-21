@@ -16,6 +16,10 @@ const ENTRY_COLUMNS = [
   'rewatches',
   'pending_review',
   'time_spent_minutes',
+  'achievements_unlocked',
+  'achievements_total',
+  'achievements_last_unlocked_at',
+  'achievements_checked_at',
 ];
 
 function videogameToRow(g: Omit<Videogame, 'id'>): RowValues {
@@ -31,6 +35,10 @@ function videogameToRow(g: Omit<Videogame, 'id'>): RowValues {
     platforms: JSON.stringify(g.platforms),
     note: g.note,
     time_spent_minutes: g.timeSpentMinutes,
+    achievements_unlocked: g.achievementsUnlocked,
+    achievements_total: g.achievementsTotal,
+    achievements_last_unlocked_at: g.achievementsLastUnlockedAt,
+    achievements_checked_at: g.achievementsCheckedAt,
     cover: g.cover,
     banner: g.banner,
     slug: g.slug,
@@ -53,6 +61,10 @@ function videogameFromRow(row: Row): Videogame {
     platforms: parseList(row.platforms),
     note: text(row.note),
     timeSpentMinutes: num(row.time_spent_minutes),
+    achievementsUnlocked: num(row.achievements_unlocked),
+    achievementsTotal: num(row.achievements_total),
+    achievementsLastUnlockedAt: text(row.achievements_last_unlocked_at),
+    achievementsCheckedAt: text(row.achievements_checked_at),
     cover: text(row.cover),
     banner: text(row.banner),
     slug: text(row.slug),

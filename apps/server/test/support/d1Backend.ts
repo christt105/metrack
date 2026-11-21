@@ -22,6 +22,7 @@ export const D1_SCHEMA = [
   '0016_steam_id.sql',
   '0017_artwork_pending.sql',
   '0018_season_filler.sql',
+  '0019_steam_achievements.sql',
 ].flatMap((file) =>
   readFileSync(new URL(`../../d1/migrations/${file}`, import.meta.url), 'utf8')
     .split(/;\s*\n/)

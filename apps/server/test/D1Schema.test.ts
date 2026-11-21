@@ -101,6 +101,11 @@ const seasonFillerSql = readFileSync(
   'utf8',
 );
 
+const steamAchievementsSql = readFileSync(
+  new URL('../d1/migrations/0019_steam_achievements.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -120,6 +125,7 @@ function fromSql(): DatabaseSync {
   db.exec(steamIdSql);
   db.exec(artworkPendingSql);
   db.exec(seasonFillerSql);
+  db.exec(steamAchievementsSql);
   return db;
 }
 
