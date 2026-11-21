@@ -40,6 +40,11 @@ const meta = computed(() =>
     .filter(Boolean)
     .join(' · '),
 );
+const fillerLabel = computed(() => {
+  if (props.episode.filler === 'filler') return messages.episodes.fillerLabel;
+  if (props.episode.filler === 'mixed') return messages.episodes.mixedFillerLabel;
+  return null;
+});
 const times = computed(() => props.episode.viewings.length);
 const done = computed(() => isDone(props.episode, props.rewatchStart));
 const skippable = computed(() => !props.episode.skipped && !hasDatedViewing(props.episode));
@@ -85,6 +90,16 @@ const skippable = computed(() => !props.episode.skipped && !hasDatedViewing(prop
           <span v-if="episode.skipped" class="skipped-label">{{
             messages.episodes.skippedLabel
           }}</span>
+          <span
+            v-if="fillerLabel && episode.filler"
+            class="filler-mark"
+            :class="episode.filler"
+            role="img"
+            :aria-label="fillerLabel"
+            :title="fillerLabel"
+          >
+            <AppIcon :name="episode.filler === 'filler' ? 'filler' : 'mixedFiller'" :size="16" />
+          </span>
           <span
             v-if="times > 1 && !episode.skipped"
             class="times"
@@ -244,6 +259,13 @@ const skippable = computed(() => !props.episode.skipped && !hasDatedViewing(prop
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow-wrap: anywhere;
+}
+
+.filler-mark {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+  color: var(--muted);
 }
 
 .times {

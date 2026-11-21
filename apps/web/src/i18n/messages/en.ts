@@ -191,6 +191,8 @@ export const en = {
     skip: 'Skip',
     unskip: 'Unskip',
     skippedLabel: 'Skipped',
+    fillerLabel: 'Filler',
+    mixedFillerLabel: 'Mixed canon and filler',
     skippedHint: 'Skipped episodes do not count as watched, and the season does not wait for them.',
     skipped: (count: number) => (count === 1 ? 'Episode skipped' : `${count} episodes skipped`),
     unskipped: 'Episode unskipped',

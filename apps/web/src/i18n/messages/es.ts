@@ -217,6 +217,8 @@ export const es: Messages = {
     skip: 'Omitir',
     unskip: 'Dejar de omitir',
     skippedLabel: 'Omitido',
+    fillerLabel: 'Relleno',
+    mixedFillerLabel: 'Mixto: canon y relleno',
     skippedHint: 'Los episodios omitidos no cuentan como vistos y la temporada no los espera.',
     skipped: (count: number) => (count === 1 ? 'Episodio omitido' : `${count} episodios omitidos`),
     unskipped: 'Episodio ya no omitido',

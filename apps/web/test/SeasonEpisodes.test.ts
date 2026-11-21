@@ -1,4 +1,4 @@
-import { enableAutoUnmount, flushPromises } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, type DOMWrapper } from '@vue/test-utils';
 import type { SeasonEpisodeItem, SeasonEpisodesResponse } from '@metrack/domain';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import SeasonEpisodes from '../src/components/SeasonEpisodes.vue';
@@ -21,6 +21,7 @@ const item = (number: number, patch: Partial<SeasonEpisodeItem> = {}): SeasonEpi
   watched: false,
   skipped: false,
   viewings: [],
+  filler: null,
   ...patch,
 });
 const response = (
@@ -60,7 +61,7 @@ async function mountList(
   return { ...mounted, seasonEpisodes };
 }
 
-const rows = (wrapper: { findAll: (s: string) => { text: () => string }[] }) =>
+const rows = (wrapper: { findAll: (s: string) => DOMWrapper<Element>[] }) =>
   wrapper.findAll('li.episode');
 
 describe('SeasonEpisodes', () => {
@@ -79,6 +80,22 @@ describe('SeasonEpisodes', () => {
     const second = wrapper.findAll('li.episode')[1]!;
     expect(second.classes()).toContain('unaired');
     expect(second.find('button.check').attributes('disabled')).toBeDefined();
+  });
+
+  it('flags filler and mixed episodes with a labelled icon and leaves canon ones plain', async () => {
+    const { wrapper } = await mountList([
+      item(1, { filler: 'filler' }),
+      item(2, { filler: 'mixed' }),
+      item(3, { filler: 'mangaCanon' }),
+      item(4),
+    ]);
+    const marks = rows(wrapper).map((row) => row.find('.filler-mark'));
+    expect(marks[0]!.attributes('aria-label')).toBe('Filler');
+    expect(marks[0]!.attributes('title')).toBe('Filler');
+    expect(marks[1]!.attributes('aria-label')).toBe('Mixed canon and filler');
+    expect(marks[0]!.html()).not.toBe(marks[1]!.html());
+    expect(marks[2]!.exists()).toBe(false);
+    expect(marks[3]!.exists()).toBe(false);
   });
 
   it('shows bare numbers when the source is numbers', async () => {
