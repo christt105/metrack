@@ -25,6 +25,7 @@ const episode = (number: number, patch: Partial<SeasonEpisodeItem> = {}): Season
   watched: false,
   skipped: false,
   viewings: [],
+  filler: null,
   ...patch,
 });
 const today = '2026-06-01';

@@ -33,6 +33,7 @@ import { userLanguageMigration } from './0031-user-language.js';
 import { timeSpentMigration } from './0032-time-spent.js';
 import { steamIdMigration } from './0033-steam-id.js';
 import { artworkPendingMigration } from './0034-artwork-pending.js';
+import { seasonFillerMigration } from './0035-season-filler.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -69,4 +70,5 @@ export const migrations: readonly Migration[] = [
   timeSpentMigration,
   steamIdMigration,
   artworkPendingMigration,
+  seasonFillerMigration,
 ];

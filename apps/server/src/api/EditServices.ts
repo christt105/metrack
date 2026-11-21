@@ -1,6 +1,7 @@
 import type { ArtworkService } from '../artwork/ArtworkService.js';
 import type { MediaCatalog } from '../media/MediaCatalog.js';
 import type { MediaEditor } from '../media/MediaEditor.js';
+import type { FillerService } from '../filler/FillerService.js';
 import type { SeasonEpisodesService } from '../seasons/SeasonEpisodesService.js';
 import type { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
 import type { SeriesRepository } from '../storage/repositories/SeriesRepository.js';
@@ -20,4 +21,5 @@ export interface EditServices {
   /** Present when a TMDB client is configured. */
   episodeGroups?: EpisodeGroupService;
   seasonEpisodes: SeasonEpisodesService;
+  filler: FillerService;
 }

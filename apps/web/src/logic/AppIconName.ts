@@ -19,6 +19,8 @@ export type AppIconName =
   | 'sortDesc'
   | 'trash'
   | 'skipForward'
+  | 'filler'
+  | 'mixedFiller'
   | 'externalLink'
   | 'crown'
   | 'heart'

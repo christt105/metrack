@@ -96,6 +96,11 @@ const artworkPendingSql = readFileSync(
   'utf8',
 );
 
+const seasonFillerSql = readFileSync(
+  new URL('../d1/migrations/0018_season_filler.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -114,6 +119,7 @@ function fromSql(): DatabaseSync {
   db.exec(timeSpentSql);
   db.exec(steamIdSql);
   db.exec(artworkPendingSql);
+  db.exec(seasonFillerSql);
   return db;
 }
 

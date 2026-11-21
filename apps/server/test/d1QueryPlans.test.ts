@@ -127,6 +127,10 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.movieRuntimes.listMissing(5);
   await owner.movieRuntimes.set(1, 100);
   await owner.seasonEpisodes.deleteForSeries(series.id);
+  await owner.seasonFiller.replaceForSeries(series.id, [
+    { seasonId: season.id, slug: 'show', categories: { '1': 'filler' } },
+  ]);
+  await owner.seasonFiller.get(season.id);
   await owner.seasons.hasPersonalData(season.id, ['1']);
   await owner.seasons.listCompletedEntries(season.id);
   await owner.seasons.reopenEntries(season.id, [1]);

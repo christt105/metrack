@@ -177,9 +177,11 @@ const edit = createEditServices({
   cache: metadataCache,
   ...(tmdb ? { tmdb } : {}),
   seasonEpisodes: repositories.seasonEpisodes,
+  seasonFiller: repositories.seasonFiller,
   episodeWatches: repositories.episodeWatches,
   titleProviders,
   imageProviders,
+  fetchFn: fetch,
 });
 
 const contentVersions = new MemoryContentVersions();
