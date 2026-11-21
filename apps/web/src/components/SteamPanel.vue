@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useApi } from '../composables/useApi';
 import { useMessages } from '../composables/useMessages';
 import ErrorNotice from './ErrorNotice.vue';
+import SteamAchievementsRefresh from './SteamAchievementsRefresh.vue';
 
 const messages = useMessages();
 const props = defineProps<{ steamId: string | null; canImport: boolean }>();
@@ -51,6 +52,10 @@ async function save(): Promise<void> {
       </RouterLink>
     </p>
     <p v-else-if="props.steamId" class="muted">{{ messages.steam.notConfigured }}</p>
+    <SteamAchievementsRefresh
+      v-if="props.steamId && canImport"
+      :label="messages.steam.achievements.refreshAll"
+    />
     <ErrorNotice :error="error" />
   </div>
 </template>

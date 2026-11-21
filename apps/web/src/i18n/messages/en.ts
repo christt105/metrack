@@ -649,6 +649,20 @@ export const en = {
     failed: (n: number) => `${n} games could not be written:`,
     artwork: (n: number) => `Preparing artwork, ${n} left`,
     unmatched: (n: number) => `${n} games IGDB does not know`,
+    achievements: {
+      title: 'Achievements',
+      progress: (unlocked: number, total: number) => `${unlocked} of ${total}`,
+      lastUnlock: (date: string) => `last unlocked ${date}`,
+      none: 'This game has no achievements',
+      unknown: 'Not checked yet',
+      refresh: 'Update achievements',
+      refreshAll: 'Update achievements of all my games',
+      checking: (done: number, total: number) => `Checking achievements, ${done} of ${total}`,
+      done: (processed: number, failed: number) =>
+        failed === 0
+          ? `Checked ${processed} games.`
+          : `Checked ${processed} games, ${failed} could not be read (is your Game details setting public?).`,
+    },
     unmatchedHint: 'These are not in your library and cannot be imported.',
   },
   ntfyAlerts: {
