@@ -187,10 +187,22 @@ describe.each(backends)('$name episode repositories', (backend) => {
       expect(await owner.episodeWatches.get(seriesId)).toEqual(watched);
       expect(await friend.episodeWatches.get(seriesId)).toEqual({ '13': [] });
       expect(await owner.episodeWatches.list()).toEqual([
-        { userId: 1, seriesId, watched, skipped: [], unmatched: [] },
+        { userId: 1, seriesId, watched, skipped: [], unmatched: [], lastActivityAt: null },
       ]);
       const all = await owner.episodeWatches.listForSeries(seriesId);
       expect(all.map((row) => row.userId)).toEqual([1, 2]);
+    });
+
+    it('stores the activity time when given and keeps it when a write has none', async () => {
+      await owner.episodeWatches.set(seriesId, watched, [], undefined, '2026-03-05T12:00:00.000Z');
+      await owner.episodeWatches.set(seriesId, { '12': [] });
+      expect((await owner.episodeWatches.getEntry(seriesId))?.lastActivityAt).toBe(
+        '2026-03-05T12:00:00.000Z',
+      );
+      await owner.episodeWatches.set(seriesId, watched, [], [], '2026-03-06T08:00:00.000Z');
+      expect((await owner.episodeWatches.getEntry(seriesId))?.lastActivityAt).toBe(
+        '2026-03-06T08:00:00.000Z',
+      );
     });
 
     it('writes the season entries that follow the watches in the same step', async () => {

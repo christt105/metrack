@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { normalizeViewings } from '@metrack/domain';
+import { isDone, normalizeViewings, openRewatchStart, unwatchedAired } from '@metrack/domain';
 import type {
   EpisodeOperation,
   MediaStatus,
@@ -11,13 +11,7 @@ import type {
 } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { useMessages } from '../composables/useMessages';
-import {
-  doneOrSkipped,
-  isDone,
-  openRewatchStart,
-  unwatchedAired,
-  watchedTodayKeys,
-} from '../logic/episodeSelection';
+import { doneOrSkipped, watchedTodayKeys } from '../logic/episodeSelection';
 import { inverseOperations } from '../logic/inverseOperations';
 import { todayIso } from '../logic/todayIso';
 import EpisodeRow from './EpisodeRow.vue';

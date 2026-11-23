@@ -8,6 +8,7 @@ import { ConnectorService } from '../../src/sync/ConnectorService.js';
 import { SyncApplier } from '../../src/sync/SyncApplier.js';
 import { createSqliteRepositories } from '../../src/storage/sqlite/createSqliteRepositories.js';
 import type { UserRepository } from '../../src/storage/repositories/UserRepository.js';
+import { createSteamServices } from '../../src/steam/createSteamServices.js';
 import { AsyncUserScope } from '../../src/users/AsyncUserScope.js';
 import { createTestApi, type TestApi } from './createTestApi.js';
 import { pathFetch } from './pathFetch.js';
@@ -61,6 +62,13 @@ export async function createIsolationApi(): Promise<{ api: TestApi; scope: Async
           join(dir, 'backups'),
         );
         return {
+          steamAchievements: createSteamServices(
+            'steam-key',
+            async () => new Response('{}', { status: 500 }),
+            repositories.videogames,
+            repositories.settings,
+            undefined,
+          ).achievements,
           auth: {
             sessions: new SessionService(repositories.sessions, repositories.users),
             users: repositories.users,

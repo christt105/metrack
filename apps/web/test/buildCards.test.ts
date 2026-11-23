@@ -19,6 +19,7 @@ function summary(
     seasonCount: null,
     pendingReview: false,
     watching: false,
+    allAchievements: false,
     ...partial,
   };
 }

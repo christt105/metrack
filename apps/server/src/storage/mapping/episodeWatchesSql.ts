@@ -1,11 +1,11 @@
-export const UPSERT_WATCHES_SQL = `INSERT INTO series_episode_entry (user_id, series_id, watched, skipped) VALUES (?, ?, ?, ?)
-  ON CONFLICT (user_id, series_id) DO UPDATE SET watched = excluded.watched, skipped = excluded.skipped`;
+export const UPSERT_WATCHES_SQL = `INSERT INTO series_episode_entry (user_id, series_id, watched, skipped, last_activity_at) VALUES (?, ?, ?, ?, ?)
+  ON CONFLICT (user_id, series_id) DO UPDATE SET watched = excluded.watched, skipped = excluded.skipped, last_activity_at = COALESCE(excluded.last_activity_at, last_activity_at)`;
 
 export const UPSERT_UNMATCHED_SQL = `INSERT INTO series_episode_entry (user_id, series_id, unmatched) VALUES (?, ?, ?)
   ON CONFLICT (user_id, series_id) DO UPDATE SET unmatched = excluded.unmatched`;
 
-export const UPSERT_WATCHES_KEEP_SKIPPED_SQL = `INSERT INTO series_episode_entry (user_id, series_id, watched) VALUES (?, ?, ?)
-  ON CONFLICT (user_id, series_id) DO UPDATE SET watched = excluded.watched`;
+export const UPSERT_WATCHES_KEEP_SKIPPED_SQL = `INSERT INTO series_episode_entry (user_id, series_id, watched, last_activity_at) VALUES (?, ?, ?, ?)
+  ON CONFLICT (user_id, series_id) DO UPDATE SET watched = excluded.watched, last_activity_at = COALESCE(excluded.last_activity_at, last_activity_at)`;
 
 export const UPDATE_WATCHED_COUNT_SQL =
   'UPDATE season_entry SET watched_count = ? WHERE user_id = ? AND season_id = ?';

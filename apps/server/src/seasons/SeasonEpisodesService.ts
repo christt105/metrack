@@ -8,6 +8,7 @@ import {
   isSeasonAiring,
   numberedEpisodes,
   skipBlockers,
+  toSeasonEpisodeItem,
   type Episode,
   type EpisodeOperation,
   type EpisodeWatches,
@@ -316,21 +317,14 @@ export class SeasonEpisodesService {
       ),
       episodes: episodes.map((episode) => {
         const key = episodeKey(episode, season.number);
-        const viewings = watched[key];
-        return {
-          key,
-          number: episode.number,
-          tmdbId: episode.tmdbId,
-          title: episode.title,
-          airDate: episode.airDate,
-          runtime: episode.runtime,
-          overview: episode.overview,
-          stillPath: episode.stillPath,
-          watched: (allWatched && !skipped.has(key)) || viewings !== undefined,
-          skipped: skipped.has(key),
-          viewings: viewings ?? [],
-          filler: filler[key] ?? null,
-        };
+        return toSeasonEpisodeItem(
+          episode,
+          season.number,
+          watched[key],
+          skipped.has(key),
+          filler[key] ?? null,
+          allWatched,
+        );
       }),
     };
   }

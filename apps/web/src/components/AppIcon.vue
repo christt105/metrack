@@ -24,6 +24,10 @@ defineProps<{ name: AppIconName; size?: number }>();
       <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
       <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
     </template>
+    <template v-else-if="name === 'next'">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m10 8.5 5 3.5-5 3.5z" />
+    </template>
     <template v-else-if="name === 'add'">
       <circle cx="11" cy="11" r="6.5" />
       <path d="m20.5 20.5-4.9-4.9M11 8.5v5M8.5 11h5" />
@@ -88,6 +92,11 @@ defineProps<{ name: AppIconName; size?: number }>();
       />
       <path d="M9.2 11.5h.01M14.8 11.5h.01M10.5 19.7v-2.3M13.5 19.7v-2.3" />
     </template>
+    <template v-else-if="name === 'trophy'">
+      <path
+        d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5v1.5A3 3 0 0 0 8 10.5M16 6h3.5v1.5a3 3 0 0 1-3.5 3M12 13v4M8.5 20h7M10 17h4"
+      />
+    </template>
     <template v-else-if="name === 'back'">
       <path d="M15 5.5 8.5 12l6.5 6.5" />
     </template>
@@ -127,6 +136,11 @@ defineProps<{ name: AppIconName; size?: number }>();
     </template>
     <template v-else-if="name === 'skipForward'">
       <path d="M5 6.5v11l7-5.5zM12.5 6.5v11l7-5.5z" />
+    </template>
+    <template v-else-if="name === 'more'">
+      <circle cx="12" cy="5.5" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="18.5" r="1.4" fill="currentColor" stroke="none" />
     </template>
     <template v-else-if="name === 'filler'">
       <circle cx="12" cy="12" r="8.5" stroke-dasharray="3 3" />

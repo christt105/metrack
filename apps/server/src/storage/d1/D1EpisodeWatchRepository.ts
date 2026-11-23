@@ -73,8 +73,9 @@ export class D1EpisodeWatchRepository implements EpisodeWatchRepository {
     watched: EpisodeWatches,
     seasons: readonly SeasonEntryUpdate[] = [],
     skipped?: readonly string[],
+    activityAt?: string,
   ): Promise<void> {
-    await this.replace(this.scope.userId(), seriesId, watched, seasons, skipped);
+    await this.replace(this.scope.userId(), seriesId, watched, seasons, skipped, activityAt);
   }
 
   async listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]> {
@@ -92,6 +93,7 @@ export class D1EpisodeWatchRepository implements EpisodeWatchRepository {
     watched: EpisodeWatches,
     seasons: readonly SeasonEntryUpdate[] = [],
     skipped?: readonly string[],
+    activityAt?: string,
   ): Promise<void> {
     await this.db.batch([
       skipped === undefined
@@ -99,12 +101,14 @@ export class D1EpisodeWatchRepository implements EpisodeWatchRepository {
             userId,
             seriesId,
             JSON.stringify(watched),
+            activityAt ?? null,
           ])
         : statement(this.db, UPSERT_WATCHES_SQL, [
             userId,
             seriesId,
             JSON.stringify(watched),
             JSON.stringify(skipped),
+            activityAt ?? null,
           ]),
       ...seasons.map((update) =>
         statement(this.db, UPDATE_TRACKING_SQL, seasonEntryUpdateParams(userId, update)),

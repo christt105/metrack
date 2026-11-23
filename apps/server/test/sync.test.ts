@@ -22,6 +22,7 @@ import { loadSyncConfig } from '../src/sync/loadSyncConfig.js';
 import { JobQueue } from '../src/jobs/JobQueue.js';
 import { FakeScheduler } from './support/FakeScheduler.js';
 import { emptySeries } from '../src/media/emptyEntities.js';
+import { isHiddenFromNext } from '../src/seasons/isHiddenFromNext.js';
 import { SyncApplier } from '../src/sync/SyncApplier.js';
 import { SyncService } from '../src/sync/SyncService.js';
 import type { LibrarySource } from '../src/sync/LibrarySource.js';
@@ -516,6 +517,9 @@ describe('SyncService', () => {
   it('applies the plan, leaves notes and ratings alone, and is idempotent', async () => {
     const t = setup(lupinLibrary, lupinPlays);
     const { season, series } = await seedLupin(t);
+    const hiddenAt = '2026-10-25T11:00:00.000Z';
+    await t.targets.series.setNextHidden(series.id, hiddenAt);
+    expect(isHiddenFromNext(hiddenAt, null)).toBe(true);
     const { result } = await t.service.apply();
     expect(result).toMatchObject({
       moviesCreated: 1,
@@ -541,6 +545,9 @@ describe('SyncService', () => {
       's4e2',
       's4e3',
     ]);
+    const activity = (await t.targets.episodeWatches.getEntry(series.id))?.lastActivityAt ?? null;
+    expect(activity).not.toBeNull();
+    expect(isHiddenFromNext(hiddenAt, activity)).toBe(false);
     expect(await t.targets.series.get(series.id)).toMatchObject({
       jellyfinId: 's1',
       note: 'my note',

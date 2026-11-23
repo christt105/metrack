@@ -1,14 +1,20 @@
 import type {
+  Language,
+  SteamAchievementsDetail,
   SteamAchievementsRequest,
   SteamAchievementsResponse,
   Videogame,
 } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
+import { HttpError } from '../http/HttpError.js';
 import type { SteamClient } from '../providers/steam/SteamClient.js';
 import type { SteamPlayerAchievements } from '../providers/steam/SteamPlayerAchievements.js';
+import { toSteamLanguage } from '../providers/steam/toSteamLanguage.js';
+import { summarizeAchievements } from '../providers/steam/summarizeAchievements.js';
 import type { UserSettingsRepository } from '../storage/repositories/UserSettingsRepository.js';
 import type { VideogameRepository } from '../storage/repositories/VideogameRepository.js';
 import { STEAM_ACHIEVEMENTS_BUDGET } from './SteamAchievementsBudget.js';
+import { mergeAchievements } from './mergeAchievements.js';
 
 const MAX_PER_REQUEST = Math.floor(
   (STEAM_ACHIEVEMENTS_BUDGET.limit - STEAM_ACHIEVEMENTS_BUDGET.overhead) /
@@ -79,6 +85,54 @@ export class SteamAchievementsService {
     };
   }
 
+  /**
+   * The achievements of one game of the user with names, descriptions and icons in `language` (the user's setting
+   * when omitted). It also stores the counts the same way `refresh` does, unless `readOnly`, for a token that may
+   * not write. A game Steam could not answer for keeps its counts and is stamped as checked, as in `refresh`; a
+   * private profile and any other failure are states of the answer, not errors.
+   */
+  async details(
+    userId: number,
+    gameId: number,
+    options: { language?: Language; readOnly?: boolean } = {},
+  ): Promise<SteamAchievementsDetail> {
+    const game = (await this.games.list()).find((candidate) => candidate.id === gameId);
+    if (!game || game.steamAppId === null) {
+      throw ApiError.notFound('Game not found or without a Steam app id');
+    }
+    const settings = await this.settings.get(userId);
+    if (!settings?.steamId) {
+      throw ApiError.badRequest('steam_id_missing', 'Set your Steam account in the settings first');
+    }
+    const language = toSteamLanguage(options.language ?? settings.language);
+    const checkedAt = this.now().toISOString();
+    let known: SteamPlayerAchievements | undefined;
+    try {
+      const player = await this.steam.achievementList(settings.steamId, game.steamAppId, language);
+      const summary = summarizeAchievements(player);
+      known = summary;
+      if (!options.readOnly) await this.store(game, summary, checkedAt);
+      const schema =
+        player.length === 0 ? [] : await this.steam.achievementSchema(game.steamAppId, language);
+      const achievements = mergeAchievements(schema, player);
+      return {
+        state: summary.total === 0 ? 'none' : 'ok',
+        unlocked: summary.unlocked,
+        total: summary.total,
+        achievements,
+      };
+    } catch (cause) {
+      if (!options.readOnly) await this.games.update(game.id, { achievementsCheckedAt: checkedAt });
+      const status = cause instanceof HttpError ? cause.status : 0;
+      return {
+        state: status === 403 ? 'private' : 'unavailable',
+        unlocked: known?.unlocked ?? game.achievementsUnlocked ?? 0,
+        total: known?.total ?? game.achievementsTotal ?? 0,
+        achievements: [],
+      };
+    }
+  }
+
   private async check(steamId: string, game: Videogame): Promise<boolean> {
     const checkedAt = this.now().toISOString();
     let found: SteamPlayerAchievements | undefined;
@@ -91,6 +145,15 @@ export class SteamAchievementsService {
       await this.games.update(game.id, { achievementsCheckedAt: checkedAt });
       return false;
     }
+    await this.store(game, found, checkedAt);
+    return true;
+  }
+
+  private async store(
+    game: Videogame,
+    found: SteamPlayerAchievements,
+    checkedAt: string,
+  ): Promise<void> {
     await this.games.update(game.id, {
       achievementsUnlocked: found.unlocked,
       achievementsTotal: found.total,
@@ -100,6 +163,5 @@ export class SteamAchievementsService {
           : new Date(found.lastUnlockTime * 1000).toISOString().slice(0, 10),
       achievementsCheckedAt: checkedAt,
     });
-    return true;
   }
 }

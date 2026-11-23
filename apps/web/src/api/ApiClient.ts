@@ -2,6 +2,7 @@ import type {
   EpisodeOperation,
   Language,
   FillerPreviewResponse,
+  NextEpisodesResponse,
   SeasonEpisodesResponse,
   SeasonEpisodesUpdateResponse,
   AccountDeletion,
@@ -34,6 +35,7 @@ import type {
   ResolveUnlinkedRequest,
   ResolveUnlinkedResponse,
   SearchResult,
+  SteamAchievementsDetail,
   SteamAchievementsRequest,
   SteamAchievementsResponse,
   SteamApplyResponse,
@@ -198,6 +200,18 @@ export class ApiClient {
   fillerPreview(seriesId: number, slug?: string): Promise<FillerPreviewResponse> {
     const query = slug ? `?slug=${encodeURIComponent(slug)}` : '';
     return this.request('GET', `/series/${seriesId}/filler${query}`);
+  }
+
+  nextEpisodes(series?: number): Promise<NextEpisodesResponse> {
+    return this.request('GET', series === undefined ? '/next' : `/next?series=${series}`);
+  }
+
+  hideFromNext(seriesId: number): Promise<void> {
+    return this.request('PUT', `/series/${seriesId}/next-hidden`);
+  }
+
+  showInNext(seriesId: number): Promise<void> {
+    return this.request('DELETE', `/series/${seriesId}/next-hidden`);
   }
 
   seasonEpisodes(seasonId: number): Promise<SeasonEpisodesResponse> {
@@ -387,6 +401,10 @@ export class ApiClient {
 
   prepareSteamArtwork(): Promise<SteamArtworkResponse> {
     return this.request('POST', '/steam/artwork');
+  }
+
+  steamAchievements(gameId: number, language: Language): Promise<SteamAchievementsDetail> {
+    return this.request('GET', `/steam/achievements/${gameId}?language=${language}`);
   }
 
   refreshSteamAchievements(

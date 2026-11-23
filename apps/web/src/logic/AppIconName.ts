@@ -1,6 +1,7 @@
 /** A glyph drawn by `AppIcon`. */
 export type AppIconName =
   | 'library'
+  | 'next'
   | 'add'
   | 'following'
   | 'inbox'
@@ -19,6 +20,7 @@ export type AppIconName =
   | 'sortDesc'
   | 'trash'
   | 'skipForward'
+  | 'more'
   | 'filler'
   | 'mixedFiller'
   | 'externalLink'
@@ -28,4 +30,5 @@ export type AppIconName =
   | 'smile'
   | 'thumbsDown'
   | 'dizzy'
-  | 'skull';
+  | 'skull'
+  | 'trophy';

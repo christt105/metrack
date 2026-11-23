@@ -106,6 +106,16 @@ const steamAchievementsSql = readFileSync(
   'utf8',
 );
 
+const lastActivitySql = readFileSync(
+  new URL('../d1/migrations/0020_last_activity.sql', import.meta.url),
+  'utf8',
+);
+
+const nextHiddenSql = readFileSync(
+  new URL('../d1/migrations/0021_next_hidden.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -126,6 +136,8 @@ function fromSql(): DatabaseSync {
   db.exec(artworkPendingSql);
   db.exec(seasonFillerSql);
   db.exec(steamAchievementsSql);
+  db.exec(lastActivitySql);
+  db.exec(nextHiddenSql);
   return db;
 }
 
