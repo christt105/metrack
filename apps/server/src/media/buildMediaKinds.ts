@@ -1,4 +1,5 @@
 import {
+  hasAllAchievements,
   sumTimeSpent,
   type Book,
   type Collection,
@@ -37,6 +38,7 @@ function summary(partial: Pick<MediaSummary, 'type' | 'id' | 'title'>): MediaSum
     seriesTitle: null,
     seasonCount: null,
     pendingReview: false,
+    allAchievements: false,
     ...partial,
   };
 }
@@ -192,6 +194,7 @@ export function buildMediaKinds(
           releaseDate: g.releaseDate,
           cover: g.cover,
           banner: g.banner,
+          allAchievements: hasAllAchievements(g),
           ...trackingOf(g),
         };
       },
