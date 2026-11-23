@@ -75,6 +75,7 @@ export function emptySeason(): Omit<Season, 'id'> {
     tags: [],
     cover: null,
     banner: null,
+    wantsRewatch: false,
     ...emptyTracking(),
   };
 }

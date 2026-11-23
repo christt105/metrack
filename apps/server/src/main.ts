@@ -40,6 +40,8 @@ import { GameArtworkBackfill } from './backfill/GameArtworkBackfill.js';
 import { GameArtworkScheduler } from './backfill/GameArtworkScheduler.js';
 import { MovieRuntimeBackfill } from './backfill/MovieRuntimeBackfill.js';
 import { MovieRuntimeScheduler } from './backfill/MovieRuntimeScheduler.js';
+import { SeasonCacheJob } from './seasons/SeasonCacheJob.js';
+import { SeasonCacheScheduler } from './seasons/SeasonCacheScheduler.js';
 import { AccountDeletionScheduler } from './account/AccountDeletionScheduler.js';
 import { AccountDeletionService } from './account/AccountDeletionService.js';
 import { AccountExporter } from './account/AccountExporter.js';
@@ -250,6 +252,10 @@ const accountDeletion = new AccountDeletionService(
   logger,
 );
 const accountScheduler = new AccountDeletionScheduler(accountDeletion, logger);
+const seasonCacheScheduler = new SeasonCacheScheduler(
+  new SeasonCacheJob(repositories.users, scope, edit.seasonCache, logger),
+  logger,
+);
 const runtimeScheduler = tmdb
   ? new MovieRuntimeScheduler(
       new MovieRuntimeBackfill(repositories.movieRuntimes, tmdb, logger),
@@ -361,6 +367,7 @@ const app = buildApp({
 const shutdown = async (): Promise<void> => {
   scheduler.stop();
   accountScheduler.stop();
+  seasonCacheScheduler.stop();
   runtimeScheduler?.stop();
   gameArtworkScheduler?.stop();
   cloudflareUsageScheduler?.stop();
@@ -380,6 +387,7 @@ if (config.backup.enabled) {
 }
 releaseScheduler?.start();
 accountScheduler.start();
+seasonCacheScheduler.start();
 runtimeScheduler?.start();
 gameArtworkScheduler?.start();
 cloudflareUsageScheduler?.start();

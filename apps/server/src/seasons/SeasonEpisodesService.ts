@@ -11,6 +11,7 @@ import {
   toSeasonEpisodeItem,
   type Episode,
   type EpisodeOperation,
+  type EpisodeState,
   type EpisodeWatches,
   type FillerCategory,
   type SeasonEpisodesUpdateResponse,
@@ -28,6 +29,7 @@ import {
 } from '../providers/tmdb/mapSeasonEpisodes.js';
 import type { SeasonEpisodesDeps } from './SeasonEpisodesDeps.js';
 import type { SeasonEpisodesResult } from './SeasonEpisodesResult.js';
+import type { ResolvedSeason } from './ResolvedSeason.js';
 import { PremiereReopener } from './PremiereReopener.js';
 import { SeriesWatchTracker } from './SeriesWatchTracker.js';
 
@@ -80,15 +82,15 @@ export class SeasonEpisodesService {
   /**
    * Applies one operation to the user's watches of the series and moves the season entries along (see
    * `deriveSeriesTracking`), writing both in one atomic step. The keys must be episodes of the season. A completed
-   * season that records none of its episodes counts as all watched, so its episodes are written first. Removing
-   * episodes never changes a status; only the dates follow what remains.
+   * season that records none of its episodes counts as all watched, so its episodes are written first. Unmarking
+   * takes away the last viewing of an episode, and the status and dates follow what remains.
    */
   async update(
     seasonId: number,
     operation: EpisodeOperation,
   ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
     const loaded = await this.resolve(seasonId);
-    const { season, catalog, episodes } = loaded;
+    const { season, episodes } = loaded;
     const keys = new Set(episodes.map((episode) => episodeKey(episode, season.number)));
     for (const key of operation.op === 'setViewings' ? [operation.key] : operation.keys) {
       if (!keys.has(key)) {
@@ -118,6 +120,28 @@ export class SeasonEpisodesService {
         );
       }
     }
+    return this.commit(loaded, (base) => applyEpisodeChange(base, operation));
+  }
+
+  /**
+   * Sets or clears the user's intention to watch the season again and moves the season entries along. Setting it
+   * records nothing else: no dates, no viewings. A completed season that records none of its episodes counts as all
+   * watched first, as for any change.
+   */
+  async setRewatchIntent(
+    seasonId: number,
+    wanted: boolean,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const loaded = await this.resolve(seasonId);
+    return this.commit(loaded, (base) => base, new Map([[seasonId, wanted]]));
+  }
+
+  private async commit(
+    loaded: ResolvedSeason,
+    edit: (base: EpisodeState) => EpisodeState,
+    intents?: ReadonlyMap<number, boolean>,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const { season, catalog, episodes } = loaded;
     const state = await this.tracker.load(season.seriesId, new Map([[season.id, episodes]]));
     const moved = state.watches
       ? idEpisodeWatches(episodes, season.number, state.watches)
@@ -125,8 +149,8 @@ export class SeasonEpisodesService {
     const { watches, skipped, updates } = await this.tracker.change(
       season.seriesId,
       { ...state, watches: moved },
-      (base) => applyEpisodeChange(base, operation),
-      operation.op === 'unmark',
+      edit,
+      intents,
     );
     const own = updates.find((update) => update.seasonId === season.id);
     const tracking: SeasonTracking = own?.tracking ?? {
@@ -134,6 +158,7 @@ export class SeasonEpisodesService {
       startedAt: season.startedAt,
       finishedAt: season.finishedAt,
       rewatches: season.rewatches,
+      wantsRewatch: season.wantsRewatch,
     };
     return {
       response: {
@@ -167,7 +192,7 @@ export class SeasonEpisodesService {
     await this.tracker.recompute(seriesId);
   }
 
-  private async resolve(seasonId: number) {
+  private async resolve(seasonId: number): Promise<ResolvedSeason> {
     const season = await this.deps.seasons.get(seasonId);
     if (!season) throw ApiError.notFound();
     const series = await this.deps.series.get(season.seriesId);

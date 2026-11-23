@@ -34,11 +34,11 @@ export class NextEpisodesService {
         ? await this.deps.seasons.list()
         : await this.deps.seasons.listBySeries(seriesId);
     const hidden = await this.deps.series.listNextHidden();
-    const candidates = this.candidates(seasons);
+    const today = this.now().toISOString().slice(0, 10);
+    const candidates = this.candidates(seasons, today);
     const series = new Map(
       (await this.deps.series.getMany(candidates.map((c) => c.seriesId))).map((s) => [s.id, s]),
     );
-    const today = this.now().toISOString().slice(0, 10);
     const rows: { row: NextEpisodeRow; viewed: string | null }[] = [];
     for (const { seriesId: id, pick } of candidates) {
       const owner = series.get(id);
@@ -79,7 +79,7 @@ export class NextEpisodesService {
     return this.deps.series.setNextHidden(seriesId, null);
   }
 
-  private candidates(seasons: readonly Season[]): Candidate[] {
+  private candidates(seasons: readonly Season[], today: string): Candidate[] {
     const bySeries = new Map<number, Season[]>();
     for (const season of seasons) {
       const list = bySeries.get(season.seriesId) ?? [];
@@ -88,7 +88,7 @@ export class NextEpisodesService {
     }
     const found: Candidate[] = [];
     for (const [seriesId, own] of bySeries) {
-      const pick = pickNextSeason(own);
+      const pick = pickNextSeason(own, today);
       if (pick) found.push({ seriesId, pick });
     }
     return found;

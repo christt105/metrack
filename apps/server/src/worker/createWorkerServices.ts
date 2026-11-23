@@ -24,6 +24,7 @@ import { TmdbSeriesProvider } from '../titles/TmdbSeriesProvider.js';
 import { AsyncUserScope } from '../users/AsyncUserScope.js';
 import { GameArtworkBackfill } from '../backfill/GameArtworkBackfill.js';
 import { MovieRuntimeBackfill } from '../backfill/MovieRuntimeBackfill.js';
+import { SeasonCacheJob } from '../seasons/SeasonCacheJob.js';
 import { ScheduledTick } from './ScheduledTick.js';
 import { stringsOf } from './stringsOf.js';
 import type { WorkerEnv } from './WorkerEnv.js';
@@ -153,6 +154,7 @@ export function createWorkerServices(
         ? { runtimes: new MovieRuntimeBackfill(repositories.movieRuntimes, tmdb, logger) }
         : {}),
       ...(gameArtwork ? { artwork: gameArtwork } : {}),
+      seasonCache: new SeasonCacheJob(repositories.users, scope, edit.seasonCache, logger),
       logger,
     }),
   };

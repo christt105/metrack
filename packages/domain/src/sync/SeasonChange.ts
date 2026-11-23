@@ -19,8 +19,10 @@ export interface SeasonChange {
   watchedEpisodes?: number;
   /** How many of the season's episodes are skipped once the played ones are taken out; absent from connectors that predate skipping. */
   skippedEpisodes?: number;
-  /** The season's later viewings after the change; present only when they change. */
+  /** All of the season's later viewings after the change; present only when they change. */
   rewatches?: Viewing[];
+  /** The season's intention to watch it again after the change; present only when it changes. */
+  wantsRewatch?: boolean;
   /** Whether this change completes a season that was not completed before. */
   completes: boolean;
   missingRating: boolean;

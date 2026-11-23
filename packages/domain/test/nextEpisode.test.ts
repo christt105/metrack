@@ -12,6 +12,8 @@ import {
 
 const TODAY = '2026-03-05';
 
+const pickNext = (seasons: Season[]) => pickNextSeason(seasons, TODAY);
+
 const season = (number: number, patch: Partial<Season> = {}): Season => ({
   id: number + 10,
   seriesId: 1,
@@ -24,6 +26,7 @@ const season = (number: number, patch: Partial<Season> = {}): Season => ({
   episodeCount: 4,
   watchedCount: 0,
   skippedCount: 0,
+  wantsRewatch: false,
   slug: null,
   tags: [],
   cover: null,
@@ -79,7 +82,7 @@ const four = [episode(1), episode(2), episode(3), episode(4)];
 
 describe('pickNextSeason', () => {
   it('picks the first season in progress', () => {
-    const pick = pickNextSeason([
+    const pick = pickNext([
       season(1, { status: 'completed' }),
       season(2, { status: 'in_progress' }),
       season(3, { status: 'in_progress' }),
@@ -88,9 +91,29 @@ describe('pickNextSeason', () => {
     expect(pick).toMatchObject({ rewatch: false, newSeason: false, rewatchStart: null });
   });
 
+  it('picks a completed season the user wants to watch again, counting viewings from today', () => {
+    const result = pickNext([
+      season(1, { status: 'completed' }),
+      season(2, { status: 'completed', wantsRewatch: true }),
+    ]);
+    expect(result?.season.number).toBe(2);
+    expect(result).toMatchObject({ rewatch: true, rewatchStart: TODAY });
+  });
+
+  it('starts a wanted rewatch at the date its open rewatch started', () => {
+    const result = pickNext([
+      season(1, {
+        status: 'completed',
+        wantsRewatch: true,
+        rewatches: [{ startedAt: '2026-02-01', finishedAt: null }],
+      }),
+    ]);
+    expect(result).toMatchObject({ rewatch: true, rewatchStart: '2026-02-01' });
+  });
+
   it('prefers the lowest season with an open rewatch over one in progress', () => {
     const open: Viewing[] = [{ startedAt: '2026-02-01', finishedAt: null }];
-    const pick = pickNextSeason([
+    const pick = pickNext([
       season(1, { status: 'completed', rewatches: open }),
       season(2, { status: 'in_progress' }),
       season(3, {
@@ -103,7 +126,7 @@ describe('pickNextSeason', () => {
   });
 
   it('picks the season after the last completed one as a new season', () => {
-    const pick = pickNextSeason([
+    const pick = pickNext([
       season(1, { status: 'completed' }),
       season(2, { status: 'completed' }),
       season(3),
@@ -114,52 +137,44 @@ describe('pickNextSeason', () => {
 
   it('does not offer the next season after a dropped one', () => {
     expect(
-      pickNextSeason([
-        season(1, { status: 'completed' }),
-        season(2, { status: 'dropped' }),
-        season(3),
-      ]),
+      pickNext([season(1, { status: 'completed' }), season(2, { status: 'dropped' }), season(3)]),
     ).toBeNull();
   });
 
   it('does not pick a series whose last started season is not completed', () => {
     expect(
-      pickNextSeason([
-        season(1, { status: 'completed' }),
-        season(2, { status: 'paused' }),
-        season(3),
-      ]),
+      pickNext([season(1, { status: 'completed' }), season(2, { status: 'paused' }), season(3)]),
     ).toBeNull();
   });
 
   it('returns nothing for paused and dropped series', () => {
-    expect(pickNextSeason([season(1, { status: 'paused' })])).toBeNull();
+    expect(pickNext([season(1, { status: 'paused' })])).toBeNull();
     expect(
-      pickNextSeason([season(1, { status: 'dropped' }), season(2, { status: 'paused' })]),
+      pickNext([season(1, { status: 'dropped' }), season(2, { status: 'paused' })]),
     ).toBeNull();
-    expect(pickNextSeason([season(1, { status: 'completed' })])).toBeNull();
+    expect(pickNext([season(1, { status: 'completed' })])).toBeNull();
   });
 
   it('never picks season 0 unless it is the only one in progress', () => {
     expect(
-      pickNextSeason([season(0, { status: 'in_progress' }), season(1, { status: 'in_progress' })])
-        ?.season.number,
+      pickNext([season(0, { status: 'in_progress' }), season(1, { status: 'in_progress' })])?.season
+        .number,
     ).toBe(1);
     expect(
-      pickNextSeason([season(0, { status: 'in_progress' }), season(1, { status: 'completed' })])
-        ?.season.number,
+      pickNext([season(0, { status: 'in_progress' }), season(1, { status: 'completed' })])?.season
+        .number,
     ).toBe(0);
     expect(
-      pickNextSeason([season(0, { status: 'planned' }), season(1, { status: 'completed' })]),
+      pickNext([season(0, { status: 'planned' }), season(1, { status: 'completed' })]),
     ).toBeNull();
     expect(
-      pickNextSeason([season(0), season(1, { status: 'completed' }), season(2)])?.season.number,
+      pickNext([season(0), season(1, { status: 'completed' }), season(2)])?.season.number,
     ).toBe(2);
   });
 
   it('moves a whole series rewatch from the first season to the second', () => {
     const done = [{ startedAt: '2026-02-01', finishedAt: '2026-02-10' }];
-    const pick = pickNextSeason([
+    const pick = pickNext([
       season(1, { status: 'completed', rewatches: done }),
       season(2, { status: 'completed' }),
     ]);
@@ -171,13 +186,13 @@ describe('pickNextSeason', () => {
     const first = [{ startedAt: '2026-02-01', finishedAt: '2026-02-10' }];
     const second = [{ startedAt: '2026-02-11', finishedAt: '2026-02-20' }];
     expect(
-      pickNextSeason([
+      pickNext([
         season(1, { status: 'completed', rewatches: first }),
         season(2, { status: 'completed', rewatches: second }),
       ]),
     ).toBeNull();
     expect(
-      pickNextSeason([
+      pickNext([
         season(1, { status: 'completed', rewatches: first }),
         season(2, { status: 'completed', rewatches: second }),
         season(3, { status: 'completed' }),
@@ -337,7 +352,7 @@ describe('buildNextEpisodeRow', () => {
   });
 
   it('continues a rewatch of the whole series from the closed season to the next one', () => {
-    const pick = pickNextSeason([
+    const pick = pickNext([
       season(1, {
         status: 'completed',
         rewatches: [{ startedAt: '2026-02-01', finishedAt: '2026-02-10' }],

@@ -144,7 +144,13 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
       watchedCount: 1,
       skippedCount: 0,
       completes: false,
-      tracking: { status: 'in_progress', startedAt: null, finishedAt: null, rewatches: [] },
+      tracking: {
+        status: 'in_progress',
+        startedAt: null,
+        finishedAt: null,
+        rewatches: [],
+        wantsRewatch: false,
+      },
     },
   ]);
   await owner.episodeWatches.get(series.id);

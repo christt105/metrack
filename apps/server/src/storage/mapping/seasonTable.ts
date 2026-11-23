@@ -17,6 +17,7 @@ const ENTRY_COLUMNS = [
   'pending_review',
   'watched_count',
   'skipped_count',
+  'wants_rewatch',
 ];
 
 function seasonToRow(s: Omit<Season, 'id'>): RowValues {
@@ -35,6 +36,7 @@ function seasonToRow(s: Omit<Season, 'id'>): RowValues {
     banner: s.banner,
     slug: s.slug,
     tags: JSON.stringify(s.tags),
+    wants_rewatch: s.wantsRewatch ? 1 : 0,
     ...trackingToRow(s),
   };
 }
@@ -56,6 +58,7 @@ function seasonFromRow(row: Row): Season {
     banner: text(row.banner),
     slug: text(row.slug),
     tags: parseList(row.tags),
+    wantsRewatch: Number(row.wants_rewatch ?? 0) === 1,
     ...trackingFromRow(row),
   };
 }

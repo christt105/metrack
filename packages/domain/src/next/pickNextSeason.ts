@@ -5,6 +5,9 @@ import type { NextSeasonPick } from './NextSeasonPick.js';
 const hasOpenRewatch = (season: Season): boolean =>
   season.rewatches.some((viewing) => viewing.finishedAt === null);
 
+const isRewatched = (season: Season): boolean =>
+  hasOpenRewatch(season) || (season.wantsRewatch && season.status === 'completed');
+
 const lastClosedFinish = (season: Season): string | null =>
   season.rewatches.reduce<string | null>(
     (latest, viewing) =>
@@ -16,21 +19,22 @@ const lastClosedFinish = (season: Season): string | null =>
 
 /**
  * The season whose episode is next for a series, from the user's season entries alone, or null when the series
- * has nothing to watch next. In order: the lowest season with an open rewatch, the first season in progress, the
+ * has nothing to watch next. In order: the lowest season being watched again (with an open rewatch, or completed
+ * and wanted again, which starts counting viewings from `today`), the first season in progress, the
  * season after the last started one when that one is completed, and, for a completed series watched again, the
  * season after the one whose rewatch closed last when it has no later rewatch. Season 0 is only chosen while it
  * is the one in progress.
  */
-export function pickNextSeason(seasons: readonly Season[]): NextSeasonPick | null {
+export function pickNextSeason(seasons: readonly Season[], today: string): NextSeasonPick | null {
   const regular = seasons
     .filter((season) => season.number !== 0)
     .sort((a, b) => a.number - b.number);
 
-  const reopened = regular.find(hasOpenRewatch);
+  const reopened = regular.find(isRewatched);
   if (reopened) {
     return {
       season: reopened,
-      rewatchStart: openRewatchStart(reopened.rewatches),
+      rewatchStart: openRewatchStart(reopened.rewatches) ?? today,
       rewatch: true,
       newSeason: false,
     };

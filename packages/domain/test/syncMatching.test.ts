@@ -59,6 +59,7 @@ function season(over: Partial<Season> = {}): Season {
     episodeCount: 3,
     watchedCount: 0,
     skippedCount: 0,
+    wantsRewatch: false,
     slug: null,
     tags: [],
     cover: null,
@@ -476,6 +477,7 @@ describe('reopenCompletedSeason', () => {
     startedAt: '2026-01-01',
     finishedAt: '2026-02-01',
     rewatches: [],
+    wantsRewatch: false,
   };
   const episodes = [
     { key: '1', airDate: '2026-01-01' },
@@ -491,6 +493,7 @@ describe('reopenCompletedSeason', () => {
       startedAt: '2026-01-01',
       finishedAt: null,
       rewatches: [],
+      wantsRewatch: false,
     });
   });
 

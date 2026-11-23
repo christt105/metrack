@@ -316,21 +316,62 @@ describe('SeasonEpisodes', () => {
     });
   });
 
-  it('starts a season rewatch from the Rewatch button of a completed season', async () => {
-    const patch = vi.fn().mockResolvedValue({ id: 50, status: 'completed', rewatches: [] });
+  it('sets the intention to watch again from the Rewatch button of a completed season', async () => {
+    const setSeasonRewatchIntent = vi.fn().mockResolvedValue({
+      ...response([item(1)]),
+      tracking: {
+        status: 'completed',
+        startedAt: null,
+        finishedAt: null,
+        rewatches: [],
+        wantsRewatch: true,
+      },
+    });
     const mounted = await mountWithApi(
       SeasonEpisodes,
-      { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])), patch } as never,
+      {
+        seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])),
+        setSeasonRewatchIntent,
+      } as never,
       { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [] },
     );
     await flushPromises();
     const button = mounted.wrapper.findAll('.actions button').find((b) => b.text() === 'Rewatch');
     await button!.trigger('click');
     await flushPromises();
-    expect(patch).toHaveBeenCalledWith('seasons', 50, {
-      rewatches: [{ startedAt: today, finishedAt: null }],
+    expect(setSeasonRewatchIntent).toHaveBeenCalledWith(50, true);
+    expect(mounted.wrapper.emitted('updated')).toHaveLength(1);
+  });
+
+  it('counts episodes as not yet done while the intention is set, and offers to cancel it', async () => {
+    const setSeasonRewatchIntent = vi.fn().mockResolvedValue({
+      ...response([item(1)]),
+      tracking: {
+        status: 'completed',
+        startedAt: null,
+        finishedAt: null,
+        rewatches: [],
+        wantsRewatch: false,
+      },
     });
-    expect(mounted.wrapper.emitted('saved')).toHaveLength(1);
+    const mounted = await mountWithApi(
+      SeasonEpisodes,
+      {
+        seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])),
+        setSeasonRewatchIntent,
+      } as never,
+      { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [], wantsRewatch: true },
+    );
+    await flushPromises();
+    const buttons = mounted.wrapper.findAll('.actions button').map((b) => b.text());
+    expect(buttons).not.toContain('Rewatch');
+    expect(buttons).toContain('Cancel rewatch');
+    await mounted.wrapper
+      .findAll('.actions button')
+      .find((b) => b.text() === 'Cancel rewatch')!
+      .trigger('click');
+    await flushPromises();
+    expect(setSeasonRewatchIntent).toHaveBeenCalledWith(50, false);
   });
 
   it('hides the Rewatch button while a rewatch is open or the season is not completed', async () => {

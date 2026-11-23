@@ -37,6 +37,7 @@ const season = {
     watchedEpisodes: { type: 'integer', minimum: 0 },
     skippedEpisodes: { type: 'integer', minimum: 0 },
     rewatches: { type: 'array', items: viewingItem },
+    wantsRewatch: { type: 'boolean' },
   },
   required: [
     'seasonId',

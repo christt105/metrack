@@ -217,6 +217,7 @@ describe.each(backends)('$name episode repositories', (backend) => {
             startedAt: '2026-03-01',
             finishedAt: null,
             rewatches: [{ startedAt: '2026-04-01', finishedAt: null }],
+            wantsRewatch: false,
           },
         },
       ]);

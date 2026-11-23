@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyEpisodeOperation,
-  deriveSeasonDates,
+  computeSeasonTracking,
   deriveSeriesTracking,
   hasEpisodeDates,
   materializeCompletedSeasons,
@@ -16,7 +16,30 @@ const view = (finishedAt: string, startedAt: string | null = finishedAt): Viewin
   finishedAt,
 });
 
-const planned = { status: 'planned' as const, startedAt: null, finishedAt: null, rewatches: [] };
+const planned = {
+  status: 'planned' as const,
+  startedAt: null,
+  finishedAt: null,
+  rewatches: [],
+  wantsRewatch: false,
+};
+
+function deriveSeasonDates(
+  tracking: { startedAt: string | null; finishedAt: string | null },
+  episodes: ExpectedEpisode[],
+  watches: Record<string, Viewing[]>,
+  today: string,
+  skipped: ReadonlySet<string> = new Set(),
+) {
+  const { tracking: result } = computeSeasonTracking({
+    tracking: { ...planned, ...tracking },
+    episodes,
+    watches,
+    skipped,
+    today,
+  });
+  return { startedAt: result.startedAt, finishedAt: result.finishedAt };
+}
 
 function season(
   seasonId: number,
@@ -58,15 +81,15 @@ describe('deriveSeasonDates', () => {
     });
   });
 
-  it('leaves the finish alone while an aired episode is unwatched', () => {
+  it('has no finish while an aired episode is unwatched and every first viewing is dated', () => {
     expect(
       deriveSeasonDates(
-        { startedAt: '2026-01-01', finishedAt: '2026-02-02' },
+        { startedAt: '2026-01-01', finishedAt: '2026-04-02' },
         episodes,
         { a: [view('2026-03-05')] },
         TODAY,
       ),
-    ).toEqual({ startedAt: '2026-03-05', finishedAt: '2026-02-02' });
+    ).toEqual({ startedAt: '2026-03-05', finishedAt: null });
   });
 
   it('keeps the stored dates when no watched episode has a dated viewing', () => {
@@ -142,6 +165,7 @@ describe('deriveSeriesTracking', () => {
           startedAt: '2026-03-01',
           finishedAt: '2026-03-02',
           rewatches: [],
+          wantsRewatch: false,
         },
       },
       {
@@ -154,6 +178,7 @@ describe('deriveSeriesTracking', () => {
           startedAt: '2026-04-01',
           finishedAt: null,
           rewatches: [],
+          wantsRewatch: false,
         },
       },
     ]);
@@ -166,6 +191,7 @@ describe('deriveSeriesTracking', () => {
       startedAt: '2026-03-01',
       finishedAt: null,
       rewatches: [],
+      wantsRewatch: false,
     };
     expect(
       deriveSeriesTracking({
@@ -174,26 +200,6 @@ describe('deriveSeriesTracking', () => {
         today: TODAY,
       }),
     ).toEqual([]);
-  });
-
-  it('with datesOnly moves the dates and the count but never the status', () => {
-    const done = {
-      status: 'completed' as const,
-      startedAt: '2026-01-01',
-      finishedAt: '2026-02-01',
-      rewatches: [],
-    };
-    const [update] = deriveSeriesTracking({
-      seasons: [season(1, ['a', 'b'], { tracking: done, watchedCount: 2 })],
-      watches: { a: [view('2026-03-05')] },
-      today: TODAY,
-      datesOnly: true,
-    });
-    expect(update).toMatchObject({
-      watchedCount: 1,
-      completes: false,
-      tracking: { status: 'completed', startedAt: '2026-03-05', finishedAt: '2026-02-01' },
-    });
   });
 
   it('with keepUnrecorded leaves a completed season that records none of its episodes alone', () => {

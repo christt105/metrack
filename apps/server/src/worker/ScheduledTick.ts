@@ -7,7 +7,7 @@ export const ERASE_ACCOUNTS_PER_TICK = 1;
 export const TICK_ARTWORK_BUDGET = 30;
 
 /**
- * What one cron trigger does: erase at most one due account and fill in the running time of a few movies and, only when none of that was needed, the artwork of a few games. A failure is logged and never rejects, so a
+ * What one cron trigger does: erase at most one due account and fill in the running time of a few movies and, only when none of that was needed, the artwork of a few games or, when there was none to do, check a few series for season entries that differ from their episodes (report only). A failure is logged and never rejects, so a
  * bad account cannot make the invocation fail.
  */
 export class ScheduledTick {
@@ -45,8 +45,18 @@ export class ScheduledTick {
         `game artwork backfill failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+    let differing: number | undefined;
+    try {
+      if (idle && erased.length === 0 && !runtimes && !artwork) {
+        differing = await this.deps.seasonCache?.run(now);
+      }
+    } catch (error) {
+      logger.error(
+        `season cache check failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
     logger.info(
-      `scheduled tick ${now.toISOString()}: erased=${erased.length}${runtimes === undefined ? '' : ` runtimes=${runtimes}`}${artwork === undefined ? '' : ` artwork=${artwork}`}`,
+      `scheduled tick ${now.toISOString()}: erased=${erased.length}${runtimes === undefined ? '' : ` runtimes=${runtimes}`}${artwork === undefined ? '' : ` artwork=${artwork}`}${differing === undefined ? '' : ` seasonCacheDiffers=${differing}`}`,
     );
   }
 }

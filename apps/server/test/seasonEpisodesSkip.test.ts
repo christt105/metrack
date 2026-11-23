@@ -143,14 +143,14 @@ describe('skipping episodes', () => {
     expect(JSON.parse(stored().skipped)).toEqual([]);
   });
 
-  it('unskip leaves a completed season completed', async () => {
+  it('unskip reopens a completed season until the episode is watched', async () => {
     const season = addSeason([101, 102]);
     await patch(season, { op: 'mark', keys: ['101'], date: '2026-02-01' });
     await patch(season, { op: 'skip', keys: ['102'] });
     const { body } = await patch(season, { op: 'unskip', keys: ['102'] });
     expect(body.skippedCount).toBe(0);
     expect(body.episodes[1]).toMatchObject({ watched: false, skipped: false });
-    expect(body.tracking.status).toBe('completed');
+    expect(body.tracking.status).toBe('in_progress');
   });
 
   it('rejects a key outside the season', async () => {

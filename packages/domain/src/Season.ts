@@ -21,4 +21,6 @@ export interface Season extends Tracking, Artwork {
   skippedCount: number;
   slug: string | null;
   tags: string[];
+  /** The user asked to watch the season again; see `SeasonTracking`. */
+  wantsRewatch: boolean;
 }

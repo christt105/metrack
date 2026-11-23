@@ -158,6 +158,7 @@ describe('MediaDetailView', () => {
         episodeCount: 0,
         watchedCount: 0,
         skippedCount: 0,
+        wantsRewatch: false,
         episodes: [],
         unmatched: lost,
       });
