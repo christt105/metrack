@@ -23,4 +23,6 @@ export interface MediaSummary {
   seriesTitle: string | null;
   seasonCount: number | null;
   pendingReview: boolean;
+  /** A season is watching when it is in progress or has an open rewatch; a series when any of its seasons is. Shown in the Continue shelf. */
+  watching: boolean;
 }

@@ -18,6 +18,7 @@ function summary(
     seriesTitle: null,
     seasonCount: null,
     pendingReview: false,
+    watching: false,
     ...partial,
   };
 }

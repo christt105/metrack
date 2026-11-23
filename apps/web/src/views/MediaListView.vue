@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { MediaPage } from '@metrack/domain';
+import { continueCards } from '../logic/continueCards';
 import ContinueCard from '../components/ContinueCard.vue';
 import ErrorNotice from '../components/ErrorNotice.vue';
 import LibraryFilters from '../components/LibraryFilters.vue';
@@ -36,9 +37,7 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 const cards = computed(() =>
   page.value ? buildCards(page.value.items, filters.value.type, filters.value.sort) : [],
 );
-const inProgress = computed(() =>
-  hasNarrowing(filters.value) ? [] : cards.value.filter((card) => card.status === 'in_progress'),
-);
+const inProgress = computed(() => (hasNarrowing(filters.value) ? [] : continueCards(cards.value)));
 
 async function load(): Promise<void> {
   const mine = ++ticket;

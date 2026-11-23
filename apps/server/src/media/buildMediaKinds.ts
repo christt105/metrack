@@ -37,6 +37,7 @@ function summary(partial: Pick<MediaSummary, 'type' | 'id' | 'title'>): MediaSum
     seriesTitle: null,
     seasonCount: null,
     pendingReview: false,
+    watching: false,
     ...partial,
   };
 }
@@ -51,6 +52,10 @@ function trackingOf(
     finishedAt: t.finishedAt,
     pendingReview: t.pendingReview,
   };
+}
+
+function isWatching(t: Tracking): boolean {
+  return t.status === 'in_progress' || t.rewatches.some((viewing) => viewing.finishedAt === null);
 }
 
 /** The five entity collections, wired to their repositories. */
@@ -106,6 +111,7 @@ export function buildMediaKinds(
           banner: s.banner,
           seasonCount: seasons.length,
           pendingReview: seasons.some((season) => season.pendingReview),
+          watching: seasons.some(isWatching),
         };
       },
       extend: async (entity) => {
@@ -173,6 +179,7 @@ export function buildMediaKinds(
           seriesId: s.seriesId,
           seriesTitle: parent?.title ?? null,
           ...trackingOf(s),
+          watching: isWatching(s),
         };
       },
     },
