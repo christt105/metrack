@@ -16,6 +16,7 @@ const card = (over: Partial<LibraryCard>): LibraryCard => ({
   seasonCount: null,
   pendingReview: false,
   allAchievements: false,
+  watching: false,
   ...over,
 });
 
