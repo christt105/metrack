@@ -158,7 +158,13 @@ export class SyncApplier {
     const merged = { ...stored, ...normalizeEpisodeWatches(incoming) };
     const skipChanged = skipped !== undefined;
     if (stored === undefined || skipChanged || !sameEpisodeWatches(stored, merged)) {
-      await watches.set(seriesId, merged, [], skipChanged ? skipped : undefined);
+      await watches.set(
+        seriesId,
+        merged,
+        [],
+        skipChanged ? skipped : undefined,
+        this.now().toISOString(),
+      );
     }
   }
 

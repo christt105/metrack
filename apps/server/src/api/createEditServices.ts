@@ -5,6 +5,7 @@ import { FillerService } from '../filler/FillerService.js';
 import { MediaCatalog } from '../media/MediaCatalog.js';
 import { MediaEditor } from '../media/MediaEditor.js';
 import { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
+import { NextEpisodesService } from '../seasons/NextEpisodesService.js';
 import { SeasonRefresher } from '../seasons/SeasonRefresher.js';
 import { SeasonEpisodesService } from '../seasons/SeasonEpisodesService.js';
 import { UnlinkedResolver } from '../titles/UnlinkedResolver.js';
@@ -33,6 +34,14 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     series: sources.series,
     unlinked: deps.unlinked,
     seasonEpisodes,
+    nextEpisodes: new NextEpisodesService({
+      seasons: sources.seasons,
+      series: sources.series,
+      catalog: deps.seasonEpisodes,
+      filler: deps.seasonFiller,
+      watches: deps.episodeWatches,
+      ...(deps.now ? { now: deps.now } : {}),
+    }),
     filler: new FillerService({
       series: sources.series,
       seasons: sources.seasons,

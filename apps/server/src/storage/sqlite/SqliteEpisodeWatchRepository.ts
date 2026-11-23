@@ -57,8 +57,9 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
     watched: EpisodeWatches,
     seasons: readonly SeasonEntryUpdate[] = [],
     skipped?: readonly string[],
+    activityAt?: string,
   ): Promise<void> {
-    await this.replace(this.scope.userId(), seriesId, watched, seasons, skipped);
+    await this.replace(this.scope.userId(), seriesId, watched, seasons, skipped, activityAt);
   }
 
   async listForSeries(seriesId: number): Promise<StoredEpisodeWatches[]> {
@@ -74,6 +75,7 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
     watched: EpisodeWatches,
     seasons: readonly SeasonEntryUpdate[] = [],
     skipped?: readonly string[],
+    activityAt?: string,
   ): Promise<void> {
     const own = !this.db.isTransaction;
     if (own) this.db.exec('BEGIN');
@@ -81,11 +83,17 @@ export class SqliteEpisodeWatchRepository implements EpisodeWatchRepository {
       if (skipped === undefined) {
         this.db
           .prepare(UPSERT_WATCHES_KEEP_SKIPPED_SQL)
-          .run(userId, seriesId, JSON.stringify(watched));
+          .run(userId, seriesId, JSON.stringify(watched), activityAt ?? null);
       } else {
         this.db
           .prepare(UPSERT_WATCHES_SQL)
-          .run(userId, seriesId, JSON.stringify(watched), JSON.stringify(skipped));
+          .run(
+            userId,
+            seriesId,
+            JSON.stringify(watched),
+            JSON.stringify(skipped),
+            activityAt ?? null,
+          );
       }
       for (const update of seasons) {
         this.db.prepare(UPDATE_TRACKING_SQL).run(...seasonEntryUpdateParams(userId, update));

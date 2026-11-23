@@ -116,6 +116,9 @@ describe('connector sync of episodes', () => {
         '2': [view('2026-01-03')],
       });
       expect((await repositories.seasons.get(season.id))?.watchedCount).toBe(2);
+      expect((await repositories.episodeWatches.getEntry(series.id))?.lastActivityAt).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
     });
   });
 
