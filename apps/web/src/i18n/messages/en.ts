@@ -19,6 +19,7 @@ export const en = {
   offline: 'You are offline. Changes cannot be saved until the connection is back.',
   nav: {
     library: 'Library',
+    next: 'Up next',
     search: 'Add title',
     watchlist: 'Following',
     unlinked: 'Unlinked',
@@ -482,6 +483,24 @@ export const en = {
       releases_today: 'Releases today',
       available_es: 'Available in Spain',
     },
+  },
+  next: {
+    title: 'Up next',
+    loading: 'Loading what is next...',
+    empty:
+      'Nothing to watch next yet. The series you are watching show up here, one row each, with the episode to watch next.',
+    emptyLink: 'Open the library',
+    episodeLabel: (season: number, episode: number) => `S${season} · E${episode}`,
+    airs: (season: number, episode: number, date: string) =>
+      `S${season} · E${episode} airs on ${date}`,
+    premieres: (season: number, date: string) => `S${season} premieres on ${date}`,
+    rewatch: 'Rewatch',
+    newSeason: 'New season',
+    mark: (series: string) => `Mark the next episode of ${series} as watched`,
+    skip: (series: string) => `Skip the next episode of ${series}`,
+    open: (series: string) => `Open the season of ${series}`,
+    skipFiller: 'Skip (filler)',
+    still: (series: string) => `Artwork of ${series}`,
   },
   unlinked: {
     title: 'Titles without a link',

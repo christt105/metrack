@@ -39,6 +39,7 @@ export const es: Messages = {
   offline: 'Estás sin conexión. Los cambios no se podrán guardar hasta que vuelva.',
   nav: {
     library: 'Biblioteca',
+    next: 'Siguiente',
     search: 'Añadir título',
     watchlist: 'Siguiendo',
     unlinked: 'Sin enlazar',
@@ -495,6 +496,24 @@ export const es: Messages = {
       releases_today: 'Se estrena hoy',
       available_es: 'Disponible en España',
     },
+  },
+  next: {
+    title: 'Siguiente',
+    loading: 'Cargando lo siguiente...',
+    empty:
+      'Aún no hay nada siguiente. Las series que estás viendo salen aquí, una fila por serie, con el episodio que toca.',
+    emptyLink: 'Abrir la biblioteca',
+    episodeLabel: (season: number, episode: number) => `T${season} · E${episode}`,
+    airs: (season: number, episode: number, date: string) =>
+      `T${season} · E${episode} se emite el ${date}`,
+    premieres: (season: number, date: string) => `T${season} se estrena el ${date}`,
+    rewatch: 'Rewatch',
+    newSeason: 'Nueva temporada',
+    mark: (series: string) => `Marcar como visto el siguiente episodio de ${series}`,
+    skip: (series: string) => `Saltar el siguiente episodio de ${series}`,
+    open: (series: string) => `Abrir la temporada de ${series}`,
+    skipFiller: 'Saltar (relleno)',
+    still: (series: string) => `Imagen de ${series}`,
   },
   unlinked: {
     title: 'Títulos sin enlazar',
