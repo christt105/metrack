@@ -126,6 +126,18 @@ describe('the season cache check', () => {
     expect(await versions.current(1)).toBe(before + 1);
   });
 
+  it('also lists seasons with the start after the finish, which a repair leaves alone', async () => {
+    const season = addFrieren();
+    api.db.prepare('DELETE FROM season_episodes WHERE season_id = ?').run(season);
+    const listed = await call('GET', '/api/season-cache');
+    expect(listed.body.drifts).toEqual([]);
+    expect(listed.body.conflicts).toEqual([
+      { seasonId: season, startedAt: '2026-11-23', finishedAt: '2026-11-18' },
+    ]);
+    expect((await call('POST', '/api/season-cache/repair')).body.conflicts).toHaveLength(1);
+    expect(entryOf(1, season)).toMatchObject({ started_at: '2026-11-23' });
+  });
+
   it('only looks at the data of the signed-in user', async () => {
     addFrieren(1);
     expect((await call('GET', '/api/season-cache', 2)).body.drifts).toEqual([]);
@@ -147,8 +159,8 @@ describe('the season cache check', () => {
       info: () => undefined,
       error: (m) => lines.push(m),
     });
-    expect(await job.run(new Date('2026-11-23T03:00:00Z'))).toBe(1);
-    expect(lines[0]).toContain(`season ${season}`);
+    expect(await job.run(new Date('2026-11-23T03:00:00Z'))).toBe(2);
+    expect(lines.join('\n')).toContain(`season ${season}`);
     expect(entryOf(1, season)).toMatchObject({ started_at: '2026-11-23' });
   });
 });

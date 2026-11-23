@@ -19,7 +19,7 @@ export class SeasonCacheJob {
     private readonly logger: Logger,
   ) {}
 
-  /** Runs one pass and answers how many season entries differ from their episodes. */
+  /** Runs one pass and answers how many season entries differ from their episodes or have a start after the finish. */
   async run(now: Date): Promise<number> {
     const hour = Math.floor(now.getTime() / 3_600_000);
     let differing = 0;
@@ -30,6 +30,12 @@ export class SeasonCacheJob {
           limit: SEASON_CACHE_SERIES_PER_USER,
         }),
       );
+      for (const conflict of report.conflicts) {
+        differing += 1;
+        this.logger.error(
+          `season dates conflict: user ${user.id} season ${conflict.seasonId} started ${conflict.startedAt} after finished ${conflict.finishedAt}`,
+        );
+      }
       for (const drift of report.drifts) {
         differing += 1;
         this.logger.error(

@@ -7,6 +7,7 @@ import { AsyncUserScope } from '../users/AsyncUserScope.js';
 import { formatSeasonCacheReport } from './formatSeasonCacheReport.js';
 import { SeasonCacheChecker } from './SeasonCacheChecker.js';
 import type { SeasonCacheDrift } from './SeasonCacheDrift.js';
+import type { SeasonDateConflict } from './SeasonDateConflict.js';
 import { SeriesWatchTracker } from './SeriesWatchTracker.js';
 
 export interface SeasonCacheCommand {
@@ -36,13 +37,15 @@ export async function runSeasonCacheCommand(command: SeasonCacheCommand): Promis
       .map((user) => user.id)
       .filter((id) => command.userId === undefined || id === command.userId);
     const entries: { userId: number; drift: SeasonCacheDrift }[] = [];
+    const conflicts: { userId: number; conflict: SeasonDateConflict }[] = [];
     let seriesChecked = 0;
     for (const userId of users) {
       const report = await scope.run(userId, () => checker.run(command.repair));
       seriesChecked += report.seriesChecked;
       entries.push(...report.drifts.map((drift) => ({ userId, drift })));
+      conflicts.push(...report.conflicts.map((conflict) => ({ userId, conflict })));
     }
-    return formatSeasonCacheReport(entries, seriesChecked, command.repair);
+    return formatSeasonCacheReport(entries, seriesChecked, command.repair, conflicts);
   } finally {
     db.close();
   }

@@ -38,18 +38,18 @@ describe('metrack season-cache', () => {
   it('lists the entries that differ without changing them, and repairs them on request', async () => {
     const listed = await runSeasonCacheCommand({ dataDir: dir, repair: false });
     expect(listed).toContain('user 1 series 1 season 1: status, startedAt, finishedAt');
-    expect(listed).toContain('1 season entries differ in 1 series');
+    expect(listed).toContain('1 season entries differ in 1 series, 0 start after finish');
     expect(await runSeasonCacheCommand({ dataDir: dir, repair: false })).toBe(listed);
     const repaired = await runSeasonCacheCommand({ dataDir: dir, repair: true });
     expect(repaired).toContain('(repaired)');
     expect(await runSeasonCacheCommand({ dataDir: dir, repair: false })).toBe(
-      '0 season entries differ in 1 series',
+      '0 season entries differ in 1 series, 0 start after finish',
     );
   });
 
   it('only checks the user asked for', async () => {
     expect(await runSeasonCacheCommand({ dataDir: dir, userId: 2, repair: false })).toBe(
-      '0 season entries differ in 0 series',
+      '0 season entries differ in 0 series, 0 start after finish',
     );
   });
 });

@@ -7,7 +7,7 @@ import type { SeriesWatchTracker } from './SeriesWatchTracker.js';
  * Compares the season entries of the user in scope with what their episodes say (`computeSeasonTracking`), series
  * by series. Reading only reports the entries that differ; repairing also rewrites them, leaving the watches as they
  * are. A season whose catalog is not complete, or that is completed with none of its episodes recorded, has nothing
- * to compare with and is never reported.
+ * to compare with and is never reported as differing, though its dates are still checked for a start after the finish.
  */
 export class SeasonCacheChecker {
   constructor(
@@ -23,9 +23,8 @@ export class SeasonCacheChecker {
     repair: boolean,
     window: { offset: number; limit: number } | undefined = undefined,
   ): Promise<SeasonCacheReport> {
-    const all = [...new Set((await this.seasons.list()).map((season) => season.seriesId))].sort(
-      (a, b) => a - b,
-    );
+    const seasons = await this.seasons.list();
+    const all = [...new Set(seasons.map((season) => season.seriesId))].sort((a, b) => a - b);
     const chosen =
       window === undefined || all.length <= window.limit
         ? all
@@ -37,6 +36,13 @@ export class SeasonCacheChecker {
     for (const seriesId of chosen) {
       drifts.push(...(await this.tracker.check(seriesId, repair)));
     }
-    return { repaired: repair, seriesChecked: chosen.length, drifts };
+    const conflicts = (repair ? await this.seasons.list() : seasons).flatMap((season) =>
+      season.startedAt !== null &&
+      season.finishedAt !== null &&
+      season.startedAt > season.finishedAt
+        ? [{ seasonId: season.id, startedAt: season.startedAt, finishedAt: season.finishedAt }]
+        : [],
+    );
+    return { repaired: repair, seriesChecked: chosen.length, drifts, conflicts };
   }
 }
