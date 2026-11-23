@@ -60,6 +60,7 @@ describe('the season episodes migration', () => {
       'watched',
       'skipped',
       'unmatched',
+      'last_activity_at',
     ]);
     expect(columns(db, 'season_episode_entry')).toEqual([]);
     db.exec(

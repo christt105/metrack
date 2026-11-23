@@ -38,5 +38,9 @@ export function episodeWatchesFromRow(row: Row): StoredEpisodeWatches {
     watched: normalizeEpisodeWatches(JSON.parse(String(row.watched))),
     skipped: parseSkipped(row.skipped),
     unmatched: parseUnmatched(row.unmatched),
+    lastActivityAt:
+      row.last_activity_at === null || row.last_activity_at === undefined
+        ? null
+        : String(row.last_activity_at),
   };
 }

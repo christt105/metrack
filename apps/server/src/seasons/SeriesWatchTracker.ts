@@ -82,13 +82,14 @@ export class SeriesWatchTracker {
       new Set(state.skipped),
     );
     const next = edit({ watches: base, skipped: state.skipped });
+    const now = this.now();
     const skipped = [...next.skipped];
     const updates = deriveSeriesTracking({
       seasons: state.seasons,
       watches: next.watches,
       skipped,
       baseline: base,
-      today: this.now().toISOString().slice(0, 10),
+      today: now.toISOString().slice(0, 10),
       datesOnly,
     });
     const changed =
@@ -98,7 +99,7 @@ export class SeriesWatchTracker {
     const skipChanged =
       JSON.stringify([...state.skipped].sort()) !== JSON.stringify([...skipped].sort());
     if (changed || skipChanged || updates.length > 0) {
-      await this.deps.watches.set(seriesId, next.watches, updates, skipped);
+      await this.deps.watches.set(seriesId, next.watches, updates, skipped, now.toISOString());
     }
     return { watches: next.watches, skipped, updates };
   }

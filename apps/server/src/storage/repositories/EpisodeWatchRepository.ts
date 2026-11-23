@@ -14,13 +14,15 @@ export interface EpisodeWatchRepository {
   /**
    * Stores the watches of the user in scope, and the skipped keys when given (kept as they were otherwise).
    * `seasons` are the season entries of the series that change with them (`watched_count`, `skipped_count`, and
-   * the status, dates and rewatches), written in the same atomic step.
+   * the status, dates and rewatches), written in the same atomic step. `activityAt`, a full ISO timestamp, is
+   * stored as the time of the last change to the series' episodes; left out, the stored one is kept.
    */
   set(
     seriesId: number,
     watched: EpisodeWatches,
     seasons?: readonly SeasonEntryUpdate[],
     skipped?: readonly string[],
+    activityAt?: string,
   ): Promise<void>;
   /** Replaces the unmatched episodes of the user in scope for the series, creating the row when it has none. */
   setUnmatched(seriesId: number, unmatched: readonly UnmatchedEpisode[]): Promise<void>;
@@ -33,5 +35,6 @@ export interface EpisodeWatchRepository {
     watched: EpisodeWatches,
     seasons?: readonly SeasonEntryUpdate[],
     skipped?: readonly string[],
+    activityAt?: string,
   ): Promise<void>;
 }

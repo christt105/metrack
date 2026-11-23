@@ -541,6 +541,7 @@ describe('SyncService', () => {
       's4e2',
       's4e3',
     ]);
+    expect((await t.targets.episodeWatches.getEntry(series.id))?.lastActivityAt).not.toBeNull();
     expect(await t.targets.series.get(series.id)).toMatchObject({
       jellyfinId: 's1',
       note: 'my note',

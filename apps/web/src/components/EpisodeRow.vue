@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { SeasonEpisodeItem, Viewing } from '@metrack/domain';
+import { hasAired, isDone, type SeasonEpisodeItem, type Viewing } from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
-import { hasAired, hasDatedViewing, isDone } from '../logic/episodeSelection';
+import { hasDatedViewing } from '../logic/episodeSelection';
 import { stillUrl } from '../logic/stillUrl';
 import AppIcon from './AppIcon.vue';
 import EpisodeViewings from './EpisodeViewings.vue';
