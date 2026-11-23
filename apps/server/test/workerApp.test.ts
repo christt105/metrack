@@ -44,6 +44,8 @@ beforeAll(async () => {
     ...statements('../d1/migrations/0019_steam_achievements.sql'),
     ...statements('../d1/migrations/0020_last_activity.sql'),
     ...statements('../d1/migrations/0021_next_hidden.sql'),
+    ...statements('../d1/migrations/0022_rewatch_intent.sql'),
+    ...statements('../d1/migrations/0023_manual_tracking.sql'),
     ...statements('../d1/seed/test-data.sql'),
     `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'test', '${hashSecret(SECRET)}', 'write', '2026-01-01T00:00:00.000Z')`,
     `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'connector', '${hashSecret(CONNECTOR_SECRET)}', 'connector', '2026-01-01T00:00:00.000Z')`,

@@ -46,9 +46,8 @@ export { isUndatedWatch } from './isUndatedWatch.js';
 export type { EpisodeState } from './EpisodeState.js';
 export type { SkipEpisodesOperation } from './api/SkipEpisodesOperation.js';
 export type { UnskipEpisodesOperation } from './api/UnskipEpisodesOperation.js';
-export { deriveSeasonTracking } from './deriveSeasonTracking.js';
+export { computeSeasonTracking } from './computeSeasonTracking.js';
 export { hasEpisodeDates } from './hasEpisodeDates.js';
-export { deriveSeasonDates } from './deriveSeasonDates.js';
 export { deriveSeriesTracking } from './deriveSeriesTracking.js';
 export {
   materializeCompletedSeasons,
@@ -60,7 +59,8 @@ export type { SeasonEntryUpdate } from './SeasonEntryUpdate.js';
 export type { ExpectedEpisode } from './ExpectedEpisode.js';
 export type { SeasonTracking } from './SeasonTracking.js';
 export type { SeasonTrackingInput } from './SeasonTrackingInput.js';
-export type { DerivedSeasonTracking } from './DerivedSeasonTracking.js';
+export type { ManualTracking } from './ManualTracking.js';
+export type { ComputedSeasonTracking } from './ComputedSeasonTracking.js';
 export type { EpisodeOperation } from './api/EpisodeOperation.js';
 export type { MarkEpisodesOperation } from './api/MarkEpisodesOperation.js';
 export type { UnmarkEpisodesOperation } from './api/UnmarkEpisodesOperation.js';

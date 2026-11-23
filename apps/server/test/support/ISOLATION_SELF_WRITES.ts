@@ -31,4 +31,5 @@ export const ISOLATION_SELF_WRITES: Readonly<Record<string, IsolationSelfWrite>>
   'POST /api/steam/apply': { payload: { appIds: ['1'] }, statuses: [501] },
   'POST /api/steam/artwork': { payload: {}, statuses: [501] },
   'POST /api/sync/apply': { payload: { confirm: true }, statuses: [501] },
+  'POST /api/season-cache/repair': { statuses: [200] },
 };

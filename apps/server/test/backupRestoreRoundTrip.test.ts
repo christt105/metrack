@@ -94,6 +94,7 @@ describe('backup and restore of the whole data directory', () => {
       episodeCount: 5,
       watchedCount: 0,
       skippedCount: 0,
+      wantsRewatch: false,
       cover: null,
       banner: null,
       slug: null,

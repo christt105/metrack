@@ -17,6 +17,7 @@ import { runConnectorCommand } from './connector/runConnectorCommand.js';
 import { openJellystatPool } from './sync/jellystat/openJellystatPool.js';
 import { createSyncSources } from './sync/createSyncSources.js';
 import { TmdbClient } from './providers/tmdb/TmdbClient.js';
+import { runSeasonCacheCommand } from './seasons/runSeasonCacheCommand.js';
 import { runUsersCommand } from './users/runUsersCommand.js';
 import { OWNER_ID } from './users/OWNER_ID.js';
 import { userDataPath } from './users/userDataPath.js';
@@ -41,6 +42,7 @@ const USAGE = `Usage: metrack backups [--data-dir <dir>]
        metrack users delete <id> [--cancel] [--data-dir <dir>]
        metrack users export <id> <file.zip> [--data-dir <dir>]
        metrack catalog [delete <movies|series|games|books> <id>] [--data-dir <dir>]
+       metrack season-cache [--repair] [--user <id>] [--data-dir <dir>]
 
   sync compares the Jellyfin playback history (Jellyfin API plus the Jellystat database, configured with JELLYFIN_URL,
   JELLYFIN_TOKEN, JELLYSTAT_DB_HOST and JELLYSTAT_DB_PASSWORD) of the Jellyfin account in a user's settings with that
@@ -85,6 +87,10 @@ const USAGE = `Usage: metrack backups [--data-dir <dir>]
   cannot be deleted. users export writes the ZIP a user can download from Settings (their data as JSON and the
   images they own) to a file.
 
+  season-cache compares every season entry (status, dates, rewatches, counters) with what the viewings of its episodes say and lists
+  the ones that differ, for every user or for --user; it changes nothing unless --repair is given, which rewrites those entries
+  from their episodes and leaves the viewings as they are. Seasons without a complete episode catalog are never listed.
+
   catalog lists the items added by hand that no user has an entry for any more (they stay when their creator's account
   is deleted, passing to user 1), and catalog delete removes one of them.`;
 
@@ -94,6 +100,7 @@ async function main(argv: string[]): Promise<number> {
     allowPositionals: true,
     options: {
       apply: { type: 'boolean', default: false },
+      repair: { type: 'boolean', default: false },
       cancel: { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
       'data-dir': { type: 'string' },
@@ -238,6 +245,20 @@ async function main(argv: string[]): Promise<number> {
     }
     const env = { ...process.env, DATA_DIR: values['data-dir'] ?? process.env.DATA_DIR };
     console.log(await runBackupCommand(loadConfig(env), command, target));
+    return 0;
+  }
+  if (!values.help && command === 'season-cache') {
+    if (positionals.length > 1) {
+      console.error(USAGE);
+      return 2;
+    }
+    console.log(
+      await runSeasonCacheCommand({
+        dataDir: values['data-dir'] ?? loadConfig(process.env).dataDir,
+        ...(values.user === undefined ? {} : { userId: Number(values.user) }),
+        repair: values.repair,
+      }),
+    );
     return 0;
   }
   if (!values.help && command === 'catalog') {

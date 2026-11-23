@@ -79,6 +79,7 @@ function stored(over: Partial<Season> = {}): Season {
     episodeCount: 3,
     watchedCount: 0,
     skippedCount: 0,
+    wantsRewatch: false,
     slug: null,
     tags: [],
     cover: null,
@@ -257,11 +258,31 @@ describe('numbered sync (no TMDB index)', () => {
       days: { s1e1: ['2026-01-05'] },
     });
     expect(series?.watches).toEqual({ s1e1: [view('2026-01-05')], s1e2: [], s1e3: [] });
-    expect(change).toBeUndefined();
+    expect(change?.manualTracking).toMatchObject({ status: 'completed', finishedAt: '2026-02-01' });
+    expect(change?.rewatches).toBeUndefined();
   });
 
-  it('opens a rewatch when a completed season has a new play after its finish', () => {
+  it('opens a rewatch when a completed season the user wants to watch again has a new play after its finish', () => {
     const { change } = one({
+      seasons: [librarySeason(3)],
+      stored: [
+        stored({
+          status: 'completed',
+          startedAt: '2026-01-01',
+          finishedAt: '2026-02-01',
+          watchedCount: 3,
+          wantsRewatch: true,
+        }),
+      ],
+      days: { s1e1: ['2026-06-01'] },
+      watches: { s1e1: [], s1e2: [], s1e3: [] },
+    });
+    expect(change?.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: null }]);
+    expect(change?.completes).toBe(false);
+  });
+
+  it('does not open a rewatch from a new play when the user did not ask to watch the season again', () => {
+    const { change, series } = one({
       seasons: [librarySeason(3)],
       stored: [
         stored({
@@ -274,8 +295,36 @@ describe('numbered sync (no TMDB index)', () => {
       days: { s1e1: ['2026-06-01'] },
       watches: { s1e1: [], s1e2: [], s1e3: [] },
     });
-    expect(change?.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: null }]);
-    expect(change?.completes).toBe(false);
+    expect(change).toBeUndefined();
+    expect(series?.watches?.s1e1).toEqual([
+      { startedAt: null, finishedAt: null },
+      { startedAt: '2026-06-01', finishedAt: '2026-06-01' },
+    ]);
+  });
+
+  it('opens a rewatch without the intention when the plays start the season over, and not for one loose episode', () => {
+    const completed = stored({
+      status: 'completed',
+      startedAt: '2026-01-01',
+      finishedAt: '2026-02-01',
+      watchedCount: 3,
+    });
+    const watches = { s1e1: [], s1e2: [], s1e3: [] };
+    const loose = one({
+      seasons: [librarySeason(3)],
+      stored: [completed],
+      days: { s1e3: ['2026-06-03'] },
+      watches,
+    });
+    expect(loose.change).toBeUndefined();
+    const started = one({
+      seasons: [librarySeason(3)],
+      stored: [completed],
+      days: { s1e1: ['2026-06-01'], s1e2: ['2026-06-02'] },
+      watches,
+    });
+    expect(started.change?.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: null }]);
+    expect(started.change?.wantsRewatch).toBeUndefined();
   });
 
   it('closes a rewatch when every episode is played again', () => {
@@ -301,6 +350,7 @@ describe('numbered sync (no TMDB index)', () => {
       startedAt: '2026-06-01',
       finishedAt: '2026-06-01',
       watchedCount: 3,
+      wantsRewatch: true,
     });
     const watches = { s1e1: [view('2026-06-01')], s1e2: [], s1e3: [] };
     expect(
@@ -320,7 +370,7 @@ describe('numbered sync (no TMDB index)', () => {
     expect(change?.rewatches).toEqual([{ startedAt: '2026-07-01', finishedAt: null }]);
   });
 
-  it('backfills a completed season without watches without opening a rewatch', () => {
+  it('counts the plays after the finish of a completed season without watches as a complete second pass', () => {
     const { change, series } = one({
       seasons: [librarySeason(3)],
       stored: [
@@ -333,7 +383,10 @@ describe('numbered sync (no TMDB index)', () => {
       ],
       days: { s1e1: ['2026-06-01'], s1e2: ['2026-06-02'], s1e3: ['2026-06-03'] },
     });
-    expect(change).toBeUndefined();
+    expect(change?.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: '2026-06-03' }]);
+    expect(change?.status).toBe('completed');
+    expect(change?.startedAt).toBe('2026-01-01');
+    expect(change?.finishedAt).toBe('2026-02-01');
     expect(Object.keys(series?.watches ?? {})).toHaveLength(3);
   });
 
@@ -346,7 +399,8 @@ describe('numbered sync (no TMDB index)', () => {
     expect(Object.keys(series?.watches ?? {})).toHaveLength(12);
     expect(series?.watches?.s1e1).toEqual([view('2026-01-05')]);
     expect(series?.watches?.s1e9).toEqual([]);
-    expect(change).toBeUndefined();
+    expect(change?.manualTracking).toMatchObject({ status: 'completed' });
+    expect(change?.rewatches).toBeUndefined();
   });
 
   it('records only the played episodes of an in-progress season without watches', () => {
@@ -632,6 +686,7 @@ describe('sync by TMDB episode id', () => {
       startedAt: '2026-06-01',
       finishedAt: '2026-06-01',
       watchedCount: 3,
+      wantsRewatch: true,
     });
     const watches = { '100': [view('2026-06-01')], '101': [], '102': [] };
     const seasons = jujutsuLibrary();

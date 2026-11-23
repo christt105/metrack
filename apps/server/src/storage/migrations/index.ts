@@ -36,6 +36,8 @@ import { artworkPendingMigration } from './0034-artwork-pending.js';
 import { seasonFillerMigration } from './0035-season-filler.js';
 import { steamAchievementsMigration } from './0036-steam-achievements.js';
 import { nextHiddenMigration } from './0038-next-hidden.js';
+import { rewatchIntentMigration } from './0039-rewatch-intent.js';
+import { manualTrackingMigration } from './0040-manual-tracking.js';
 import { lastActivityMigration } from './0037-last-activity.js';
 
 export const migrations: readonly Migration[] = [
@@ -77,4 +79,6 @@ export const migrations: readonly Migration[] = [
   steamAchievementsMigration,
   lastActivityMigration,
   nextHiddenMigration,
+  rewatchIntentMigration,
+  manualTrackingMigration,
 ];

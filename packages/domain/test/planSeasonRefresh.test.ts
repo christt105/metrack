@@ -15,6 +15,7 @@ function season(overrides: Partial<Season>): Season {
     episodeCount: null,
     watchedCount: 0,
     skippedCount: 0,
+    wantsRewatch: false,
     cover: null,
     banner: null,
     slug: null,

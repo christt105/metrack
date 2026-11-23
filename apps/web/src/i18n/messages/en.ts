@@ -201,6 +201,8 @@ export const en = {
     unskipped: 'Episode unskipped',
     rewatch: 'Rewatch',
     rewatchStarted: 'Rewatch started',
+    rewatchCancel: 'Cancel rewatch',
+    rewatchCancelled: 'Rewatch cancelled',
     rewatchOf: (done: number, total: number) => `Rewatch: ${done} of ${total}`,
     rewatchListLocked: 'The rewatches of a season with episodes follow its episode viewings.',
     noOverview: 'No synopsis.',

@@ -88,6 +88,7 @@ export async function seedMirrorLibrary(sources: ExportSources): Promise<void> {
     episodeCount: null,
     watchedCount: 0,
     skippedCount: 0,
+    wantsRewatch: false,
     cover: null,
     banner: null,
     tags: [],

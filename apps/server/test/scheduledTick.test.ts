@@ -3,6 +3,7 @@ import { AccountDeletionService } from '../src/account/AccountDeletionService.js
 import type { ImageStore } from '../src/images/ImageStore.js';
 import type { AccountRepository } from '../src/storage/repositories/AccountRepository.js';
 import type { UserRepository } from '../src/storage/repositories/UserRepository.js';
+import type { SeasonCacheJob } from '../src/seasons/SeasonCacheJob.js';
 import { createWorkerHandler } from '../src/worker/createWorkerHandler.js';
 import { ScheduledTick } from '../src/worker/ScheduledTick.js';
 import type { WorkerEnv } from '../src/worker/WorkerEnv.js';
@@ -36,7 +37,7 @@ function setup(options: { dueUsers?: number[]; failing?: boolean } = {}) {
     () => new Date(`${DAY}03:00:00Z`),
   );
   const tick = new ScheduledTick({ accounts: service, logger });
-  return { tick, erased, lines };
+  return { tick, erased, lines, service };
 }
 
 const at = (hour: number): number => Date.parse(`${DAY}00:00:00Z`) + hour * HOUR_MS;
@@ -49,6 +50,20 @@ describe('ScheduledTick', () => {
     await tick.run(at(4));
     expect(erased).toEqual([5, 6]);
     expect(lines.at(-1)).toBe('scheduled tick 2026-11-20T04:00:00.000Z: erased=1');
+  });
+
+  it('checks the season cache when nothing else ran and logs how many entries differ', async () => {
+    const { service, lines } = setup();
+    const seasonCache = { run: async () => 2 } as unknown as SeasonCacheJob;
+    const tick = new ScheduledTick({
+      accounts: service,
+      seasonCache,
+      logger: { info: (m: string) => lines.push(m), error: (m: string) => lines.push(`E ${m}`) },
+    });
+    await tick.run(at(3));
+    expect(lines.at(-1)).toBe(
+      'scheduled tick 2026-11-20T03:00:00.000Z: erased=0 seasonCacheDiffers=2',
+    );
   });
 
   it('logs a failure of the erasing without rejecting', async () => {

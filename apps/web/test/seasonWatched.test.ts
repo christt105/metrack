@@ -8,6 +8,7 @@ const season = (patch: Partial<Season>) =>
     episodeCount: 12,
     watchedCount: 0,
     skippedCount: 0,
+    wantsRewatch: false,
     ...patch,
   }) as Season;
 

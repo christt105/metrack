@@ -56,8 +56,12 @@ function trackingOf(
   };
 }
 
-function isWatching(t: Tracking): boolean {
-  return t.status === 'in_progress' || t.rewatches.some((viewing) => viewing.finishedAt === null);
+function isWatching(t: Tracking & { wantsRewatch?: boolean }): boolean {
+  return (
+    t.status === 'in_progress' ||
+    t.rewatches.some((viewing) => viewing.finishedAt === null) ||
+    (t.wantsRewatch === true && t.status === 'completed')
+  );
 }
 
 /** The five entity collections, wired to their repositories. */

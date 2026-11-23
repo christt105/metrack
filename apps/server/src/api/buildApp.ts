@@ -11,6 +11,7 @@ import { registerMetadataRoutes } from './registerMetadataRoutes.js';
 import { registerEpisodeGroupRoutes } from './registerEpisodeGroupRoutes.js';
 import { registerFillerRoutes } from './registerFillerRoutes.js';
 import { registerNextEpisodeRoutes } from './registerNextEpisodeRoutes.js';
+import { registerSeasonCacheRoutes } from './registerSeasonCacheRoutes.js';
 import { registerSeasonEpisodeRoutes } from './registerSeasonEpisodeRoutes.js';
 import { registerMediaRoutes } from './registerMediaRoutes.js';
 import { bumpContentVersionOnWrite } from './bumpContentVersionOnWrite.js';
@@ -161,6 +162,7 @@ export function buildApp(deps: AppDeps): Hono<ApiEnv> {
     }
     registerSeasonEpisodeRoutes(routes, deps.edit.seasonEpisodes, deps.contentVersions);
     registerNextEpisodeRoutes(routes, deps.edit.nextEpisodes);
+    registerSeasonCacheRoutes(routes, deps.edit.seasonCache);
     registerFillerRoutes(routes, deps.edit.filler, deps.contentVersions);
     registerMediaRoutes(
       routes,

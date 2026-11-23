@@ -211,9 +211,9 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       :series-id="seasonOf.seriesId"
       :status="seasonOf.status"
       :rewatches="seasonOf.rewatches"
+      :wants-rewatch="seasonOf.wantsRewatch"
       @updated="onEpisodes"
       @loaded="onEpisodesLoaded"
-      @saved="onSaved($event as unknown as AnyDetail)"
     />
 
     <ManagePanel

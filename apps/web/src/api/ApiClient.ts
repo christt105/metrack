@@ -225,6 +225,10 @@ export class ApiClient {
     return this.request('PATCH', `/seasons/${seasonId}/episodes`, operation);
   }
 
+  setSeasonRewatchIntent(seasonId: number, wanted: boolean): Promise<SeasonEpisodesUpdateResponse> {
+    return this.request('PUT', `/seasons/${seasonId}/rewatch-intent`, { wanted });
+  }
+
   episodeGroups(seriesId: number): Promise<EpisodeGroupOptions> {
     return this.request('GET', `/series/${seriesId}/episode-groups`);
   }

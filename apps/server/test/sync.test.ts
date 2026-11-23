@@ -479,6 +479,7 @@ async function seedLupin(t: ReturnType<typeof setup>) {
     episodeCount: 8,
     watchedCount: 0,
     skippedCount: 0,
+    wantsRewatch: false,
     slug: null,
     tags: [],
     cover: null,

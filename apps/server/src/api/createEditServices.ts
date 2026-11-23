@@ -6,6 +6,8 @@ import { MediaCatalog } from '../media/MediaCatalog.js';
 import { MediaEditor } from '../media/MediaEditor.js';
 import { EpisodeGroupService } from '../seasons/EpisodeGroupService.js';
 import { NextEpisodesService } from '../seasons/NextEpisodesService.js';
+import { SeasonCacheChecker } from '../seasons/SeasonCacheChecker.js';
+import { SeriesWatchTracker } from '../seasons/SeriesWatchTracker.js';
 import { SeasonRefresher } from '../seasons/SeasonRefresher.js';
 import { SeasonEpisodesService } from '../seasons/SeasonEpisodesService.js';
 import { UnlinkedResolver } from '../titles/UnlinkedResolver.js';
@@ -34,6 +36,15 @@ export function createEditServices(deps: EditServicesDeps): EditServices {
     series: sources.series,
     unlinked: deps.unlinked,
     seasonEpisodes,
+    seasonCache: new SeasonCacheChecker(
+      sources.seasons,
+      new SeriesWatchTracker({
+        seasons: sources.seasons,
+        catalog: deps.seasonEpisodes,
+        watches: deps.episodeWatches,
+        ...(deps.now ? { now: deps.now } : {}),
+      }),
+    ),
     nextEpisodes: new NextEpisodesService({
       seasons: sources.seasons,
       series: sources.series,

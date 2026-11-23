@@ -227,6 +227,8 @@ export const es: Messages = {
     unskipped: 'Episodio ya no omitido',
     rewatch: 'Volver a ver',
     rewatchStarted: 'Revisionado iniciado',
+    rewatchCancel: 'Cancelar revisionado',
+    rewatchCancelled: 'Revisionado cancelado',
     rewatchOf: (done: number, total: number) => `Revisionado: ${done} de ${total}`,
     rewatchListLocked:
       'Los revisionados de una temporada con episodios siguen los visionados de sus episodios.',

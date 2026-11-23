@@ -36,6 +36,7 @@ function payloadFor(method: string, path: string): unknown {
   if (path.endsWith('/images/:kind')) return { url: 'https://image.tmdb.org/t/p/original/x.jpg' };
   if (path === '/api/seasons/:id/episodes') return { op: 'mark', keys: ['s1e1'], date: null };
   if (path === '/api/series/:id/season-ordering') return { episodeGroup: null };
+  if (path === '/api/seasons/:id/rewatch-intent') return { wanted: true };
   if (path === '/api/unlinked/:id/resolve') return { ids: { tmdbId: 1 } };
   if (path === '/api/users/:id/role') return { role: 'normal' };
   if (path.endsWith('/sync')) return { contentVersion: 1, plan: EMPTY_PLAN };

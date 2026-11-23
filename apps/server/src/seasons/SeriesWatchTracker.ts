@@ -8,13 +8,15 @@ import {
   type EpisodeWatches,
   type SeasonEntryUpdate,
 } from '@metrack/domain';
+import { driftOf } from './driftOf.js';
+import type { SeasonCacheDrift } from './SeasonCacheDrift.js';
 import type { SeriesWatchState } from './SeriesWatchState.js';
 import type { SeriesWatchTrackerDeps } from './SeriesWatchTrackerDeps.js';
 
 /**
  * Keeps the user's season entries of a series in step with their watches of it: after any change to the watches,
- * the `watched_count`, status and dates of every season whose episodes are known are derived again from them
- * (`deriveSeriesTracking`) and written in the same atomic step as the watches.
+ * the `watched_count`, status, dates, rewatches and intention to watch again of every season whose episodes are
+ * known are computed again from them (`deriveSeriesTracking`) and written in the same atomic step as the watches.
  */
 export class SeriesWatchTracker {
   private readonly now: () => Date;
@@ -49,6 +51,8 @@ export class SeriesWatchTracker {
               startedAt: season.startedAt,
               finishedAt: season.finishedAt,
               rewatches: season.rewatches,
+              wantsRewatch: season.wantsRewatch,
+              manual: season.manualTracking ?? null,
             },
             watchedCount: season.watchedCount,
             skippedCount: season.skippedCount,
@@ -67,14 +71,14 @@ export class SeriesWatchTracker {
   /**
    * Applies `edit` to what the user recorded of the series (completed seasons that record none of their episodes
    * count as all watched first, except the skipped ones) and writes the watches and skipped keys with the season
-   * entries that follow. `datesOnly` leaves statuses and rewatches alone, for removing episodes. Returns the state
+   * entries that follow. `intents` first sets the intention to watch again of the given seasons. Returns the state
    * after the change and the entries that changed.
    */
   async change(
     seriesId: number,
     state: SeriesWatchState,
     edit: (base: EpisodeState) => EpisodeState,
-    datesOnly = false,
+    intents: ReadonlyMap<number, boolean> = new Map(),
   ): Promise<{ watches: EpisodeWatches; skipped: string[]; updates: SeasonEntryUpdate[] }> {
     const base = materializeCompletedSeasons(
       state.seasons,
@@ -88,9 +92,9 @@ export class SeriesWatchTracker {
       seasons: state.seasons,
       watches: next.watches,
       skipped,
-      baseline: base,
+      intents,
+      before: state.watches ?? {},
       today: now.toISOString().slice(0, 10),
-      datesOnly,
     });
     const changed =
       state.watches === undefined
@@ -104,18 +108,29 @@ export class SeriesWatchTracker {
     return { watches: next.watches, skipped, updates };
   }
 
-  /** Derives every known season entry of the series again from the user's watches, leaving the watches as they are. */
-  async recompute(seriesId: number): Promise<void> {
+  /**
+   * Derives every known season entry of the series again from the user's watches, leaving the watches as they are,
+   * and answers the entries that differ from what they hold. With `repair` it also writes them.
+   */
+  async check(seriesId: number, repair: boolean): Promise<SeasonCacheDrift[]> {
     const state = await this.load(seriesId);
-    if (state.watches === undefined) return;
+    if (state.watches === undefined) return [];
     const updates = deriveSeriesTracking({
       seasons: state.seasons,
       watches: state.watches,
       skipped: state.skipped,
-      baseline: state.watches,
       today: this.now().toISOString().slice(0, 10),
       keepUnrecorded: true,
     });
-    if (updates.length > 0) await this.deps.watches.set(seriesId, state.watches, updates);
+    if (repair && updates.length > 0) await this.deps.watches.set(seriesId, state.watches, updates);
+    return updates.flatMap((update) => {
+      const stored = state.seasons.find((season) => season.seasonId === update.seasonId);
+      return stored ? [driftOf(seriesId, stored, update)] : [];
+    });
+  }
+
+  /** Derives every known season entry of the series again from the user's watches, leaving the watches as they are. */
+  async recompute(seriesId: number): Promise<void> {
+    await this.check(seriesId, true);
   }
 }

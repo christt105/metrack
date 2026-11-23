@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { isDone, normalizeViewings, openRewatchStart, unwatchedAired } from '@metrack/domain';
+import { isDone, openRewatchStart, unwatchedAired } from '@metrack/domain';
 import type {
   EpisodeOperation,
   MediaStatus,
-  Season,
   SeasonEpisodesResponse,
   SeasonEpisodesUpdateResponse,
   Viewing,
@@ -29,11 +28,11 @@ const props = defineProps<{
   seriesId: number;
   status: MediaStatus;
   rewatches?: Viewing[];
+  wantsRewatch?: boolean;
 }>();
 const emit = defineEmits<{
   updated: [update: SeasonEpisodesUpdateResponse];
   loaded: [data: SeasonEpisodesResponse];
-  saved: [season: Season];
 }>();
 
 const api = useApi();
@@ -50,7 +49,9 @@ const today = computed(() => todayIso());
 const numbered = computed(() => data.value?.source !== 'numbers');
 const partial = computed(() => data.value !== null && !data.value.complete);
 const stalled = computed(() => partial.value && attempts.value >= REFILL_ATTEMPTS);
-const rewatchStart = computed(() => openRewatchStart(props.rewatches ?? []));
+const wanted = computed(() => props.status === 'completed' && props.wantsRewatch === true);
+const openStart = computed(() => openRewatchStart(props.rewatches ?? []));
+const rewatchStart = computed(() => openStart.value ?? (wanted.value ? today.value : null));
 const markable = computed(() =>
   data.value ? watchedTodayKeys(data.value.episodes, today.value, rewatchStart.value) : [],
 );
@@ -68,6 +69,7 @@ const canRewatch = computed(
     rewatchStart.value === null &&
     props.rewatches !== undefined,
 );
+const canCancelRewatch = computed(() => wanted.value && openStart.value === null);
 
 function stopRefill(): void {
   clearTimeout(refill);
@@ -194,18 +196,13 @@ function unskip(key: string): Promise<void> {
   return run({ op: 'unskip', keys: [key] }, () => messages.episodes.unskipped);
 }
 
-async function startRewatch(): Promise<void> {
+async function setRewatchIntent(wantedNow: boolean): Promise<void> {
   if (busy.value) return;
   busy.value = true;
   error.value = null;
   try {
-    const next = normalizeViewings([
-      ...(props.rewatches ?? []),
-      { startedAt: today.value, finishedAt: null },
-    ]);
-    const updated = await api.patch('seasons', props.seasonId, { rewatches: next } as never);
-    emit('saved', updated as unknown as Season);
-    say(messages.episodes.rewatchStarted, []);
+    receive(await api.setSeasonRewatchIntent(props.seasonId, wantedNow));
+    say(wantedNow ? messages.episodes.rewatchStarted : messages.episodes.rewatchCancelled, []);
   } catch (cause) {
     error.value = cause;
   } finally {
@@ -274,9 +271,18 @@ onBeforeUnmount(() => {
             type="button"
             class="small ghost"
             :disabled="busy"
-            @click="startRewatch"
+            @click="setRewatchIntent(true)"
           >
             {{ messages.episodes.rewatch }}
+          </button>
+          <button
+            v-if="canCancelRewatch"
+            type="button"
+            class="small ghost"
+            :disabled="busy"
+            @click="setRewatchIntent(false)"
+          >
+            {{ messages.episodes.rewatchCancel }}
           </button>
         </div>
         <ul class="list">

@@ -6,11 +6,11 @@ export interface SeriesTrackingInput {
   watches: EpisodeWatches;
   /** Keys of the episodes the user skipped. */
   skipped?: readonly string[];
-  /** The watches before the change; only viewings missing from it can open a season rewatch. */
-  baseline?: EpisodeWatches;
+  /** Intentions to watch a season again that replace the stored ones, by season id. */
+  intents?: ReadonlyMap<number, boolean>;
+  /** The watches before the change being written: a season none of whose episodes was watched in them remembers its status and dates. */
+  before?: EpisodeWatches;
   today: string;
-  /** Only the dates follow the watches, not the status or the rewatches: for removing episodes. */
-  datesOnly?: boolean;
   /** Leave completed seasons that record none of their episodes as they are, instead of counting them as 0. */
   keepUnrecorded?: boolean;
 }

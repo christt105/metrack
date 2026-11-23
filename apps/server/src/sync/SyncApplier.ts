@@ -1,6 +1,5 @@
 import {
   normalizeEpisodeWatches,
-  normalizeViewings,
   readViewings,
   sameEpisodeWatches,
   type EpisodeWatches,
@@ -105,6 +104,7 @@ export class SyncApplier {
             seriesId,
             pendingReview: season.completes,
             rewatches: readViewings(season.rewatches ?? []),
+            wantsRewatch: season.wantsRewatch ?? false,
             watchedCount:
               season.watchedEpisodes ?? (season.status === 'completed' ? season.episodeCount : 0),
           });
@@ -170,13 +170,9 @@ export class SyncApplier {
 
   private async personalExtras(id: number, change: SeasonChange): Promise<Partial<Season>> {
     const extras: Partial<Season> = change.completes ? { pendingReview: true } : {};
-    if (change.rewatches) {
-      const stored = (await this.targets.seasons.get(id))?.rewatches ?? [];
-      extras.rewatches = normalizeViewings([
-        ...stored.filter((viewing) => viewing.finishedAt !== null),
-        ...readViewings(change.rewatches),
-      ]);
-    }
+    if (change.rewatches) extras.rewatches = readViewings(change.rewatches);
+    if (change.wantsRewatch !== undefined) extras.wantsRewatch = change.wantsRewatch;
+    if (change.manualTracking !== undefined) extras.manualTracking = change.manualTracking;
     if (change.skippedEpisodes !== undefined) extras.skippedCount = change.skippedEpisodes;
     if (change.watchedEpisodes !== undefined) {
       extras.watchedCount = change.watchedEpisodes;

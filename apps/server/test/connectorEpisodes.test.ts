@@ -140,7 +140,7 @@ describe('connector sync of episodes', () => {
     });
   });
 
-  it('writes a rewatch the plan opens and keeps the closed ones', async () => {
+  it('writes the rewatches the plan carries, closed ones included', async () => {
     const { send, repositories, scope, season } = await setup();
     await scope.run(2, () =>
       repositories.seasons.update(season.id, {
@@ -153,7 +153,11 @@ describe('connector sync of episodes', () => {
       {
         status: 'completed',
         finishedAt: '2026-02-01',
-        rewatches: [{ startedAt: '2026-06-01', finishedAt: null }],
+        rewatches: [
+          view('2026-03-01', '2026-02-20'),
+          { startedAt: '2026-06-01', finishedAt: null },
+        ],
+        wantsRewatch: true,
       },
       { '1': [view('2026-06-01')] },
     );

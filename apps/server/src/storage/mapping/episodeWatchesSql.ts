@@ -11,7 +11,7 @@ export const UPDATE_WATCHED_COUNT_SQL =
   'UPDATE season_entry SET watched_count = ? WHERE user_id = ? AND season_id = ?';
 
 export const UPDATE_TRACKING_SQL =
-  'UPDATE season_entry SET watched_count = ?, skipped_count = ?, status = ?, started_at = ?, finished_at = ?, rewatches = ? WHERE user_id = ? AND season_id = ?';
+  'UPDATE season_entry SET watched_count = ?, skipped_count = ?, status = ?, started_at = ?, finished_at = ?, rewatches = ?, wants_rewatch = ?, manual_tracking = ? WHERE user_id = ? AND season_id = ?';
 
 export const UPSERT_CATALOG_SQL = `INSERT INTO season_episodes (season_id, episodes, source, fetched_at, complete, refill) VALUES (?, ?, ?, ?, ?, ?)
   ON CONFLICT (season_id) DO UPDATE SET episodes = excluded.episodes, source = excluded.source, fetched_at = excluded.fetched_at, complete = excluded.complete, refill = excluded.refill`;
