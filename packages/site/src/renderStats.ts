@@ -41,6 +41,16 @@ function typeCards(messages: SiteMessages, entries: PublicEntry[], hideEmpty: bo
   }).join('');
 }
 
+function achievementsCard(messages: SiteMessages, entries: PublicEntry[]): string {
+  const count = entries.filter((entry) => entry.allAchievements).length;
+  return count === 0
+    ? ''
+    : card(
+        `<i class="fas fa-trophy"></i> ${formatInteger(count, messages)}`,
+        messages.stats.allAchievements,
+      );
+}
+
 function ratingBars(
   messages: SiteMessages,
   counts: Map<number, number>,
@@ -91,7 +101,7 @@ function allTime(
   const counts = new Map<number, number>();
   for (const rating of ratings) counts.set(rating, (counts.get(rating) ?? 0) + 1);
   const total = finished.reduce((sum, entry) => sum + completions(entry), 0);
-  const cards = `<section class="stats-cards">${card(formatInteger(media.length, messages), messages.stats.total)}${card(formatInteger(total, messages), messages.stats.finished)}${typeCards(messages, media, false)}${averageCard(messages, ratings)}</section>`;
+  const cards = `<section class="stats-cards">${card(formatInteger(media.length, messages), messages.stats.total)}${card(formatInteger(total, messages), messages.stats.finished)}${typeCards(messages, media, false)}${achievementsCard(messages, media)}${averageCard(messages, ratings)}</section>`;
 
   const perYear = new Map<string, number>();
   for (const entry of finished) {

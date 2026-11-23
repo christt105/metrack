@@ -61,4 +61,92 @@ describe('SteamAchievements', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('Set your Steam account');
   });
+
+  const detail = {
+    state: 'ok',
+    unlocked: 1,
+    total: 2,
+    achievements: [
+      {
+        apiName: 'A',
+        name: 'First',
+        description: 'Do it',
+        hidden: false,
+        iconUrl: 'https://cdn.steamstatic.com/a.jpg',
+        unlocked: true,
+        unlockedAt: '2026-11-01T10:00:00.000Z',
+      },
+      {
+        apiName: 'B',
+        name: 'Secret',
+        description: null,
+        hidden: true,
+        iconUrl: 'https://cdn.steamstatic.com/b.jpg',
+        unlocked: false,
+        unlockedAt: null,
+      },
+    ],
+  };
+  const counts = { achievementsUnlocked: 1, achievementsTotal: 2 };
+
+  it('shows the list by default, loads it once and lets the user collapse it', async () => {
+    const steamAchievements = vi.fn().mockResolvedValue(detail);
+    const { wrapper } = await mountWithApi(
+      SteamAchievements,
+      { steamAchievements },
+      { game: game(counts) },
+    );
+    await flushPromises();
+    expect(steamAchievements).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-test="achievements-bar"]').attributes('max')).toBe('2');
+    expect(steamAchievements).toHaveBeenCalledWith(9, 'en');
+    const items = wrapper.findAll('[data-test="achievement"]');
+    expect(items).toHaveLength(2);
+    expect(items[0]?.text()).toContain('First');
+    expect(items[0]?.text()).toContain('Unlocked 2026-11-01');
+    expect(items[1]?.classes()).toContain('locked');
+    expect(items[1]?.text()).toContain('Hidden achievement');
+    expect(items[1]?.find('img').attributes('src')).toBe('https://cdn.steamstatic.com/b.jpg');
+    expect(wrapper.emitted('refreshed')).toBeUndefined();
+    await wrapper.find('[data-test="achievements-toggle"]').trigger('click');
+    expect(wrapper.find('[data-test="achievement-list"]').exists()).toBe(false);
+    await wrapper.find('[data-test="achievements-toggle"]').trigger('click');
+    expect(wrapper.find('[data-test="achievement-list"]').exists()).toBe(true);
+    expect(steamAchievements).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks the page to reload when the stored counts were stale', async () => {
+    const steamAchievements = vi.fn().mockResolvedValue({ ...detail, unlocked: 2 });
+    const { wrapper } = await mountWithApi(
+      SteamAchievements,
+      { steamAchievements },
+      { game: game(counts) },
+    );
+    await flushPromises();
+    expect(wrapper.emitted('refreshed')).toHaveLength(1);
+  });
+
+  it('explains a private profile and a failed answer', async () => {
+    const steamAchievements = vi
+      .fn()
+      .mockResolvedValueOnce({ state: 'private', unlocked: 0, total: 0, achievements: [] })
+      .mockRejectedValueOnce(new Error('boom'));
+    const { wrapper } = await mountWithApi(
+      SteamAchievements,
+      { steamAchievements },
+      { game: game({}) },
+    );
+    await flushPromises();
+    expect(wrapper.find('[data-test="achievements-private"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="achievement-list"]').exists()).toBe(false);
+  });
+
+  it('offers no list for a game without achievements', async () => {
+    const { wrapper } = await mountWithApi(
+      SteamAchievements,
+      {},
+      { game: game({ achievementsUnlocked: 0, achievementsTotal: 0 }) },
+    );
+    expect(wrapper.find('[data-test="achievements-toggle"]').exists()).toBe(false);
+  });
 });

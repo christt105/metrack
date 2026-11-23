@@ -34,6 +34,7 @@ import type {
   ResolveUnlinkedRequest,
   ResolveUnlinkedResponse,
   SearchResult,
+  SteamAchievementsDetail,
   SteamAchievementsRequest,
   SteamAchievementsResponse,
   SteamApplyResponse,
@@ -387,6 +388,10 @@ export class ApiClient {
 
   prepareSteamArtwork(): Promise<SteamArtworkResponse> {
     return this.request('POST', '/steam/artwork');
+  }
+
+  steamAchievements(gameId: number, language: Language): Promise<SteamAchievementsDetail> {
+    return this.request('GET', `/steam/achievements/${gameId}?language=${language}`);
   }
 
   refreshSteamAchievements(

@@ -88,6 +88,11 @@ defineProps<{ name: AppIconName; size?: number }>();
       />
       <path d="M9.2 11.5h.01M14.8 11.5h.01M10.5 19.7v-2.3M13.5 19.7v-2.3" />
     </template>
+    <template v-else-if="name === 'trophy'">
+      <path
+        d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5v1.5A3 3 0 0 0 8 10.5M16 6h3.5v1.5a3 3 0 0 1-3.5 3M12 13v4M8.5 20h7M10 17h4"
+      />
+    </template>
     <template v-else-if="name === 'back'">
       <path d="M15 5.5 8.5 12l6.5 6.5" />
     </template>
