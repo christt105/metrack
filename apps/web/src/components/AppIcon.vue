@@ -24,6 +24,10 @@ defineProps<{ name: AppIconName; size?: number }>();
       <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
       <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
     </template>
+    <template v-else-if="name === 'next'">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m10 8.5 5 3.5-5 3.5z" />
+    </template>
     <template v-else-if="name === 'add'">
       <circle cx="11" cy="11" r="6.5" />
       <path d="m20.5 20.5-4.9-4.9M11 8.5v5M8.5 11h5" />

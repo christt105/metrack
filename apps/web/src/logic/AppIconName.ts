@@ -1,6 +1,7 @@
 /** A glyph drawn by `AppIcon`. */
 export type AppIconName =
   | 'library'
+  | 'next'
   | 'add'
   | 'following'
   | 'inbox'

@@ -5,6 +5,7 @@ import LoginView from '../views/LoginView.vue';
 import MediaDetailView from '../views/MediaDetailView.vue';
 import MediaEditView from '../views/MediaEditView.vue';
 import MediaListView from '../views/MediaListView.vue';
+import NextView from '../views/NextView.vue';
 import NewMediaView from '../views/NewMediaView.vue';
 import SearchView from '../views/SearchView.vue';
 import SettingsView from '../views/SettingsView.vue';
@@ -25,6 +26,7 @@ export const routes: RouteRecordRaw[] = [
   },
   { path: '/welcome', name: 'welcome', component: WelcomeView },
   { path: '/', name: 'library', component: MediaListView },
+  { path: '/next', name: 'next', component: NextView },
   { path: '/search', name: 'search', component: SearchView },
   { path: '/watchlist', name: 'watchlist', component: WatchlistView },
   { path: '/unlinked', name: 'unlinked', component: UnlinkedView },
