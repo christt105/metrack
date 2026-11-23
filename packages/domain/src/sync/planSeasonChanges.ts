@@ -16,6 +16,7 @@ function trackingOf(stored: Season | null) {
     finishedAt: stored?.finishedAt ?? null,
     rewatches: stored?.rewatches ?? [],
     wantsRewatch: stored?.wantsRewatch ?? false,
+    manual: stored?.manualTracking ?? null,
   };
 }
 
@@ -68,12 +69,15 @@ export function planSeasonChanges(
       episodes: draft.expected,
       watches: merged,
       skipped,
+      previouslyEmpty: draft.expected.every(({ key }) => !(key in stored)),
       today,
     });
     const derived = computed.tracking;
     const rewatchesChanged =
       JSON.stringify(derived.rewatches) !== JSON.stringify(season?.rewatches ?? []);
     const intentChanged = derived.wantsRewatch !== (season?.wantsRewatch ?? false);
+    const manualChanged =
+      JSON.stringify(derived.manual ?? null) !== JSON.stringify(season?.manualTracking ?? null);
     const change: SeasonChange = {
       seasonId: season?.id ?? null,
       matchedBy: draft.matchedBy,
@@ -92,8 +96,16 @@ export function planSeasonChanges(
       missingRating: derived.status === 'completed' && (season?.rating ?? null) === null,
       ...(rewatchesChanged ? { rewatches: derived.rewatches } : {}),
       ...(intentChanged ? { wantsRewatch: derived.wantsRewatch } : {}),
+      ...(manualChanged ? { manualTracking: derived.manual ?? null } : {}),
     };
-    if (season && !rewatchesChanged && !intentChanged && isUnchanged(season, change)) continue;
+    if (
+      season &&
+      !rewatchesChanged &&
+      !intentChanged &&
+      !manualChanged &&
+      isUnchanged(season, change)
+    )
+      continue;
     changes.push(change);
   }
   return {

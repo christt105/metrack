@@ -172,6 +172,7 @@ export class SyncApplier {
     const extras: Partial<Season> = change.completes ? { pendingReview: true } : {};
     if (change.rewatches) extras.rewatches = readViewings(change.rewatches);
     if (change.wantsRewatch !== undefined) extras.wantsRewatch = change.wantsRewatch;
+    if (change.manualTracking !== undefined) extras.manualTracking = change.manualTracking;
     if (change.skippedEpisodes !== undefined) extras.skippedCount = change.skippedEpisodes;
     if (change.watchedEpisodes !== undefined) {
       extras.watchedCount = change.watchedEpisodes;

@@ -1,6 +1,7 @@
 import type { ComputedSeasonTracking } from './ComputedSeasonTracking.js';
 import type { ExpectedEpisode } from './ExpectedEpisode.js';
 import { normalizeViewings } from './normalizeViewings.js';
+import type { SeasonTracking } from './SeasonTracking.js';
 import type { SeasonTrackingInput } from './SeasonTrackingInput.js';
 import type { Viewing } from './Viewing.js';
 
@@ -96,6 +97,16 @@ function firstPassDates(
   return result;
 }
 
+function remembered(
+  tracking: SeasonTracking,
+  previouslyEmpty: boolean,
+): Pick<SeasonTracking, 'manual'> {
+  if (tracking.manual) return { manual: tracking.manual };
+  if (!previouslyEmpty) return {};
+  const { status, startedAt, finishedAt } = tracking;
+  return { manual: { status, startedAt, finishedAt } };
+}
+
 /**
  * A catalog season's status, dates, rewatches and counters, computed from scratch from the viewings of its
  * episodes, the episodes skipped, the user's intention to watch it again and today. Nothing depends on what was
@@ -107,10 +118,13 @@ function firstPassDates(
  * included); a later pass is complete when every aired episode that is not skipped has that many viewings. The
  * first pass takes its dates from the first viewings of the episodes, keeping the stored ones where those are
  * unknown, and an unfinished first pass has no finish unless some first viewing has no date to give it. A start
- * after the finish is brought back to it. Every complete later pass is a rewatch, from its earliest start to its latest finish. An incomplete pass
- * that follows the complete ones with at least one dated viewing is an open rewatch only while the intention to
- * watch again is set, and the intention is cleared once a rewatch completes. A season without a single viewing,
- * or dropped, keeps its tracking as the user left it.
+ * after the finish is brought back to it. Every complete later pass is a rewatch, from its earliest start to its
+ * latest finish. An incomplete pass that follows the complete ones with at least one dated viewing is an open
+ * rewatch while the intention to watch again is set or while the pass has a viewing of each of the first two
+ * episodes that are not skipped (the season is being started over; watching loose episodes is not), and the
+ * intention is cleared once a rewatch completes. A season without a single viewing goes back to the status and
+ * dates it had before the first one (`manual`, kept when the first viewing appears), and a dropped season keeps its
+ * tracking as the user left it.
  */
 export function computeSeasonTracking(input: SeasonTrackingInput): ComputedSeasonTracking {
   const { tracking, episodes, today } = input;
@@ -124,7 +138,14 @@ export function computeSeasonTracking(input: SeasonTrackingInput): ComputedSeaso
     skippedCount,
     completes: false,
   };
-  if (tracking.status === 'dropped' || watchedCount === 0) return unchanged;
+  if (tracking.status === 'dropped') return unchanged;
+  if (watchedCount === 0) {
+    const { manual } = tracking;
+    if (!manual) return unchanged;
+    const restored: SeasonTracking = { ...unchanged.tracking, ...manual };
+    delete restored.manual;
+    return { ...unchanged, tracking: restored };
+  }
 
   const required = episodes.filter((e) => !skipped.has(e.key));
   const airedRequired = required.filter((e) => isAired(e, today));
@@ -143,7 +164,10 @@ export function computeSeasonTracking(input: SeasonTrackingInput): ComputedSeaso
   for (let pass = 2; pass <= completePasses; pass += 1) rewatches.push(passDates(own, pass));
   const closedBefore = tracking.rewatches.filter((v) => v.finishedAt !== null).length;
   const wantsRewatch = tracking.wantsRewatch && completePasses - 1 <= closedBefore;
-  if (wantsRewatch && firstPassComplete && most > completePasses) {
+  const startsOver = required
+    .slice(0, 2)
+    .every((e) => (own.get(e.key)?.length ?? 0) >= completePasses + 1);
+  if ((wantsRewatch || startsOver) && firstPassComplete && most > completePasses) {
     const { startedAt } = passDates(own, completePasses + 1);
     if (startedAt !== null) rewatches.push({ startedAt, finishedAt: null });
   }
@@ -155,6 +179,7 @@ export function computeSeasonTracking(input: SeasonTrackingInput): ComputedSeaso
       finishedAt: dates.finishedAt,
       rewatches: normalizeViewings(rewatches),
       wantsRewatch,
+      ...remembered(tracking, input.previouslyEmpty === true),
     },
     watchedCount,
     skippedCount,

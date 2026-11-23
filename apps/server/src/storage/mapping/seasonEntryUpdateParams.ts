@@ -4,7 +4,18 @@ import { normalizeViewings, type SeasonEntryUpdate } from '@metrack/domain';
 export function seasonEntryUpdateParams(
   userId: number,
   update: SeasonEntryUpdate,
-): [number, number, string, string | null, string | null, string, number, number, number] {
+): [
+  number,
+  number,
+  string,
+  string | null,
+  string | null,
+  string,
+  number,
+  string | null,
+  number,
+  number,
+] {
   const { tracking } = update;
   return [
     update.watchedCount,
@@ -14,6 +25,7 @@ export function seasonEntryUpdateParams(
     tracking.finishedAt,
     JSON.stringify(normalizeViewings(tracking.rewatches)),
     tracking.wantsRewatch ? 1 : 0,
+    tracking.manual ? JSON.stringify(tracking.manual) : null,
     userId,
     update.seasonId,
   ];

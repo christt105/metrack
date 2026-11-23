@@ -116,6 +116,11 @@ const rewatchIntentSql = readFileSync(
   'utf8',
 );
 
+const manualTrackingSql = readFileSync(
+  new URL('../d1/migrations/0023_manual_tracking.sql', import.meta.url),
+  'utf8',
+);
+
 const nextHiddenSql = readFileSync(
   new URL('../d1/migrations/0021_next_hidden.sql', import.meta.url),
   'utf8',
@@ -144,6 +149,7 @@ function fromSql(): DatabaseSync {
   db.exec(lastActivitySql);
   db.exec(nextHiddenSql);
   db.exec(rewatchIntentSql);
+  db.exec(manualTrackingSql);
   return db;
 }
 

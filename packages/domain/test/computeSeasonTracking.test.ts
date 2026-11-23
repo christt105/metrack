@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyEpisodeChange,
   computeSeasonTracking,
+  deriveSeriesTracking,
   materializeCompletedSeasons,
   type EpisodeState,
   type EpisodeOperation,
@@ -285,9 +286,13 @@ describe('mark and unmark', () => {
       skipped: state.skipped,
     };
     let cache = tracking;
+    let before = state.watches;
     for (const operation of operations) {
       current = applyEpisodeChange(current, operation);
+      const previouslyEmpty = episodes(count).every(({ key }) => !(key in before));
+      before = current.watches;
       cache = computeSeasonTracking({
+        previouslyEmpty,
         tracking: cache,
         episodes: episodes(count),
         watches: current.watches,
@@ -314,13 +319,13 @@ describe('mark and unmark', () => {
     expect(base).toEqual({ k1: [], k2: [], k3: [], k4: [] });
     const next = applyEpisodeChange({ watches: base, skipped: [] }, mark('k1'));
     expect(next.watches.k1).toEqual([undated, day(TODAY)]);
-    expect(apply(completedByHand, state, [mark('k1')])).toEqual(completedByHand);
+    expect(apply(completedByHand, state, [mark('k1')])).toMatchObject(completedByHand);
   });
 
   it('puts a season completed by hand back as it was after marking and unmarking an episode', () => {
     expect(
       apply(completedByHand, { watches: {}, skipped: [] }, [mark('k1'), unmark('k1')]),
-    ).toEqual(completedByHand);
+    ).toMatchObject(completedByHand);
   });
 
   it('leaves the season as it was after marking and unmarking a new episode, in any order', () => {
@@ -359,5 +364,128 @@ describe('mark and unmark', () => {
     const rewatching = apply(first, { watches, skipped: [] }, [mark('k1')]);
     expect(rewatching.rewatches).toEqual([{ startedAt: TODAY, finishedAt: null }]);
     expect(apply(first, { watches, skipped: [] }, [mark('k1'), unmark('k1')])).toEqual(first);
+  });
+});
+
+describe('starting a season over', () => {
+  const six = (extra: EpisodeWatches = {}): EpisodeWatches => ({
+    k1: [day('2026-03-01')],
+    k2: [day('2026-03-02')],
+    k3: [day('2026-03-03')],
+    k4: [day('2026-03-04')],
+    k5: [day('2026-03-05')],
+    k6: [day('2026-03-06')],
+    ...extra,
+  });
+  const done = compute(planned, six(), { count: 6 }).tracking;
+
+  it('does not open a rewatch from a loose episode watched again', () => {
+    const result = compute(done, six({ k5: [day('2026-03-05'), day('2026-06-01')] }), { count: 6 });
+    expect(result.tracking).toEqual(done);
+  });
+
+  it('opens a rewatch once the first two episodes have a second viewing, and closes it when one is unmarked', () => {
+    const both = six({
+      k1: [day('2026-03-01'), day('2026-06-01')],
+      k2: [day('2026-03-02'), day('2026-06-02')],
+    });
+    const open = compute(done, both, { count: 6 });
+    expect(open.tracking.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: null }]);
+    expect(open.tracking.wantsRewatch).toBe(false);
+    const closed = compute(open.tracking, { ...both, k2: [day('2026-03-02')] }, { count: 6 });
+    expect(closed.tracking).toEqual(done);
+  });
+
+  it('does not open a rewatch from the second episode alone', () => {
+    const result = compute(done, six({ k2: [day('2026-03-02'), day('2026-06-02')] }), { count: 6 });
+    expect(result.tracking.rewatches).toEqual([]);
+  });
+
+  it('goes by the first two episodes that are not skipped', () => {
+    const watches = six({
+      k2: [day('2026-03-02'), day('2026-06-02')],
+      k3: [day('2026-03-03'), day('2026-06-03')],
+    });
+    delete watches.k1;
+    const skipped = ['k1'];
+    const base = compute(planned, watches, { count: 6, skipped }).tracking;
+    expect(base.rewatches).toEqual([{ startedAt: '2026-06-02', finishedAt: null }]);
+  });
+
+  it('restarts one season without touching another of the series', () => {
+    const second = ['b1', 'b2', 'b3'].map((key) => ({ key, airDate: '2026-01-01' }));
+    const season = (
+      id: number,
+      keys: ExpectedEpisode[],
+      tracking: SeasonTracking,
+    ): SeriesSeasonInput => ({
+      seasonId: id,
+      tracking,
+      watchedCount: keys.length,
+      skippedCount: 0,
+      episodes: keys,
+    });
+    const first = episodes(3);
+    const watches: EpisodeWatches = {
+      k1: [day('2026-03-01')],
+      k2: [day('2026-03-02')],
+      k3: [day('2026-03-03')],
+      b1: [day('2026-04-01'), day('2026-06-01')],
+      b2: [day('2026-04-02'), day('2026-06-02')],
+      b3: [day('2026-04-03')],
+    };
+    const doneFirst = compute(planned, watches).tracking;
+    const doneSecond = computeSeasonTracking({
+      tracking: planned,
+      episodes: second,
+      watches: { ...watches, b1: [day('2026-04-01')], b2: [day('2026-04-02')] },
+      today: TODAY,
+    }).tracking;
+    const updates = deriveSeriesTracking({
+      seasons: [season(1, first, doneFirst), season(2, second, doneSecond)],
+      watches,
+      today: TODAY,
+    });
+    expect(updates.map((u) => u.seasonId)).toEqual([2]);
+    expect(updates[0]?.tracking.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: null }]);
+  });
+});
+
+describe('a season whose viewings are all removed', () => {
+  const mark = (key: string, date = TODAY): EpisodeOperation => ({ op: 'mark', keys: [key], date });
+  const unmark = (key: string): EpisodeOperation => ({ op: 'unmark', keys: [key] });
+  const run = (tracking: SeasonTracking, operations: EpisodeOperation[]) => {
+    let state: EpisodeState = { watches: {}, skipped: [] };
+    let cache = tracking;
+    for (const operation of operations) {
+      const before = state.watches;
+      state = applyEpisodeChange(state, operation);
+      cache = computeSeasonTracking({
+        previouslyEmpty: episodes(3).every(({ key }) => !(key in before)),
+        tracking: cache,
+        episodes: episodes(3),
+        watches: state.watches,
+        today: TODAY,
+      }).tracking;
+    }
+    return cache;
+  };
+
+  it('goes back to planned after marking and unmarking', () => {
+    const result = run(planned, [mark('k1'), mark('k2'), unmark('k2'), unmark('k1')]);
+    expect(result).toEqual(planned);
+  });
+
+  it('goes back to paused or in progress as the user left it', () => {
+    for (const status of ['paused', 'in_progress'] as const) {
+      const tracking = { ...planned, status, startedAt: status === 'paused' ? '2026-01-01' : null };
+      expect(run(tracking, [mark('k1'), unmark('k1')])).toEqual(tracking);
+    }
+  });
+
+  it('keeps what it had if the viewings never all went away', () => {
+    const result = run(planned, [mark('k1'), mark('k2')]);
+    expect(result.status).toBe('in_progress');
+    expect(result.manual).toEqual({ status: 'planned', startedAt: null, finishedAt: null });
   });
 });

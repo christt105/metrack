@@ -270,7 +270,7 @@ describe('PATCH /api/seasons/:id/episodes', () => {
   it('sets the intention to watch again without recording dates and clears it without a trace', async () => {
     const season = addSeason({ status: 'completed', finishedAt: '2026-02-01' });
     const wanted = await put(owner, season, { wanted: true });
-    expect(wanted.body.tracking).toEqual({
+    expect(wanted.body.tracking).toMatchObject({
       status: 'completed',
       startedAt: '2026-01-01',
       finishedAt: '2026-02-01',
@@ -307,7 +307,7 @@ describe('PATCH /api/seasons/:id/episodes', () => {
     expect(startedAt! <= finishedAt!).toBe(true);
     expect(marked.body.tracking).toMatchObject({ status: 'completed', rewatches: [] });
     const unmarked = await patch(owner, season, { op: 'unmark', keys: ['s1e1'] });
-    expect(unmarked.body.tracking).toEqual({
+    expect(unmarked.body.tracking).toMatchObject({
       status: 'completed',
       startedAt: '2026-01-01',
       finishedAt: '2026-11-18',
@@ -315,6 +315,29 @@ describe('PATCH /api/seasons/:id/episodes', () => {
       wantsRewatch: false,
     });
     expect(entryOf(1, season)).toMatchObject({ status: 'completed', watched_count: 3 });
+  });
+
+  it('opens a rewatch when the first two episodes are watched again, without the intention, and closes it when one is unmarked', async () => {
+    const season = addSeason({ status: 'completed', finishedAt: '2026-02-01', episodeCount: 4 });
+    const loose = await patch(owner, season, { op: 'mark', keys: ['s1e4'], date: '2026-03-01' });
+    expect(loose.body.tracking.rewatches).toEqual([]);
+    await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: '2026-03-02' });
+    const started = await patch(owner, season, { op: 'mark', keys: ['s1e2'], date: '2026-03-03' });
+    expect(started.body.tracking.rewatches).toEqual([
+      { startedAt: '2026-03-01', finishedAt: null },
+    ]);
+    expect(started.body.tracking.wantsRewatch).toBe(false);
+    const closed = await patch(owner, season, { op: 'unmark', keys: ['s1e2'] });
+    expect(closed.body.tracking.rewatches).toEqual([]);
+  });
+
+  it('puts a planned season back to planned after marking and unmarking its only episode', async () => {
+    const season = addSeason();
+    const marked = await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: '2026-03-01' });
+    expect(marked.body.tracking.status).toBe('in_progress');
+    const { body } = await patch(owner, season, { op: 'unmark', keys: ['s1e1'] });
+    expect(body.tracking).toMatchObject({ status: 'planned', startedAt: null, finishedAt: null });
+    expect(entryOf(1, season)).toMatchObject({ status: 'planned', started_at: null });
   });
 
   it('never changes a dropped season', async () => {
@@ -436,10 +459,11 @@ describe('PATCH /api/seasons/:id/episodes', () => {
       const gone = await patch(owner, season, { op: 'unmark', keys: ['102'] });
       expect(gone.body.datesDerived).toBe(false);
       expect(gone.body.tracking).toMatchObject({
-        status: 'in_progress',
-        startedAt: '2026-06-09',
+        status: 'planned',
+        startedAt: null,
         finishedAt: null,
       });
+      expect(entryOf(1, season)).toMatchObject({ status: 'planned', started_at: null });
       expect(gone.body.watchedCount).toBe(0);
     });
 

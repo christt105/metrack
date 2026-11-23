@@ -159,6 +159,7 @@ export class SeasonEpisodesService {
       finishedAt: season.finishedAt,
       rewatches: season.rewatches,
       wantsRewatch: season.wantsRewatch,
+      manual: season.manualTracking ?? null,
     };
     return {
       response: {

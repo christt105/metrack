@@ -11,7 +11,8 @@ function isCurrent(
   return (
     computed.watchedCount === season.watchedCount &&
     computed.skippedCount === season.skippedCount &&
-    JSON.stringify(computed.tracking) === JSON.stringify(season.tracking)
+    JSON.stringify({ ...computed.tracking, manual: computed.tracking.manual ?? null }) ===
+      JSON.stringify({ ...season.tracking, manual: season.tracking.manual ?? null })
   );
 }
 
@@ -37,6 +38,9 @@ export function deriveSeriesTracking(input: SeriesTrackingInput): SeasonEntryUpd
       episodes: season.episodes,
       watches: input.watches,
       skipped,
+      ...(input.before
+        ? { previouslyEmpty: season.episodes.every(({ key }) => !(key in input.before!)) }
+        : {}),
       today: input.today,
     });
     if (isCurrent(season, computed)) continue;

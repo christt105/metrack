@@ -59,6 +59,7 @@ export type { SeasonEntryUpdate } from './SeasonEntryUpdate.js';
 export type { ExpectedEpisode } from './ExpectedEpisode.js';
 export type { SeasonTracking } from './SeasonTracking.js';
 export type { SeasonTrackingInput } from './SeasonTrackingInput.js';
+export type { ManualTracking } from './ManualTracking.js';
 export type { ComputedSeasonTracking } from './ComputedSeasonTracking.js';
 export type { EpisodeOperation } from './api/EpisodeOperation.js';
 export type { MarkEpisodesOperation } from './api/MarkEpisodesOperation.js';

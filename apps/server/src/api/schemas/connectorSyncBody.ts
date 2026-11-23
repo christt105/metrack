@@ -38,6 +38,16 @@ const season = {
     skippedEpisodes: { type: 'integer', minimum: 0 },
     rewatches: { type: 'array', items: viewingItem },
     wantsRewatch: { type: 'boolean' },
+    manualTracking: {
+      type: ['object', 'null'],
+      properties: {
+        status: { enum: [...MEDIA_STATUSES] },
+        startedAt: nullableDate,
+        finishedAt: nullableDate,
+      },
+      required: ['status', 'startedAt', 'finishedAt'],
+      additionalProperties: false,
+    },
   },
   required: [
     'seasonId',

@@ -258,7 +258,8 @@ describe('numbered sync (no TMDB index)', () => {
       days: { s1e1: ['2026-01-05'] },
     });
     expect(series?.watches).toEqual({ s1e1: [view('2026-01-05')], s1e2: [], s1e3: [] });
-    expect(change).toBeUndefined();
+    expect(change?.manualTracking).toMatchObject({ status: 'completed', finishedAt: '2026-02-01' });
+    expect(change?.rewatches).toBeUndefined();
   });
 
   it('opens a rewatch when a completed season the user wants to watch again has a new play after its finish', () => {
@@ -299,6 +300,31 @@ describe('numbered sync (no TMDB index)', () => {
       { startedAt: null, finishedAt: null },
       { startedAt: '2026-06-01', finishedAt: '2026-06-01' },
     ]);
+  });
+
+  it('opens a rewatch without the intention when the plays start the season over, and not for one loose episode', () => {
+    const completed = stored({
+      status: 'completed',
+      startedAt: '2026-01-01',
+      finishedAt: '2026-02-01',
+      watchedCount: 3,
+    });
+    const watches = { s1e1: [], s1e2: [], s1e3: [] };
+    const loose = one({
+      seasons: [librarySeason(3)],
+      stored: [completed],
+      days: { s1e3: ['2026-06-03'] },
+      watches,
+    });
+    expect(loose.change).toBeUndefined();
+    const started = one({
+      seasons: [librarySeason(3)],
+      stored: [completed],
+      days: { s1e1: ['2026-06-01'], s1e2: ['2026-06-02'] },
+      watches,
+    });
+    expect(started.change?.rewatches).toEqual([{ startedAt: '2026-06-01', finishedAt: null }]);
+    expect(started.change?.wantsRewatch).toBeUndefined();
   });
 
   it('closes a rewatch when every episode is played again', () => {
@@ -373,7 +399,8 @@ describe('numbered sync (no TMDB index)', () => {
     expect(Object.keys(series?.watches ?? {})).toHaveLength(12);
     expect(series?.watches?.s1e1).toEqual([view('2026-01-05')]);
     expect(series?.watches?.s1e9).toEqual([]);
-    expect(change).toBeUndefined();
+    expect(change?.manualTracking).toMatchObject({ status: 'completed' });
+    expect(change?.rewatches).toBeUndefined();
   });
 
   it('records only the played episodes of an in-progress season without watches', () => {

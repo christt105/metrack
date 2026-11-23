@@ -1,4 +1,5 @@
 import type { Artwork } from './Artwork.js';
+import type { ManualTracking } from './ManualTracking.js';
 import type { Tracking } from './Tracking.js';
 
 /**
@@ -23,4 +24,6 @@ export interface Season extends Tracking, Artwork {
   tags: string[];
   /** The user asked to watch the season again; see `SeasonTracking`. */
   wantsRewatch: boolean;
+  /** See `SeasonTracking`. */
+  manualTracking?: ManualTracking | null;
 }

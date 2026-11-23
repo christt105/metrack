@@ -1,4 +1,4 @@
-import type { Season } from '@metrack/domain';
+import type { ManualTracking, Season } from '@metrack/domain';
 import type { MediaTableSpec } from './MediaTableSpec.js';
 import type { Row } from './Row.js';
 import type { RowValues } from './RowValues.js';
@@ -18,7 +18,17 @@ const ENTRY_COLUMNS = [
   'watched_count',
   'skipped_count',
   'wants_rewatch',
+  'manual_tracking',
 ];
+
+function parseManual(value: unknown): ManualTracking | null {
+  if (typeof value !== 'string') return null;
+  try {
+    return JSON.parse(value) as ManualTracking;
+  } catch {
+    return null;
+  }
+}
 
 function seasonToRow(s: Omit<Season, 'id'>): RowValues {
   return {
@@ -37,6 +47,7 @@ function seasonToRow(s: Omit<Season, 'id'>): RowValues {
     slug: s.slug,
     tags: JSON.stringify(s.tags),
     wants_rewatch: s.wantsRewatch ? 1 : 0,
+    manual_tracking: s.manualTracking ? JSON.stringify(s.manualTracking) : null,
     ...trackingToRow(s),
   };
 }
@@ -59,6 +70,7 @@ function seasonFromRow(row: Row): Season {
     slug: text(row.slug),
     tags: parseList(row.tags),
     wantsRewatch: Number(row.wants_rewatch ?? 0) === 1,
+    manualTracking: parseManual(row.manual_tracking),
     ...trackingFromRow(row),
   };
 }

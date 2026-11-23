@@ -52,6 +52,7 @@ export class SeriesWatchTracker {
               finishedAt: season.finishedAt,
               rewatches: season.rewatches,
               wantsRewatch: season.wantsRewatch,
+              manual: season.manualTracking ?? null,
             },
             watchedCount: season.watchedCount,
             skippedCount: season.skippedCount,
@@ -92,6 +93,7 @@ export class SeriesWatchTracker {
       watches: next.watches,
       skipped,
       intents,
+      before: state.watches ?? {},
       today: now.toISOString().slice(0, 10),
     });
     const changed =

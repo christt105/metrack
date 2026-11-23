@@ -1,3 +1,4 @@
+import type { ManualTracking } from '../ManualTracking.js';
 import type { MediaStatus } from '../MediaStatus.js';
 import type { Viewing } from '../Viewing.js';
 import type { SeasonMatchKind } from './SeasonMatchKind.js';
@@ -23,6 +24,8 @@ export interface SeasonChange {
   rewatches?: Viewing[];
   /** The season's intention to watch it again after the change; present only when it changes. */
   wantsRewatch?: boolean;
+  /** What the season held before its first episode viewing, once a viewing makes it start being derived; present only when it changes. */
+  manualTracking?: ManualTracking | null;
   /** Whether this change completes a season that was not completed before. */
   completes: boolean;
   missingRating: boolean;

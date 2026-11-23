@@ -12,5 +12,7 @@ export interface SeasonTrackingInput {
   /** Keys of the episodes the user skipped: not owed for a pass to complete. */
   skipped?: ReadonlySet<string>;
   /** Today as `YYYY-MM-DD`; episodes airing later are not expected to be watched yet. */
+  /** Whether none of the season's episodes had a viewing before the change being written. */
+  previouslyEmpty?: boolean;
   today: string;
 }

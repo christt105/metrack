@@ -1,3 +1,4 @@
+import type { ManualTracking } from './ManualTracking.js';
 import type { MediaStatus } from './MediaStatus.js';
 import type { Viewing } from './Viewing.js';
 
@@ -9,4 +10,6 @@ export interface SeasonTracking {
   rewatches: Viewing[];
   /** The user asked to watch the season again; cleared when the pass it asked for completes. */
   wantsRewatch: boolean;
+  /** The status and dates the season had before its first episode viewing, restored when the last one is removed. */
+  manual?: ManualTracking | null;
 }
