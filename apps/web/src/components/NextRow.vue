@@ -3,12 +3,14 @@ import { computed, ref } from 'vue';
 import { sizedImageUrl, type NextEpisodeRow } from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
 import { stillUrl } from '../logic/stillUrl';
+import type { RowMenuItem } from '../logic/RowMenuItem';
 import AppIcon from './AppIcon.vue';
+import RowMenu from './RowMenu.vue';
 import SeasonProgress from './SeasonProgress.vue';
 
 const messages = useMessages();
 const props = defineProps<{ row: NextEpisodeRow; busy: boolean }>();
-const emit = defineEmits<{ mark: []; skip: [] }>();
+const emit = defineEmits<{ mark: []; skip: []; hide: [] }>();
 
 const imageFailed = ref(false);
 const image = computed(() => {
@@ -19,6 +21,14 @@ const image = computed(() => {
   const cover = season.cover ?? series.cover ?? series.banner;
   return cover ? sizedImageUrl(cover, 'thumb') : null;
 });
+const rewatching = computed(
+  () => props.row.progress.rewatch || props.row.labels.includes('rewatch'),
+);
+const menuItems = computed<RowMenuItem[]>(() => [{ id: 'hide', label: messages.next.hide }]);
+
+function onMenu(id: string): void {
+  if (id === 'hide') emit('hide');
+}
 const ready = computed(() => props.row.availability === 'ready');
 const filler = computed(() => props.row.episode.filler);
 const fillerHint = computed(() => filler.value === 'filler' || filler.value === 'mixed');
@@ -97,8 +107,15 @@ const meta = computed(() =>
         />
       </span>
     </RouterLink>
-    <div v-if="ready" class="actions">
+    <div class="actions">
+      <RowMenu
+        :label="messages.next.menu(row.series.title)"
+        :items="menuItems"
+        :disabled="busy"
+        @select="onMenu"
+      />
       <button
+        v-if="ready && !rewatching"
         type="button"
         class="act skip"
         :class="{ highlight: fillerHint }"
@@ -110,6 +127,7 @@ const meta = computed(() =>
         <AppIcon name="skipForward" :size="20" />
       </button>
       <button
+        v-if="ready"
         type="button"
         class="act mark"
         :disabled="busy"
@@ -228,7 +246,12 @@ const meta = computed(() =>
   display: flex;
   flex: none;
   flex-direction: column;
+  align-items: flex-end;
   gap: var(--s-2);
+}
+
+.actions :deep(.menu) {
+  margin: -6px -6px 0 0;
 }
 
 .act {

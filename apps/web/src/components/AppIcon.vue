@@ -137,6 +137,11 @@ defineProps<{ name: AppIconName; size?: number }>();
     <template v-else-if="name === 'skipForward'">
       <path d="M5 6.5v11l7-5.5zM12.5 6.5v11l7-5.5z" />
     </template>
+    <template v-else-if="name === 'more'">
+      <circle cx="12" cy="5.5" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="18.5" r="1.4" fill="currentColor" stroke="none" />
+    </template>
     <template v-else-if="name === 'filler'">
       <circle cx="12" cy="12" r="8.5" stroke-dasharray="3 3" />
     </template>

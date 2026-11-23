@@ -513,6 +513,10 @@ export const es: Messages = {
     skip: (series: string) => `Saltar el siguiente episodio de ${series}`,
     open: (series: string) => `Abrir la temporada de ${series}`,
     skipFiller: 'Saltar (relleno)',
+    menu: (series: string) => `Más acciones de ${series}`,
+    hide: 'Quitar de Siguiente',
+    hidden: (series: string) => `${series} quitada de Siguiente`,
+    seasonCompleted: (season: number) => `Temporada ${season} completada`,
     still: (series: string) => `Imagen de ${series}`,
   },
   unlinked: {

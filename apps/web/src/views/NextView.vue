@@ -15,9 +15,8 @@ const TOAST_MS = 7000;
 
 interface Undoable {
   message: string;
-  seasonId: number;
   seriesId: number;
-  undo: EpisodeOperation[];
+  revert: (() => Promise<void>) | null;
 }
 
 const messages = useMessages();
@@ -64,12 +63,15 @@ async function inverseFor(
   row: NextEpisodeRow,
   operation: EpisodeOperation,
 ): Promise<EpisodeOperation[]> {
-  if (row.source !== 'numbers' && row.labels.includes('rewatch')) {
+  if (row.source !== 'numbers' && rewatching(row)) {
     return inverseOperations(operation, (await api.seasonEpisodes(row.season.id)).episodes);
   }
   const keys = [nextEpisodeKey(row)];
   return [operation.op === 'skip' ? { op: 'unskip', keys } : { op: 'unmark', keys }];
 }
+
+const rewatching = (row: NextEpisodeRow): boolean =>
+  row.progress.rewatch || row.labels.includes('rewatch');
 
 async function act(row: NextEpisodeRow, kind: 'mark' | 'skip'): Promise<void> {
   const seriesId = row.series.id;
@@ -80,14 +82,41 @@ async function act(row: NextEpisodeRow, kind: 'mark' | 'skip'): Promise<void> {
     const keys = [nextEpisodeKey(row)];
     const operation: EpisodeOperation =
       kind === 'mark' ? { op: 'mark', keys, date: todayIso() } : { op: 'skip', keys };
-    const undo = await inverseFor(row, operation);
-    await api.updateSeasonEpisodes(row.season.id, operation);
+    const inverse = await inverseFor(row, operation);
+    const update = await api.updateSeasonEpisodes(row.season.id, operation);
     await refreshRow(seriesId);
+    const done = kind === 'mark' ? messages.episodes.marked(1) : messages.episodes.skipped(1);
+    const finished = update.tracking.status === 'completed' && !rewatching(row);
     say({
-      message: kind === 'mark' ? messages.episodes.marked(1) : messages.episodes.skipped(1),
-      seasonId: row.season.id,
+      message: finished ? `${done}. ${messages.next.seasonCompleted(row.season.number)}` : done,
       seriesId,
-      undo,
+      revert: async () => {
+        for (const reverse of inverse) await api.updateSeasonEpisodes(row.season.id, reverse);
+        await refreshRow(seriesId);
+      },
+    });
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    setBusy(seriesId, false);
+  }
+}
+
+async function hide(row: NextEpisodeRow): Promise<void> {
+  const seriesId = row.series.id;
+  if (busy.value.has(seriesId)) return;
+  setBusy(seriesId, true);
+  error.value = null;
+  try {
+    await api.hideFromNext(seriesId);
+    rows.value = replaceNextRow(rows.value ?? [], seriesId, null);
+    say({
+      message: messages.next.hidden(row.series.title),
+      seriesId,
+      revert: async () => {
+        await api.showInNext(seriesId);
+        await load();
+      },
     });
   } catch (cause) {
     error.value = cause;
@@ -99,15 +128,12 @@ async function act(row: NextEpisodeRow, kind: 'mark' | 'skip'): Promise<void> {
 async function undo(): Promise<void> {
   const current = toast.value;
   dismiss();
-  if (!current || current.undo.length === 0 || busy.value.has(current.seriesId)) return;
+  if (!current?.revert || busy.value.has(current.seriesId)) return;
   setBusy(current.seriesId, true);
   error.value = null;
   try {
-    for (const operation of current.undo) {
-      await api.updateSeasonEpisodes(current.seasonId, operation);
-    }
-    await refreshRow(current.seriesId);
-    say({ ...current, message: messages.quick.undone, undo: [] });
+    await current.revert();
+    say({ ...current, message: messages.quick.undone, revert: null });
   } catch (cause) {
     error.value = cause;
   } finally {
@@ -137,13 +163,14 @@ onBeforeUnmount(() => clearTimeout(timer));
         :busy="busy.has(row.series.id)"
         @mark="act(row, 'mark')"
         @skip="act(row, 'skip')"
+        @hide="hide(row)"
       />
     </ul>
     <Teleport to="body">
       <UndoToast
         v-if="toast"
         :message="toast.message"
-        :undoable="toast.undo.length > 0"
+        :undoable="toast.revert !== null"
         @undo="undo"
         @dismiss="dismiss"
       />

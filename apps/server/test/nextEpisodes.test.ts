@@ -333,7 +333,7 @@ describe('GET /api/next', () => {
       });
     }
     expect(await count()).toBe(before);
-    expect(before).toBeLessThanOrEqual(2 + 3 * 3);
+    expect(before).toBeLessThanOrEqual(3 + 3 * 3);
     expect(fetched).toEqual([]);
   });
 });
@@ -374,5 +374,177 @@ describe('last_activity_at', () => {
       200,
     );
     expect(activity(second.seriesId)).toBe('2026-03-05T12:00:00.000Z');
+  });
+});
+
+describe('the season after a completed one', () => {
+  const patch = (seasonId: number, body: EpisodeOperation) =>
+    api.app.inject({ method: 'PATCH', url: `/api/seasons/${seasonId}/episodes`, payload: body });
+  const season = (id: number) =>
+    api.db
+      .prepare('SELECT status, started_at, finished_at FROM season_entry WHERE season_id = ?')
+      .get(id) as { status: string; started_at: string | null; finished_at: string | null };
+
+  it('offers its first episode once the last one is marked, and the check starts it today', async () => {
+    const { seasonIds } = addShow({
+      title: 'Two seasons',
+      seasons: [
+        { number: 1, status: 'in_progress', episodes: aired(501, 502), watchedCount: 1 },
+        { number: 2, status: 'planned', episodes: aired(511, 512) },
+      ],
+      watches: { '501': [day('2026-02-01')] },
+    });
+    const [first = 0, second = 0] = seasonIds;
+    expect((await patch(first, { op: 'mark', keys: ['502'], date: '2026-03-05' })).statusCode).toBe(
+      200,
+    );
+    expect(season(first).status).toBe('completed');
+    expect(season(second)).toEqual({ status: 'planned', started_at: null, finished_at: null });
+    const { body } = await next();
+    expect(body.rows).toHaveLength(1);
+    expect(body.rows[0]).toMatchObject({
+      season: { id: second, number: 2 },
+      episode: { number: 1, key: '511' },
+      labels: ['newSeason'],
+      availability: 'ready',
+    });
+
+    expect(
+      (await patch(second, { op: 'mark', keys: ['511'], date: '2026-03-05' })).statusCode,
+    ).toBe(200);
+    expect(season(second)).toEqual({
+      status: 'in_progress',
+      started_at: '2026-03-05',
+      finished_at: null,
+    });
+    const after = (await next()).body;
+    expect(after.rows[0]).toMatchObject({
+      season: { number: 2 },
+      episode: { number: 2 },
+      labels: [],
+    });
+  });
+
+  it('announces a next season that has not aired, and leaves the series out once nothing is left', async () => {
+    addShow({
+      title: 'Announced',
+      seasons: [
+        { number: 1, status: 'completed', episodes: aired(521), watchedCount: 1 },
+        {
+          number: 2,
+          status: 'planned',
+          episodes: [
+            { id: 531, airDate: '2026-06-01' },
+            { id: 532, airDate: '2026-06-08' },
+          ],
+        },
+      ],
+    });
+    addShow({
+      title: 'Nothing next',
+      seasons: [{ number: 1, status: 'completed', episodes: aired(541), watchedCount: 1 }],
+    });
+    const { body } = await next();
+    expect(titles(body)).toEqual(['Announced']);
+    expect(body.rows[0]).toMatchObject({
+      availability: 'premieres',
+      airsOn: '2026-06-01',
+      season: { number: 2 },
+      labels: ['newSeason'],
+    });
+  });
+});
+
+describe('taking a series off the list', () => {
+  const hide = (seriesId: number, headers: Record<string, string> = {}) =>
+    api.app.inject({ method: 'PUT', url: `/api/series/${seriesId}/next-hidden`, headers });
+  const unhide = (seriesId: number) =>
+    api.app.inject({ method: 'DELETE', url: `/api/series/${seriesId}/next-hidden` });
+  const patch = (seasonId: number, body: EpisodeOperation) =>
+    api.app.inject({ method: 'PATCH', url: `/api/seasons/${seasonId}/episodes`, payload: body });
+  const stored = (seriesId: number) =>
+    (
+      api.db
+        .prepare('SELECT next_hidden_at FROM series_entry WHERE series_id = ?')
+        .get(seriesId) as { next_hidden_at: string | null }
+    ).next_hidden_at;
+
+  function show(title: string, ids: number[], activity: string | null = null) {
+    return addShow({
+      title,
+      seasons: [{ number: 1, status: 'in_progress', episodes: aired(...ids) }],
+      lastActivityAt: activity,
+    });
+  }
+
+  it('hides it with the server time, keeps every season status, and brings it back on undo', async () => {
+    const kept = show('Kept', [601, 602]);
+    const gone = show('Gone', [611, 612], '2026-03-01T10:00:00.000Z');
+    show('Also here', [621]);
+    expect((await hide(gone.seriesId)).statusCode).toBe(204);
+    expect(stored(gone.seriesId)).toBe('2026-03-05T12:00:00.000Z');
+    expect(titles((await next()).body).sort()).toEqual(['Also here', 'Kept']);
+    expect((await next(`?series=${gone.seriesId}`)).body.rows).toEqual([]);
+    expect(
+      api.db
+        .prepare('SELECT status FROM season_entry WHERE season_id = ?')
+        .get(gone.seasonIds[0] ?? 0),
+    ).toEqual({ status: 'in_progress' });
+    expect(stored(kept.seriesId)).toBeNull();
+
+    expect((await unhide(gone.seriesId)).statusCode).toBe(204);
+    expect(stored(gone.seriesId)).toBeNull();
+    expect(titles((await next()).body)).toContain('Gone');
+  });
+
+  it('counts a series without recorded activity as older than the removal', async () => {
+    const quiet = show('Quiet', [631]);
+    expect((await hide(quiet.seriesId)).statusCode).toBe(204);
+    expect((await next()).body.rows).toEqual([]);
+  });
+
+  it('brings the series back when an episode is marked or skipped from its season page', async () => {
+    const marked = show('Marked', [641, 642, 643]);
+    const skipped = show('Skipped', [651, 652, 653]);
+    await hide(marked.seriesId);
+    await hide(skipped.seriesId);
+    expect((await next()).body.rows).toEqual([]);
+
+    api.clock.now = new Date('2026-03-06T09:00:00Z');
+    await patch(marked.seasonIds[0] ?? 0, { op: 'mark', keys: ['641'], date: '2026-03-06' });
+    expect(titles((await next()).body)).toEqual(['Marked']);
+    await patch(skipped.seasonIds[0] ?? 0, { op: 'skip', keys: ['651'] });
+    expect(titles((await next()).body).sort()).toEqual(['Marked', 'Skipped']);
+  });
+
+  it('keeps a series hidden while its activity is not newer than the removal', async () => {
+    const same = show('Same', [661, 662]);
+    await hide(same.seriesId);
+    await patch(same.seasonIds[0] ?? 0, { op: 'mark', keys: ['661'], date: '2026-03-05' });
+    expect((await next()).body.rows).toEqual([]);
+  });
+
+  it('answers 404 for a series that is not in the library of the user', async () => {
+    await new SqliteUserRepository(api.db).create({ name: 'Friend', email: null });
+    const theirs = addShow({
+      title: 'Theirs',
+      userId: 2,
+      seasons: [{ number: 1, status: 'in_progress', episodes: aired(671) }],
+    });
+    expect((await hide(theirs.seriesId)).statusCode).toBe(404);
+    expect((await hide(99999)).statusCode).toBe(404);
+    expect((await unhide(theirs.seriesId)).statusCode).toBe(404);
+    expect((await hide(0)).statusCode).toBe(400);
+  });
+
+  it('refuses a read-only token', async () => {
+    const mine = show('Mine', [681]);
+    const { secret } = await api.tokens.create(1, {
+      name: 'reader',
+      scope: 'read',
+      expiresInDays: null,
+    });
+    expect((await hide(mine.seriesId, { authorization: `Bearer ${secret}` })).statusCode).toBe(403);
+    expect(stored(mine.seriesId)).toBeNull();
   });
 });
