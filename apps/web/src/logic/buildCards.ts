@@ -17,6 +17,7 @@ export interface LibraryCard {
   rating: number | null;
   seasonCount: number | null;
   pendingReview: boolean;
+  allAchievements: boolean;
 }
 
 function toCard(item: MediaSummary): LibraryCard {
@@ -32,6 +33,7 @@ function toCard(item: MediaSummary): LibraryCard {
     rating: item.rating,
     seasonCount: item.seasonCount,
     pendingReview: item.pendingReview,
+    allAchievements: item.allAchievements,
   };
 }
 

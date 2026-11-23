@@ -28,6 +28,10 @@ export interface PublicEntry {
   externalLabel: string | null;
   /** Time spent on the item; null when there is no data. */
   timeSpent: TimeSpent | null;
+  /** Steam achievements of a game: how many are unlocked of how many it has; null when unknown or the game has none. */
+  achievements: { unlocked: number; total: number } | null;
+  /** A game with every Steam achievement unlocked. */
+  allAchievements: boolean;
   /** The series a season belongs to. */
   seriesId: number | null;
 }

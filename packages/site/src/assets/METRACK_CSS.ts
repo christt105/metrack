@@ -28,4 +28,26 @@ body {
   vertical-align: middle;
   margin-right: 0.4rem;
 }
+.badge-trophy {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 0 6px 6px 0;
+  background: #f1c40f;
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.status-badge.all-achievements {
+  background: #f1c40f;
+  color: #fff;
+}
 `;

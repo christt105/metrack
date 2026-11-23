@@ -26,6 +26,9 @@ export function renderCard(library: Library, entry: PublicEntry, date: string | 
     status === 'finished' && entry.rating !== null ? ratingTheme(entry.rating, messages) : null;
   const badges = [
     `<div class="badge-type ${type}" title="${messages.typeLabels[type]}"><i class="${TYPE_ICONS[type]}"></i></div>`,
+    entry.allAchievements
+      ? `<div class="badge-trophy" title="${escapeHtml(messages.card.allAchievements)}"><i class="fas fa-trophy"></i></div>`
+      : '',
     entry.review !== null && entry.review.trim() !== ''
       ? `<div class="badge-content" title="${messages.card.hasReview}"><i class="fas fa-file-alt"></i></div>`
       : '',
