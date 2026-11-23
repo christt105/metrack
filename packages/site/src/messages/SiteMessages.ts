@@ -55,9 +55,10 @@ export interface SiteMessages {
     search: string;
     noResults: string;
   };
-  card: { hasReview: string };
+  card: { hasReview: string; allAchievements: string };
   detail: {
     developer: string;
+    achievements: string;
     author: string;
     rewatches: string;
     abandoned: string;
@@ -77,6 +78,7 @@ export interface SiteMessages {
     ratingNote: (rating: number, label: string) => string;
   };
   stats: {
+    allAchievements: string;
     title: string;
     total: string;
     finished: string;

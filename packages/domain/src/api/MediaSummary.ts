@@ -23,4 +23,6 @@ export interface MediaSummary {
   seriesTitle: string | null;
   seasonCount: number | null;
   pendingReview: boolean;
+  /** A game with every Steam achievement unlocked; false for everything else. */
+  allAchievements: boolean;
 }

@@ -74,8 +74,10 @@ export const es: SiteMessages = {
   },
   card: {
     hasReview: 'Contiene reseña/notas personales',
+    allAchievements: 'Todos los logros',
   },
   detail: {
+    achievements: 'Logros',
     developer: 'Desarrollador:',
     author: 'Autor:',
     rewatches: 'Revisionados:',
@@ -93,6 +95,7 @@ export const es: SiteMessages = {
     ratingNote: (rating: number, label: string): string => `Nota: ${rating} (${label})`,
   },
   stats: {
+    allAchievements: 'Juegos con todos los logros',
     title: 'Estadísticas',
     total: 'Total',
     finished: 'Completados',

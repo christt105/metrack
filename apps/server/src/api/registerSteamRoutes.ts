@@ -1,5 +1,6 @@
 import {
   STEAM_APPLY_BATCH_SIZE,
+  type Language,
   type SteamAchievementsRequest,
   type SteamApplyRequest,
 } from '@metrack/domain';
@@ -15,6 +16,18 @@ const achievementsBody = {
     gameId: { type: 'integer', minimum: 1 },
     asOf: { type: 'string', minLength: 1, maxLength: 40 },
   },
+  additionalProperties: false,
+} as const;
+
+const gameParams = {
+  type: 'object',
+  properties: { gameId: { type: 'integer', minimum: 1 } },
+  required: ['gameId'],
+} as const;
+
+const detailQuery = {
+  type: 'object',
+  properties: { language: { type: 'string', enum: ['en', 'es'] } },
   additionalProperties: false,
 } as const;
 
@@ -36,7 +49,7 @@ const applyBody = {
  * one request stays under the Workers subrequest limit; it recomputes what each id does from Steam's current answer
  * and writes it, and an id that is already in the library with at least Steam's time is skipped, so repeating a batch
  * adds nothing. `POST /api/steam/artwork` prepares the artwork of the games that import added with it deferred, as many as
- * fit in one request, and answers how many it finished and how many remain. `POST /api/steam/achievements` asks Steam for the achievements of the user's games with a Steam app id, a few per request, and answers `{ processed, failed, remaining, asOf }`; it needs only the Steam API key. All answer 501 when the server has no Steam API key or no IGDB credentials.
+ * fit in one request, and answers how many it finished and how many remain. `GET /api/steam/achievements/:gameId` answers the achievements of one game with names, descriptions and icons, and stores its counts unless the token is read-only. `POST /api/steam/achievements` asks Steam for the achievements of the user's games with a Steam app id, a few per request, and answers `{ processed, failed, remaining, asOf }`; it needs only the Steam API key. All answer 501 when the server has no Steam API key or no IGDB credentials.
  */
 export function registerSteamRoutes(
   routes: ApiRoutes,
@@ -70,6 +83,23 @@ export function registerSteamRoutes(
         );
       }
       return achievements.refresh(requireUser(request.user).id, request.body ?? {});
+    },
+  );
+
+  routes.get<{ Params: { gameId: number }; Querystring: { language?: Language } }>(
+    '/api/steam/achievements/:gameId',
+    { schema: { params: gameParams, querystring: detailQuery } },
+    async (request) => {
+      if (!achievements) {
+        throw ApiError.notImplemented(
+          'steam_not_configured',
+          'Steam achievements need STEAM_API_KEY',
+        );
+      }
+      return achievements.details(requireUser(request.user).id, request.params.gameId, {
+        language: request.query.language,
+        readOnly: request.tokenScope === 'read',
+      });
     },
   );
 

@@ -1,5 +1,6 @@
 import {
   finishDates,
+  hasAllAchievements,
   manualTimeSpent,
   movieTimeSpent,
   seasonTimeSpent,
@@ -42,6 +43,8 @@ const NOTHING: Omit<PublicEntry, 'kind' | 'id' | 'title' | 'status'> = {
   externalLabel: null,
   seriesId: null,
   timeSpent: null,
+  achievements: null,
+  allAchievements: false,
 };
 
 function tracked(tracking: Tracking, artwork: Artwork): Partial<PublicEntry> {
@@ -138,6 +141,11 @@ function seasonEntry(
   };
 }
 
+function achievementsOf(game: Videogame): PublicEntry['achievements'] {
+  const { achievementsUnlocked: unlocked, achievementsTotal: total } = game;
+  return unlocked !== null && total !== null && total > 0 ? { unlocked, total } : null;
+}
+
 function gameEntry(game: Videogame): PublicEntry {
   return {
     ...NOTHING,
@@ -148,6 +156,8 @@ function gameEntry(game: Videogame): PublicEntry {
     slug: game.slug,
     status: game.status,
     timeSpent: manualTimeSpent(game),
+    achievements: achievementsOf(game),
+    allAchievements: hasAllAchievements(game),
     releaseDate: game.releaseDate,
     overview: game.overview,
     genres: game.genres,

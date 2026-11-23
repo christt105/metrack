@@ -3,7 +3,11 @@ import { getJson } from '../../http/getJson.js';
 import { HttpError } from '../../http/HttpError.js';
 import type { SteamOwnedGame } from './SteamOwnedGame.js';
 import type { SteamPlayerStats } from './SteamPlayerStats.js';
+import type { SteamLanguage } from './SteamLanguage.js';
+import type { SteamPlayerAchievement } from './SteamPlayerAchievement.js';
 import type { SteamPlayerAchievements } from './SteamPlayerAchievements.js';
+import type { SteamSchemaAchievement } from './SteamSchemaAchievement.js';
+import { summarizeAchievements } from './summarizeAchievements.js';
 
 const BASE = 'https://api.steampowered.com';
 
@@ -55,31 +59,50 @@ export class SteamClient {
    * failure, a private profile included, throws, so it is never mistaken for a game without achievements.
    */
   async playerAchievements(steamId: string, appId: string): Promise<SteamPlayerAchievements> {
+    return summarizeAchievements(await this.achievementList(steamId, appId));
+  }
+
+  /**
+   * The raw list behind `playerAchievements`, with the same failure rules. With a `language` Steam also answers the
+   * display name and description of each achievement in it.
+   */
+  async achievementList(
+    steamId: string,
+    appId: string,
+    language?: SteamLanguage,
+  ): Promise<SteamPlayerAchievement[]> {
     const target = new URL(`${BASE}/ISteamUserStats/GetPlayerAchievements/v1/`);
     target.searchParams.set('key', this.apiKey);
     target.searchParams.set('steamid', steamId);
     target.searchParams.set('appid', appId);
+    if (language) target.searchParams.set('l', language);
     const response = await this.fetchFn(target, { headers: { Accept: 'application/json' } });
     const stats = await readStats(response);
-    if (stats?.error !== undefined && /no stats/i.test(stats.error)) return NONE;
+    if (stats?.error !== undefined && /no stats/i.test(stats.error)) return [];
     if (!response.ok || !stats || stats.success === false) {
       throw new HttpError(
         `Request failed (${response.status}) for ${target.origin}${target.pathname}`,
         response.status,
       );
     }
-    const achievements = stats.achievements ?? [];
-    const unlocked = achievements.filter((a) => a.achieved === 1);
-    const times = unlocked.map((a) => a.unlocktime ?? 0).filter((time) => time > 0);
-    return {
-      total: achievements.length,
-      unlocked: unlocked.length,
-      lastUnlockTime: times.length > 0 ? Math.max(...times) : null,
-    };
+    return stats.achievements ?? [];
+  }
+
+  /** The achievements a game defines, with names, descriptions and icon addresses in `language`; empty for a game without any. */
+  async achievementSchema(
+    appId: string,
+    language: SteamLanguage,
+  ): Promise<SteamSchemaAchievement[]> {
+    const response = await getJson<{
+      game?: { availableGameStats?: { achievements?: SteamSchemaAchievement[] } };
+    }>(this.fetchFn, `${BASE}/ISteamUserStats/GetSchemaForGame/v2/`, {
+      key: this.apiKey,
+      appid: appId,
+      l: language,
+    });
+    return response.game?.availableGameStats?.achievements ?? [];
   }
 }
-
-const NONE: SteamPlayerAchievements = { total: 0, unlocked: 0, lastUnlockTime: null };
 
 async function readStats(response: Response): Promise<SteamPlayerStats | undefined> {
   try {
