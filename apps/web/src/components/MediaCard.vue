@@ -4,6 +4,7 @@ import { sizedImageUrl } from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
 import type { LibraryCard } from '../logic/buildCards';
 import { detailPath } from '../logic/mediaRoutes';
+import AppIcon from './AppIcon.vue';
 import PendingBadge from './PendingBadge.vue';
 import RatingBadge from './RatingBadge.vue';
 import StatusBadge from './StatusBadge.vue';
@@ -34,6 +35,16 @@ const meta = computed(() => {
         decoding="async"
       />
       <span v-else class="placeholder" aria-hidden="true">{{ card.title.slice(0, 1) }}</span>
+      <span
+        v-if="card.allAchievements"
+        class="trophy"
+        role="img"
+        :title="messages.steam.achievements.all"
+        :aria-label="messages.steam.achievements.all"
+        data-test="all-achievements"
+      >
+        <AppIcon name="trophy" :size="18" />
+      </span>
       <span v-if="card.rating !== null" class="rating">
         <RatingBadge :rating="card.rating" compact :size="14" />
       </span>
@@ -100,6 +111,21 @@ img {
   color: var(--on-surface);
   font-size: var(--t-label);
   font-weight: 600;
+}
+
+.trophy {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--trophy);
+  color: var(--trophy);
 }
 
 .body {
