@@ -205,6 +205,14 @@ export class ApiClient {
     return this.request('GET', series === undefined ? '/next' : `/next?series=${series}`);
   }
 
+  hideFromNext(seriesId: number): Promise<void> {
+    return this.request('PUT', `/series/${seriesId}/next-hidden`);
+  }
+
+  showInNext(seriesId: number): Promise<void> {
+    return this.request('DELETE', `/series/${seriesId}/next-hidden`);
+  }
+
   seasonEpisodes(seasonId: number): Promise<SeasonEpisodesResponse> {
     return this.request('GET', `/seasons/${seasonId}/episodes`);
   }

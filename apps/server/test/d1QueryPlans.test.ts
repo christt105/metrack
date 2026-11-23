@@ -107,6 +107,8 @@ async function exercise(owner: Repositories, friend: Repositories): Promise<void
   await owner.series.findByTmdbId(2);
   await owner.series.findByTvdbId(3);
   await owner.series.listFollowed();
+  await owner.series.listNextHidden();
+  await owner.series.setNextHidden(series.id, null);
   await owner.series.list();
   const season = await owner.seasons.create({ ...emptySeason(), seriesId: series.id });
   await owner.seasons.listBySeries(series.id);

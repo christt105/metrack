@@ -30,7 +30,7 @@ const row = (id: number, patch: Partial<NextEpisodeRow> = {}): NextEpisodeRow =>
 
 async function mountNext(rows: NextEpisodeRow[], api: Record<string, unknown> = {}) {
   const nextEpisodes = vi.fn().mockResolvedValue({ rows });
-  const updateSeasonEpisodes = vi.fn().mockResolvedValue({});
+  const updateSeasonEpisodes = vi.fn().mockResolvedValue({ tracking: { status: 'in_progress' } });
   const mounted = await mountWithApi(NextView, {
     nextEpisodes,
     updateSeasonEpisodes,
@@ -169,7 +169,7 @@ describe('NextView', () => {
     await button.trigger('click');
     expect(updateSeasonEpisodes).toHaveBeenCalledTimes(1);
     expect(button.attributes('disabled')).toBeDefined();
-    finish({});
+    finish({ tracking: { status: 'in_progress' } });
     await flushPromises();
     expect(button.attributes('disabled')).toBeUndefined();
   });
@@ -179,14 +179,16 @@ describe('NextView', () => {
     const { wrapper } = await mountNext([waiting]);
     const item = wrapper.find('[data-series="1"]');
     expect(item.text()).toContain('S3 · E7 airs on 28 Nov 2030');
-    expect(item.find('button').exists()).toBe(false);
+    expect(item.find('.mark').exists()).toBe(false);
+    expect(item.find('.skip').exists()).toBe(false);
   });
 
   it('shows the premiere date of a season not aired yet', async () => {
     const waiting = row(1, { availability: 'premieres', airsOn: '2030-11-28' });
     const { wrapper } = await mountNext([waiting]);
     expect(wrapper.find('[data-series="1"]').text()).toContain('S3 premieres on 28 Nov 2030');
-    expect(wrapper.find('button').exists()).toBe(false);
+    expect(wrapper.find('.mark').exists()).toBe(false);
+    expect(wrapper.find('.skip').exists()).toBe(false);
   });
 
   it('shows the error when marking fails and keeps the row', async () => {
@@ -207,5 +209,110 @@ describe('NextView', () => {
     await markButton(wrapper, 1).trigger('click');
     await flushPromises();
     expect(wrapper.findAll('li.next').map((li) => li.attributes('data-series'))).toEqual(['2']);
+  });
+
+  it('hides the skip button on a rewatch row', async () => {
+    const { wrapper } = await mountNext([
+      row(1, {
+        labels: ['rewatch'],
+        progress: { watched: 2, total: 12, skipped: 0, rewatch: true },
+      }),
+      row(2),
+    ]);
+    expect(wrapper.find('[data-series="1"] .skip').exists()).toBe(false);
+    expect(wrapper.find('[data-series="1"] .mark').exists()).toBe(true);
+    expect(wrapper.find('[data-series="2"] .skip').exists()).toBe(true);
+  });
+
+  it('says the season is completed when the mark finishes it, and the row becomes the new season', async () => {
+    const fresh = row(1, {
+      season: { ...row(1).season, id: 11, number: 4 },
+      episode: { ...row(1).episode, number: 1, key: 'n1' },
+      labels: ['newSeason'],
+    });
+    const nextEpisodes = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [row(1)] })
+      .mockResolvedValueOnce({ rows: [fresh] });
+    const updateSeasonEpisodes = vi.fn().mockResolvedValue({ tracking: { status: 'completed' } });
+    const { wrapper } = await mountNext([], { nextEpisodes, updateSeasonEpisodes });
+    await markButton(wrapper, 1).trigger('click');
+    await flushPromises();
+    const item = wrapper.find('[data-series="1"]');
+    expect(item.text()).toContain('S4 · E1');
+    expect(item.text()).toContain('New season');
+    expect(document.body.textContent).toContain('Episode marked. Season 3 completed');
+  });
+
+  it('does not announce a completed season for a plain mark', async () => {
+    const { wrapper } = await mountNext([row(1)]);
+    await markButton(wrapper, 1).trigger('click');
+    await flushPromises();
+    expect(document.body.textContent).not.toContain('completed');
+  });
+});
+
+describe('the row menu', () => {
+  const trigger = (wrapper: VueWrapper, id: number) =>
+    wrapper.find(`[data-series="${id}"] .trigger`);
+
+  it('opens with the remove action, closes with Escape and gives the focus back', async () => {
+    const { wrapper } = await mountNext([row(1)]);
+    const button = trigger(wrapper, 1);
+    expect(button.attributes('aria-haspopup')).toBe('menu');
+    expect(button.attributes('aria-expanded')).toBe('false');
+    expect(button.attributes('aria-label')).toBe('More actions for Series 1');
+    await button.trigger('click');
+    expect(button.attributes('aria-expanded')).toBe('true');
+    const items = wrapper.findAll('[role="menuitem"]');
+    expect(items.map((item) => item.text())).toEqual(['Remove from Up next']);
+    await wrapper.find('.menu').trigger('keydown', { key: 'Escape' });
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+  });
+
+  it('removes the series, shows a toast and puts it back on undo', async () => {
+    const nextEpisodes = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [row(1), row(2)] })
+      .mockResolvedValueOnce({ rows: [row(2), row(1)] });
+    const hideFromNext = vi.fn().mockResolvedValue(undefined);
+    const showInNext = vi.fn().mockResolvedValue(undefined);
+    const { wrapper, updateSeasonEpisodes } = await mountNext([], {
+      nextEpisodes,
+      hideFromNext,
+      showInNext,
+    });
+    await trigger(wrapper, 1).trigger('click');
+    await wrapper.find('[role="menuitem"]').trigger('click');
+    await flushPromises();
+    expect(hideFromNext).toHaveBeenCalledWith(1);
+    expect(wrapper.findAll('li.next').map((li) => li.attributes('data-series'))).toEqual(['2']);
+    expect(document.body.textContent).toContain('Series 1 removed from Up next');
+
+    (document.body.querySelector('.toast .undo') as HTMLButtonElement).click();
+    await flushPromises();
+    expect(showInNext).toHaveBeenCalledWith(1);
+    expect(updateSeasonEpisodes).not.toHaveBeenCalled();
+    expect(wrapper.findAll('li.next').map((li) => li.attributes('data-series'))).toEqual([
+      '2',
+      '1',
+    ]);
+  });
+
+  it('keeps the row and shows the error when removing fails', async () => {
+    const hideFromNext = vi.fn().mockRejectedValue(new Error('boom'));
+    const { wrapper } = await mountNext([row(1)], { hideFromNext });
+    await trigger(wrapper, 1).trigger('click');
+    await wrapper.find('[role="menuitem"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.findAll('li.next')).toHaveLength(1);
+  });
+
+  it('is offered on a row that is waiting for its air date', async () => {
+    const { wrapper } = await mountNext([
+      row(1, { availability: 'premieres', airsOn: '2030-11-28' }),
+    ]);
+    expect(trigger(wrapper, 1).exists()).toBe(true);
   });
 });

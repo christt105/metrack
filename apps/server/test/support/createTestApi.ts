@@ -175,7 +175,7 @@ export async function createTestApi(
     titleProviders,
     imageProviders,
     fetchFn,
-    now: () => NOW,
+    now: () => clock.now,
   });
   const profiles = new SqlitePublicProfileRepository(db);
   const users = new SqliteUserRepository(db);

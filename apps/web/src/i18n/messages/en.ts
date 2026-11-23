@@ -500,6 +500,10 @@ export const en = {
     skip: (series: string) => `Skip the next episode of ${series}`,
     open: (series: string) => `Open the season of ${series}`,
     skipFiller: 'Skip (filler)',
+    menu: (series: string) => `More actions for ${series}`,
+    hide: 'Remove from Up next',
+    hidden: (series: string) => `${series} removed from Up next`,
+    seasonCompleted: (season: number) => `Season ${season} completed`,
     still: (series: string) => `Artwork of ${series}`,
   },
   unlinked: {

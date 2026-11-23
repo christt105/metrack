@@ -24,4 +24,20 @@ export class SqliteSeriesRepository
   async listFollowed(): Promise<Series[]> {
     return this.where('e.follow = 1 ORDER BY c.id');
   }
+
+  async listNextHidden(): Promise<Map<number, string>> {
+    const rows = this.db
+      .prepare(
+        'SELECT series_id, next_hidden_at FROM series_entry WHERE user_id = ? AND next_hidden_at IS NOT NULL',
+      )
+      .all(this.scope.userId());
+    return new Map(rows.map((row) => [Number(row.series_id), String(row.next_hidden_at)]));
+  }
+
+  async setNextHidden(seriesId: number, at: string | null): Promise<boolean> {
+    const result = this.db
+      .prepare('UPDATE series_entry SET next_hidden_at = ? WHERE user_id = ? AND series_id = ?')
+      .run(at, this.scope.userId(), seriesId);
+    return Number(result.changes) > 0;
+  }
 }

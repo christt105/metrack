@@ -7,6 +7,7 @@ import {
   type NextSeasonPick,
   type Season,
 } from '@metrack/domain';
+import { isHiddenFromNext } from './isHiddenFromNext.js';
 import type { NextEpisodesDeps } from './NextEpisodesDeps.js';
 
 interface Candidate {
@@ -32,6 +33,7 @@ export class NextEpisodesService {
       seriesId === undefined
         ? await this.deps.seasons.list()
         : await this.deps.seasons.listBySeries(seriesId);
+    const hidden = await this.deps.series.listNextHidden();
     const candidates = this.candidates(seasons);
     const series = new Map(
       (await this.deps.series.getMany(candidates.map((c) => c.seriesId))).map((s) => [s.id, s]),
@@ -42,6 +44,7 @@ export class NextEpisodesService {
       const owner = series.get(id);
       if (!owner) continue;
       const entry = await this.deps.watches.getEntry(id);
+      if (isHiddenFromNext(hidden.get(id), entry?.lastActivityAt ?? null)) continue;
       const watches = entry?.watched ?? {};
       const catalog = await this.deps.catalog.get(pick.season.id);
       const row = buildNextEpisodeRow({
@@ -64,6 +67,16 @@ export class NextEpisodesService {
     }
     rows.sort((a, b) => compare(a, b));
     return { rows: rows.map((r) => r.row) };
+  }
+
+  /** Takes the series off the list until something of it is marked or skipped; false when it is not in the library. */
+  async hide(seriesId: number): Promise<boolean> {
+    return this.deps.series.setNextHidden(seriesId, this.now().toISOString());
+  }
+
+  /** Puts a series taken off the list back; false when it is not in the library. */
+  async unhide(seriesId: number): Promise<boolean> {
+    return this.deps.series.setNextHidden(seriesId, null);
   }
 
   private candidates(seasons: readonly Season[]): Candidate[] {
