@@ -30,4 +30,5 @@ export type AppIconName =
   | 'smile'
   | 'thumbsDown'
   | 'dizzy'
-  | 'skull';
+  | 'skull'
+  | 'trophy';

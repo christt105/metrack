@@ -2,6 +2,7 @@ import { escapeHtml } from '@metrack/export';
 import { entryStatus } from './entryStatus.js';
 import { findEntry } from './findEntry.js';
 import { formatDate } from './formatDate.js';
+import { formatInteger } from './formatInteger.js';
 import { imageSrc } from './imageSrc.js';
 import type { Library } from './Library.js';
 import type { SiteMessages } from './messages/SiteMessages.js';
@@ -36,6 +37,16 @@ function meta(messages: SiteMessages, entry: PublicEntry): string {
   if (entry.authors.length > 0) {
     parts.push(
       `<span class="meta-item"><strong>${messages.detail.author}</strong> ${escapeHtml(entry.authors.join(', '))}</span>`,
+    );
+  }
+  if (entry.achievements !== null) {
+    parts.push(
+      `<span class="meta-item"><strong>${messages.detail.achievements}</strong> ${formatInteger(entry.achievements.unlocked, messages)} / ${formatInteger(entry.achievements.total, messages)}</span>`,
+    );
+  }
+  if (entry.allAchievements) {
+    parts.push(
+      `<span class="meta-item status-badge all-achievements" title="${escapeHtml(messages.card.allAchievements)}"><i class="fas fa-trophy"></i> ${escapeHtml(messages.card.allAchievements)}</span>`,
     );
   }
   if (entry.kind !== 'series') {
