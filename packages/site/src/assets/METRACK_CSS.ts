@@ -36,18 +36,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 0 6px 6px 0;
-  background: #f1c40f;
-  color: #fff;
-  font-size: 0.85rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 0 8px 8px 0;
+  background: #f2c230;
+  color: #3a2a00;
+  font-size: 1rem;
   line-height: 1;
   pointer-events: none;
 }
 
 .status-badge.all-achievements {
-  background: #f1c40f;
-  color: #fff;
+  background: #f2c230;
+  color: #3a2a00;
 }
 `;

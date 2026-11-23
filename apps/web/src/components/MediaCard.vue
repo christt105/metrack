@@ -43,7 +43,7 @@ const meta = computed(() => {
         :aria-label="messages.steam.achievements.all"
         data-test="all-achievements"
       >
-        <AppIcon name="trophy" :size="14" />
+        <AppIcon name="trophy" :size="18" />
       </span>
       <span v-if="card.rating !== null" class="rating">
         <RatingBadge :rating="card.rating" compact :size="14" />
@@ -119,10 +119,13 @@ img {
   left: 8px;
   display: inline-flex;
   align-items: center;
-  padding: 4px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   background: var(--bg);
-  color: var(--primary);
+  border: 1px solid var(--trophy);
+  color: var(--trophy);
 }
 
 .body {

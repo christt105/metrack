@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import type { SteamAchievementsDetail, Videogame } from '@metrack/domain';
 import { useApi } from '../composables/useApi';
 import { useLocale } from '../composables/useLocale';
@@ -14,7 +14,7 @@ const emit = defineEmits<{ refreshed: [] }>();
 const messages = useMessages();
 const api = useApi();
 const locale = useLocale();
-const open = ref(false);
+const open = ref(true);
 const loading = ref(false);
 const error = ref<unknown>(null);
 const detail = ref<SteamAchievementsDetail | null>(null);
@@ -57,6 +57,10 @@ async function toggle(): Promise<void> {
   open.value = !open.value;
   if (open.value && detail.value === null && !loading.value) await load();
 }
+
+onMounted(async () => {
+  if (canList.value) await load();
+});
 
 async function refreshed(): Promise<void> {
   emit('refreshed');

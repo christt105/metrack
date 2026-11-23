@@ -89,17 +89,16 @@ describe('SteamAchievements', () => {
   };
   const counts = { achievementsUnlocked: 1, achievementsTotal: 2 };
 
-  it('loads the list only when it is shown and renders the progress bar', async () => {
+  it('shows the list by default, loads it once and lets the user collapse it', async () => {
     const steamAchievements = vi.fn().mockResolvedValue(detail);
     const { wrapper } = await mountWithApi(
       SteamAchievements,
       { steamAchievements },
       { game: game(counts) },
     );
-    expect(steamAchievements).not.toHaveBeenCalled();
-    expect(wrapper.find('[data-test="achievements-bar"]').attributes('max')).toBe('2');
-    await wrapper.find('[data-test="achievements-toggle"]').trigger('click');
     await flushPromises();
+    expect(steamAchievements).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-test="achievements-bar"]').attributes('max')).toBe('2');
     expect(steamAchievements).toHaveBeenCalledWith(9, 'en');
     const items = wrapper.findAll('[data-test="achievement"]');
     expect(items).toHaveLength(2);
@@ -109,6 +108,11 @@ describe('SteamAchievements', () => {
     expect(items[1]?.text()).toContain('Hidden achievement');
     expect(items[1]?.find('img').attributes('src')).toBe('https://cdn.steamstatic.com/b.jpg');
     expect(wrapper.emitted('refreshed')).toBeUndefined();
+    await wrapper.find('[data-test="achievements-toggle"]').trigger('click');
+    expect(wrapper.find('[data-test="achievement-list"]').exists()).toBe(false);
+    await wrapper.find('[data-test="achievements-toggle"]').trigger('click');
+    expect(wrapper.find('[data-test="achievement-list"]').exists()).toBe(true);
+    expect(steamAchievements).toHaveBeenCalledTimes(1);
   });
 
   it('asks the page to reload when the stored counts were stale', async () => {
@@ -118,7 +122,6 @@ describe('SteamAchievements', () => {
       { steamAchievements },
       { game: game(counts) },
     );
-    await wrapper.find('[data-test="achievements-toggle"]').trigger('click');
     await flushPromises();
     expect(wrapper.emitted('refreshed')).toHaveLength(1);
   });
@@ -133,7 +136,6 @@ describe('SteamAchievements', () => {
       { steamAchievements },
       { game: game({}) },
     );
-    await wrapper.find('[data-test="achievements-toggle"]').trigger('click');
     await flushPromises();
     expect(wrapper.find('[data-test="achievements-private"]').exists()).toBe(true);
     expect(wrapper.find('[data-test="achievement-list"]').exists()).toBe(false);
