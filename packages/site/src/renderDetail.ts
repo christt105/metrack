@@ -69,12 +69,26 @@ function taxonomies(library: Library, entry: PublicEntry): string {
   return `<div class="media-external-links">${external}</div><div class="media-taxonomies">${groups}</div>`;
 }
 
+function abandoned(messages: SiteMessages, entry: PublicEntry): string {
+  if (entry.abandoned.length === 0) return '';
+  const items = entry.abandoned
+    .map((pass) => {
+      const started = pass.startedAt === null ? null : formatDate(pass.startedAt, messages);
+      const finished = pass.finishedAt === null ? null : formatDate(pass.finishedAt, messages);
+      const restarted = formatDate(pass.restartedOn, messages);
+      return `<li>${escapeHtml(messages.detail.abandonedPass(started, finished, restarted))}</li>`;
+    })
+    .join('');
+  return `<div class="media-rewatches"><strong>${messages.detail.abandoned}</strong><ul>${items}</ul></div>`;
+}
+
 function rewatches(messages: SiteMessages, entry: PublicEntry): string {
-  if (entry.rewatches.length === 0) return '';
+  const started = abandoned(messages, entry);
+  if (entry.rewatches.length === 0) return started;
   const items = entry.rewatches
     .map((date) => `<li>${escapeHtml(formatDate(date, messages))}</li>`)
     .join('');
-  return `<div class="media-rewatches"><strong>${messages.detail.rewatches}</strong><ul>${items}</ul></div>`;
+  return `<div class="media-rewatches"><strong>${messages.detail.rewatches}</strong><ul>${items}</ul></div>${started}`;
 }
 
 function ratingBadge(messages: SiteMessages, entry: PublicEntry): string {

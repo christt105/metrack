@@ -87,17 +87,18 @@ export function buildNextEpisodeRow(input: NextEpisodeInput): NextEpisodeRow | n
       input.filler[key] ?? null,
     );
   });
-  const nextKey = unwatchedAired(items, today, undefined, pick.rewatchStart)[0];
+  const nextKey = unwatchedAired(items, today, undefined, pick.passStart)[0];
   const pending =
     items.find((item) => item.key === nextKey) ??
-    items.find((item) => !item.skipped && !isDone(item, pick.rewatchStart));
+    items.find((item) => !item.skipped && !isDone(item, pick.passStart));
   if (pending === undefined) return null;
   const aired = nextKey !== undefined;
   const premiere = !aired && items.every((item) => !hasAired(item, today));
   const progress: NextEpisodeProgress = {
-    watched: rewatching
-      ? items.filter((item) => item.skipped || isDone(item, pick.rewatchStart)).length
-      : watchedOf(season),
+    watched:
+      pick.passStart !== null
+        ? items.filter((item) => item.skipped || isDone(item, pick.passStart)).length
+        : watchedOf(season),
     total: items.length,
     skipped: skippedCount,
     rewatch: rewatching,

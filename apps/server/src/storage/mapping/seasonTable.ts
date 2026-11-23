@@ -2,7 +2,14 @@ import type { Season } from '@metrack/domain';
 import type { MediaTableSpec } from './MediaTableSpec.js';
 import type { Row } from './Row.js';
 import type { RowValues } from './RowValues.js';
-import { num, parseList, text, trackingFromRow, trackingToRow } from './rowMapping.js';
+import {
+  num,
+  parseAbandoned,
+  parseList,
+  text,
+  trackingFromRow,
+  trackingToRow,
+} from './rowMapping.js';
 
 const ENTRY_COLUMNS = [
   'jellyfin_id',
@@ -14,6 +21,7 @@ const ENTRY_COLUMNS = [
   'rating',
   'review',
   'rewatches',
+  'abandoned',
   'pending_review',
   'watched_count',
   'skipped_count',
@@ -35,6 +43,7 @@ function seasonToRow(s: Omit<Season, 'id'>): RowValues {
     banner: s.banner,
     slug: s.slug,
     tags: JSON.stringify(s.tags),
+    abandoned: JSON.stringify(s.abandoned),
     ...trackingToRow(s),
   };
 }
@@ -56,6 +65,7 @@ function seasonFromRow(row: Row): Season {
     banner: text(row.banner),
     slug: text(row.slug),
     tags: parseList(row.tags),
+    abandoned: parseAbandoned(row.abandoned),
     ...trackingFromRow(row),
   };
 }

@@ -46,6 +46,13 @@ function tracking(t: Pick<Tracking, 'status' | 'finishedAt' | 'rewatches'>) {
   };
 }
 
+function abandonedPasses(season: Pick<Season, 'abandoned'>): string[] {
+  return season.abandoned.map(
+    (pass) =>
+      `${pass.startedAt ?? '?'} to ${pass.finishedAt ?? '?'}, started over on ${pass.restartedOn}`,
+  );
+}
+
 function backLink(webUrl: string | null, collection: string, id: number): Field {
   return optional('metrack', webUrl === null ? null : `${webUrl}/${collection}/${id}`);
 }
@@ -133,6 +140,7 @@ function seriesDrafts(
           s.date,
           optional('started', dateField(season.startedAt)),
           s.rewatches,
+          optional('abandoned', abandonedPasses(season)),
           always('tags', season.tags),
           always('rating', rating(season.rating)),
           always('release_date', dateField(season.firstAirDate)),

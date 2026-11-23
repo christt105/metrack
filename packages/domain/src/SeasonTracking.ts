@@ -1,3 +1,4 @@
+import type { AbandonedPass } from './AbandonedPass.js';
 import type { MediaStatus } from './MediaStatus.js';
 import type { Viewing } from './Viewing.js';
 
@@ -7,4 +8,6 @@ export interface SeasonTracking {
   startedAt: string | null;
   finishedAt: string | null;
   rewatches: Viewing[];
+  /** The passes left to start the season over, oldest first; the current pass begins at the last `restartedOn`. */
+  abandoned: AbandonedPass[];
 }

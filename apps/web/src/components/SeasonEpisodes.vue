@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { isDone, normalizeViewings, openRewatchStart, unwatchedAired } from '@metrack/domain';
+import {
+  currentPassStart,
+  isDone,
+  normalizeViewings,
+  openRewatchStart,
+  unwatchedAired,
+} from '@metrack/domain';
 import type {
+  AbandonedPass,
   EpisodeOperation,
   MediaStatus,
   Season,
@@ -14,6 +21,7 @@ import { useMessages } from '../composables/useMessages';
 import { doneOrSkipped, watchedTodayKeys } from '../logic/episodeSelection';
 import { inverseOperations } from '../logic/inverseOperations';
 import { todayIso } from '../logic/todayIso';
+import AbandonedPasses from './AbandonedPasses.vue';
 import EpisodeRow from './EpisodeRow.vue';
 import ErrorNotice from './ErrorNotice.vue';
 import SeasonProgress from './SeasonProgress.vue';
@@ -29,6 +37,7 @@ const props = defineProps<{
   seriesId: number;
   status: MediaStatus;
   rewatches?: Viewing[];
+  abandoned?: AbandonedPass[];
 }>();
 const emit = defineEmits<{
   updated: [update: SeasonEpisodesUpdateResponse];
@@ -40,7 +49,7 @@ const api = useApi();
 const data = ref<SeasonEpisodesResponse | null>(null);
 const busy = ref(false);
 const error = ref<unknown>(null);
-const toast = ref<{ message: string; undo: EpisodeOperation[] } | null>(null);
+const toast = ref<{ message: string; undo: EpisodeOperation[]; restart: boolean } | null>(null);
 let timer: ReturnType<typeof setTimeout> | undefined;
 let ticket = 0;
 let refill: ReturnType<typeof setTimeout> | undefined;
@@ -51,8 +60,18 @@ const numbered = computed(() => data.value?.source !== 'numbers');
 const partial = computed(() => data.value !== null && !data.value.complete);
 const stalled = computed(() => partial.value && attempts.value >= REFILL_ATTEMPTS);
 const rewatchStart = computed(() => openRewatchStart(props.rewatches ?? []));
+const passStart = computed(() =>
+  currentPassStart({ rewatches: props.rewatches ?? [], abandoned: props.abandoned ?? [] }),
+);
 const markable = computed(() =>
-  data.value ? watchedTodayKeys(data.value.episodes, today.value, rewatchStart.value) : [],
+  data.value
+    ? watchedTodayKeys(
+        data.value.episodes,
+        today.value,
+        passStart.value,
+        rewatchStart.value !== null,
+      )
+    : [],
 );
 const progress = computed(() =>
   data.value
@@ -67,6 +86,13 @@ const canRewatch = computed(
     props.status === 'completed' &&
     rewatchStart.value === null &&
     props.rewatches !== undefined,
+);
+const canRestart = computed(
+  () =>
+    numbered.value &&
+    props.status === 'in_progress' &&
+    props.abandoned !== undefined &&
+    (data.value?.watchedCount ?? 0) > 0,
 );
 
 function stopRefill(): void {
@@ -113,9 +139,9 @@ async function load(): Promise<void> {
   }
 }
 
-function say(message: string, undo: EpisodeOperation[]): void {
+function say(message: string, undo: EpisodeOperation[], restart = false): void {
   clearTimeout(timer);
-  toast.value = { message, undo };
+  toast.value = { message, undo, restart };
   timer = setTimeout(dismiss, TOAST_MS);
 }
 
@@ -167,11 +193,11 @@ function mark(keys: string[]): Promise<void> {
 
 function toggle(key: string): Promise<void> {
   const episode = data.value?.episodes.find((e) => e.key === key);
-  if (!episode || !isDone(episode, rewatchStart.value)) return mark([key]);
-  if (rewatchStart.value === null) {
+  if (!episode || !isDone(episode, passStart.value)) return mark([key]);
+  if (passStart.value === null) {
     return run({ op: 'unmark', keys: [key] }, () => messages.episodes.unmarked);
   }
-  const start = rewatchStart.value;
+  const start = passStart.value;
   const kept = episode.viewings.filter(
     (viewing) => viewing.finishedAt !== null && viewing.finishedAt < start,
   );
@@ -182,7 +208,7 @@ function toggle(key: string): Promise<void> {
 
 function markUpTo(key: string): Promise<void> {
   return data.value
-    ? mark(unwatchedAired(data.value.episodes, today.value, key, rewatchStart.value))
+    ? mark(unwatchedAired(data.value.episodes, today.value, key, passStart.value))
     : Promise.resolve();
 }
 
@@ -213,17 +239,33 @@ async function startRewatch(): Promise<void> {
   }
 }
 
+async function restart(): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
+  error.value = null;
+  try {
+    receive(await api.restartSeason(props.seasonId));
+    say(messages.episodes.restartDone, [], true);
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    busy.value = false;
+  }
+}
+
 function setViewings(key: string, viewings: Viewing[]): Promise<void> {
   return run({ op: 'setViewings', key, viewings }, () => messages.episodes.viewingsSaved);
 }
 
 async function undo(): Promise<void> {
   const operations = toast.value?.undo ?? [];
+  const restarted = toast.value?.restart ?? false;
   dismiss();
-  if (busy.value || operations.length === 0) return;
+  if (busy.value || (operations.length === 0 && !restarted)) return;
   busy.value = true;
   error.value = null;
   try {
+    if (restarted) receive(await api.undoSeasonRestart(props.seasonId));
     for (const operation of operations) {
       receive(await api.updateSeasonEpisodes(props.seasonId, operation));
     }
@@ -278,6 +320,15 @@ onBeforeUnmount(() => {
           >
             {{ messages.episodes.rewatch }}
           </button>
+          <button
+            v-if="canRestart"
+            type="button"
+            class="small ghost"
+            :disabled="busy"
+            @click="restart"
+          >
+            {{ messages.episodes.restart }}
+          </button>
         </div>
         <ul class="list">
           <EpisodeRow
@@ -287,7 +338,7 @@ onBeforeUnmount(() => {
             :numbered="numbered"
             :today="today"
             :busy="busy"
-            :rewatch-start="rewatchStart"
+            :rewatch-start="passStart"
             @toggle="toggle(episode.key)"
             @mark-up-to="markUpTo(episode.key)"
             @skip="skip(episode.key)"
@@ -295,13 +346,14 @@ onBeforeUnmount(() => {
             @viewings="setViewings(episode.key, $event)"
           />
         </ul>
+        <AbandonedPasses :passes="abandoned ?? []" :episodes="data.episodes" />
       </template>
     </template>
     <Teleport to="body">
       <UndoToast
         v-if="toast"
         :message="toast.message"
-        :undoable="toast.undo.length > 0"
+        :undoable="toast.undo.length > 0 || toast.restart"
         @undo="undo"
         @dismiss="dismiss"
       />

@@ -1,4 +1,4 @@
-export const COMPLETED_ENTRIES_SQL = `SELECT e.user_id, e.status, e.started_at, e.finished_at, e.rewatches, w.watched, w.skipped
+export const COMPLETED_ENTRIES_SQL = `SELECT e.user_id, e.status, e.started_at, e.finished_at, e.rewatches, e.abandoned, w.watched, w.skipped
   FROM season_entry e
   JOIN series_episode_entry w ON w.user_id = e.user_id AND w.series_id = (SELECT s.series_id FROM season s WHERE s.id = e.season_id)
   WHERE e.season_id = ? AND e.status = 'completed'`;

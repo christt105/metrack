@@ -1,3 +1,4 @@
+import { lastRestart } from '../lastRestart.js';
 import { openRewatchStart } from '../openRewatchStart.js';
 import type { Season } from '../Season.js';
 import type { NextSeasonPick } from './NextSeasonPick.js';
@@ -28,9 +29,11 @@ export function pickNextSeason(seasons: readonly Season[]): NextSeasonPick | nul
 
   const reopened = regular.find(hasOpenRewatch);
   if (reopened) {
+    const rewatchStart = openRewatchStart(reopened.rewatches);
     return {
       season: reopened,
-      rewatchStart: openRewatchStart(reopened.rewatches),
+      rewatchStart,
+      passStart: rewatchStart,
       rewatch: true,
       newSeason: false,
     };
@@ -39,7 +42,15 @@ export function pickNextSeason(seasons: readonly Season[]): NextSeasonPick | nul
   const current =
     regular.find((season) => season.status === 'in_progress') ??
     seasons.find((season) => season.number === 0 && season.status === 'in_progress');
-  if (current) return { season: current, rewatchStart: null, rewatch: false, newSeason: false };
+  if (current) {
+    return {
+      season: current,
+      rewatchStart: null,
+      passStart: lastRestart(current.abandoned),
+      rewatch: false,
+      newSeason: false,
+    };
+  }
 
   const started = regular.filter((season) => season.status !== 'planned');
   const last = started[started.length - 1];
@@ -48,18 +59,32 @@ export function pickNextSeason(seasons: readonly Season[]): NextSeasonPick | nul
       (season) =>
         season.number > last.number && season.status !== 'completed' && season.status !== 'dropped',
     );
-    if (next) return { season: next, rewatchStart: null, rewatch: false, newSeason: true };
+    if (next) {
+      return {
+        season: next,
+        rewatchStart: null,
+        passStart: lastRestart(next.abandoned),
+        rewatch: false,
+        newSeason: true,
+      };
+    }
   }
 
   if (regular.length > 1 && regular.every((season) => season.status === 'completed')) {
     let found: { index: number; finish: string } | null = null;
     for (const [index, season] of regular.entries()) {
       const finish = lastClosedFinish(season);
-      if (finish !== null && (found === null || finish > found.finish)) found = { index, finish };
+      if (finish !== null && (found === null || finish >= found.finish)) found = { index, finish };
     }
     const next = found === null ? undefined : regular[found.index + 1];
     if (found !== null && next && (lastClosedFinish(next) ?? '') < found.finish) {
-      return { season: next, rewatchStart: found.finish, rewatch: true, newSeason: false };
+      return {
+        season: next,
+        rewatchStart: found.finish,
+        passStart: found.finish,
+        rewatch: true,
+        newSeason: false,
+      };
     }
   }
   return null;

@@ -1,6 +1,8 @@
 import { deriveSeasonDates } from './deriveSeasonDates.js';
 import { deriveSeasonTracking } from './deriveSeasonTracking.js';
+import { lastRestart } from './lastRestart.js';
 import { isUnrecordedCompletion } from './materializeCompletedSeasons.js';
+import { passWatches } from './passWatches.js';
 import type { SeasonEntryUpdate } from './SeasonEntryUpdate.js';
 import type { SeasonTracking } from './SeasonTracking.js';
 import type { SeriesTrackingInput } from './SeriesTrackingInput.js';
@@ -21,7 +23,8 @@ export function deriveSeriesTracking(input: SeriesTrackingInput): SeasonEntryUpd
     )
       continue;
     const before: SeasonTracking = season.tracking;
-    const watchedCount = season.episodes.filter(({ key }) => key in input.watches).length;
+    const pass = passWatches(input.watches, lastRestart(season.tracking.abandoned));
+    const watchedCount = season.episodes.filter(({ key }) => key in pass).length;
     const skippedCount = season.episodes.filter(({ key }) => skipped.has(key)).length;
     let tracking: SeasonTracking = before;
     let completes = false;
@@ -46,6 +49,7 @@ export function deriveSeriesTracking(input: SeriesTrackingInput): SeasonEntryUpd
         startedAt: derived.startedAt,
         finishedAt: derived.finishedAt,
         rewatches: derived.rewatches,
+        abandoned: derived.abandoned,
       };
       completes = derived.completes;
     }

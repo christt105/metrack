@@ -1,4 +1,6 @@
 import { deriveSeasonTracking } from '../deriveSeasonTracking.js';
+import { lastRestart } from '../lastRestart.js';
+import { passWatches } from '../passWatches.js';
 import type { EpisodeWatches } from '../EpisodeWatches.js';
 import {
   isUnrecordedCompletion,
@@ -18,6 +20,7 @@ function trackingOf(stored: Season | null) {
     startedAt: stored?.startedAt ?? null,
     finishedAt: stored?.finishedAt ?? null,
     rewatches: stored?.rewatches ?? [],
+    abandoned: stored?.abandoned ?? [],
   };
 }
 
@@ -79,6 +82,7 @@ export function planSeasonChanges(
       baseline: season !== null && unrecorded.has(season.id) ? merged : base,
       today,
     });
+    const pass = passWatches(merged, lastRestart(season?.abandoned ?? []));
     const rewatchesChanged =
       JSON.stringify(derived.rewatches) !== JSON.stringify(season?.rewatches ?? []);
     const change: SeasonChange = {
@@ -93,7 +97,7 @@ export function planSeasonChanges(
       status: derived.status,
       startedAt: derived.startedAt,
       finishedAt: derived.finishedAt,
-      watchedEpisodes: draft.expected.filter(({ key }) => key in merged).length,
+      watchedEpisodes: draft.expected.filter(({ key }) => key in pass).length,
       skippedEpisodes: draft.expected.filter(({ key }) => skipped.has(key)).length,
       completes: derived.status === 'completed' && season?.status !== 'completed',
       missingRating: derived.status === 'completed' && (season?.rating ?? null) === null,

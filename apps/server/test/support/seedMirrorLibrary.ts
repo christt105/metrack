@@ -91,6 +91,7 @@ export async function seedMirrorLibrary(sources: ExportSources): Promise<void> {
     cover: null,
     banner: null,
     tags: [],
+    abandoned: [],
   };
   const zeta = await sources.series.create({
     ...series,

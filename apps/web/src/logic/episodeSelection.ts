@@ -20,10 +20,11 @@ export function doneOrSkipped(
 export function watchedTodayKeys(
   episodes: readonly SeasonEpisodeItem[],
   today: string,
-  rewatchStart: string | null = null,
+  passStart: string | null = null,
+  rewatching: boolean = passStart !== null,
 ): string[] {
-  const pending = unwatchedAired(episodes, today, undefined, rewatchStart);
-  if (pending.length > 0 || rewatchStart !== null) return pending;
+  const pending = unwatchedAired(episodes, today, undefined, passStart);
+  if (pending.length > 0 || rewatching) return pending;
   return episodes
     .filter((episode) => !episode.skipped && hasAired(episode, today))
     .map((episode) => episode.key);

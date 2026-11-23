@@ -129,6 +129,26 @@ describe('buildVaultMirror', () => {
     expect(notes[0]?.content).toContain('seasons: []');
   });
 
+  it('writes the passes a season was started over from, only when it has any', () => {
+    const notes = mirror({
+      series: [series()],
+      seasons: [
+        season({
+          id: 1,
+          number: 1,
+          slug: 'Show - Season 1',
+          status: 'in_progress',
+          abandoned: [{ startedAt: '2026-01-01', finishedAt: null, restartedOn: '2026-02-01' }],
+        }),
+        season({ id: 2, number: 2, slug: 'Show - Season 2', status: 'in_progress' }),
+      ],
+    });
+    const first = notes.find((n) => n.path === 'Seasons/Show - Season 1.md')?.content;
+    const second = notes.find((n) => n.path === 'Seasons/Show - Season 2.md')?.content;
+    expect(first).toContain('abandoned:\n  - 2026-01-01 to ?, started over on 2026-02-01');
+    expect(second).not.toContain('abandoned');
+  });
+
   it('writes season notes and derives the series status from them', () => {
     const notes = mirror({
       series: [series()],

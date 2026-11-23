@@ -1,3 +1,4 @@
+import { readAbandoned } from '../readAbandoned.js';
 import { readViewings } from '../readViewings.js';
 import { viewingsFromDates } from '../viewingsFromDates.js';
 import type { SyncState } from '../sync/SyncState.js';
@@ -11,6 +12,7 @@ export function fromWireSyncState(state: WireSyncState): SyncState {
     seasons: state.seasons.map(({ viewings, ...s }) => ({
       ...s,
       rewatches: viewings ? readViewings(viewings) : viewingsFromDates(s.rewatches),
+      abandoned: readAbandoned(s.abandoned ?? []),
     })),
   };
 }

@@ -49,6 +49,7 @@ export class SeriesWatchTracker {
               startedAt: season.startedAt,
               finishedAt: season.finishedAt,
               rewatches: season.rewatches,
+              abandoned: season.abandoned,
             },
             watchedCount: season.watchedCount,
             skippedCount: season.skippedCount,

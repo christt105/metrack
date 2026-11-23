@@ -89,6 +89,7 @@ function season(over: Partial<Season>): Season {
     slug: null,
     tags: [],
     ...ART,
+    abandoned: [],
     ...TRACKING,
     ...over,
   };

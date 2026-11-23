@@ -79,6 +79,9 @@ export const en: SiteMessages = {
     developer: 'Developer:',
     author: 'Author:',
     rewatches: 'Rewatches:',
+    abandoned: 'Started over:',
+    abandonedPass: (startedAt, finishedAt, restartedOn) =>
+      `${startedAt ?? '?'} to ${finishedAt ?? '?'}, started over on ${restartedOn}`,
     seasons: 'Seasons',
     series: 'Series',
     synopsis: 'Synopsis',

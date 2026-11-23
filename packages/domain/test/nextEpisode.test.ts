@@ -34,6 +34,7 @@ const season = (number: number, patch: Partial<Season> = {}): Season => ({
   rating: null,
   review: null,
   rewatches: [],
+  abandoned: [],
   pendingReview: false,
   ...patch,
 });
@@ -167,6 +168,33 @@ describe('pickNextSeason', () => {
     expect(pick?.season.number).toBe(2);
   });
 
+  it('keeps going through seasons rewatched on the same day', () => {
+    const sameDay = [{ startedAt: '2026-02-10', finishedAt: '2026-02-10' }];
+    expect(
+      pickNextSeason([
+        season(1, { status: 'completed', rewatches: sameDay }),
+        season(2, { status: 'completed', rewatches: sameDay }),
+        season(3, { status: 'completed' }),
+      ])?.season.number,
+    ).toBe(3);
+  });
+
+  it('starts counting a season started over at its last restart', () => {
+    const abandoned = [
+      { startedAt: '2026-01-01', finishedAt: '2026-01-02', restartedOn: '2026-02-01' },
+    ];
+    const pick = pickNextSeason([season(1, { status: 'in_progress', abandoned })]);
+    expect(pick).toMatchObject({ rewatchStart: null, passStart: '2026-02-01' });
+    const watches: EpisodeWatches = {
+      '101': [{ startedAt: '2026-01-01', finishedAt: '2026-01-01' }],
+      '102': [{ startedAt: '2026-01-02', finishedAt: '2026-01-02' }],
+      '103': [{ startedAt: '2026-02-02', finishedAt: '2026-02-02' }],
+    };
+    const result = row(pick!, four, watches);
+    expect(result?.episode.number).toBe(1);
+    expect(result?.labels).toEqual([]);
+  });
+
   it('stops once the next season has a rewatch after the closed one, or the last season is reached', () => {
     const first = [{ startedAt: '2026-02-01', finishedAt: '2026-02-10' }];
     const second = [{ startedAt: '2026-02-11', finishedAt: '2026-02-20' }];
@@ -189,6 +217,7 @@ describe('pickNextSeason', () => {
 const inProgress: NextSeasonPick = {
   season: season(2, { status: 'in_progress', watchedCount: 2 }),
   rewatchStart: null,
+  passStart: null,
   rewatch: false,
   newSeason: false,
 };
@@ -251,6 +280,7 @@ describe('buildNextEpisodeRow', () => {
         rewatches: [{ startedAt: '2026-03-01', finishedAt: null }],
       }),
       rewatchStart: '2026-03-01',
+      passStart: '2026-03-01',
       rewatch: true,
       newSeason: false,
     };
@@ -271,6 +301,7 @@ describe('buildNextEpisodeRow', () => {
     const pick: NextSeasonPick = {
       season: season(3),
       rewatchStart: null,
+      passStart: null,
       rewatch: false,
       newSeason: true,
     };
@@ -287,6 +318,7 @@ describe('buildNextEpisodeRow', () => {
     const pick: NextSeasonPick = {
       season: season(3),
       rewatchStart: null,
+      passStart: null,
       rewatch: false,
       newSeason: true,
     };
@@ -313,6 +345,7 @@ describe('buildNextEpisodeRow', () => {
     const upcoming: NextSeasonPick = {
       season: season(3, { firstAirDate: '2026-06-01' }),
       rewatchStart: null,
+      passStart: null,
       rewatch: false,
       newSeason: true,
     };

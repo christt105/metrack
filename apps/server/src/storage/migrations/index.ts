@@ -36,6 +36,7 @@ import { artworkPendingMigration } from './0034-artwork-pending.js';
 import { seasonFillerMigration } from './0035-season-filler.js';
 import { steamAchievementsMigration } from './0036-steam-achievements.js';
 import { lastActivityMigration } from './0037-last-activity.js';
+import { abandonedPassesMigration } from './0039-abandoned-passes.js';
 
 export const migrations: readonly Migration[] = [
   initialMigration,
@@ -75,4 +76,5 @@ export const migrations: readonly Migration[] = [
   seasonFillerMigration,
   steamAchievementsMigration,
   lastActivityMigration,
+  abandonedPassesMigration,
 ];

@@ -26,12 +26,14 @@ const planned: SeasonTracking = {
   startedAt: null,
   finishedAt: null,
   rewatches: [],
+  abandoned: [],
 };
 const completed: SeasonTracking = {
   status: 'completed',
   startedAt: '2026-01-01',
   finishedAt: '2026-02-01',
   rewatches: [],
+  abandoned: [],
 };
 
 function episodes(count: number, airDate: string | null = '2025-01-01'): ExpectedEpisode[] {

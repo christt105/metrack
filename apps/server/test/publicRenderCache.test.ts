@@ -48,6 +48,7 @@ beforeAll(async () => {
       ...statements('../d1/migrations/0017_artwork_pending.sql'),
       ...statements('../d1/migrations/0019_steam_achievements.sql'),
       ...statements('../d1/migrations/0020_last_activity.sql'),
+      ...statements('../d1/migrations/0022_abandoned_passes.sql'),
     ].map((sql) => DB.prepare(sql)),
   );
   const spy = {

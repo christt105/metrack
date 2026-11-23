@@ -1,3 +1,4 @@
+import type { AbandonedPass } from './AbandonedPass.js';
 import type { Artwork } from './Artwork.js';
 import type { Tracking } from './Tracking.js';
 
@@ -21,4 +22,6 @@ export interface Season extends Tracking, Artwork {
   skippedCount: number;
   slug: string | null;
   tags: string[];
+  /** The passes left to start the season over, oldest first; see `SeasonTracking`. */
+  abandoned: AbandonedPass[];
 }

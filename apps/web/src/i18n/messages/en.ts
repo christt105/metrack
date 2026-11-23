@@ -73,6 +73,8 @@ export const en = {
       'This provider is not set up on the server yet (TMDB for movies and series, IGDB for games).',
     noMetadataSource: 'There is no metadata source for this kind of title.',
     generic: 'Something went wrong.',
+    restartSameDay:
+      'You watched an episode of this season today, so a new pass cannot be told from the old one until tomorrow.',
   },
   list: {
     searchPlaceholder: 'Search titles',
@@ -201,6 +203,15 @@ export const en = {
     rewatch: 'Rewatch',
     rewatchStarted: 'Rewatch started',
     rewatchOf: (done: number, total: number) => `Rewatch: ${done} of ${total}`,
+    restart: 'Start over',
+    restartDone: 'Season started over from the first episode',
+    restartConfirm: 'Start this season over? The episodes you have watched stay in your history.',
+    abandonedTitle: 'Passes left behind',
+    abandonedPass: (watched: number, total: number, from: string | null, to: string | null) =>
+      `${watched} of ${total}, ${from === null ? 'until' : `from ${from} to`} ${to ?? 'an unknown date'}`,
+    restartSeries: 'Start over',
+    restartSeriesHint: 'You have finished every season. Watch the series again from season 1.',
+    seriesRewatchStarted: 'Rewatch of season 1 started',
     rewatchListLocked: 'The rewatches of a season with episodes follow its episode viewings.',
     noOverview: 'No synopsis.',
     viewings: 'Viewings',

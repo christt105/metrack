@@ -2,7 +2,9 @@ import { deriveSeasonDates } from './deriveSeasonDates.js';
 import type { DerivedSeasonTracking } from './DerivedSeasonTracking.js';
 import type { EpisodeWatches } from './EpisodeWatches.js';
 import type { ExpectedEpisode } from './ExpectedEpisode.js';
+import { lastRestart } from './lastRestart.js';
 import { normalizeViewings } from './normalizeViewings.js';
+import { passWatches } from './passWatches.js';
 import type { SeasonTrackingInput } from './SeasonTrackingInput.js';
 import type { Viewing } from './Viewing.js';
 
@@ -89,7 +91,8 @@ function seasonWatches(
  * season. Once every expected episode is watched and none is still to air, the season completes. A completed
  * season with a viewing dated after its last finish that is not in `baseline` opens a rewatch starting that day,
  * and the rewatch closes on the latest of the dates that watched every aired episode again. At most one rewatch is
- * open and it is the last. Dates follow the episodes as `deriveSeasonDates` says. Dropped seasons never change, and
+ * open and it is the last. Dates follow the episodes as `deriveSeasonDates` says. A season that was started over
+ * counts only the viewings finished on or after its last restart for its dates and its completion (see `passWatches`). Dropped seasons never change, and
  * removing episodes never changes a status because nothing here reacts to a missing viewing.
  */
 export function deriveSeasonTracking(input: SeasonTrackingInput): DerivedSeasonTracking {
@@ -105,23 +108,25 @@ export function deriveSeasonTracking(input: SeasonTrackingInput): DerivedSeasonT
     baseline: input.baseline && seasonWatches(input.baseline, input.episodes),
   };
 
+  const pass = passWatches(watches, lastRestart(tracking.abandoned));
+
   if (tracking.status === 'completed') {
     const rewatching = deriveRewatch(scoped);
     return {
       ...rewatching,
-      ...deriveSeasonDates(rewatching, input.episodes, watches, today, skipped),
+      ...deriveSeasonDates(rewatching, input.episodes, pass, today, skipped),
     };
   }
 
   const next: DerivedSeasonTracking = { ...tracking, completes: false };
-  Object.assign(next, deriveSeasonDates(tracking, input.episodes, watches, today, skipped));
+  Object.assign(next, deriveSeasonDates(tracking, input.episodes, pass, today, skipped));
   if (next.status === 'planned' || next.status === 'paused') next.status = 'in_progress';
   const expected = input.episodes;
   const allWatched =
     expected.length > 0 &&
     expected.some((e) => !skipped.has(e.key)) &&
     expected.every(
-      (e) => skipped.has(e.key) || ((e.airDate === null || e.airDate <= today) && e.key in watches),
+      (e) => skipped.has(e.key) || ((e.airDate === null || e.airDate <= today) && e.key in pass),
     );
   if (allWatched) {
     next.status = 'completed';

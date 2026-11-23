@@ -60,6 +60,12 @@ export interface SiteMessages {
     developer: string;
     author: string;
     rewatches: string;
+    abandoned: string;
+    abandonedPass: (
+      startedAt: string | null,
+      finishedAt: string | null,
+      restartedOn: string,
+    ) => string;
     seasons: string;
     series: string;
     synopsis: string;

@@ -111,6 +111,11 @@ const lastActivitySql = readFileSync(
   'utf8',
 );
 
+const abandonedPassesSql = readFileSync(
+  new URL('../d1/migrations/0022_abandoned_passes.sql', import.meta.url),
+  'utf8',
+);
+
 function fromSql(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
   db.exec(schemaSql);
@@ -132,6 +137,7 @@ function fromSql(): DatabaseSync {
   db.exec(seasonFillerSql);
   db.exec(steamAchievementsSql);
   db.exec(lastActivitySql);
+  db.exec(abandonedPassesSql);
   return db;
 }
 

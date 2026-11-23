@@ -9,6 +9,7 @@ const d1Sql = [
   '0010_season_episodes_refill.sql',
   '0012_unmatched_episodes.sql',
   '0020_last_activity.sql',
+  '0022_abandoned_passes.sql',
 ]
   .map((file) => readFileSync(new URL(`../d1/migrations/${file}`, import.meta.url), 'utf8'))
   .join('\n');

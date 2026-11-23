@@ -85,6 +85,7 @@ describe('backup and restore of the whole data directory', () => {
     });
     const season = await new SqliteSeasonRepository(db, OWNER_SCOPE).create({
       seriesId: series.id,
+      abandoned: [],
       number: 1,
       tmdbSeasonNumber: 1,
       jellyfinId: null,

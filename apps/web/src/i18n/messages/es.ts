@@ -101,6 +101,8 @@ export const es: Messages = {
       'Este proveedor aún no está configurado en el servidor (TMDB para películas y series, IGDB para juegos).',
     noMetadataSource: 'No hay ninguna fuente de metadatos para este tipo de título.',
     generic: 'Algo ha salido mal.',
+    restartSameDay:
+      'Hoy has visto un episodio de esta temporada, así que no se puede distinguir una pasada nueva de la anterior hasta mañana.',
   },
   list: {
     searchPlaceholder: 'Buscar títulos',
@@ -227,6 +229,17 @@ export const es: Messages = {
     rewatch: 'Volver a ver',
     rewatchStarted: 'Revisionado iniciado',
     rewatchOf: (done: number, total: number) => `Revisionado: ${done} de ${total}`,
+    restart: 'Empezar de nuevo',
+    restartDone: 'Temporada empezada de nuevo desde el primer episodio',
+    restartConfirm:
+      'Empezar esta temporada de nuevo? Los episodios que ya viste se quedan en tu historial.',
+    abandonedTitle: 'Pasadas abandonadas',
+    abandonedPass: (watched: number, total: number, from: string | null, to: string | null) =>
+      `${watched} de ${total}, ${from === null ? 'hasta' : `del ${from} al`} ${to ?? 'una fecha desconocida'}`,
+    restartSeries: 'Volver a empezar',
+    restartSeriesHint:
+      'Has terminado todas las temporadas. Vuelve a ver la serie desde la temporada 1.',
+    seriesRewatchStarted: 'Revisionado de la temporada 1 iniciado',
     rewatchListLocked:
       'Los revisionados de una temporada con episodios siguen los visionados de sus episodios.',
     noOverview: 'Sin sinopsis.',

@@ -28,6 +28,7 @@ const NOTHING: Omit<PublicEntry, 'kind' | 'id' | 'title' | 'status'> = {
   rating: null,
   review: null,
   rewatches: [],
+  abandoned: [],
   cover: null,
   banner: null,
   releaseDate: null,
@@ -133,6 +134,7 @@ function seasonEntry(
     genres: series?.genres ?? [],
     tags: season.tags,
     seriesId: season.seriesId,
+    abandoned: season.abandoned,
   };
 }
 

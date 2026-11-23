@@ -1,17 +1,23 @@
 import {
   applyEpisodeChange,
   countWatchedEpisodes,
+  deriveSeasonTracking,
   episodeKey,
   hasEpisodeDates,
   idEpisodeWatches,
   isEpisodeCatalogStale,
   isSeasonAiring,
+  lastRestart,
   numberedEpisodes,
+  passWatches,
+  restartSeason,
   skipBlockers,
   toSeasonEpisodeItem,
+  undoRestart,
   type Episode,
   type EpisodeOperation,
   type EpisodeWatches,
+  type ExpectedEpisode,
   type FillerCategory,
   type SeasonEpisodesUpdateResponse,
   type SeasonTracking,
@@ -134,6 +140,7 @@ export class SeasonEpisodesService {
       startedAt: season.startedAt,
       finishedAt: season.finishedAt,
       rewatches: season.rewatches,
+      abandoned: season.abandoned,
     };
     return {
       response: {
@@ -153,6 +160,94 @@ export class SeasonEpisodesService {
         tracking,
       },
       episodeCountChanged: loaded.episodeCountChanged,
+    };
+  }
+
+  /**
+   * Starts an in-progress season over from its first episode (see `restartSeason`): the current pass moves to the
+   * season entry's abandoned passes and only the viewings made from today on count towards the new one. Refused
+   * with 400 `restart_not_in_progress`, `restart_nothing_watched` or `restart_same_day`.
+   */
+  async restart(seasonId: number): Promise<SeasonEpisodesUpdateResponse> {
+    return this.changePass(seasonId, (tracking, episodes, watches, today) => {
+      const result = restartSeason(tracking, episodes, watches, today);
+      if (result.ok) return result.tracking;
+      const refusals = {
+        not_in_progress: 'Only a season in progress can be started over',
+        nothing_watched: 'There is nothing watched in this pass to start over',
+        same_day:
+          'The last episode was watched today, so a new pass could not be told from the old one until tomorrow',
+      } as const;
+      throw ApiError.badRequest(`restart_${result.reason}`, refusals[result.reason]);
+    });
+  }
+
+  /** Takes back the last start over of a season and derives it again from its watches (see `undoRestart`). */
+  async undoRestart(seasonId: number): Promise<SeasonEpisodesUpdateResponse> {
+    return this.changePass(seasonId, (tracking) => {
+      const undone = undoRestart(tracking);
+      if (undone === null) {
+        throw ApiError.badRequest('restart_none', 'This season has not been started over');
+      }
+      return undone;
+    });
+  }
+
+  private async changePass(
+    seasonId: number,
+    change: (
+      tracking: SeasonTracking,
+      episodes: readonly ExpectedEpisode[],
+      watches: EpisodeWatches,
+      today: string,
+    ) => SeasonTracking,
+  ): Promise<SeasonEpisodesUpdateResponse> {
+    const loaded = await this.resolve(seasonId);
+    const { season, catalog, episodes } = loaded;
+    const state = await this.tracker.load(season.seriesId, new Map([[season.id, episodes]]));
+    const stored = state.watches ?? {};
+    const watches = idEpisodeWatches(episodes, season.number, stored);
+    const entry = state.seasons.find((candidate) => candidate.seasonId === season.id);
+    if (!entry) throw ApiError.notFound();
+    const now = this.now();
+    const today = now.toISOString().slice(0, 10);
+    const edited = change(entry.tracking, entry.episodes, watches, today);
+    const skipped = new Set(state.skipped);
+    const derived = deriveSeasonTracking({
+      tracking: edited,
+      episodes: entry.episodes,
+      watches,
+      skipped,
+      baseline: watches,
+      today,
+    });
+    const tracking: SeasonTracking = {
+      status: derived.status,
+      startedAt: derived.startedAt,
+      finishedAt: derived.finishedAt,
+      rewatches: derived.rewatches,
+      abandoned: derived.abandoned,
+    };
+    const pass = passWatches(watches, lastRestart(tracking.abandoned));
+    const watchedCount = entry.episodes.filter(({ key }) => key in pass).length;
+    const skippedCount = entry.episodes.filter(({ key }) => skipped.has(key)).length;
+    await this.deps.watches.set(
+      season.seriesId,
+      watches,
+      [{ seasonId: season.id, watchedCount, skippedCount, tracking, completes: derived.completes }],
+      undefined,
+      now.toISOString(),
+    );
+    return {
+      ...this.respond(
+        { ...season, ...tracking, watchedCount, skippedCount },
+        catalog,
+        episodes,
+        watches,
+        skipped,
+        (await this.deps.filler.get(season.id))?.categories ?? {},
+      ),
+      tracking,
     };
   }
 
@@ -298,7 +393,11 @@ export class SeasonEpisodesService {
     filler: Readonly<Record<string, FillerCategory>>,
   ): SeasonEpisodesResult['response'] {
     const watched = stored ?? {};
-    const counted = countWatchedEpisodes(episodes, season.number, watched);
+    const counted = countWatchedEpisodes(
+      episodes,
+      season.number,
+      passWatches(watched, lastRestart(season.abandoned)),
+    );
     const skippedCount = episodes.filter((episode) =>
       skipped.has(episodeKey(episode, season.number)),
     ).length;

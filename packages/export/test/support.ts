@@ -73,6 +73,7 @@ export const season = (over: Partial<Season> = {}): Season => ({
   banner: null,
   slug: 'Show - Season 1',
   tags: [],
+  abandoned: [],
   ...tracking,
   ...over,
 });

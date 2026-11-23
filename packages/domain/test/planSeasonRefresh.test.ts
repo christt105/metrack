@@ -25,6 +25,7 @@ function season(overrides: Partial<Season>): Season {
     rating: null,
     review: null,
     rewatches: [],
+    abandoned: [],
     pendingReview: false,
     ...overrides,
   };

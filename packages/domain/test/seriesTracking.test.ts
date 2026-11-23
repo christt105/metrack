@@ -16,7 +16,13 @@ const view = (finishedAt: string, startedAt: string | null = finishedAt): Viewin
   finishedAt,
 });
 
-const planned = { status: 'planned' as const, startedAt: null, finishedAt: null, rewatches: [] };
+const planned = {
+  status: 'planned' as const,
+  startedAt: null,
+  finishedAt: null,
+  rewatches: [],
+  abandoned: [],
+};
 
 function season(
   seasonId: number,
@@ -142,6 +148,7 @@ describe('deriveSeriesTracking', () => {
           startedAt: '2026-03-01',
           finishedAt: '2026-03-02',
           rewatches: [],
+          abandoned: [],
         },
       },
       {
@@ -154,6 +161,7 @@ describe('deriveSeriesTracking', () => {
           startedAt: '2026-04-01',
           finishedAt: null,
           rewatches: [],
+          abandoned: [],
         },
       },
     ]);
@@ -166,6 +174,7 @@ describe('deriveSeriesTracking', () => {
       startedAt: '2026-03-01',
       finishedAt: null,
       rewatches: [],
+      abandoned: [],
     };
     expect(
       deriveSeriesTracking({
@@ -182,6 +191,7 @@ describe('deriveSeriesTracking', () => {
       startedAt: '2026-01-01',
       finishedAt: '2026-02-01',
       rewatches: [],
+      abandoned: [],
     };
     const [update] = deriveSeriesTracking({
       seasons: [season(1, ['a', 'b'], { tracking: done, watchedCount: 2 })],

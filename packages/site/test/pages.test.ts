@@ -187,6 +187,28 @@ describe('renderDetail', () => {
     expect(renderDetail(library, 'season', 1)).toContain('href="/u/ana/series/1"');
   });
 
+  it('lists the passes of a season that was started over, and nothing otherwise', () => {
+    const started = buildLibrary(
+      input({
+        series: [series({ id: 1, title: 'Lupin' }), series({ id: 2, title: 'Dark' })],
+        seasons: [
+          season({
+            id: 1,
+            seriesId: 1,
+            number: 1,
+            status: 'in_progress',
+            abandoned: [
+              { startedAt: '2026-01-01', finishedAt: '2026-01-03', restartedOn: '2026-02-01' },
+            ],
+          }),
+          season({ id: 2, seriesId: 2, number: 1, status: 'in_progress' }),
+        ],
+      }),
+    );
+    expect(renderDetail(started, 'season', 1)).toContain('Empezada de nuevo:');
+    expect(renderDetail(started, 'season', 2)).not.toContain('Empezada de nuevo:');
+  });
+
   it('shows game and book fields', () => {
     expect(renderDetail(library, 'videogame', 1)).toContain('Maddy');
     expect(renderDetail(library, 'book', 1)).toContain('William Gibson');

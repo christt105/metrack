@@ -14,7 +14,8 @@ import { idParams } from './schemas/mediaSchemas.js';
  * read, so it does not bump the content version, except when opening the season changed its shared episode count:
  * the library list shows that number, so the signed-in user's version is bumped and every list revalidates.
  * `PATCH` marks, unmarks or edits the viewings of episodes and answers with the episodes and the season's tracking
- * after the change; it is a write, so the content version is bumped by the usual write path.
+ * after the change; it is a write, so the content version is bumped by the usual write path. `POST` and `DELETE`
+ * on `/api/seasons/{id}/restart` start the season over and take that back, with the same answer.
  */
 export function registerSeasonEpisodeRoutes(
   routes: ApiRoutes,
@@ -38,5 +39,18 @@ export function registerSeasonEpisodeRoutes(
       const { response } = await episodes.update(request.params.id, request.body);
       return response;
     },
+  );
+
+  routes.post<{ Params: { id: number } }>(
+    '/api/seasons/:id/restart',
+    { schema: { params: idParams } },
+    async (request): Promise<SeasonEpisodesUpdateResponse> => episodes.restart(request.params.id),
+  );
+
+  routes.delete<{ Params: { id: number } }>(
+    '/api/seasons/:id/restart',
+    { schema: { params: idParams } },
+    async (request): Promise<SeasonEpisodesUpdateResponse> =>
+      episodes.undoRestart(request.params.id),
   );
 }

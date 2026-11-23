@@ -482,6 +482,7 @@ async function seedLupin(t: ReturnType<typeof setup>) {
     tags: [],
     cover: null,
     banner: null,
+    abandoned: [],
     status: 'planned',
     startedAt: null,
     finishedAt: null,

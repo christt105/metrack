@@ -1,0 +1,46 @@
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils';
+import type { Season } from '@metrack/domain';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import RestartSeries from '../src/components/RestartSeries.vue';
+import { todayIso } from '../src/logic/todayIso';
+import { mountWithApi } from './mountWithApi';
+
+enableAutoUnmount(afterEach);
+
+const season = (number: number, patch: Partial<Season> = {}): Season =>
+  ({
+    id: number + 10,
+    seriesId: 1,
+    number,
+    status: 'completed',
+    rewatches: [],
+    abandoned: [],
+    ...patch,
+  }) as Season;
+
+describe('RestartSeries', () => {
+  it('opens a rewatch on season 1 of a finished series', async () => {
+    const patch = vi.fn().mockResolvedValue({});
+    const { wrapper } = await mountWithApi(RestartSeries, { patch } as never, {
+      seasons: [season(2), season(1)],
+    });
+    await wrapper.find('button').trigger('click');
+    await flushPromises();
+    expect(patch).toHaveBeenCalledWith('seasons', 11, {
+      rewatches: [{ startedAt: todayIso(), finishedAt: null }],
+    });
+    expect(wrapper.emitted('changed')).toHaveLength(1);
+  });
+
+  it('is hidden while a season is not completed or a rewatch is under way', async () => {
+    const open = [{ startedAt: '2026-05-01', finishedAt: null }];
+    for (const seasons of [
+      [season(1), season(2, { status: 'in_progress' })],
+      [season(1, { rewatches: open }), season(2)],
+      [],
+    ]) {
+      const { wrapper } = await mountWithApi(RestartSeries, {} as never, { seasons });
+      expect(wrapper.find('button').exists()).toBe(false);
+    }
+  });
+});

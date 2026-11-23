@@ -1,4 +1,4 @@
-import type { MediaStatus, TimeSpent } from '@metrack/domain';
+import type { AbandonedPass, MediaStatus, TimeSpent } from '@metrack/domain';
 import type { PublicKind } from './PublicKind.js';
 
 /** One item that may be shown on a public page: a piece of the library that is not pending review. */
@@ -14,6 +14,8 @@ export interface PublicEntry {
   rating: number | null;
   review: string | null;
   rewatches: string[];
+  /** The passes of a season that were left to start it over; empty for everything else. */
+  abandoned: AbandonedPass[];
   cover: string | null;
   banner: string | null;
   releaseDate: string | null;

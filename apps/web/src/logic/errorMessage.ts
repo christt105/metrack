@@ -6,6 +6,7 @@ export function errorMessage(error: unknown, messages: Messages): string {
   if (error instanceof ApiRequestError) {
     if (error.code === 'network_error') return messages.errors.network;
     if (error.code === 'provider_not_configured') return messages.errors.providerNotConfigured;
+    if (error.code === 'restart_same_day') return messages.errors.restartSameDay;
     if (error.code === 'no_metadata_source') return messages.errors.noMetadataSource;
     if (error.status === 404) return messages.errors.notFound;
     return error.message;

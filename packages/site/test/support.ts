@@ -80,6 +80,7 @@ export function season(overrides: Partial<Season> & { id: number; seriesId: numb
     tags: [],
     cover: null,
     banner: null,
+    abandoned: [],
     ...overrides,
   };
 }

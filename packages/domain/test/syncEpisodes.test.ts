@@ -89,6 +89,7 @@ function stored(over: Partial<Season> = {}): Season {
     rating: null,
     review: null,
     rewatches: [],
+    abandoned: [],
     pendingReview: false,
     ...over,
   };
@@ -258,6 +259,30 @@ describe('numbered sync (no TMDB index)', () => {
     });
     expect(series?.watches).toEqual({ s1e1: [view('2026-01-05')], s1e2: [], s1e3: [] });
     expect(change).toBeUndefined();
+  });
+
+  it('does not count an old viewing resent by Jellyfin in a season started over', () => {
+    const { change, series } = one({
+      seasons: [librarySeason(3)],
+      stored: [
+        stored({
+          status: 'in_progress',
+          watchedCount: 0,
+          abandoned: [
+            { startedAt: '2026-01-01', finishedAt: '2026-01-02', restartedOn: '2026-02-01' },
+          ],
+        }),
+      ],
+      days: { s1e1: ['2026-01-01'], s1e2: ['2026-01-02', '2026-02-02'] },
+      watches: { s1e1: [view('2026-01-01')], s1e2: [view('2026-01-02')] },
+    });
+    expect(series?.watches?.s1e1).toEqual([view('2026-01-01')]);
+    expect(change).toMatchObject({
+      status: 'in_progress',
+      startedAt: '2026-02-02',
+      watchedEpisodes: 1,
+      completes: false,
+    });
   });
 
   it('opens a rewatch when a completed season has a new play after its finish', () => {

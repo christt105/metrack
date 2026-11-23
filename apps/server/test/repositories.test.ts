@@ -52,6 +52,7 @@ const newSeason = (
 ): Omit<Season, 'id'> => ({
   seriesId,
   number,
+  abandoned: [],
   tmdbSeasonNumber: null,
   jellyfinId: null,
   title: null,

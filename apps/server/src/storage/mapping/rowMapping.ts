@@ -1,6 +1,8 @@
 import {
   normalizeViewings,
+  readAbandoned,
   readViewings,
+  type AbandonedPass,
   type MediaStatus,
   type Tracking,
   type Viewing,
@@ -14,6 +16,10 @@ export function parseList(value: unknown): string[] {
 
 export function parseViewings(value: unknown): Viewing[] {
   return readViewings(JSON.parse(String(value)) as unknown[]);
+}
+
+export function parseAbandoned(value: unknown): AbandonedPass[] {
+  return readAbandoned(JSON.parse(String(value)) as unknown[]);
 }
 
 export function text(value: unknown): string | null {
