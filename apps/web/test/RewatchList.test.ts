@@ -30,11 +30,7 @@ describe('RewatchList', () => {
   it('shows viewings newest first with their start and end', async () => {
     const { wrapper } = await mountList();
     const rows = wrapper.findAll('li').map((li) => li.find('.text').text());
-    expect(rows).toEqual([
-      'Watching since 2026-05-01',
-      '2025-02-01 - 2025-02-03',
-      '? - 2024-01-01',
-    ]);
+    expect(rows).toEqual(['Watching since 1 May 2026', '1 Feb 2025 to 3 Feb 2025', '1 Jan 2024']);
   });
 
   it('edits a viewing inline and sends the full list', async () => {
@@ -98,17 +94,5 @@ describe('RewatchList', () => {
     open.wrapper.unmount();
     const closed = await mountList(undefined, false, rewatches.slice(0, 2));
     expect(closed.wrapper.text()).toContain(messages.rewatches.onlyCompleted);
-  });
-
-  it('is read-only when locked: no add form, no edit or remove', async () => {
-    const mounted = await mountWithApi(
-      RewatchList,
-      { patch: vi.fn() as never },
-      { collection: 'seasons', id: 20, rewatches, completed: true, locked: true },
-    );
-    expect(mounted.wrapper.findAll('li')).toHaveLength(3);
-    expect(mounted.wrapper.find('form').exists()).toBe(false);
-    expect(mounted.wrapper.findAll('button')).toHaveLength(0);
-    expect(mounted.wrapper.text()).toContain(messages.episodes.rewatchListLocked);
   });
 });

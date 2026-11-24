@@ -1,7 +1,12 @@
 import type { EpisodeOperation, SeasonEpisodeItem, Viewing } from '@metrack/domain';
 
 const dated = (viewings: readonly Viewing[]): Viewing[] =>
-  viewings.filter((viewing) => viewing.finishedAt !== null || viewing.abandonedAt !== undefined);
+  viewings.filter(
+    (viewing) =>
+      viewing.finishedAt !== null ||
+      viewing.startedAt === null ||
+      viewing.abandonedAt !== undefined,
+  );
 
 /**
  * The operations that put the watches and skips back as they were before `operation`. Marking is undone by
@@ -56,6 +61,17 @@ export function inverseOperations(
         key: e.key,
         viewings: dated(e.viewings),
       }));
+  }
+  if (operation.op === 'restoreViewings') {
+    const touched = episodesOf(operation.episodes.map(({ key }) => key));
+    const unwatched = touched.filter((e) => !e.watched).map((e) => e.key);
+    const watched = touched
+      .filter((e) => e.watched)
+      .map(({ key, viewings }) => ({ key, viewings: dated(viewings) }));
+    return [
+      ...(unwatched.length > 0 ? [{ op: 'unmark', keys: unwatched } as const] : []),
+      ...(watched.length > 0 ? [{ op: 'restoreViewings', episodes: watched } as const] : []),
+    ];
   }
   const episode = byKey.get(operation.key);
   if (!episode) return [];

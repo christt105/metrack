@@ -1,4 +1,5 @@
 import type { MarkEpisodesOperation } from './MarkEpisodesOperation.js';
+import type { RestoreEpisodeViewingsOperation } from './RestoreEpisodeViewingsOperation.js';
 import type { SetEpisodeViewingsOperation } from './SetEpisodeViewingsOperation.js';
 import type { SkipEpisodesOperation } from './SkipEpisodesOperation.js';
 import type { UnmarkEpisodesOperation } from './UnmarkEpisodesOperation.js';
@@ -9,5 +10,6 @@ export type EpisodeOperation =
   | MarkEpisodesOperation
   | UnmarkEpisodesOperation
   | SetEpisodeViewingsOperation
+  | RestoreEpisodeViewingsOperation
   | SkipEpisodesOperation
   | UnskipEpisodesOperation;

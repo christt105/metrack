@@ -15,6 +15,7 @@ import {
 } from '../logic/viewingEdits';
 import ErrorNotice from './ErrorNotice.vue';
 import UndoToast from './UndoToast.vue';
+import ViewingDateFields from './ViewingDateFields.vue';
 import ViewingRow from './ViewingRow.vue';
 
 const messages = useMessages();
@@ -25,7 +26,6 @@ const props = defineProps<{
   id: number;
   rewatches: Viewing[];
   completed: boolean;
-  locked?: boolean;
 }>();
 const emit = defineEmits<{ updated: [detail: AnyDetail] }>();
 
@@ -37,6 +37,7 @@ const error = ref<unknown>(null);
 const toast = ref<{ message: string; undo: Viewing[] | null } | null>(null);
 let timer: ReturnType<typeof setTimeout> | undefined;
 
+const single = computed(() => props.collection === 'movies' || props.collection === 'seasons');
 const viewings = computed(() => newestFirst(props.rewatches));
 const rewatching = computed(() => props.rewatches.some((v) => v.finishedAt === null));
 const canAdd = computed(() => formIsValid(start.value, end.value, true));
@@ -98,23 +99,15 @@ onBeforeUnmount(() => clearTimeout(timer));
         :key="`${viewing.startedAt}|${viewing.finishedAt}`"
         :viewing="viewing"
         :busy="busy"
-        :readonly="locked"
+        :single="single"
         @change="change(withReplaced(rewatches, index, $event), messages.rewatches.changed)"
         @remove="change(withoutViewing(rewatches, index), messages.rewatches.removed)"
       />
     </ul>
-    <form v-if="completed && !locked" class="add" @submit.prevent="add">
-      <label>
-        <span>{{ messages.rewatches.start }}</span>
-        <input v-model="start" type="date" />
-      </label>
-      <label>
-        <span>{{ messages.rewatches.end }}</span>
-        <input v-model="end" type="date" required />
-      </label>
+    <form v-if="completed" class="add" @submit.prevent="add">
+      <ViewingDateFields v-model:start="start" v-model:end="end" :single="single" required />
       <button type="submit" :disabled="busy || !canAdd">{{ messages.rewatches.add }}</button>
     </form>
-    <p v-else-if="locked" class="muted">{{ messages.episodes.rewatchListLocked }}</p>
     <p v-else-if="!rewatching" class="muted">{{ messages.rewatches.onlyCompleted }}</p>
     <ErrorNotice :error="error" />
     <Teleport to="body">
@@ -144,12 +137,5 @@ onBeforeUnmount(() => clearTimeout(timer));
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
-}
-
-.add label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1 1 140px;
 }
 </style>

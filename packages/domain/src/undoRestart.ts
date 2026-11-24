@@ -16,24 +16,38 @@ function lastAbandonment(
   return last;
 }
 
+function hasAbandonment(
+  episodes: readonly ExpectedEpisode[],
+  watches: EpisodeWatches,
+  day: string,
+): boolean {
+  return episodes.some(({ key }) => watches[key]?.some((viewing) => viewing.abandonedAt === day));
+}
+
 /**
- * Takes back the last start over of a season: the abandoned mark is removed from the viewings abandoned on its latest
- * day, which count again. Refused when the season was never started over (`none`) and when a viewing was made on or
- * after that day (`same_day`), because the new pass would merge into the old one.
+ * Takes back a start over of a season: the abandoned mark is removed from the viewings abandoned on `day`, which
+ * count again, by default the latest day. Refused when there is no such start over (`none`) and, for the latest
+ * day, when a viewing was made on or after it (`same_day`), because the new pass would merge into the old one. An
+ * earlier day can always be taken back: its viewings join the live ones in date order, so the older pass becomes
+ * an earlier pass of the season.
  */
 export function undoRestart(
   episodes: readonly ExpectedEpisode[],
   watches: EpisodeWatches,
+  requested?: string,
 ): RestartResult {
-  const day = lastAbandonment(episodes, watches);
-  if (day === null) return { ok: false, reason: 'none' };
-  const newer = episodes.some(({ key }) =>
-    watches[key]?.some(
-      (viewing) =>
-        viewing.abandonedAt === undefined &&
-        [viewing.finishedAt, viewing.startedAt].some((date) => date !== null && date >= day),
-    ),
-  );
+  const latest = lastAbandonment(episodes, watches);
+  const day = requested ?? latest;
+  if (day === null || !hasAbandonment(episodes, watches, day)) return { ok: false, reason: 'none' };
+  const newer =
+    day === latest &&
+    episodes.some(({ key }) =>
+      watches[key]?.some(
+        (viewing) =>
+          viewing.abandonedAt === undefined &&
+          [viewing.finishedAt, viewing.startedAt].some((date) => date !== null && date >= day),
+      ),
+    );
   if (newer) return { ok: false, reason: 'same_day' };
   const result = { ...watches };
   for (const { key } of episodes) {

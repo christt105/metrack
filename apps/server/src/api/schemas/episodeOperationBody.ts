@@ -30,7 +30,7 @@ const episodeViewing = {
   ],
 } as const;
 
-/** One operation on the watched episodes of a season: `mark`, `unmark`, `setViewings`, `skip` or `unskip`. */
+/** One operation on the watched episodes of a season: `mark`, `unmark`, `setViewings`, `restoreViewings`, `skip` or `unskip`. */
 export const episodeOperationBody = {
   anyOf: [
     {
@@ -49,6 +49,24 @@ export const episodeOperationBody = {
       type: 'object',
       properties: { op: { enum: ['skip', 'unskip'] }, keys },
       required: ['op', 'keys'],
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      properties: {
+        op: { const: 'restoreViewings' },
+        episodes: {
+          type: 'array',
+          maxItems: 5000,
+          items: {
+            type: 'object',
+            properties: { key: episodeKey, viewings: { type: 'array', items: episodeViewing } },
+            required: ['key', 'viewings'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['op', 'episodes'],
       additionalProperties: false,
     },
     {
