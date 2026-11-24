@@ -660,6 +660,64 @@ describe('GET /api/seasons/:id/episodes', () => {
       expect(failed.body.episodes).toHaveLength(15);
     });
 
+    it('keeps the catalog incomplete while one episode fails and fetches only it once it recovers', async () => {
+      const season = addSeason({ episodeCount: 20 });
+      setUpChunks(20);
+      handlers.set(episodePath(17), () => new Response('unavailable', { status: 503 }));
+      await episodes(owner, season.id);
+
+      calls = [];
+      const failing = await episodes(owner, season.id);
+      expect(failing.body.complete).toBe(false);
+      expect(failing.body.episodes.map((e) => e.number)).toEqual(
+        Array.from({ length: 19 }, (_, i) => i + 1).filter((n) => n !== 17),
+      );
+      expect(api.db.prepare('SELECT complete FROM season_episodes').get()).toEqual({ complete: 0 });
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+
+      handlers.set(episodePath(17), () => Response.json(tmdbEpisode(117, 17, 'E17')));
+      calls = [];
+      const recovered = await episodes(owner, season.id);
+      expect(calls.filter((c) => c.includes('/episode/'))).toEqual([episodePath(17)]);
+      expect(recovered.body.complete).toBe(true);
+      expect(recovered.body.episodes.map((e) => e.number)).toEqual(
+        Array.from({ length: 20 }, (_, i) => i + 1),
+      );
+      expect(api.db.prepare('SELECT complete FROM season_episodes').get()).toEqual({ complete: 1 });
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+    });
+
+    it('keeps serving the old catalog while a refetch loses one episode, then completes it', async () => {
+      const season = addSeason({ episodeCount: 20 });
+      setUpChunks(20);
+      handlers.set(episodePath(17), () => new Response('unavailable', { status: 503 }));
+      storeCatalog(
+        season.id,
+        '2025-01-01T00:00:00.000Z',
+        Array.from({ length: 20 }, (_, i) => compact(i + 1, 900 + i + 1)),
+      );
+      await episodes(owner, season.id);
+      const failing = await episodes(owner, season.id);
+      expect(failing.body.complete).toBe(true);
+      expect(failing.body.episodes).toHaveLength(20);
+      expect(failing.body.episodes[0]?.tmdbId).toBe(901);
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+      const pending = api.db.prepare('SELECT refill FROM season_episodes').get() as {
+        refill: string;
+      };
+      expect(JSON.parse(pending.refill)).toHaveLength(19);
+
+      handlers.set(episodePath(17), () => Response.json(tmdbEpisode(117, 17, 'E17')));
+      calls = [];
+      const recovered = await episodes(owner, season.id);
+      expect(calls.filter((c) => c.includes('/episode/'))).toEqual([episodePath(17)]);
+      expect(recovered.body.complete).toBe(true);
+      expect(recovered.body.episodes).toHaveLength(20);
+      expect(recovered.body.episodes[0]?.tmdbId).toBe(101);
+      expect(api.db.prepare('SELECT refill FROM season_episodes').get()).toEqual({ refill: null });
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+    });
+
     it('lists bare numbers when the season has no episode count to chunk by', async () => {
       const season = addSeason({ episodeCount: null });
       setUpChunks(5);
