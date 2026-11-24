@@ -11,6 +11,7 @@ import {
   withViewing,
   withoutViewing,
 } from '../logic/viewingEdits';
+import ViewingDateFields from './ViewingDateFields.vue';
 import ViewingRow from './ViewingRow.vue';
 
 const messages = useMessages();
@@ -36,22 +37,16 @@ function add(): void {
     <ul v-else class="dates">
       <ViewingRow
         v-for="(viewing, index) in listed"
-        :key="`${viewing.startedAt}|${viewing.finishedAt}`"
+        :key="`${viewing.abandonedAt ?? ''}|${viewing.startedAt}|${viewing.finishedAt}`"
         :viewing="viewing"
         :busy="busy"
+        single
         @change="emit('change', withReplaced(viewings, index, $event))"
         @remove="emit('change', withoutViewing(viewings, index))"
       />
     </ul>
     <form class="add" @submit.prevent="add">
-      <label>
-        <span>{{ messages.rewatches.start }}</span>
-        <input v-model="start" type="date" />
-      </label>
-      <label>
-        <span>{{ messages.rewatches.end }}</span>
-        <input v-model="end" type="date" required />
-      </label>
+      <ViewingDateFields v-model:start="start" v-model:end="end" single required />
       <button type="submit" class="small" :disabled="busy || !canAdd">
         {{ messages.episodes.addViewing }}
       </button>
@@ -79,12 +74,5 @@ h4 {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
-}
-
-.add label {
-  display: flex;
-  flex: 1 1 120px;
-  flex-direction: column;
-  gap: 2px;
 }
 </style>

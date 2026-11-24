@@ -1,5 +1,6 @@
 import { computeSeasonTracking } from '../computeSeasonTracking.js';
 import type { EpisodeWatches } from '../EpisodeWatches.js';
+import { liveWatches } from '../liveWatches.js';
 import { materializeCompletedSeasons } from '../materializeCompletedSeasons.js';
 import { mergeEpisodeWatches } from '../mergeEpisodeWatches.js';
 import { sameEpisodeWatches } from '../sameEpisodeWatches.js';
@@ -57,6 +58,7 @@ export function planSeasonChanges(
   storedSkipped: readonly string[] = [],
 ): SeasonChanges {
   const stored = storedWatches ?? {};
+  const liveStored = liveWatches(stored);
   const inputs = drafts.flatMap(inputOf);
   const base = materializeCompletedSeasons(inputs, stored, new Set(storedSkipped));
   const merged = mergeEpisodeWatches(base, incoming, seasonFinishes(drafts));
@@ -69,7 +71,7 @@ export function planSeasonChanges(
       episodes: draft.expected,
       watches: merged,
       skipped,
-      previouslyEmpty: draft.expected.every(({ key }) => !(key in stored)),
+      previouslyEmpty: draft.expected.every(({ key }) => !(key in liveStored)),
       today,
     });
     const derived = computed.tracking;

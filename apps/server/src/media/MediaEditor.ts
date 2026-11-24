@@ -1,5 +1,6 @@
 import {
   addRewatch,
+  brokenViewingRule,
   readViewings,
   transitionStatus,
   type Collection,
@@ -112,7 +113,18 @@ export class MediaEditor {
       }
     }
     for (const [field, value] of Object.entries(rest)) {
-      if (field === 'rewatches') this.validate({ rewatches: value });
+      if (field === 'rewatches') {
+        this.validate({ rewatches: value });
+        this.checkRules(
+          (value as unknown[]).flatMap((item): Viewing[] => {
+            if (typeof item === 'string') return [{ startedAt: null, finishedAt: item }];
+            const { startedAt, finishedAt } = (item ?? {}) as Partial<Viewing>;
+            return typeof item === 'object'
+              ? [{ startedAt: startedAt ?? null, finishedAt: finishedAt ?? null }]
+              : [];
+          }),
+        );
+      }
       working[field] = field === 'rewatches' ? readViewings(value as unknown[]) : value;
     }
     if ('finishedAt' in rest && !('startedAt' in rest) && current.startedAt === null) {
@@ -121,6 +133,14 @@ export class MediaEditor {
     this.validate(working);
     if ('startedAt' in rest || 'finishedAt' in rest || status !== undefined) {
       this.validateOrder(working);
+    }
+    if ('startedAt' in rest || 'finishedAt' in rest) {
+      this.checkRules([
+        {
+          startedAt: 'startedAt' in rest ? ((working.startedAt as string | null) ?? null) : null,
+          finishedAt: 'finishedAt' in rest ? ((working.finishedAt as string | null) ?? null) : null,
+        },
+      ]);
     }
 
     const changes: Record<string, unknown> = {};
@@ -297,6 +317,19 @@ export class MediaEditor {
           throw ApiError.badRequest('invalid_dates', 'A rewatch cannot finish before it starts');
         }
       }
+    }
+  }
+
+  private checkRules(viewings: Viewing[]): void {
+    const broken = brokenViewingRule(viewings, this.today());
+    if (broken === 'invalid_dates') {
+      throw ApiError.badRequest('invalid_dates', 'A viewing cannot finish before it starts');
+    }
+    if (broken === 'future_date') {
+      throw ApiError.badRequest('future_date', 'A viewing cannot have a date in the future');
+    }
+    if (broken === 'duplicate') {
+      throw ApiError.badRequest('duplicate_viewing', 'The list already has that exact viewing');
     }
   }
 

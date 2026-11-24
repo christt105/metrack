@@ -265,9 +265,34 @@ describe('the row menu', () => {
     await button.trigger('click');
     expect(button.attributes('aria-expanded')).toBe('true');
     const items = wrapper.findAll('[role="menuitem"]');
-    expect(items.map((item) => item.text())).toEqual(['Remove from Up next']);
+    expect(items.map((item) => item.text())).toEqual(['Start over', 'Remove from Up next']);
     await wrapper.find('.menu').trigger('keydown', { key: 'Escape' });
     expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+  });
+
+  it('starts the season over from the menu and takes it back from the toast', async () => {
+    const nextEpisodes = vi.fn().mockResolvedValue({ rows: [row(1)] });
+    const restartSeason = vi.fn().mockResolvedValue({});
+    const undoSeasonRestart = vi.fn().mockResolvedValue({});
+    const { wrapper } = await mountNext([], { nextEpisodes, restartSeason, undoSeasonRestart });
+    await trigger(wrapper, 1).trigger('click');
+    await wrapper.findAll('[role="menuitem"]')[0]!.trigger('click');
+    await flushPromises();
+    expect(restartSeason).toHaveBeenCalledWith(row(1).season.id);
+    expect(document.body.textContent).toContain('Season started over from the first episode');
+    (document.body.querySelector('.toast .undo') as HTMLButtonElement).click();
+    await flushPromises();
+    expect(undoSeasonRestart).toHaveBeenCalledWith(row(1).season.id);
+  });
+
+  it('has no Start over entry for a row with nothing watched', async () => {
+    const { wrapper } = await mountNext([
+      row(1, { progress: { watched: 0, total: 12, skipped: 0, rewatch: false } }),
+    ]);
+    await trigger(wrapper, 1).trigger('click');
+    expect(wrapper.findAll('[role="menuitem"]').map((item) => item.text())).toEqual([
+      'Remove from Up next',
+    ]);
   });
 
   it('removes the series, shows a toast and puts it back on undo', async () => {
@@ -283,7 +308,7 @@ describe('the row menu', () => {
       showInNext,
     });
     await trigger(wrapper, 1).trigger('click');
-    await wrapper.find('[role="menuitem"]').trigger('click');
+    await wrapper.findAll('[role="menuitem"]').at(-1)!.trigger('click');
     await flushPromises();
     expect(hideFromNext).toHaveBeenCalledWith(1);
     expect(wrapper.findAll('li.next').map((li) => li.attributes('data-series'))).toEqual(['2']);
@@ -303,7 +328,7 @@ describe('the row menu', () => {
     const hideFromNext = vi.fn().mockRejectedValue(new Error('boom'));
     const { wrapper } = await mountNext([row(1)], { hideFromNext });
     await trigger(wrapper, 1).trigger('click');
-    await wrapper.find('[role="menuitem"]').trigger('click');
+    await wrapper.findAll('[role="menuitem"]').at(-1)!.trigger('click');
     await flushPromises();
     expect(wrapper.find('[role="alert"]').exists()).toBe(true);
     expect(wrapper.findAll('li.next')).toHaveLength(1);

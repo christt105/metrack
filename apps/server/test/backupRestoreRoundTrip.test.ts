@@ -121,7 +121,10 @@ describe('backup and restore of the whole data directory', () => {
     await new SqliteEpisodeWatchRepository(db, OWNER_SCOPE).set(
       series.id,
       {
-        '11': [{ startedAt: null, finishedAt: '2026-03-01' }],
+        '11': [
+          { startedAt: '2026-02-01', finishedAt: '2026-02-02', abandonedAt: '2026-02-10' },
+          { startedAt: null, finishedAt: '2026-03-01' },
+        ],
         s1e2: [],
       },
       [],

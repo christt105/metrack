@@ -35,6 +35,9 @@ function as(userId: number) {
       api.app.inject({ method: 'PATCH', url, headers, payload: payload as object }),
     put: (url: string, payload: unknown) =>
       api.app.inject({ method: 'PUT', url, headers, payload: payload as object }),
+    post: (url: string) => api.app.inject({ method: 'POST', url, headers }),
+    delete: (url: string) => api.app.inject({ method: 'DELETE', url, headers }),
+    get: (url: string) => api.app.inject({ method: 'GET', url, headers }),
   };
 }
 
@@ -123,6 +126,10 @@ const view = (finishedAt: string, startedAt: string | null = finishedAt) => ({
 });
 
 describe('PATCH /api/seasons/:id/episodes', () => {
+  beforeEach(() => {
+    api.clock.now = new Date('2026-12-31T12:00:00Z');
+  });
+
   it('marks episodes with a date, starts the season and bumps the content version', async () => {
     const season = addSeason();
     const before = await versions.current(1);
@@ -482,6 +489,120 @@ describe('PATCH /api/seasons/:id/episodes', () => {
       catalog(second, [201, 202]);
       const { status } = await patch(owner, first, { op: 'mark', keys: ['201'], date: null });
       expect(status).toBe(400);
+    });
+  });
+});
+
+describe('start over', () => {
+  const abandoned = (date: string) => ({
+    startedAt: date,
+    finishedAt: date,
+    abandonedAt: '2026-03-05',
+  });
+
+  async function restart(seasonId: number) {
+    const response = await owner.post(`/api/seasons/${seasonId}/restart`);
+    return { status: response.statusCode, body: response.json() as SeasonEpisodesUpdateResponse };
+  }
+
+  async function undoRestart(seasonId: number) {
+    const response = await owner.delete(`/api/seasons/${seasonId}/restart`);
+    return { status: response.statusCode, body: response.json() as SeasonEpisodesUpdateResponse };
+  }
+
+  async function drifts(): Promise<number> {
+    const response = await owner.get('/api/season-cache');
+    return (response.json() as { drifts: unknown[] }).drifts.length;
+  }
+
+  it('marks the pass in progress as abandoned today and leaves the season in progress without dates', async () => {
+    const season = addSeason();
+    await patch(owner, season, { op: 'mark', keys: ['s1e1', 's1e2'], date: '2026-02-01' });
+    const { status, body } = await restart(season);
+    expect(status).toBe(200);
+    expect(watchesOf(1, season)).toEqual({
+      s1e1: [abandoned('2026-02-01')],
+      s1e2: [abandoned('2026-02-01')],
+    });
+    expect(body.watchedCount).toBe(0);
+    expect(body.episodes[0]).toMatchObject({ watched: false, viewings: [abandoned('2026-02-01')] });
+    expect(body.tracking).toMatchObject({
+      status: 'in_progress',
+      startedAt: null,
+      finishedAt: null,
+    });
+    expect(entryOf(1, season)).toMatchObject({
+      status: 'in_progress',
+      started_at: null,
+      watched_count: 0,
+    });
+    expect(await drifts()).toBe(0);
+  });
+
+  it('counts the new pass from the viewings made after it and completes without a rewatch', async () => {
+    const season = addSeason();
+    await patch(owner, season, { op: 'mark', keys: ['s1e1', 's1e2'], date: '2026-02-01' });
+    await restart(season);
+    const { body } = await patch(owner, season, {
+      op: 'mark',
+      keys: ['s1e1', 's1e2', 's1e3'],
+      date: '2026-03-05',
+    });
+    expect(body.tracking).toMatchObject({
+      status: 'completed',
+      startedAt: '2026-03-05',
+      rewatches: [],
+    });
+    expect(body.watchedCount).toBe(3);
+    expect(await drifts()).toBe(0);
+  });
+
+  it('takes the mark back and refuses once the new pass has a viewing', async () => {
+    const season = addSeason();
+    await patch(owner, season, { op: 'mark', keys: ['s1e1', 's1e2'], date: '2026-02-01' });
+    await restart(season);
+    const undone = await undoRestart(season);
+    expect(undone.status).toBe(200);
+    expect(watchesOf(1, season)).toEqual({
+      s1e1: [view('2026-02-01')],
+      s1e2: [view('2026-02-01')],
+    });
+    expect(undone.body.tracking).toMatchObject({ status: 'in_progress', startedAt: '2026-02-01' });
+    expect(await drifts()).toBe(0);
+    await restart(season);
+    await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: '2026-03-05' });
+    const refused = await owner.delete(`/api/seasons/${season}/restart`);
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json()).toMatchObject({ code: 'restart_same_day' });
+  });
+
+  it('refuses nothing watched, a finished season and an unrestarted undo', async () => {
+    const season = addSeason();
+    const none = await owner.post(`/api/seasons/${season}/restart`);
+    expect(none.statusCode).toBe(400);
+    expect(none.json()).toMatchObject({ code: 'restart_nothing_watched' });
+    const nothing = await owner.delete(`/api/seasons/${season}/restart`);
+    expect(nothing.json()).toMatchObject({ code: 'restart_none' });
+    await patch(owner, season, { op: 'mark', keys: ['s1e1', 's1e2', 's1e3'], date: '2026-02-01' });
+    const done = await owner.post(`/api/seasons/${season}/restart`);
+    expect(done.json()).toMatchObject({ code: 'restart_not_in_progress' });
+  });
+
+  it('keeps the abandoned viewings through setViewings and unmark', async () => {
+    const season = addSeason();
+    await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: '2026-02-01' });
+    await restart(season);
+    await patch(owner, season, { op: 'mark', keys: ['s1e1'], date: '2026-03-05' });
+    await patch(owner, season, { op: 'unmark', keys: ['s1e1'] });
+    expect(watchesOf(1, season)).toEqual({ s1e1: [abandoned('2026-02-01')] });
+    const set = await patch(owner, season, {
+      op: 'setViewings',
+      key: 's1e1',
+      viewings: [abandoned('2026-02-01'), view('2026-03-05')],
+    });
+    expect(set.status).toBe(200);
+    expect(watchesOf(1, season)).toEqual({
+      s1e1: [abandoned('2026-02-01'), view('2026-03-05')],
     });
   });
 });

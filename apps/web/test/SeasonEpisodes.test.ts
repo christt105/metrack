@@ -391,6 +391,77 @@ describe('SeasonEpisodes', () => {
     expect(wrapper.findAll('.actions button').map((b) => b.text())).toEqual(['Watched today']);
   });
 
+  it('starts a season in progress over, lists the abandoned pass and undoes it from the toast', async () => {
+    const left = (date: string) => ({
+      startedAt: date,
+      finishedAt: date,
+      abandonedAt: '2026-02-01',
+    });
+    const episodes = [
+      item(1, { watched: true, viewings: [{ startedAt: '2026-01-01', finishedAt: '2026-01-01' }] }),
+      item(2, { watched: true, viewings: [{ startedAt: '2026-01-02', finishedAt: '2026-01-02' }] }),
+      item(3),
+    ];
+    const restarted = {
+      ...response(
+        [
+          item(1, { viewings: [left('2026-01-01')] }),
+          item(2, { viewings: [left('2026-01-02')] }),
+          item(3),
+        ],
+        { watchedCount: 0 },
+      ),
+      tracking: tracking(),
+    };
+    const undone = { ...response(episodes), tracking: tracking() };
+    const restartSeason = vi.fn().mockResolvedValue(restarted);
+    const undoSeasonRestart = vi.fn().mockResolvedValue(undone);
+    const mounted = await mountWithApi(
+      SeasonEpisodes,
+      {
+        seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)),
+        restartSeason,
+        undoSeasonRestart,
+      } as never,
+      { seasonId: 50, seriesId: 7, status: 'in_progress', rewatches: [] },
+    );
+    await flushPromises();
+    const button = mounted.wrapper
+      .findAll('.actions button')
+      .find((b) => b.text() === 'Start over');
+    await button!.trigger('click');
+    await flushPromises();
+    expect(restartSeason).toHaveBeenCalledWith(50);
+    expect(mounted.wrapper.emitted('updated')).toHaveLength(1);
+    expect(mounted.wrapper.find('.history .left').text()).toContain('Left behind on 1 Feb 2026');
+    expect(mounted.wrapper.find('.history .left').text()).toContain('2 of 3 episodes');
+    (document.body.querySelector('.toast .undo') as HTMLElement).click();
+    await flushPromises();
+    expect(undoSeasonRestart).toHaveBeenCalledWith(50);
+    expect(mounted.wrapper.find('.history .left').exists()).toBe(false);
+  });
+
+  it('only offers Start over for a season in progress with something watched', async () => {
+    const none = await mountWithApi(
+      SeasonEpisodes,
+      { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])) } as never,
+      { seasonId: 50, seriesId: 7, status: 'in_progress', rewatches: [] },
+    );
+    await flushPromises();
+    expect(none.wrapper.text()).not.toContain('Start over');
+    const done = await mountWithApi(
+      SeasonEpisodes,
+      {
+        seasonEpisodes: vi
+          .fn()
+          .mockResolvedValue(response([item(1, { watched: true, viewings: [viewing] })])),
+      } as never,
+      { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [] },
+    );
+    await flushPromises();
+    expect(done.wrapper.text()).not.toContain('Start over');
+  });
+
   it('says the status changed and that undo does not revert it', async () => {
     const update = vi.fn().mockResolvedValue({
       ...response([item(1, { watched: true })]),
@@ -417,7 +488,7 @@ describe('SeasonEpisodes', () => {
     expect(update).toHaveBeenCalledWith(50, {
       op: 'setViewings',
       key: 'k1',
-      viewings: [viewing, { startedAt: null, finishedAt: '2026-03-03' }],
+      viewings: [viewing, { startedAt: '2026-03-03', finishedAt: '2026-03-03' }],
     });
   });
 

@@ -1,6 +1,8 @@
 import type { ComputedSeasonTracking } from './ComputedSeasonTracking.js';
 import type { ExpectedEpisode } from './ExpectedEpisode.js';
+import { countCompletePasses } from './countCompletePasses.js';
 import { normalizeViewings } from './normalizeViewings.js';
+import { ownPasses } from './ownPasses.js';
 import type { SeasonTracking } from './SeasonTracking.js';
 import type { SeasonTrackingInput } from './SeasonTrackingInput.js';
 import type { Viewing } from './Viewing.js';
@@ -21,19 +23,6 @@ function startOf(viewing: Viewing): string | null {
 
 function finishOf(viewing: Viewing): string | null {
   return viewing.finishedAt ?? viewing.startedAt;
-}
-
-function ownViewings(input: SeasonTrackingInput): Passes {
-  const own: Passes = new Map();
-  for (const { key } of input.episodes) {
-    const stored = input.watches[key];
-    if (stored === undefined) continue;
-    own.set(
-      key,
-      stored.length === 0 ? [{ startedAt: null, finishedAt: null }] : normalizeViewings(stored),
-    );
-  }
-  return own;
 }
 
 function isAired(episode: ExpectedEpisode, today: string): boolean {
@@ -124,12 +113,13 @@ function remembered(
  * episodes that are not skipped (the season is being started over; watching loose episodes is not), and the
  * intention is cleared once a rewatch completes. A season without a single viewing goes back to the status and
  * dates it had before the first one (`manual`, kept when the first viewing appears), and a dropped season keeps its
- * tracking as the user left it.
+ * tracking as the user left it. Abandoned viewings (see `Viewing.abandonedAt`) are not viewings here; a season whose
+ * only viewings were abandoned is in progress with no dates.
  */
 export function computeSeasonTracking(input: SeasonTrackingInput): ComputedSeasonTracking {
   const { tracking, episodes, today } = input;
   const skipped = input.skipped ?? new Set<string>();
-  const own = ownViewings(input);
+  const own = ownPasses(episodes, input.watches);
   const watchedCount = own.size;
   const skippedCount = episodes.filter((e) => skipped.has(e.key)).length;
   const unchanged: ComputedSeasonTracking = {
@@ -140,6 +130,21 @@ export function computeSeasonTracking(input: SeasonTrackingInput): ComputedSeaso
   };
   if (tracking.status === 'dropped') return unchanged;
   if (watchedCount === 0) {
+    const abandoned = episodes.some(({ key }) =>
+      input.watches[key]?.some((viewing) => viewing.abandonedAt !== undefined),
+    );
+    if (abandoned) {
+      return {
+        ...unchanged,
+        tracking: {
+          ...unchanged.tracking,
+          status: 'in_progress',
+          startedAt: null,
+          finishedAt: null,
+          rewatches: [],
+        },
+      };
+    }
     const { manual } = tracking;
     if (!manual) return unchanged;
     const restored: SeasonTracking = { ...unchanged.tracking, ...manual };
@@ -148,16 +153,8 @@ export function computeSeasonTracking(input: SeasonTrackingInput): ComputedSeaso
   }
 
   const required = episodes.filter((e) => !skipped.has(e.key));
-  const airedRequired = required.filter((e) => isAired(e, today));
+  const completePasses = countCompletePasses(own, episodes, skipped, today);
   const most = Math.max(...[...own.values()].map((v) => v.length));
-  const isComplete = (pass: number): boolean =>
-    pass === 1
-      ? required.length > 0 && required.every((e) => isAired(e, today) && own.has(e.key))
-      : airedRequired.length > 0 &&
-        airedRequired.every((e) => (own.get(e.key)?.length ?? 0) >= pass);
-  let completePasses = 0;
-  while (completePasses < most && isComplete(completePasses + 1)) completePasses += 1;
-
   const firstPassComplete = completePasses >= 1;
   const status = firstPassComplete ? 'completed' : 'in_progress';
   const rewatches: Viewing[] = [];

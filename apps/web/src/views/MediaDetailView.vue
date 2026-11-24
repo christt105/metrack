@@ -19,8 +19,10 @@ import ManagePanel from '../components/ManagePanel.vue';
 import QuickActions from '../components/QuickActions.vue';
 import ReviewPanel from '../components/ReviewPanel.vue';
 import SeasonEpisodes from '../components/SeasonEpisodes.vue';
+import SeasonOwnHistory from '../components/SeasonOwnHistory.vue';
 import SteamAchievements from '../components/SteamAchievements.vue';
 import SkipFiller from '../components/SkipFiller.vue';
+import RestartSeries from '../components/RestartSeries.vue';
 import SeasonList from '../components/SeasonList.vue';
 import UnmatchedEpisodes from '../components/UnmatchedEpisodes.vue';
 import { useApi } from '../composables/useApi';
@@ -125,7 +127,7 @@ function onEpisodes(update: SeasonEpisodesUpdateResponse): void {
   if (seasonOf.value) detail.value = withTracking(seasonOf.value, update) as unknown as AnyDetail;
 }
 
-const hasCatalog = ref(false);
+const hasCatalog = ref<boolean | null>(null);
 
 function onEpisodesLoaded(data: SeasonEpisodesResponse): void {
   hasCatalog.value = data.source !== 'numbers';
@@ -144,7 +146,7 @@ const eyebrow = computed(() => messages.typeLabels[type.value]);
 watch(
   () => [props.collection, props.id],
   () => {
-    hasCatalog.value = false;
+    hasCatalog.value = null;
   },
 );
 watch(() => [props.collection, props.id], load, { immediate: true });
@@ -178,7 +180,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
           v-if="trackedStatus"
           :collection="collection"
           :detail="detail"
-          :episode-mode="hasCatalog"
+          :episode-mode="hasCatalog === true"
           @saved="onSaved"
         />
         <RouterLink :to="`/${collection}/${detail.id}/edit`" class="button">
@@ -203,6 +205,8 @@ watch(() => [props.collection, props.id], load, { immediate: true });
 
     <SeasonList v-if="series" :seasons="series.seasons" :series-cover="series.cover" />
 
+    <RestartSeries v-if="series" :seasons="series.seasons" @changed="load" />
+
     <SkipFiller v-if="series && animated" :series-id="series.id" @changed="load" />
 
     <SeasonEpisodes
@@ -216,12 +220,17 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       @loaded="onEpisodesLoaded"
     />
 
+    <SeasonOwnHistory
+      v-if="seasonOf && hasCatalog === false && trackedStatus"
+      :season="seasonOf"
+      @updated="onSaved"
+    />
+
     <ManagePanel
       :collection="collection"
       :detail="detail"
       :title="titleText"
       :fallback="parentArtwork"
-      :rewatches-locked="hasCatalog"
       @load="load"
       @saved="onSaved"
     />

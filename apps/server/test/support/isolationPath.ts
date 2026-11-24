@@ -22,6 +22,7 @@ const NAMED: Readonly<Record<string, (world: IsolationWorld) => number | string>
   type: () => 'movie',
   titleId: (world) => world.movieId,
   gameId: (world) => world.gameId,
+  pass: () => 1,
 };
 
 /** Fills the params of a route pattern with user 1's ids; throws when it cannot tell what a param stands for. */

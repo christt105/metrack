@@ -11,10 +11,14 @@ import type {
 import { useApi } from '../composables/useApi';
 import { useMessages } from '../composables/useMessages';
 import { doneOrSkipped, watchedTodayKeys } from '../logic/episodeSelection';
+import type { HistoryPass } from '../logic/HistoryPass';
+import type { HistoryRow } from '../logic/HistoryRow';
+import { changeViewing, deleteViewing } from '../logic/historyOperations';
 import { inverseOperations } from '../logic/inverseOperations';
 import { todayIso } from '../logic/todayIso';
 import EpisodeRow from './EpisodeRow.vue';
 import ErrorNotice from './ErrorNotice.vue';
+import SeasonHistory from './SeasonHistory.vue';
 import SeasonProgress from './SeasonProgress.vue';
 import UndoToast from './UndoToast.vue';
 
@@ -39,7 +43,12 @@ const api = useApi();
 const data = ref<SeasonEpisodesResponse | null>(null);
 const busy = ref(false);
 const error = ref<unknown>(null);
-const toast = ref<{ message: string; undo: EpisodeOperation[] } | null>(null);
+const toast = ref<{
+  message: string;
+  undo: EpisodeOperation[];
+  restart: boolean;
+  intent: boolean | null;
+} | null>(null);
 let timer: ReturnType<typeof setTimeout> | undefined;
 let ticket = 0;
 let refill: ReturnType<typeof setTimeout> | undefined;
@@ -68,6 +77,12 @@ const canRewatch = computed(
     props.status === 'completed' &&
     rewatchStart.value === null &&
     props.rewatches !== undefined,
+);
+const canRestart = computed(
+  () =>
+    numbered.value &&
+    (props.status === 'in_progress' || openStart.value !== null) &&
+    (data.value?.episodes.some((episode) => isDone(episode, rewatchStart.value)) ?? false),
 );
 const canCancelRewatch = computed(() => wanted.value && openStart.value === null);
 
@@ -115,9 +130,14 @@ async function load(): Promise<void> {
   }
 }
 
-function say(message: string, undo: EpisodeOperation[]): void {
+function say(
+  message: string,
+  undo: EpisodeOperation[],
+  restart = false,
+  intent: boolean | null = null,
+): void {
   clearTimeout(timer);
-  toast.value = { message, undo };
+  toast.value = { message, undo, restart, intent };
   timer = setTimeout(dismiss, TOAST_MS);
 }
 
@@ -175,7 +195,9 @@ function toggle(key: string): Promise<void> {
   }
   const start = rewatchStart.value;
   const kept = episode.viewings.filter(
-    (viewing) => viewing.finishedAt !== null && viewing.finishedAt < start,
+    (viewing) =>
+      viewing.abandonedAt !== undefined ||
+      (viewing.finishedAt !== null && viewing.finishedAt < start),
   );
   return kept.length === 0
     ? run({ op: 'unmark', keys: [key] }, () => messages.episodes.unmarked)
@@ -210,17 +232,95 @@ async function setRewatchIntent(wantedNow: boolean): Promise<void> {
   }
 }
 
+async function restart(): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
+  error.value = null;
+  try {
+    receive(await api.restartSeason(props.seasonId));
+    say(messages.episodes.restartDone, [], true);
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    busy.value = false;
+  }
+}
+
 function setViewings(key: string, viewings: Viewing[]): Promise<void> {
   return run({ op: 'setViewings', key, viewings }, () => messages.episodes.viewingsSaved);
 }
 
-async function undo(): Promise<void> {
-  const operations = toast.value?.undo ?? [];
-  dismiss();
-  if (busy.value || operations.length === 0) return;
+function changeRow(row: HistoryRow, replacement: Viewing): Promise<void> {
+  return run(changeViewing(row, replacement), () => messages.history.viewingChanged);
+}
+
+function removeRow(row: HistoryRow): Promise<void> {
+  return run(deleteViewing(row), () => messages.history.viewingDeleted);
+}
+
+function previousViewings(rows: readonly HistoryRow[]): EpisodeOperation[] {
+  const keys = new Set(rows.map((row) => row.key));
+  const episodes = (data.value?.episodes ?? [])
+    .filter((episode) => keys.has(episode.key))
+    .map(({ key, viewings }) => ({ key, viewings }));
+  return episodes.length === 0 ? [] : [{ op: 'restoreViewings', episodes }];
+}
+
+async function deletePass(pass: HistoryPass): Promise<void> {
+  if (busy.value || pass.number === null) return;
   busy.value = true;
   error.value = null;
   try {
+    const undo = previousViewings(pass.rows);
+    receive(await api.removeSeasonPass(props.seasonId, pass.number));
+    say(messages.history.passDeleted, undo);
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function takeBack(pass: HistoryPass): Promise<void> {
+  if (busy.value || pass.abandonedOn === null) return;
+  busy.value = true;
+  error.value = null;
+  try {
+    const undo = previousViewings(pass.rows);
+    receive(await api.undoSeasonRestart(props.seasonId, pass.abandonedOn));
+    say(messages.history.startOverUndone, undo);
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function removeIntent(): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
+  error.value = null;
+  try {
+    receive(await api.setSeasonRewatchIntent(props.seasonId, false));
+    say(messages.history.intentRemoved, [], false, true);
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function undo(): Promise<void> {
+  const operations = toast.value?.undo ?? [];
+  const restarted = toast.value?.restart ?? false;
+  const intent = toast.value?.intent ?? null;
+  dismiss();
+  if (busy.value || (operations.length === 0 && !restarted && intent === null)) return;
+  busy.value = true;
+  error.value = null;
+  try {
+    if (intent !== null) receive(await api.setSeasonRewatchIntent(props.seasonId, intent));
+    if (restarted) receive(await api.undoSeasonRestart(props.seasonId));
     for (const operation of operations) {
       receive(await api.updateSeasonEpisodes(props.seasonId, operation));
     }
@@ -276,6 +376,15 @@ onBeforeUnmount(() => {
             {{ messages.episodes.rewatch }}
           </button>
           <button
+            v-if="canRestart"
+            type="button"
+            class="small ghost"
+            :disabled="busy"
+            @click="restart"
+          >
+            {{ messages.episodes.restart }}
+          </button>
+          <button
             v-if="canCancelRewatch"
             type="button"
             class="small ghost"
@@ -303,16 +412,27 @@ onBeforeUnmount(() => {
         </ul>
       </template>
     </template>
-    <Teleport to="body">
-      <UndoToast
-        v-if="toast"
-        :message="toast.message"
-        :undoable="toast.undo.length > 0"
-        @undo="undo"
-        @dismiss="dismiss"
-      />
-    </Teleport>
   </section>
+  <SeasonHistory
+    v-if="data && numbered"
+    :episodes="data.episodes"
+    :wants-rewatch="props.wantsRewatch === true"
+    :busy="busy"
+    @change="changeRow"
+    @remove="removeRow"
+    @delete-pass="deletePass"
+    @take-back="takeBack"
+    @remove-intent="removeIntent"
+  />
+  <Teleport to="body">
+    <UndoToast
+      v-if="toast"
+      :message="toast.message"
+      :undoable="toast.undo.length > 0 || toast.restart || toast.intent !== null"
+      @undo="undo"
+      @dismiss="dismiss"
+    />
+  </Teleport>
 </template>
 
 <style scoped>

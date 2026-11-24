@@ -6,9 +6,13 @@ import {
   idEpisodeWatches,
   isEpisodeCatalogStale,
   isSeasonAiring,
+  brokenViewingRule,
   numberedEpisodes,
+  removePass,
+  restartSeason,
   skipBlockers,
   toSeasonEpisodeItem,
+  undoRestart,
   type Episode,
   type EpisodeOperation,
   type EpisodeState,
@@ -18,6 +22,7 @@ import {
   type SeasonTracking,
   type Season,
   type SeasonEpisodes,
+  type Viewing,
   type Series,
 } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
@@ -32,6 +37,12 @@ import type { SeasonEpisodesResult } from './SeasonEpisodesResult.js';
 import type { ResolvedSeason } from './ResolvedSeason.js';
 import { PremiereReopener } from './PremiereReopener.js';
 import { SeriesWatchTracker } from './SeriesWatchTracker.js';
+
+function operationKeys(operation: EpisodeOperation): string[] {
+  if (operation.op === 'setViewings') return [operation.key];
+  if (operation.op === 'restoreViewings') return operation.episodes.map(({ key }) => key);
+  return operation.keys;
+}
 
 /** How many single episodes one request fetches for a season too large to read whole. */
 export const EPISODE_CHUNK_SIZE = 15;
@@ -92,7 +103,7 @@ export class SeasonEpisodesService {
     const loaded = await this.resolve(seasonId);
     const { season, episodes } = loaded;
     const keys = new Set(episodes.map((episode) => episodeKey(episode, season.number)));
-    for (const key of operation.op === 'setViewings' ? [operation.key] : operation.keys) {
+    for (const key of operationKeys(operation)) {
       if (!keys.has(key)) {
         throw ApiError.badRequest(
           'episode_out_of_range',
@@ -100,15 +111,13 @@ export class SeasonEpisodesService {
         );
       }
     }
-    if (operation.op === 'setViewings') {
-      for (const viewing of operation.viewings) {
-        if (viewing.finishedAt === null || (viewing.startedAt ?? '') > viewing.finishedAt) {
-          throw ApiError.badRequest(
-            'invalid_viewing',
-            'An episode viewing needs a finish date that is not before its start',
-          );
-        }
-      }
+    const today = this.today();
+    if (operation.op === 'setViewings') this.checkViewings(operation.viewings, today);
+    if (operation.op === 'restoreViewings') {
+      for (const { viewings } of operation.episodes) this.checkViewings(viewings, today);
+    }
+    if (operation.op === 'mark' && operation.date !== null) {
+      this.checkViewings([{ startedAt: operation.date, finishedAt: operation.date }], today);
     }
     if (operation.op === 'skip') {
       const watches = (await this.deps.watches.get(season.seriesId)) ?? {};
@@ -134,6 +143,123 @@ export class SeasonEpisodesService {
   ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
     const loaded = await this.resolve(seasonId);
     return this.commit(loaded, (base) => base, new Map([[seasonId, wanted]]));
+  }
+
+  /**
+   * Starts a season over from its first episode: the viewings of the pass in progress are marked abandoned with
+   * today's date (see `restartSeason`) and the season entries are derived again from the result. Refused with 400
+   * `restart_not_in_progress`, `restart_nothing_watched` or `restart_same_day`.
+   */
+  async restart(
+    seasonId: number,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const loaded = await this.resolve(seasonId);
+    const { season, episodes } = loaded;
+    const expected = episodes.map((episode) => ({
+      key: episodeKey(episode, season.number),
+      airDate: episode.airDate,
+    }));
+    const today = this.today();
+    return this.commit(loaded, (base) => {
+      const result = restartSeason(
+        expected,
+        base.watches,
+        new Set(base.skipped),
+        today,
+        season.status === 'dropped',
+      );
+      if (result.ok) return { watches: result.watches, skipped: base.skipped };
+      const refusals = {
+        not_in_progress: 'Only a season with a pass in progress can be started over',
+        nothing_watched: 'There is nothing watched in this pass to start over',
+        same_day: 'This season was already started over today',
+        none: 'This season has not been started over',
+      } as const;
+      throw ApiError.badRequest(`restart_${result.reason}`, refusals[result.reason]);
+    });
+  }
+
+  /**
+   * Takes back a start over of a season by removing the abandoned mark from the viewings abandoned on `day`, by
+   * default the latest one (see `undoRestart`).
+   */
+  async undoRestart(
+    seasonId: number,
+    day?: string,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const loaded = await this.resolve(seasonId);
+    const { season, episodes } = loaded;
+    const expected = episodes.map((episode) => ({
+      key: episodeKey(episode, season.number),
+      airDate: episode.airDate,
+    }));
+    return this.commit(loaded, (base) => {
+      const result = undoRestart(expected, base.watches, day);
+      if (result.ok) return { watches: result.watches, skipped: base.skipped };
+      const refusals = {
+        none: 'This season has not been started over',
+        same_day:
+          'Something was watched after this season was started over, so it cannot be taken back',
+        not_in_progress: '',
+        nothing_watched: '',
+      } as const;
+      throw ApiError.badRequest(`restart_${result.reason}`, refusals[result.reason]);
+    });
+  }
+
+  /**
+   * Deletes pass `pass` of a season: the `pass`-th live viewing of each of its episodes (see `removePass`). Refused
+   * with 400 `pass_not_found` when no episode has that pass.
+   */
+  async removePass(
+    seasonId: number,
+    pass: number,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const loaded = await this.resolve(seasonId);
+    const { season, episodes } = loaded;
+    const expected = episodes.map((episode) => ({
+      key: episodeKey(episode, season.number),
+      airDate: episode.airDate,
+    }));
+    return this.commit(loaded, (base) => {
+      const result = removePass(expected, base.watches, pass);
+      if (!result.ok) {
+        throw ApiError.badRequest('pass_not_found', `This season has no pass ${pass}`);
+      }
+      return { watches: result.watches, skipped: base.skipped };
+    });
+  }
+
+  private today(): string {
+    return this.now().toISOString().slice(0, 10);
+  }
+
+  private checkViewings(viewings: readonly Viewing[], today: string): void {
+    for (const viewing of viewings) {
+      if (
+        viewing.finishedAt === null &&
+        viewing.startedAt !== null &&
+        viewing.abandonedAt === undefined
+      ) {
+        throw ApiError.badRequest(
+          'invalid_viewing',
+          'An episode viewing needs a finish date that is not before its start',
+        );
+      }
+    }
+    const broken = brokenViewingRule(viewings, today);
+    if (broken === 'invalid_dates') {
+      throw ApiError.badRequest(
+        'invalid_viewing',
+        'An episode viewing needs a finish date that is not before its start',
+      );
+    }
+    if (broken === 'future_date') {
+      throw ApiError.badRequest('future_date', 'A viewing cannot have a date in the future');
+    }
+    if (broken === 'duplicate') {
+      throw ApiError.badRequest('duplicate_viewing', 'The episode already has that exact viewing');
+    }
   }
 
   private async commit(
