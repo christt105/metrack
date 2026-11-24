@@ -21,7 +21,7 @@ export interface LibraryCard {
   allAchievements: boolean;
 }
 
-function toCard(item: MediaSummary): LibraryCard {
+export function toCard(item: MediaSummary): LibraryCard {
   return {
     key: `${item.type}-${item.id}`,
     type: item.type,

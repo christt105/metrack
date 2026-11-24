@@ -9,6 +9,11 @@ import StatusBadge from './StatusBadge.vue';
 const messages = useMessages();
 const props = defineProps<{ card: LibraryCard }>();
 const to = computed(() => detailPath(props.card.type, props.card.id));
+const title = computed(() =>
+  props.card.type === 'season' && props.card.subtitle
+    ? `${props.card.subtitle}, ${props.card.title}`
+    : props.card.title,
+);
 const image = computed(() => {
   if (props.card.banner) return { src: sizedImageUrl(props.card.banner, 'cover'), wide: true };
   if (props.card.cover) return { src: sizedImageUrl(props.card.cover, 'thumb'), wide: false };
@@ -28,10 +33,10 @@ const image = computed(() => {
         loading="eager"
         decoding="async"
       />
-      <span v-else class="placeholder" aria-hidden="true">{{ card.title.slice(0, 1) }}</span>
+      <span v-else class="placeholder" aria-hidden="true">{{ title.slice(0, 1) }}</span>
     </div>
     <div class="body">
-      <strong class="title">{{ card.title }}</strong>
+      <strong class="title">{{ title }}</strong>
       <span class="meta">
         {{ messages.typeLabels[card.type] }}
         <StatusBadge v-if="card.status" :status="card.status" />
