@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { hasAired, isDone, type SeasonEpisodeItem, type Viewing } from '@metrack/domain';
+import {
+  hasAired,
+  isDone,
+  liveViewings,
+  type SeasonEpisodeItem,
+  type Viewing,
+} from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
 import { hasDatedViewing } from '../logic/episodeSelection';
 import { stillUrl } from '../logic/stillUrl';
@@ -45,7 +51,7 @@ const fillerLabel = computed(() => {
   if (props.episode.filler === 'mixed') return messages.episodes.mixedFillerLabel;
   return null;
 });
-const times = computed(() => props.episode.viewings.length);
+const times = computed(() => liveViewings(props.episode.viewings).length);
 const done = computed(() => isDone(props.episode, props.rewatchStart));
 const skippable = computed(() => !props.episode.skipped && !hasDatedViewing(props.episode));
 </script>

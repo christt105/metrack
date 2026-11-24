@@ -1,5 +1,6 @@
 import type { EpisodeWatches } from './EpisodeWatches.js';
 import type { ExpectedEpisode } from './ExpectedEpisode.js';
+import { liveWatches } from './liveWatches.js';
 import type { SeasonTracking } from './SeasonTracking.js';
 
 /**
@@ -11,11 +12,12 @@ import type { SeasonTracking } from './SeasonTracking.js';
 export function reopenCompletedSeason(
   tracking: SeasonTracking,
   episodes: readonly ExpectedEpisode[],
-  watches: EpisodeWatches,
+  stored: EpisodeWatches,
   skipped: ReadonlySet<string>,
   today: string,
 ): SeasonTracking | null {
   if (tracking.status !== 'completed') return null;
+  const watches = liveWatches(stored);
   if (tracking.rewatches.some((viewing) => viewing.finishedAt === null)) return null;
   if (!episodes.some(({ key }) => key in watches)) return null;
   const owed = episodes.some(

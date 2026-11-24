@@ -327,6 +327,32 @@ describe('numbered sync (no TMDB index)', () => {
     expect(started.change?.wantsRewatch).toBeUndefined();
   });
 
+  it('does not add a play that already exists as an abandoned viewing and counts a later one in the new pass', () => {
+    const abandoned = (day: string): Viewing => ({
+      startedAt: day,
+      finishedAt: day,
+      abandonedAt: '2026-06-10',
+    });
+    const watches = { s1e1: [abandoned('2026-06-01')], s1e2: [abandoned('2026-06-02')] };
+    const season = stored({ status: 'in_progress', watchedCount: 0 });
+    const replay = one({
+      seasons: [librarySeason(3)],
+      stored: [season],
+      days: { s1e1: ['2026-06-01'], s1e2: ['2026-06-02'] },
+      watches,
+    });
+    expect(replay.series?.watches).toBeUndefined();
+    expect(replay.change?.watchedEpisodes ?? 0).toBe(0);
+    const later = one({
+      seasons: [librarySeason(3)],
+      stored: [season],
+      days: { s1e1: ['2026-06-12'] },
+      watches,
+    });
+    expect(later.series?.watches?.s1e1).toEqual([abandoned('2026-06-01'), view('2026-06-12')]);
+    expect(later.change).toMatchObject({ status: 'in_progress', watchedEpisodes: 1 });
+  });
+
   it('closes a rewatch when every episode is played again', () => {
     const { change } = one({
       seasons: [librarySeason(3)],

@@ -10,7 +10,7 @@ import SeasonProgress from './SeasonProgress.vue';
 
 const messages = useMessages();
 const props = defineProps<{ row: NextEpisodeRow; busy: boolean }>();
-const emit = defineEmits<{ mark: []; skip: []; hide: [] }>();
+const emit = defineEmits<{ mark: []; skip: []; hide: []; restart: [] }>();
 
 const imageFailed = ref(false);
 const image = computed(() => {
@@ -24,10 +24,20 @@ const image = computed(() => {
 const rewatching = computed(
   () => props.row.progress.rewatch || props.row.labels.includes('rewatch'),
 );
-const menuItems = computed<RowMenuItem[]>(() => [{ id: 'hide', label: messages.next.hide }]);
+const restartable = computed(
+  () =>
+    props.row.source !== 'numbers' &&
+    props.row.progress.watched !== null &&
+    props.row.progress.watched - props.row.progress.skipped > 0,
+);
+const menuItems = computed<RowMenuItem[]>(() => [
+  ...(restartable.value ? [{ id: 'restart', label: messages.next.restart }] : []),
+  { id: 'hide', label: messages.next.hide },
+]);
 
 function onMenu(id: string): void {
   if (id === 'hide') emit('hide');
+  if (id === 'restart') emit('restart');
 }
 const ready = computed(() => props.row.availability === 'ready');
 const filler = computed(() => props.row.episode.filler);

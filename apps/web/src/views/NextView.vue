@@ -102,6 +102,29 @@ async function act(row: NextEpisodeRow, kind: 'mark' | 'skip'): Promise<void> {
   }
 }
 
+async function restart(row: NextEpisodeRow): Promise<void> {
+  const seriesId = row.series.id;
+  if (busy.value.has(seriesId)) return;
+  setBusy(seriesId, true);
+  error.value = null;
+  try {
+    await api.restartSeason(row.season.id);
+    await refreshRow(seriesId);
+    say({
+      message: messages.episodes.restartDone,
+      seriesId,
+      revert: async () => {
+        await api.undoSeasonRestart(row.season.id);
+        await refreshRow(seriesId);
+      },
+    });
+  } catch (cause) {
+    error.value = cause;
+  } finally {
+    setBusy(seriesId, false);
+  }
+}
+
 async function hide(row: NextEpisodeRow): Promise<void> {
   const seriesId = row.series.id;
   if (busy.value.has(seriesId)) return;
@@ -163,6 +186,7 @@ onBeforeUnmount(() => clearTimeout(timer));
         :busy="busy.has(row.series.id)"
         @mark="act(row, 'mark')"
         @skip="act(row, 'skip')"
+        @restart="restart(row)"
         @hide="hide(row)"
       />
     </ul>

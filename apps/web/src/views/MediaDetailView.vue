@@ -21,6 +21,7 @@ import ReviewPanel from '../components/ReviewPanel.vue';
 import SeasonEpisodes from '../components/SeasonEpisodes.vue';
 import SteamAchievements from '../components/SteamAchievements.vue';
 import SkipFiller from '../components/SkipFiller.vue';
+import RestartSeries from '../components/RestartSeries.vue';
 import SeasonList from '../components/SeasonList.vue';
 import UnmatchedEpisodes from '../components/UnmatchedEpisodes.vue';
 import { useApi } from '../composables/useApi';
@@ -202,6 +203,8 @@ watch(() => [props.collection, props.id], load, { immediate: true });
     />
 
     <SeasonList v-if="series" :seasons="series.seasons" :series-cover="series.cover" />
+
+    <RestartSeries v-if="series" :seasons="series.seasons" @changed="load" />
 
     <SkipFiller v-if="series && animated" :series-id="series.id" @changed="load" />
 

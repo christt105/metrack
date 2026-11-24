@@ -1,4 +1,5 @@
 import type { EpisodeWatches } from './EpisodeWatches.js';
+import { liveWatches } from './liveWatches.js';
 
 /**
  * The start dates of the first viewings of the watched episodes among `keys`, or null when none is watched or
@@ -6,8 +7,9 @@ import type { EpisodeWatches } from './EpisodeWatches.js';
  */
 export function firstViewingStarts(
   keys: readonly string[],
-  watches: EpisodeWatches,
+  stored: EpisodeWatches,
 ): string[] | null {
+  const watches = liveWatches(stored);
   const starts: string[] = [];
   for (const key of keys) {
     const viewings = watches[key];

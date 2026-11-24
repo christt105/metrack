@@ -1,4 +1,5 @@
 import { computeSeasonTracking } from './computeSeasonTracking.js';
+import { liveWatches } from './liveWatches.js';
 import { isUnrecordedCompletion } from './materializeCompletedSeasons.js';
 import type { SeasonEntryUpdate } from './SeasonEntryUpdate.js';
 import type { SeriesSeasonInput } from './SeriesSeasonInput.js';
@@ -25,6 +26,7 @@ function isCurrent(
 export function deriveSeriesTracking(input: SeriesTrackingInput): SeasonEntryUpdate[] {
   const updates: SeasonEntryUpdate[] = [];
   const skipped = new Set(input.skipped ?? []);
+  const before = input.before ? liveWatches(input.before) : {};
   for (const season of input.seasons) {
     if (
       season.episodes.length === 0 ||
@@ -39,7 +41,7 @@ export function deriveSeriesTracking(input: SeriesTrackingInput): SeasonEntryUpd
       watches: input.watches,
       skipped,
       ...(input.before
-        ? { previouslyEmpty: season.episodes.every(({ key }) => !(key in input.before!)) }
+        ? { previouslyEmpty: season.episodes.every(({ key }) => !(key in before)) }
         : {}),
       today: input.today,
     });

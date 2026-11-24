@@ -74,6 +74,8 @@ export const en = {
       'This provider is not set up on the server yet (TMDB for movies and series, IGDB for games).',
     noMetadataSource: 'There is no metadata source for this kind of title.',
     generic: 'Something went wrong.',
+    restartSameDay:
+      'This season was already started over today, or something was watched after it was, so this cannot be done now.',
   },
   list: {
     searchPlaceholder: 'Search titles',
@@ -200,6 +202,15 @@ export const en = {
     skipped: (count: number) => (count === 1 ? 'Episode skipped' : `${count} episodes skipped`),
     unskipped: 'Episode unskipped',
     rewatch: 'Rewatch',
+    restart: 'Start over',
+    restartDone: 'Season started over from the first episode',
+    abandonedTitle: 'Passes left behind',
+    abandonedPass: (watched: number, total: number, from: string | null, to: string | null) =>
+      `${watched} of ${total}, ${from === null ? 'until' : `from ${from} to`} ${to ?? 'an unknown date'}`,
+    abandonedViewing: (date: string) => `Left behind on ${date}`,
+    restartSeries: 'Start the series over',
+    restartSeriesHint: 'You have finished every season. Watch the series again from season 1.',
+    seriesRewatchStarted: 'Rewatch of season 1 started',
     rewatchStarted: 'Rewatch started',
     rewatchCancel: 'Cancel rewatch',
     rewatchCancelled: 'Rewatch cancelled',
@@ -504,6 +515,7 @@ export const en = {
     skipFiller: 'Skip (filler)',
     menu: (series: string) => `More actions for ${series}`,
     hide: 'Remove from Up next',
+    restart: 'Start over',
     hidden: (series: string) => `${series} removed from Up next`,
     seasonCompleted: (season: number) => `Season ${season} completed`,
     still: (series: string) => `Artwork of ${series}`,

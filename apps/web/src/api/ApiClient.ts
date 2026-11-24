@@ -225,6 +225,14 @@ export class ApiClient {
     return this.request('PATCH', `/seasons/${seasonId}/episodes`, operation);
   }
 
+  restartSeason(seasonId: number): Promise<SeasonEpisodesUpdateResponse> {
+    return this.request('POST', `/seasons/${seasonId}/restart`);
+  }
+
+  undoSeasonRestart(seasonId: number): Promise<SeasonEpisodesUpdateResponse> {
+    return this.request('DELETE', `/seasons/${seasonId}/restart`);
+  }
+
   setSeasonRewatchIntent(seasonId: number, wanted: boolean): Promise<SeasonEpisodesUpdateResponse> {
     return this.request('PUT', `/seasons/${seasonId}/rewatch-intent`, { wanted });
   }

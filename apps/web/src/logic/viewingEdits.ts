@@ -30,7 +30,8 @@ export function withReplaced(
   replacement: Viewing,
 ): Viewing[] {
   const list = newestFirst(viewings);
-  list[index] = replacement;
+  const abandonedAt = list[index]?.abandonedAt;
+  list[index] = abandonedAt === undefined ? replacement : { ...replacement, abandonedAt };
   return normalizeViewings(list);
 }
 

@@ -7,8 +7,10 @@ import {
   isEpisodeCatalogStale,
   isSeasonAiring,
   numberedEpisodes,
+  restartSeason,
   skipBlockers,
   toSeasonEpisodeItem,
+  undoRestart,
   type Episode,
   type EpisodeOperation,
   type EpisodeState,
@@ -102,7 +104,8 @@ export class SeasonEpisodesService {
     }
     if (operation.op === 'setViewings') {
       for (const viewing of operation.viewings) {
-        if (viewing.finishedAt === null || (viewing.startedAt ?? '') > viewing.finishedAt) {
+        const open = viewing.finishedAt === null && viewing.abandonedAt === undefined;
+        if (open || (viewing.startedAt ?? '') > (viewing.finishedAt ?? '\uffff')) {
           throw ApiError.badRequest(
             'invalid_viewing',
             'An episode viewing needs a finish date that is not before its start',
@@ -134,6 +137,64 @@ export class SeasonEpisodesService {
   ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
     const loaded = await this.resolve(seasonId);
     return this.commit(loaded, (base) => base, new Map([[seasonId, wanted]]));
+  }
+
+  /**
+   * Starts a season over from its first episode: the viewings of the pass in progress are marked abandoned with
+   * today's date (see `restartSeason`) and the season entries are derived again from the result. Refused with 400
+   * `restart_not_in_progress`, `restart_nothing_watched` or `restart_same_day`.
+   */
+  async restart(
+    seasonId: number,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const loaded = await this.resolve(seasonId);
+    const { season, episodes } = loaded;
+    const expected = episodes.map((episode) => ({
+      key: episodeKey(episode, season.number),
+      airDate: episode.airDate,
+    }));
+    const today = this.now().toISOString().slice(0, 10);
+    return this.commit(loaded, (base) => {
+      const result = restartSeason(
+        expected,
+        base.watches,
+        new Set(base.skipped),
+        today,
+        season.status === 'dropped',
+      );
+      if (result.ok) return { watches: result.watches, skipped: base.skipped };
+      const refusals = {
+        not_in_progress: 'Only a season with a pass in progress can be started over',
+        nothing_watched: 'There is nothing watched in this pass to start over',
+        same_day: 'This season was already started over today',
+        none: 'This season has not been started over',
+      } as const;
+      throw ApiError.badRequest(`restart_${result.reason}`, refusals[result.reason]);
+    });
+  }
+
+  /** Takes back the last start over of a season by removing the abandoned mark from its viewings (see `undoRestart`). */
+  async undoRestart(
+    seasonId: number,
+  ): Promise<{ response: SeasonEpisodesUpdateResponse; episodeCountChanged: boolean }> {
+    const loaded = await this.resolve(seasonId);
+    const { season, episodes } = loaded;
+    const expected = episodes.map((episode) => ({
+      key: episodeKey(episode, season.number),
+      airDate: episode.airDate,
+    }));
+    return this.commit(loaded, (base) => {
+      const result = undoRestart(expected, base.watches);
+      if (result.ok) return { watches: result.watches, skipped: base.skipped };
+      const refusals = {
+        none: 'This season has not been started over',
+        same_day:
+          'Something was watched after this season was started over, so it cannot be taken back',
+        not_in_progress: '',
+        nothing_watched: '',
+      } as const;
+      throw ApiError.badRequest(`restart_${result.reason}`, refusals[result.reason]);
+    });
   }
 
   private async commit(

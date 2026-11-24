@@ -17,6 +17,7 @@ import { idParams } from './schemas/mediaSchemas.js';
  * `PATCH` marks, unmarks or edits the viewings of episodes and answers with the episodes and the season's tracking
  * after the change; it is a write, so the content version is bumped by the usual write path. `PUT` on
  * `/api/seasons/{id}/rewatch-intent` sets or clears the intention to watch the season again and answers the same.
+ * `POST` and `DELETE` on `/api/seasons/{id}/restart` start the season over and take that back, with the same answer.
  */
 export function registerSeasonEpisodeRoutes(
   routes: ApiRoutes,
@@ -47,6 +48,24 @@ export function registerSeasonEpisodeRoutes(
     { schema: { params: idParams, body: rewatchIntentBody } },
     async (request): Promise<SeasonEpisodesUpdateResponse> => {
       const { response } = await episodes.setRewatchIntent(request.params.id, request.body.wanted);
+      return response;
+    },
+  );
+
+  routes.post<{ Params: { id: number } }>(
+    '/api/seasons/:id/restart',
+    { schema: { params: idParams } },
+    async (request): Promise<SeasonEpisodesUpdateResponse> => {
+      const { response } = await episodes.restart(request.params.id);
+      return response;
+    },
+  );
+
+  routes.delete<{ Params: { id: number } }>(
+    '/api/seasons/:id/restart',
+    { schema: { params: idParams } },
+    async (request): Promise<SeasonEpisodesUpdateResponse> => {
+      const { response } = await episodes.undoRestart(request.params.id);
       return response;
     },
   );
