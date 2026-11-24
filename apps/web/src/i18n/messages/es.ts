@@ -102,6 +102,10 @@ export const es: Messages = {
       'Este proveedor aún no está configurado en el servidor (TMDB para películas y series, IGDB para juegos).',
     noMetadataSource: 'No hay ninguna fuente de metadatos para este tipo de título.',
     generic: 'Algo ha salido mal.',
+    viewingInvalid: 'El inicio de un visionado no puede ser posterior a su fin.',
+    viewingFuture: 'Un visionado no puede tener una fecha futura.',
+    viewingDuplicate: 'Ese visionado exacto ya está registrado.',
+    passNotFound: 'Esa pasada ya no existe.',
     restartSameDay:
       'Esta temporada ya se ha empezado de nuevo hoy, o se ha visto algo después, así que no se puede hacer ahora.',
   },
@@ -230,9 +234,6 @@ export const es: Messages = {
     rewatch: 'Volver a ver',
     restart: 'Empezar de nuevo',
     restartDone: 'Temporada empezada de nuevo desde el primer episodio',
-    abandonedTitle: 'Pasadas abandonadas',
-    abandonedPass: (watched: number, total: number, from: string | null, to: string | null) =>
-      `${watched} de ${total}, ${from === null ? 'hasta el' : `del ${from} al`} ${to ?? 'una fecha desconocida'}`,
     abandonedViewing: (date: string) => `Abandonado el ${date}`,
     restartSeries: 'Volver a empezar la serie',
     restartSeriesHint:
@@ -242,8 +243,6 @@ export const es: Messages = {
     rewatchCancel: 'Cancelar revisionado',
     rewatchCancelled: 'Revisionado cancelado',
     rewatchOf: (done: number, total: number) => `Revisionado: ${done} de ${total}`,
-    rewatchListLocked:
-      'Los revisionados de una temporada con episodios siguen los visionados de sus episodios.',
     noOverview: 'Sin sinopsis.',
     viewings: 'Visionados',
     noViewings: 'Visto en una fecha desconocida.',
@@ -432,11 +431,43 @@ export const es: Messages = {
       `Tus propias imágenes (subidas y portadas propias) ocupan ${used}. El propietario no tiene límite.`,
     megabytes: (bytes: number) => `${megabyteFormat.format(bytes / (1024 * 1024))} MB`,
   },
+  history: {
+    title: 'Historial',
+    intro:
+      'Todo lo registrado de esta temporada, pasada a pasada. Puedes corregir fechas y borrar visionados; cada cambio se puede deshacer.',
+    empty: 'Todavía no hay nada registrado de esta temporada.',
+    firstTime: 'Primera vez',
+    rewatchN: (number: number) => `Revisionado ${number}`,
+    leftBehind: (date: string) => `Abandonada el ${date}`,
+    summary: (watched: number, total: number) => `${watched} de ${total} episodios`,
+    range: (from: string | null, to: string | null) =>
+      from === null || from === to ? (to ?? 'Fecha desconocida') : `${from} a ${to ?? '?'}`,
+    unknownDate: 'Fecha desconocida',
+    deletePass: 'Borrar pasada',
+    deletePassWarning: (name: string) =>
+      `¿Borrar "${name}"? Se elimina su visionado de cada episodio y la temporada se recalcula.`,
+    confirmDelete: 'Borrar',
+    takeBack: 'Deshacer',
+    takeBackHint:
+      'Los visionados de esta pasada vuelven a contar, en orden de fecha con los demás.',
+    wantsRewatch: 'Quieres volver a ver esta temporada.',
+    removeIntent: 'Quitar',
+    viewingChanged: 'Visionado modificado',
+    viewingDeleted: 'Visionado borrado',
+    passDeleted: 'Pasada borrada',
+    startOverUndone: 'Empezar de nuevo deshecho',
+    intentRemoved: 'Intención de volver a ver quitada',
+    firstPassDates: 'Fechas de la temporada',
+    noDates: 'La temporada no tiene fechas.',
+    rewatchesTitle: 'Revisionados',
+  },
   rewatches: {
     empty: 'Sin revisionados.',
     add: 'Añadir visionado',
     start: 'Inicio',
     end: 'Fin',
+    seenOn: 'Visto el',
+    differentStart: 'Inicio distinto',
     onlyCompleted: 'Solo se pueden volver a ver los elementos completados.',
     added: 'Visionado añadido',
     changed: 'Visionado modificado',

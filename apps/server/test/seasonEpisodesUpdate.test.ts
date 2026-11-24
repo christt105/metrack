@@ -126,6 +126,10 @@ const view = (finishedAt: string, startedAt: string | null = finishedAt) => ({
 });
 
 describe('PATCH /api/seasons/:id/episodes', () => {
+  beforeEach(() => {
+    api.clock.now = new Date('2026-12-31T12:00:00Z');
+  });
+
   it('marks episodes with a date, starts the season and bumps the content version', async () => {
     const season = addSeason();
     const before = await versions.current(1);

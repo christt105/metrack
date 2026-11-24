@@ -15,7 +15,6 @@ import SeasonOrderingPanel from './SeasonOrderingPanel.vue';
 
 const messages = useMessages();
 const props = defineProps<{
-  rewatchesLocked?: boolean;
   collection: Collection;
   detail: AnyDetail;
   title: string;
@@ -56,13 +55,12 @@ function onArtwork(updated: AnyDetail): void {
     <h2 id="manage-title">{{ messages.manage.title }}</h2>
     <p class="muted intro">{{ messages.manage.intro }}</p>
     <div class="groups">
-      <ManageGroup v-if="trackedStatus" :title="viewingsTitle">
+      <ManageGroup v-if="trackedStatus && collection !== 'seasons'" :title="viewingsTitle">
         <RewatchList
           :id="detail.id"
           :collection="collection"
           :rewatches="rewatches"
           :completed="trackedStatus === 'completed'"
-          :locked="rewatchesLocked"
           @updated="emit('saved', $event)"
         />
       </ManageGroup>

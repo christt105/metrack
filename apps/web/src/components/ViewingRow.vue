@@ -3,9 +3,20 @@ import { ref } from 'vue';
 import type { Viewing } from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
 import { describeViewing, formIsValid, viewingFromForm } from '../logic/viewingEdits';
+import ViewingDateFields from './ViewingDateFields.vue';
 
 const messages = useMessages();
-const props = defineProps<{ viewing: Viewing; busy: boolean; readonly?: boolean }>();
+const props = withDefaults(
+  defineProps<{
+    viewing: Viewing;
+    busy: boolean;
+    readonly?: boolean;
+    removable?: boolean;
+    single?: boolean;
+    label?: string;
+  }>(),
+  { removable: true, label: undefined },
+);
 const emit = defineEmits<{ change: [viewing: Viewing]; remove: [] }>();
 
 const editing = ref(false);
@@ -13,6 +24,8 @@ const start = ref('');
 const end = ref('');
 
 const isOpen = () => props.viewing.finishedAt === null;
+const singleDate = () => props.single === true && !(isOpen() && props.viewing.startedAt !== null);
+const unknown = () => props.viewing.startedAt === null && props.viewing.finishedAt === null;
 
 function edit(): void {
   start.value = props.viewing.startedAt ?? '';
@@ -30,14 +43,13 @@ function save(): void {
 <template>
   <li class="viewing">
     <form v-if="editing" class="fields" @submit.prevent="save">
-      <label>
-        <span>{{ messages.rewatches.start }}</span>
-        <input v-model="start" type="date" />
-      </label>
-      <label>
-        <span>{{ messages.rewatches.end }}</span>
-        <input v-model="end" type="date" :required="!isOpen()" />
-      </label>
+      <span v-if="label" class="label">{{ label }}</span>
+      <ViewingDateFields
+        v-model:start="start"
+        v-model:end="end"
+        :single="singleDate()"
+        :required="!isOpen()"
+      />
       <div class="actions">
         <button type="submit" class="small" :disabled="busy">{{ messages.common.save }}</button>
         <button type="button" class="small ghost" @click="editing = false">
@@ -46,8 +58,9 @@ function save(): void {
       </div>
     </form>
     <template v-else>
+      <span v-if="label" class="label">{{ label }}</span>
       <span class="text"
-        >{{ describeViewing(viewing)
+        >{{ unknown() ? messages.history.unknownDate : describeViewing(viewing)
         }}<span v-if="viewing.abandonedAt" class="muted">
           ·
           {{
@@ -59,7 +72,13 @@ function save(): void {
         <button type="button" class="small ghost" :disabled="busy" @click="edit">
           {{ messages.common.edit }}
         </button>
-        <button type="button" class="small danger" :disabled="busy" @click="emit('remove')">
+        <button
+          v-if="removable"
+          type="button"
+          class="small danger"
+          :disabled="busy"
+          @click="emit('remove')"
+        >
           {{ messages.common.remove }}
         </button>
       </span>
@@ -77,7 +96,21 @@ function save(): void {
 }
 
 .text {
+  flex: 1 1 auto;
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.label {
+  display: -webkit-box;
+  flex: 1 1 100%;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .fields {
@@ -85,12 +118,7 @@ function save(): void {
   flex-direction: column;
   gap: 8px;
   width: 100%;
-}
-
-.fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  min-width: 0;
 }
 
 .actions {

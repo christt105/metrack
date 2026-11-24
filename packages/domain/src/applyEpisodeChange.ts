@@ -32,6 +32,13 @@ export function applyEpisodeChange(state: EpisodeState, operation: EpisodeOperat
         skipped: state.skipped.filter((key) => !touched.has(key)),
       };
     }
+    case 'restoreViewings': {
+      const touched = new Set(operation.episodes.map(({ key }) => key));
+      return {
+        watches: applyEpisodeOperation(state.watches, operation),
+        skipped: state.skipped.filter((key) => !touched.has(key)),
+      };
+    }
     case 'unmark':
       return { watches: applyEpisodeOperation(state.watches, operation), skipped: state.skipped };
   }

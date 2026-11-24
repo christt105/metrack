@@ -432,20 +432,20 @@ describe('rewatches', () => {
   it('accepts viewing objects, records a start and restores the list exactly', async () => {
     const id = await createMovie({ status: 'completed', finishedAt: '2026-01-01' });
     const viewings = [
-      { startedAt: '2026-02-01', finishedAt: '2026-02-03' },
-      { startedAt: null, finishedAt: '2026-04-01' },
-      { startedAt: '2026-05-01', finishedAt: null },
+      { startedAt: '2026-01-02', finishedAt: '2026-01-03' },
+      { startedAt: null, finishedAt: '2026-03-01' },
+      { startedAt: '2026-03-04', finishedAt: null },
     ];
     const set = await patch(`/api/movies/${id}`, { rewatches: [...viewings].reverse() });
     expect(set.json().rewatches).toEqual(viewings);
     const added = await post(`/api/movies/${id}/rewatches`, {
-      startedAt: '2026-06-01',
-      finishedAt: '2026-06-02',
+      startedAt: '2026-03-02',
+      finishedAt: '2026-03-03',
     });
     expect(added.statusCode).toBe(201);
     expect(added.json().rewatches).toContainEqual({
-      startedAt: '2026-06-01',
-      finishedAt: '2026-06-02',
+      startedAt: '2026-03-02',
+      finishedAt: '2026-03-03',
     });
     const bad = await post(`/api/movies/${id}/rewatches`, {});
     expect(bad.statusCode).toBe(400);

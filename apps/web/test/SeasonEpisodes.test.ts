@@ -433,13 +433,12 @@ describe('SeasonEpisodes', () => {
     await flushPromises();
     expect(restartSeason).toHaveBeenCalledWith(50);
     expect(mounted.wrapper.emitted('updated')).toHaveLength(1);
-    expect(mounted.wrapper.find('.abandoned').text()).toContain(
-      '2 of 3, from 1 Jan 2026 to 2 Jan 2026',
-    );
+    expect(mounted.wrapper.find('.history .left').text()).toContain('Left behind on 1 Feb 2026');
+    expect(mounted.wrapper.find('.history .left').text()).toContain('2 of 3 episodes');
     (document.body.querySelector('.toast .undo') as HTMLElement).click();
     await flushPromises();
     expect(undoSeasonRestart).toHaveBeenCalledWith(50);
-    expect(mounted.wrapper.find('.abandoned').exists()).toBe(false);
+    expect(mounted.wrapper.find('.history .left').exists()).toBe(false);
   });
 
   it('only offers Start over for a season in progress with something watched', async () => {
@@ -489,7 +488,7 @@ describe('SeasonEpisodes', () => {
     expect(update).toHaveBeenCalledWith(50, {
       op: 'setViewings',
       key: 'k1',
-      viewings: [viewing, { startedAt: null, finishedAt: '2026-03-03' }],
+      viewings: [viewing, { startedAt: '2026-03-03', finishedAt: '2026-03-03' }],
     });
   });
 

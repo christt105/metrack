@@ -45,6 +45,11 @@ export function applyEpisodeOperation(
     }
     case 'setViewings':
       return { ...watches, [operation.key]: normalizeViewings(operation.viewings) };
+    case 'restoreViewings': {
+      const next = { ...watches };
+      for (const { key, viewings } of operation.episodes) next[key] = normalizeViewings(viewings);
+      return next;
+    }
     case 'skip':
     case 'unskip':
       return watches;
