@@ -1,7 +1,7 @@
 import type { EpisodeOperation, SeasonEpisodeItem, Viewing } from '@metrack/domain';
 
 const dated = (viewings: readonly Viewing[]): Viewing[] =>
-  viewings.filter((viewing) => viewing.finishedAt !== null);
+  viewings.filter((viewing) => viewing.finishedAt !== null || viewing.abandonedAt !== undefined);
 
 /**
  * The operations that put the watches and skips back as they were before `operation`. Marking is undone by

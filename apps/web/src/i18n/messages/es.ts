@@ -102,6 +102,8 @@ export const es: Messages = {
       'Este proveedor aún no está configurado en el servidor (TMDB para películas y series, IGDB para juegos).',
     noMetadataSource: 'No hay ninguna fuente de metadatos para este tipo de título.',
     generic: 'Algo ha salido mal.',
+    restartSameDay:
+      'Esta temporada ya se ha empezado de nuevo hoy, o se ha visto algo después, así que no se puede hacer ahora.',
   },
   list: {
     searchPlaceholder: 'Buscar títulos',
@@ -226,6 +228,16 @@ export const es: Messages = {
     skipped: (count: number) => (count === 1 ? 'Episodio omitido' : `${count} episodios omitidos`),
     unskipped: 'Episodio ya no omitido',
     rewatch: 'Volver a ver',
+    restart: 'Empezar de nuevo',
+    restartDone: 'Temporada empezada de nuevo desde el primer episodio',
+    abandonedTitle: 'Pasadas abandonadas',
+    abandonedPass: (watched: number, total: number, from: string | null, to: string | null) =>
+      `${watched} de ${total}, ${from === null ? 'hasta el' : `del ${from} al`} ${to ?? 'una fecha desconocida'}`,
+    abandonedViewing: (date: string) => `Abandonado el ${date}`,
+    restartSeries: 'Volver a empezar la serie',
+    restartSeriesHint:
+      'Has terminado todas las temporadas. Vuelve a ver la serie desde la temporada 1.',
+    seriesRewatchStarted: 'Revisionado de la temporada 1 iniciado',
     rewatchStarted: 'Revisionado iniciado',
     rewatchCancel: 'Cancelar revisionado',
     rewatchCancelled: 'Revisionado cancelado',
@@ -517,6 +529,7 @@ export const es: Messages = {
     skipFiller: 'Saltar (relleno)',
     menu: (series: string) => `Más acciones de ${series}`,
     hide: 'Quitar de Siguiente',
+    restart: 'Empezar de nuevo',
     hidden: (series: string) => `${series} quitada de Siguiente`,
     seasonCompleted: (season: number) => `Temporada ${season} completada`,
     still: (series: string) => `Imagen de ${series}`,

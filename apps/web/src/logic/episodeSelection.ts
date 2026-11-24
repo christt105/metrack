@@ -1,8 +1,14 @@
-import { hasAired, isDone, unwatchedAired, type SeasonEpisodeItem } from '@metrack/domain';
+import {
+  hasAired,
+  isDone,
+  liveViewings,
+  unwatchedAired,
+  type SeasonEpisodeItem,
+} from '@metrack/domain';
 
 /** Whether the episode has a viewing with a date, so it cannot be skipped. */
 export function hasDatedViewing(episode: SeasonEpisodeItem): boolean {
-  return episode.viewings.some((v) => v.startedAt !== null || v.finishedAt !== null);
+  return liveViewings(episode.viewings).some((v) => v.startedAt !== null || v.finishedAt !== null);
 }
 
 /** How many episodes are done or skipped: the progress toward finishing the season, or the open rewatch. */

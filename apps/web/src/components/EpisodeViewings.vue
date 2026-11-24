@@ -36,7 +36,7 @@ function add(): void {
     <ul v-else class="dates">
       <ViewingRow
         v-for="(viewing, index) in listed"
-        :key="`${viewing.startedAt}|${viewing.finishedAt}`"
+        :key="`${viewing.abandonedAt ?? ''}|${viewing.startedAt}|${viewing.finishedAt}`"
         :viewing="viewing"
         :busy="busy"
         @change="emit('change', withReplaced(viewings, index, $event))"

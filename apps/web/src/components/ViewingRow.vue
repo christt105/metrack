@@ -46,7 +46,15 @@ function save(): void {
       </div>
     </form>
     <template v-else>
-      <span class="text">{{ describeViewing(viewing) }}</span>
+      <span class="text"
+        >{{ describeViewing(viewing)
+        }}<span v-if="viewing.abandonedAt" class="muted">
+          ·
+          {{
+            messages.episodes.abandonedViewing(messages.episodes.airDate(viewing.abandonedAt))
+          }}</span
+        ></span
+      >
       <span v-if="!readonly" class="actions">
         <button type="button" class="small ghost" :disabled="busy" @click="edit">
           {{ messages.common.edit }}

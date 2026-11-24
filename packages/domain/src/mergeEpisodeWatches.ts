@@ -1,5 +1,6 @@
 import { collapseUndatedViewing } from './collapseUndatedViewing.js';
 import type { EpisodeWatches } from './EpisodeWatches.js';
+import { liveViewings } from './liveViewings.js';
 import { normalizeViewings } from './normalizeViewings.js';
 import type { Viewing } from './Viewing.js';
 
@@ -15,12 +16,14 @@ function isDuplicate(a: Viewing, b: Viewing): boolean {
  * `seasonFinish` gives, for the episodes of seasons the user has an entry for, the finish date of that season
  * (null when it has none): there the dated viewing replaces the unknown-date first one, and so it does for an
  * episode already stored with both, unless it finished after the season did and so is a rewatch, see
- * `collapseUndatedViewing`.
+ * `collapseUndatedViewing`. A viewing equal to an abandoned one is a duplicate too, so a play already abandoned is not
+ * added back, unless `matchAbandoned` is false.
  */
 export function mergeEpisodeWatches(
   stored: EpisodeWatches,
   incoming: EpisodeWatches,
   seasonFinish: ReadonlyMap<string, string | null> = new Map(),
+  matchAbandoned = true,
 ): EpisodeWatches {
   const merged: EpisodeWatches = {};
   for (const [key, viewings] of Object.entries(stored)) merged[key] = viewings;
@@ -30,9 +33,12 @@ export function mergeEpisodeWatches(
       merged[key] = normalizeViewings(viewings);
       continue;
     }
-    const added = viewings.filter(
-      (viewing) => !current.some((other) => isDuplicate(other, viewing)),
-    );
+    if (viewings.length === 0 && current.length > 0 && liveViewings(current).length === 0) {
+      merged[key] = normalizeViewings([...current, { startedAt: null, finishedAt: null }]);
+      continue;
+    }
+    const known = matchAbandoned ? current : liveViewings(current);
+    const added = viewings.filter((viewing) => !known.some((other) => isDuplicate(other, viewing)));
     if (added.length === 0) continue;
     const first: Viewing[] = current.length === 0 ? [{ startedAt: null, finishedAt: null }] : [];
     merged[key] = normalizeViewings([...first, ...current, ...added]);
