@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { en } from '../src/i18n/messages/en';
+import { es } from '../src/i18n/messages/es';
 import {
   describeViewing,
   formIsValid,
@@ -21,10 +23,14 @@ describe('viewingEdits', () => {
   });
 
   it('describes viewings without em dashes and with placeholders', () => {
-    expect(describeViewing(closed[0]!)).toBe('? - 2024-01-01');
-    expect(describeViewing(closed[1]!)).toBe('2025-02-01 - 2025-02-03');
-    expect(describeViewing(open)).toBe('Watching since 2026-05-01');
-    expect(describeViewing({ startedAt: null, finishedAt: null })).toBe('Watching, no start date');
+    expect(describeViewing(closed[0]!, en)).toBe('1 Jan 2024');
+    expect(describeViewing(closed[1]!, en)).toBe('1 Feb 2025 to 3 Feb 2025');
+    expect(describeViewing({ startedAt: '2025-02-01', finishedAt: '2025-02-01' }, en)).toBe(
+      '1 Feb 2025',
+    );
+    expect(describeViewing(open, en)).toBe('Watching since 1 May 2026');
+    expect(describeViewing({ startedAt: null, finishedAt: null }, en)).toBe('Unknown date');
+    expect(describeViewing(closed[1]!, es)).toBe('1 feb 2025 a 3 feb 2025');
   });
 
   it('turns empty form fields into missing dates', () => {

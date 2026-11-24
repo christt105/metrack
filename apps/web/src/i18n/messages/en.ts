@@ -413,6 +413,8 @@ export const en = {
     range: (from: string | null, to: string | null) =>
       from === null || from === to ? (to ?? 'Unknown date') : `${from} to ${to ?? '?'}`,
     unknownDate: 'Unknown date',
+    watchingSince: (date: string) => `Watching since ${date}`,
+    watchingNoStart: 'Watching, no start date',
     deletePass: 'Delete pass',
     deletePassWarning: (name: string) =>
       `Delete "${name}"? Its viewing of each episode is removed and the season is recalculated.`,

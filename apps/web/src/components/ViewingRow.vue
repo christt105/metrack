@@ -25,7 +25,6 @@ const end = ref('');
 
 const isOpen = () => props.viewing.finishedAt === null;
 const singleDate = () => props.single === true && !(isOpen() && props.viewing.startedAt !== null);
-const unknown = () => props.viewing.startedAt === null && props.viewing.finishedAt === null;
 
 function edit(): void {
   start.value = props.viewing.startedAt ?? '';
@@ -60,7 +59,7 @@ function save(): void {
     <template v-else>
       <span v-if="label" class="label">{{ label }}</span>
       <span class="text"
-        >{{ unknown() ? messages.history.unknownDate : describeViewing(viewing)
+        >{{ describeViewing(viewing, messages)
         }}<span v-if="viewing.abandonedAt" class="muted">
           ·
           {{

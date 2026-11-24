@@ -443,6 +443,8 @@ export const es: Messages = {
     range: (from: string | null, to: string | null) =>
       from === null || from === to ? (to ?? 'Fecha desconocida') : `${from} a ${to ?? '?'}`,
     unknownDate: 'Fecha desconocida',
+    watchingSince: (date: string) => `Viendo desde el ${date}`,
+    watchingNoStart: 'Viendo, sin fecha de inicio',
     deletePass: 'Borrar pasada',
     deletePassWarning: (name: string) =>
       `¿Borrar "${name}"? Se elimina su visionado de cada episodio y la temporada se recalcula.`,
