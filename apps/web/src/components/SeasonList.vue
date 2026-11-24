@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { sizedImageUrl, type Season } from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
+import { ratingDisplay } from '../logic/ratingDisplay';
 import { seasonWatched } from '../logic/seasonWatched';
 import PendingBadge from './PendingBadge.vue';
 import SeasonProgress from './SeasonProgress.vue';
@@ -44,7 +45,9 @@ function coverOf(season: Season): string | null {
             }}</span>
             <span class="states">
               <StatusBadge :status="season.status" />
-              <span v-if="season.rating !== null" class="rating">{{ season.rating }}/10</span>
+              <span v-if="season.rating !== null" class="rating">{{
+                ratingDisplay(season.rating, messages).label
+              }}</span>
               <PendingBadge v-if="season.pendingReview" />
             </span>
             <SeasonProgress

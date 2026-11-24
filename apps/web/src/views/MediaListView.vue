@@ -37,7 +37,9 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 const cards = computed(() =>
   page.value ? buildCards(page.value.items, filters.value.type, filters.value.sort) : [],
 );
-const inProgress = computed(() => (hasNarrowing(filters.value) ? [] : continueCards(cards.value)));
+const inProgress = computed(() =>
+  hasNarrowing(filters.value) ? [] : continueCards(page.value?.items ?? [], cards.value),
+);
 
 async function load(): Promise<void> {
   const mine = ++ticket;
