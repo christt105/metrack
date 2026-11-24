@@ -30,6 +30,11 @@ describe('brokenViewingRule', () => {
     );
   });
 
+  it('lets viewings with no date repeat', () => {
+    const unknown = { startedAt: null, finishedAt: null };
+    expect(brokenViewingRule([unknown, unknown], '2026-03-05')).toBeNull();
+  });
+
   it('does not take a live viewing and an abandoned one for duplicates', () => {
     expect(
       brokenViewingRule([day('2026-01-01'), gone('2026-01-01', '2026-02-01')], '2026-03-05'),
