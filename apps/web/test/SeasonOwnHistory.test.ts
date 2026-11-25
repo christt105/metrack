@@ -1,10 +1,17 @@
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import type { Season } from '@metrack/domain';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SeasonOwnHistory from '../src/components/SeasonOwnHistory.vue';
 import { mountWithApi } from './mountWithApi';
+import { pickDate } from './pickDate';
 
 enableAutoUnmount(afterEach);
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 2, 20));
+});
+afterEach(() => vi.useRealTimers());
 
 const season = {
   id: 20,
@@ -20,8 +27,8 @@ describe('SeasonOwnHistory', () => {
     const { wrapper } = await mountWithApi(SeasonOwnHistory, { patch: patch as never }, { season });
     const row = wrapper.find('.dates li');
     await row.find('button').trigger('click');
-    expect(row.findAll('input[type="date"]')).toHaveLength(2);
-    await row.find('input[type="date"]').setValue('2026-01-11');
+    expect(row.findAll('input.date-trigger')).toHaveLength(2);
+    await pickDate(row.get('input.date-trigger'), '2026-01-11');
     await row.find('form').trigger('submit');
     await flushPromises();
     expect(patch).toHaveBeenLastCalledWith('seasons', 20, {
@@ -42,8 +49,8 @@ describe('SeasonOwnHistory', () => {
     const patch = vi.fn().mockResolvedValue({});
     const { wrapper } = await mountWithApi(SeasonOwnHistory, { patch: patch as never }, { season });
     const add = wrapper.find('form.add');
-    expect(add.findAll('input[type="date"]')).toHaveLength(1);
-    await add.find('input[type="date"]').setValue('2026-03-01');
+    expect(add.findAll('input.date-trigger')).toHaveLength(1);
+    await pickDate(add.get('input.date-trigger'), '2026-03-01');
     await add.trigger('submit');
     await flushPromises();
     expect(patch.mock.calls[0]![2].rewatches).toContainEqual({

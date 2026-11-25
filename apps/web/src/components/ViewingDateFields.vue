@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, useId, watch } from 'vue';
 import { useMessages } from '../composables/useMessages';
 import { todayIso } from '../logic/todayIso';
+import DatePicker from './DatePicker.vue';
 
 const messages = useMessages();
+const startId = useId();
+const endId = useId();
 const props = defineProps<{ single: boolean; required: boolean }>();
 const start = defineModel<string>('start', { required: true });
 const end = defineModel<string>('end', { required: true });
@@ -23,28 +26,28 @@ watch(
 <template>
   <div class="fields">
     <template v-if="single">
-      <label>
-        <span>{{ messages.rewatches.seenOn }}</span>
-        <input v-model="end" type="date" :max="max" :required="required" />
-      </label>
+      <div class="date-item">
+        <label :for="endId">{{ messages.rewatches.seenOn }}</label>
+        <DatePicker :id="endId" v-model="end" :max="max" :required="required" />
+      </div>
       <label class="toggle">
         <input v-model="different" type="checkbox" />
         <span>{{ messages.rewatches.differentStart }}</span>
       </label>
-      <label v-if="different">
-        <span>{{ messages.rewatches.start }}</span>
-        <input v-model="start" type="date" :max="end || max" />
-      </label>
+      <div v-if="different" class="date-item">
+        <label :for="startId">{{ messages.rewatches.start }}</label>
+        <DatePicker :id="startId" v-model="start" :max="end || max" />
+      </div>
     </template>
     <template v-else>
-      <label>
-        <span>{{ messages.rewatches.start }}</span>
-        <input v-model="start" type="date" :max="max" />
-      </label>
-      <label>
-        <span>{{ messages.rewatches.end }}</span>
-        <input v-model="end" type="date" :max="max" :required="required" />
-      </label>
+      <div class="date-item">
+        <label :for="startId">{{ messages.rewatches.start }}</label>
+        <DatePicker :id="startId" v-model="start" :max="max" />
+      </div>
+      <div class="date-item">
+        <label :for="endId">{{ messages.rewatches.end }}</label>
+        <DatePicker :id="endId" v-model="end" :max="max" :required="required" />
+      </div>
     </template>
   </div>
 </template>
@@ -58,19 +61,15 @@ watch(
   min-width: 0;
 }
 
-label {
+.date-item {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
 
-input[type='date'] {
-  width: 100%;
-  min-width: 0;
-}
-
 .toggle {
+  display: flex;
   flex-direction: row;
   align-items: center;
   gap: 8px;

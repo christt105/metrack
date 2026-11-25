@@ -1,10 +1,17 @@
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import type { SeasonEpisodeItem, SeasonEpisodesResponse } from '@metrack/domain';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SeasonEpisodes from '../src/components/SeasonEpisodes.vue';
 import { mountWithApi } from './mountWithApi';
+import { pickDate } from './pickDate';
 
 enableAutoUnmount(afterEach);
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 2, 20));
+});
+afterEach(() => vi.useRealTimers());
 
 const day = (date: string, abandonedAt?: string) => ({
   startedAt: date,
@@ -102,8 +109,8 @@ describe('SeasonHistory', () => {
     const { wrapper } = await mountHistory({ updateSeasonEpisodes });
     const row = wrapper.findAll('.history details.pass')[0]!.findAll('li')[1]!;
     await row.find('button').trigger('click');
-    expect(row.findAll('input[type="date"]')).toHaveLength(1);
-    await row.find('input[type="date"]').setValue('2026-03-09');
+    expect(row.findAll('input.date-trigger')).toHaveLength(1);
+    await pickDate(row.get('input.date-trigger'), '2026-03-09');
     await row.find('form').trigger('submit');
     await flushPromises();
     expect(updateSeasonEpisodes).toHaveBeenCalledWith(50, {
@@ -119,10 +126,10 @@ describe('SeasonHistory', () => {
     const row = wrapper.findAll('.history details.pass')[0]!.findAll('li')[1]!;
     await row.find('button').trigger('click');
     await row.find('input[type="checkbox"]').setValue(true);
-    const [end, start] = row.findAll('input[type="date"]');
-    expect(row.findAll('input[type="date"]')).toHaveLength(2);
-    await end!.setValue('2026-03-09');
-    await start!.setValue('2026-03-08');
+    const [end, start] = row.findAll('input.date-trigger');
+    expect(row.findAll('input.date-trigger')).toHaveLength(2);
+    await pickDate(end!, '2026-03-09');
+    await pickDate(start!, '2026-03-08');
     await row.find('form').trigger('submit');
     await flushPromises();
     expect(updateSeasonEpisodes).toHaveBeenCalledWith(50, {

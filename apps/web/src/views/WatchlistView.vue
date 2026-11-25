@@ -9,7 +9,7 @@ import { useApi } from '../composables/useApi';
 import { useLoader } from '../composables/useLoader';
 import { useMessages } from '../composables/useMessages';
 import { buildAgenda, RECENT_DAYS } from '../logic/following/buildAgenda';
-import { daysBetween, localDate } from '../logic/following/dates';
+import { daysBetween, localDate } from '../logic/calendar/dates';
 import { followingEvents } from '../logic/following/followingEvents';
 
 const messages = useMessages();

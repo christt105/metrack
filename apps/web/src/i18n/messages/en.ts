@@ -12,6 +12,7 @@ import type {
   EditableSetting,
 } from '@metrack/domain';
 import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from '@metrack/domain';
+import { spanishCalendar } from './spanishCalendar';
 
 /** Every user-facing text of the app. The English dictionary; every other language fills the same shape. */
 export const en = {
@@ -462,6 +463,15 @@ export const en = {
     manualTitle: 'Title',
     create: 'Create',
     added: 'Added.',
+  },
+  datePicker: {
+    ...spanishCalendar,
+    choose: 'Choose a date',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    today: 'Today',
+    clear: 'Clear',
+    tooLate: (max: string) => `Choose a date on or before ${spanishCalendar.field(max)}.`,
   },
   watchlist: {
     title: 'Following',

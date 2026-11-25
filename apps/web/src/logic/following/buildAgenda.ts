@@ -1,5 +1,5 @@
 import type { AgendaGroup } from './AgendaGroup';
-import { daysBetween } from './dates';
+import { daysBetween } from '../calendar/dates';
 import type { FollowingEvent } from './FollowingEvent';
 
 /** How many days back a release still shows as just out. */

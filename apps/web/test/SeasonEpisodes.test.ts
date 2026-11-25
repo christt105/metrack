@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import SeasonEpisodes from '../src/components/SeasonEpisodes.vue';
 import { todayIso } from '../src/logic/todayIso';
 import { mountWithApi } from './mountWithApi';
+import { pickDate } from './pickDate';
 
 enableAutoUnmount(afterEach);
 
@@ -475,14 +476,19 @@ describe('SeasonEpisodes', () => {
     );
   });
 
-  it('edits the viewings of a watched episode with setViewings', async () => {
+  it('edits the viewings of a watched episode with setViewings', async ({ onTestFinished }) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 2, 15));
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const update = vi.fn().mockResolvedValue({ ...response([]), tracking: tracking() });
     const { wrapper } = await mountList([item(1, { watched: true, viewings: [viewing] })], {
       updateSeasonEpisodes: update,
     });
     await wrapper.find('li.episode button.text').trigger('click');
     const add = wrapper.find('.viewings form.add');
-    await add.find('input[required]').setValue('2026-03-03');
+    await pickDate(add.get('input.date-trigger[required]'), '2026-03-03');
     await add.trigger('submit');
     await flushPromises();
     expect(update).toHaveBeenCalledWith(50, {
