@@ -5,6 +5,13 @@ import type { FetchFn } from '../src/http/FetchFn.js';
 import { MemoryContentVersions } from '../src/site/MemoryContentVersions.js';
 import { SqliteUserRepository } from '../src/storage/sqlite/SqliteUserRepository.js';
 import { AsyncUserScope } from '../src/users/AsyncUserScope.js';
+import { SeasonEpisodesService } from '../src/seasons/SeasonEpisodesService.js';
+import { TmdbClient } from '../src/providers/tmdb/TmdbClient.js';
+import { SqliteEpisodeWatchRepository } from '../src/storage/sqlite/SqliteEpisodeWatchRepository.js';
+import { SqliteSeasonEpisodesRepository } from '../src/storage/sqlite/SqliteSeasonEpisodesRepository.js';
+import { SqliteSeasonFillerRepository } from '../src/storage/sqlite/SqliteSeasonFillerRepository.js';
+import type { SeasonEpisodesRepository } from '../src/storage/repositories/SeasonEpisodesRepository.js';
+import type { SeasonRepository } from '../src/storage/repositories/SeasonRepository.js';
 import { createTestApi, NOW, type TestApi } from './support/createTestApi.js';
 
 const SERIES_TMDB_ID = 4242;
@@ -17,6 +24,7 @@ let users: SqliteUserRepository;
 let versions: MemoryContentVersions;
 let handlers: Map<string, Handler>;
 let calls: string[];
+let scope: AsyncUserScope;
 
 const byHeader: Authenticator = {
   userFor: async (headers) => users.get(Number(headers.get('x-test-user'))),
@@ -55,8 +63,9 @@ beforeEach(async () => {
   handlers = new Map();
   calls = [];
   versions = new MemoryContentVersions();
+  scope = new AsyncUserScope();
   api = await createTestApi(fetchFn, {
-    scope: new AsyncUserScope(),
+    scope,
     authenticator: byHeader,
     contentVersions: versions,
   });
@@ -660,6 +669,80 @@ describe('GET /api/seasons/:id/episodes', () => {
       expect(failed.body.episodes).toHaveLength(15);
     });
 
+    it('keeps the catalog incomplete while one episode fails and fetches only it once it recovers', async () => {
+      const season = addSeason({ episodeCount: 20 });
+      setUpChunks(20);
+      handlers.set(episodePath(17), () => new Response('unavailable', { status: 503 }));
+      await episodes(owner, season.id);
+
+      calls = [];
+      const failing = await episodes(owner, season.id);
+      expect(failing.body.complete).toBe(false);
+      expect(failing.body.episodes.map((e) => e.number)).toEqual(
+        Array.from({ length: 20 }, (_, i) => i + 1).filter((n) => n !== 17),
+      );
+      expect(api.db.prepare('SELECT complete FROM season_episodes').get()).toEqual({ complete: 0 });
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+
+      handlers.set(episodePath(17), () => Response.json(tmdbEpisode(117, 17, 'E17')));
+      calls = [];
+      const recovered = await episodes(owner, season.id);
+      expect(calls.filter((c) => c.includes('/episode/'))).toEqual([episodePath(17)]);
+      expect(recovered.body.complete).toBe(true);
+      expect(recovered.body.episodes.map((e) => e.number)).toEqual(
+        Array.from({ length: 20 }, (_, i) => i + 1),
+      );
+      expect(api.db.prepare('SELECT complete FROM season_episodes').get()).toEqual({ complete: 1 });
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+    });
+
+    it('keeps serving the old catalog while a refetch loses one episode, then completes it', async () => {
+      const season = addSeason({ episodeCount: 20 });
+      setUpChunks(20);
+      handlers.set(episodePath(17), () => new Response('unavailable', { status: 503 }));
+      storeCatalog(
+        season.id,
+        '2025-01-01T00:00:00.000Z',
+        Array.from({ length: 20 }, (_, i) => compact(i + 1, 900 + i + 1)),
+      );
+      await episodes(owner, season.id);
+      const failing = await episodes(owner, season.id);
+      expect(failing.body.complete).toBe(true);
+      expect(failing.body.episodes).toHaveLength(20);
+      expect(failing.body.episodes[0]?.tmdbId).toBe(901);
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+      const pending = api.db.prepare('SELECT refill FROM season_episodes').get() as {
+        refill: string;
+      };
+      expect(JSON.parse(pending.refill)).toHaveLength(19);
+
+      handlers.set(episodePath(17), () => Response.json(tmdbEpisode(117, 17, 'E17')));
+      calls = [];
+      const recovered = await episodes(owner, season.id);
+      expect(calls.filter((c) => c.includes('/episode/'))).toEqual([episodePath(17)]);
+      expect(recovered.body.complete).toBe(true);
+      expect(recovered.body.episodes).toHaveLength(20);
+      expect(recovered.body.episodes[0]?.tmdbId).toBe(101);
+      expect(api.db.prepare('SELECT refill FROM season_episodes').get()).toEqual({ refill: null });
+      expect(countOf(season.id)).toEqual({ episode_count: 20 });
+    });
+
+    it('asks for the same number of episodes as before for a 31-episode season', async () => {
+      const season = addSeason({ episodeCount: 31 });
+      setUpChunks(31);
+      const numbersOf = () => calls.filter((c) => c.includes('/episode/')).length;
+      await episodes(owner, season.id);
+      expect([numbersOf(), calls.length]).toEqual([15, 16]);
+      calls = [];
+      await episodes(owner, season.id);
+      expect([numbersOf(), calls.length]).toEqual([15, 15]);
+      calls = [];
+      const last = await episodes(owner, season.id);
+      expect([numbersOf(), calls.length]).toEqual([1, 1]);
+      expect(last.body.complete).toBe(true);
+      expect(last.body.episodes).toHaveLength(31);
+    });
+
     it('lists bare numbers when the season has no episode count to chunk by', async () => {
       const season = addSeason({ episodeCount: null });
       setUpChunks(5);
@@ -724,6 +807,94 @@ describe('GET /api/seasons/:id/episodes', () => {
       expect(sent).toBeLessThan(2 * MEGABYTE);
       expect(body).toMatchObject({ source: 'tmdb', complete: true });
       expect(body.episodes).toHaveLength(2);
+    });
+  });
+
+  it('reads a season that fits in one request with a single call', async () => {
+    const season = addSeason({ episodeCount: 2 });
+    handlers.set(
+      `/3/tv/${SERIES_TMDB_ID}/season/1`,
+      seasonHandler([tmdbEpisode(11, 1, 'A'), tmdbEpisode(12, 2, 'B')]),
+    );
+    await episodes(owner, season.id);
+    expect(calls).toEqual([`/3/tv/${SERIES_TMDB_ID}/season/1`]);
+  });
+
+  describe('recomputeSeries', () => {
+    function serviceWith(overrides: {
+      catalog?: Partial<SeasonEpisodesRepository>;
+      seasons?: Partial<SeasonRepository>;
+    }): SeasonEpisodesService {
+      const catalog = new SqliteSeasonEpisodesRepository(api.db);
+      return new SeasonEpisodesService({
+        seasons: Object.assign(Object.create(api.seasons), overrides.seasons) as SeasonRepository,
+        series: api.series,
+        catalog: Object.assign(
+          Object.create(catalog),
+          overrides.catalog,
+        ) as SeasonEpisodesRepository,
+        watches: new SqliteEpisodeWatchRepository(api.db, scope),
+        filler: new SqliteSeasonFillerRepository(api.db),
+        tmdb: new TmdbClient(fetchFn, { apiKey: 'key', language: 'es-ES' }),
+        now: () => NOW,
+      });
+    }
+
+    function secondSeason(seriesId: number): number {
+      const id = Number(
+        api.db
+          .prepare(
+            'INSERT INTO season (series_id, number, tmdb_season_number, episode_count) VALUES (?, 2, 2, 1)',
+          )
+          .run(seriesId).lastInsertRowid,
+      );
+      api.db
+        .prepare(
+          "INSERT INTO season_entry (user_id, season_id, status) VALUES (1, ?, 'in_progress')",
+        )
+        .run(id);
+      return id;
+    }
+
+    it('propagates a failure to store the catalog', async () => {
+      const season = addSeason({ episodeCount: 1 });
+      handlers.set(`/3/tv/${SERIES_TMDB_ID}/season/1`, seasonHandler([tmdbEpisode(11, 1, 'A')]));
+      const service = serviceWith({
+        catalog: {
+          put: async () => {
+            throw new Error('disk full');
+          },
+        },
+      });
+      await expect(scope.run(1, () => service.recomputeSeries(season.seriesId))).rejects.toThrow(
+        'disk full',
+      );
+    });
+
+    it('propagates a failure to update the season', async () => {
+      const season = addSeason({ episodeCount: 5 });
+      handlers.set(`/3/tv/${SERIES_TMDB_ID}/season/1`, seasonHandler([tmdbEpisode(11, 1, 'A')]));
+      const service = serviceWith({
+        seasons: {
+          updateCatalog: async () => {
+            throw new Error('database locked');
+          },
+        },
+      });
+      await expect(scope.run(1, () => service.recomputeSeries(season.seriesId))).rejects.toThrow(
+        'database locked',
+      );
+    });
+
+    it('goes on with the other seasons when the provider fails for one', async () => {
+      const first = addSeason({ episodeCount: 1 });
+      const second = secondSeason(first.seriesId);
+      handlers.set(`/3/tv/${SERIES_TMDB_ID}/season/1`, () => new Response('down', { status: 503 }));
+      handlers.set(`/3/tv/${SERIES_TMDB_ID}/season/2`, seasonHandler([tmdbEpisode(21, 1, 'B')]));
+      await scope.run(1, () => serviceWith({}).recomputeSeries(first.seriesId));
+      expect(api.db.prepare('SELECT season_id FROM season_episodes').all()).toEqual([
+        { season_id: second },
+      ]);
     });
   });
 });
