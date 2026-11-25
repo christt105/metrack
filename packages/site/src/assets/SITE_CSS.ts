@@ -511,7 +511,7 @@ select {
 .profile {
   position: relative;
   isolation: isolate;
-  min-height: 300px;
+  min-height: 440px;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
@@ -534,14 +534,14 @@ select {
 }
 
 .profile-backdrop.is-loaded img {
-  opacity: 0.55;
+  opacity: 1;
 }
 
 .profile-backdrop::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(22, 28, 26, 0.1) 0%, rgba(22, 28, 26, 0.55) 55%, var(--bg) 100%);
+  background: linear-gradient(to bottom, rgba(22, 28, 26, 0) 0%, rgba(22, 28, 26, 0) 45%, rgba(22, 28, 26, 0.7) 80%, var(--bg) 100%);
 }
 
 .profile-inner {
@@ -565,11 +565,13 @@ select {
 }
 
 .profile-name {
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
   font-size: clamp(24px, 1.2vw + 18px, 32px);
   letter-spacing: -0.035em;
 }
 
 .profile-bio {
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
   margin-top: var(--s-2);
   max-width: 60ch;
   color: rgba(227, 226, 218, 0.82);
@@ -577,7 +579,7 @@ select {
 
 @media (max-width: 759px) {
   .profile {
-    min-height: 240px;
+    min-height: 340px;
   }
 
   .profile-inner {
@@ -714,8 +716,9 @@ select {
   gap: var(--s-1);
   overflow-x: auto;
   scrollbar-width: none;
-  margin: 0 calc(-1 * var(--gut));
-  padding: var(--s-2) var(--gut);
+  padding: var(--s-1);
+  border: 1px solid var(--outline);
+  border-radius: 999px;
   background: rgba(22, 28, 26, 0.9);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
