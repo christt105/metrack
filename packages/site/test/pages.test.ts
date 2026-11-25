@@ -216,6 +216,39 @@ describe('renderDetail', () => {
     expect(renderDetail(library, 'book', 1)).toContain('William Gibson');
   });
 
+  it('describes the page for link previews with the review and an absolute picture', () => {
+    const html = renderDetail(library, 'movie', 1, 'https://example.org') as string;
+    expect(html).toContain('<meta property="og:title" content="Dune &lt;2&gt; | ');
+    expect(html).toContain('<meta property="og:description" content="Una obra.">');
+    expect(html).toContain('<meta name="description" content="Una obra.">');
+    expect(html).toContain(
+      '<meta property="og:image" content="https://image.tmdb.org/t/p/w780/dune.jpg">',
+    );
+    expect(html).toContain('<meta name="twitter:card" content="summary">');
+  });
+
+  it('prefers the banner and leaves out pictures without an absolute address', () => {
+    const own = buildLibrary(
+      input({
+        movies: [
+          movie({
+            id: 1,
+            status: 'completed',
+            overview: 'Sinopsis.',
+            banner: `/api/images/${HASH_B}`,
+          }),
+        ],
+      }),
+    );
+    const shared = renderDetail(own, 'movie', 1, 'https://example.org') as string;
+    expect(shared).toContain(
+      `<meta property="og:image" content="https://example.org/u/ana/images/${HASH_B}">`,
+    );
+    expect(shared).toContain('<meta name="twitter:card" content="summary_large_image">');
+    expect(shared).toContain('<meta property="og:description" content="Sinopsis.">');
+    expect(renderDetail(own, 'movie', 1)).not.toContain('og:image');
+  });
+
   it('has no page for pending or unknown items', () => {
     expect(renderDetail(library, 'movie', 2)).toBeNull();
     expect(renderDetail(library, 'movie', 99)).toBeNull();

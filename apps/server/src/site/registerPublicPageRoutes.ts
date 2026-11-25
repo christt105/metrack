@@ -193,8 +193,9 @@ export function registerPublicPageRoutes(app: Hono<ApiEnv>, deps: PublicPageDeps
   app.get('/u/:handle/:type/:id', async (context) => {
     const { type, id } = context.req.param();
     if (!isPublicKind(type) || !ID.test(id)) return notFound(context);
-    return cached(context, `${type}/${Number(id)}`, HTML, (library) =>
-      renderDetail(library, type, Number(id)),
+    const origin = siteOrigin(context.req.raw, deps.publicUrl);
+    return cached(context, `${type}/${Number(id)}@${origin}`, HTML, (library) =>
+      renderDetail(library, type, Number(id), origin),
     );
   });
 }

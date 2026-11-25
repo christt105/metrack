@@ -199,7 +199,9 @@ describe('a public page', () => {
       'if-none-match': first.headers.get('etag') ?? '',
     });
     expect(stale.status).toBe(200);
-    expect(stale.headers.get('etag')).toBe(renderEtag(1, 1, RENDERED_AT, 'movie/1#es'));
+    expect(stale.headers.get('etag')).toBe(
+      renderEtag(1, 1, RENDERED_AT, 'movie/1@http://localhost#es'),
+    );
     expect(await stale.text()).toContain('Rewritten after the first visit');
   });
 
