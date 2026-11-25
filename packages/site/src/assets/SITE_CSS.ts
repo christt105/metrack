@@ -66,6 +66,10 @@ export const SITE_CSS = String.raw`@font-face {
     --header: calc(93px + env(safe-area-inset-top, 0px));
     --gut: 16px;
   }
+
+  :root:has(.site-header-inner-home) {
+    --header: calc(53px + env(safe-area-inset-top, 0px));
+  }
 }
 
 * {
@@ -741,6 +745,15 @@ select {
   color: var(--on-surface);
   background: var(--surface-low);
   text-decoration: none;
+}
+
+@media (max-width: 759px) {
+  .year-nav {
+    margin: 0 calc(-1 * var(--gut));
+    padding: var(--s-1) var(--gut);
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
 }
 
 .year-title {
