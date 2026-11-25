@@ -227,7 +227,7 @@ describe('renderDetail', () => {
     expect(html).toContain('<meta name="twitter:card" content="summary">');
   });
 
-  it('prefers the banner and leaves out pictures without an absolute address', () => {
+  it('falls back to the banner and leaves out pictures without an absolute address', () => {
     const own = buildLibrary(
       input({
         movies: [
@@ -247,6 +247,21 @@ describe('renderDetail', () => {
     expect(shared).toContain('<meta name="twitter:card" content="summary_large_image">');
     expect(shared).toContain('<meta property="og:description" content="Sinopsis.">');
     expect(renderDetail(own, 'movie', 1)).not.toContain('og:image');
+    const both = buildLibrary(
+      input({
+        movies: [
+          movie({
+            id: 1,
+            status: 'completed',
+            cover: `/api/images/${HASH_A}`,
+            banner: `/api/images/${HASH_B}`,
+          }),
+        ],
+      }),
+    );
+    expect(renderDetail(both, 'movie', 1, 'https://example.org')).toContain(
+      `<meta property="og:image" content="https://example.org/u/ana/images/${HASH_A}">`,
+    );
   });
 
   it('has no page for pending or unknown items', () => {

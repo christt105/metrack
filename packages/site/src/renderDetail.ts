@@ -127,10 +127,10 @@ function shareDescription(entry: PublicEntry): string | undefined {
 }
 
 function shareCard(library: Library, entry: PublicEntry, origin: string): ShareCard {
-  const banner = imageSrc(entry.banner, library.handle, 'banner', origin);
-  if (banner !== null && banner.startsWith('http')) return { image: banner, wide: true };
   const cover = imageSrc(entry.cover, library.handle, 'cover', origin);
-  return { image: cover !== null && cover.startsWith('http') ? cover : null, wide: false };
+  if (cover !== null && cover.startsWith('http')) return { image: cover, wide: false };
+  const banner = imageSrc(entry.banner, library.handle, 'banner', origin);
+  return { image: banner !== null && banner.startsWith('http') ? banner : null, wide: true };
 }
 
 /**
