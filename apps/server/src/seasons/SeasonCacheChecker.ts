@@ -23,8 +23,11 @@ export class SeasonCacheChecker {
     repair: boolean,
     window: { offset: number; limit: number } | undefined = undefined,
   ): Promise<SeasonCacheReport> {
-    const seasons = await this.seasons.list();
-    const all = [...new Set(seasons.map((season) => season.seriesId))].sort((a, b) => a - b);
+    const seasons = window === undefined ? await this.seasons.list() : [];
+    const all =
+      window === undefined
+        ? [...new Set(seasons.map((season) => season.seriesId))].sort((a, b) => a - b)
+        : await this.seasons.listSeriesIds();
     const chosen =
       window === undefined || all.length <= window.limit
         ? all
@@ -34,9 +37,13 @@ export class SeasonCacheChecker {
           );
     const drifts: SeasonCacheDrift[] = [];
     for (const seriesId of chosen) {
-      drifts.push(...(await this.tracker.check(seriesId, repair)));
+      const entries = window === undefined ? undefined : await this.seasons.listBySeries(seriesId);
+      drifts.push(...(await this.tracker.check(seriesId, repair, entries)));
+      if (entries) seasons.push(...(repair ? await this.seasons.listBySeries(seriesId) : entries));
     }
-    const conflicts = (repair ? await this.seasons.list() : seasons).flatMap((season) =>
+    const conflicts = (
+      repair && window === undefined ? await this.seasons.list() : seasons
+    ).flatMap((season) =>
       season.startedAt !== null &&
       season.finishedAt !== null &&
       season.startedAt > season.finishedAt

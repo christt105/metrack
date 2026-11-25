@@ -3,6 +3,7 @@ import type { UserScope } from '../../users/UserScope.js';
 import { completedEntryFromRow } from '../mapping/completedEntryFromRow.js';
 import { COMPLETED_ENTRIES_SQL, REOPEN_ENTRY_SQL } from '../mapping/completedEntriesSql.js';
 import { SEASON_PERSONAL_DATA_SQL } from '../mapping/seasonPersonalDataSql.js';
+import { SEASON_SERIES_IDS_SQL } from '../mapping/seasonSeriesIdsSql.js';
 import { seasonTable } from '../mapping/seasonTable.js';
 import type { CompletedSeasonEntry } from '../repositories/CompletedSeasonEntry.js';
 import type { SeasonRepository } from '../repositories/SeasonRepository.js';
@@ -13,6 +14,12 @@ import { execute, queryAll, queryFirst, statement } from './d1Query.js';
 export class D1SeasonRepository extends D1TableRepository<Season> implements SeasonRepository {
   constructor(db: D1Database, scope: UserScope) {
     super(db, scope, seasonTable);
+  }
+
+  async listSeriesIds(): Promise<number[]> {
+    return (await queryAll(this.db, SEASON_SERIES_IDS_SQL, this.scope.userId())).map((row) =>
+      Number(row.series_id),
+    );
   }
 
   async listBySeries(seriesId: number): Promise<Season[]> {
