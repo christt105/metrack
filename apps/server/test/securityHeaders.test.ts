@@ -206,10 +206,13 @@ describe('content security policy', () => {
     expect(policyOf(withSecurityHeaders(response, true, '/'))).toContain("'nonce-");
   });
 
-  it('keeps the nonce out of the public style-src and gives the app style-src its hash', () => {
+  it('keeps the nonce out of style-src and gives both style-src the hash', () => {
     const publicPolicy = policyOf(withSecurityHeaders(html(), true, '/u/x/'));
-    expect(publicPolicy).toContain("style-src 'self' 'unsafe-inline' https://giscus.app;");
+    expect(publicPolicy).toContain(
+      "style-src 'self' 'unsafe-hashes' 'sha256-Ia8f7Xd1GU9rNhtqyt5pM4QjRB9pqCkMhfAkkeE4+l4=' https://giscus.app;",
+    );
     expect(publicPolicy).toContain("script-src 'self' https://giscus.app 'nonce-");
+    expect(publicPolicy).not.toMatch(/style-src[^;]*nonce/);
     const appPolicy = policyOf(withSecurityHeaders(html(), true, '/'));
     expect(appPolicy).toContain(
       "style-src 'self' 'unsafe-hashes' 'sha256-Ia8f7Xd1GU9rNhtqyt5pM4QjRB9pqCkMhfAkkeE4+l4='",
@@ -248,12 +251,13 @@ describe('content security policy', () => {
     expect(direct.headers.get(CONTENT_SECURITY_POLICY_HEADER)).toContain("'nonce-");
   });
 
-  it('keeps the public policy free of inline scripts and the app policy of inline styles', () => {
-    expect(PUBLIC_CONTENT_SECURITY_POLICY).toContain(
-      "style-src 'self' 'unsafe-inline' https://giscus.app",
-    );
-    expect(PUBLIC_CONTENT_SECURITY_POLICY).not.toMatch(/script-src[^;]*unsafe-inline/);
+  it('keeps both policies free of inline code, the public one being the app one plus giscus', () => {
+    expect(PUBLIC_CONTENT_SECURITY_POLICY).not.toContain('unsafe-inline');
     expect(APP_CONTENT_SECURITY_POLICY).not.toContain('unsafe-inline');
     expect(APP_CONTENT_SECURITY_POLICY).not.toContain('giscus');
+    expect(PUBLIC_CONTENT_SECURITY_POLICY.replaceAll(' https://giscus.app', '')).toBe(
+      APP_CONTENT_SECURITY_POLICY.replace("frame-src 'none'", 'frame-src'),
+    );
+    expect(PUBLIC_CONTENT_SECURITY_POLICY).toContain('frame-src https://giscus.app;');
   });
 });
