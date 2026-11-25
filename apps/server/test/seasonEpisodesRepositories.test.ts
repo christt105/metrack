@@ -63,6 +63,24 @@ describe.each(backends)('$name episode repositories', (backend) => {
     seasonId = season.id;
   });
 
+  it('lists distinct series ids in order and scopes ids and seasons to the current user', async () => {
+    const shared = (await owner.seasons.get(seasonId))!.seriesId;
+    const ownerOnly = await owner.series.create({ ...emptySeries(), tmdbId: 2, title: 'Owned' });
+    const friendOnly = await friend.series.create({
+      ...emptySeries(),
+      tmdbId: 3,
+      title: 'Private',
+    });
+    await friend.seasons.create({ ...emptySeason(), seriesId: friendOnly.id });
+    await owner.seasons.create({ ...emptySeason(), seriesId: ownerOnly.id });
+    await owner.seasons.create({ ...emptySeason(), seriesId: shared, number: 2 });
+
+    expect(await owner.seasons.listSeriesIds()).toEqual([shared, ownerOnly.id]);
+    expect(await friend.seasons.listSeriesIds()).toEqual([shared, friendOnly.id]);
+    expect((await friend.seasons.listBySeries(shared)).map(({ number }) => number)).toEqual([1]);
+    expect(await owner.seasons.listBySeries(friendOnly.id)).toEqual([]);
+  });
+
   describe('SeasonFillerRepository', () => {
     let seriesOfSeason: number;
 

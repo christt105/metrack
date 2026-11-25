@@ -28,6 +28,7 @@ import UnmatchedEpisodes from '../components/UnmatchedEpisodes.vue';
 import { useApi } from '../composables/useApi';
 import { useMessages } from '../composables/useMessages';
 import { isTracked } from '../logic/fieldSchemas';
+import { mediaSourceUrl } from '../logic/mediaSourceUrl';
 import { seasonWatched } from '../logic/seasonWatched';
 import { withTracking } from '../logic/withTracking';
 
@@ -60,9 +61,15 @@ const trackedStatus = computed(() =>
     ? detail.value.status
     : null,
 );
-const parentTitle = ref<string | null>(null);
-const parentArtwork = ref<{ cover: string | null; banner: string | null } | null>(null);
-const parentTmdbId = ref<number | null>(null);
+const parent = ref<SeriesDetail | null>(null);
+const sourceUrl = computed(() =>
+  detail.value ? mediaSourceUrl(props.collection, detail.value, parent.value) : null,
+);
+const sourceLabel = computed(() => {
+  if (props.collection === 'games') return messages.detail.viewOnSteam;
+  if (props.collection === 'books') return messages.detail.viewOnOpenLibrary;
+  return messages.detail.viewOnTmdb;
+});
 const seasonUnmatched = ref<UnmatchedEpisode[]>([]);
 
 const unmatchedSource = computed(() => {
@@ -78,7 +85,7 @@ const unmatchedSource = computed(() => {
   const number = seasonOf.value.tmdbSeasonNumber ?? seasonOf.value.number;
   return {
     unmatched: seasonUnmatched.value,
-    tmdbId: parentTmdbId.value,
+    tmdbId: parent.value?.tmdbId ?? null,
     known: [number],
     only: number,
   };
@@ -91,19 +98,13 @@ async function load(): Promise<void> {
     if (mine !== ticket) return;
     detail.value = result;
     error.value = null;
-    parentTitle.value = null;
-    parentArtwork.value = null;
-    parentTmdbId.value = null;
+    parent.value = null;
     seasonUnmatched.value = [];
     if (props.collection === 'seasons') {
-      const parent = await api
+      const resultParent = await api
         .getDetail('series', (result as unknown as Season).seriesId)
         .catch(() => null);
-      if (mine === ticket) {
-        parentTitle.value = parent?.title ?? null;
-        parentArtwork.value = parent ? { cover: parent.cover, banner: parent.banner } : null;
-        parentTmdbId.value = parent?.tmdbId ?? null;
-      }
+      if (mine === ticket) parent.value = resultParent;
     }
   } catch (cause) {
     if (mine !== ticket) return;
@@ -146,10 +147,13 @@ const eyebrow = computed(() => messages.typeLabels[type.value]);
 watch(
   () => [props.collection, props.id],
   () => {
+    detail.value = null;
+    error.value = null;
     hasCatalog.value = null;
+    void load();
   },
+  { immediate: true },
 );
-watch(() => [props.collection, props.id], load, { immediate: true });
 </script>
 
 <template>
@@ -159,13 +163,13 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       :title="titleText"
       :eyebrow="eyebrow"
       :status="trackedStatus"
-      :fallback="parentArtwork"
+      :fallback="parent"
       :watched="watchedEpisodes"
     >
       <template #before-title>
         <RouterLink v-if="seasonOf" :to="`/series/${seasonOf.seriesId}`" class="back">
           <AppIcon name="back" :size="18" />
-          {{ parentTitle ?? `${messages.detail.seasonOf} #${seasonOf.seriesId}` }}
+          {{ parent?.title ?? `${messages.detail.seasonOf} #${seasonOf.seriesId}` }}
         </RouterLink>
       </template>
       <template #actions>
@@ -187,6 +191,15 @@ watch(() => [props.collection, props.id], load, { immediate: true });
           <AppIcon name="edit" :size="18" />
           {{ messages.hero.edit }}
         </RouterLink>
+        <a
+          v-if="sourceUrl"
+          :href="sourceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="source-link"
+        >
+          {{ sourceLabel }}
+        </a>
       </template>
       <template v-if="trackedStatus" #review>
         <ReviewPanel :collection="collection" :detail="detail" @saved="onSaved" />
@@ -230,7 +243,7 @@ watch(() => [props.collection, props.id], load, { immediate: true });
       :collection="collection"
       :detail="detail"
       :title="titleText"
-      :fallback="parentArtwork"
+      :fallback="parent"
       @load="load"
       @saved="onSaved"
     />
@@ -243,6 +256,16 @@ watch(() => [props.collection, props.id], load, { immediate: true });
 .detail {
   max-width: 1120px;
   margin: 0 auto;
+}
+
+.source-link {
+  color: var(--muted);
+  font-size: var(--t-small);
+  text-decoration: underline;
+}
+
+.source-link:hover {
+  color: var(--on-surface);
 }
 
 .back {

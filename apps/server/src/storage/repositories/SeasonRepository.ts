@@ -3,6 +3,8 @@ import type { CompletedSeasonEntry } from './CompletedSeasonEntry.js';
 import type { MediaEntityRepository } from './MediaEntityRepository.js';
 
 export interface SeasonRepository extends MediaEntityRepository<Season> {
+  /** Series ids with at least one season entry for the user in scope, ordered by id. */
+  listSeriesIds(): Promise<number[]>;
   /** Seasons of one series ordered by number. */
   listBySeries(seriesId: number): Promise<Season[]>;
   /**

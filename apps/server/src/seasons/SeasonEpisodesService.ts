@@ -27,14 +27,13 @@ import {
 } from '@metrack/domain';
 import { ApiError } from '../api/ApiError.js';
 import { ResponseTooLargeError } from '../http/ResponseTooLargeError.js';
-import {
-  mapGroupSeasonEpisodes,
-  mapSeasonEpisode,
-  mapSeasonEpisodes,
-} from '../providers/tmdb/mapSeasonEpisodes.js';
+import { mapGroupSeasonEpisodes, mapSeasonEpisodes } from '../providers/tmdb/mapSeasonEpisodes.js';
 import type { SeasonEpisodesDeps } from './SeasonEpisodesDeps.js';
 import type { SeasonEpisodesResult } from './SeasonEpisodesResult.js';
 import type { ResolvedSeason } from './ResolvedSeason.js';
+import { EpisodeChunkLoader } from './EpisodeChunkLoader.js';
+import { EpisodeProviderError } from './EpisodeProviderError.js';
+import { fromProvider } from './fromProvider.js';
 import { PremiereReopener } from './PremiereReopener.js';
 import { SeriesWatchTracker } from './SeriesWatchTracker.js';
 
@@ -43,9 +42,6 @@ function operationKeys(operation: EpisodeOperation): string[] {
   if (operation.op === 'restoreViewings') return operation.episodes.map(({ key }) => key);
   return operation.keys;
 }
-
-/** How many single episodes one request fetches for a season too large to read whole. */
-export const EPISODE_CHUNK_SIZE = 15;
 
 /**
  * The episodes of a season and what the user in scope watched of them. The shared catalog is read from its one
@@ -310,11 +306,11 @@ export class SeasonEpisodesService {
 
   /**
    * Fetches the catalogs of the series' seasons that have none or are stale, then derives the user's season
-   * entries again from their watches. A season whose catalog cannot be had keeps its entry as it is.
+   * entries again from their watches. A season whose catalog cannot be had keeps its entry as it is. A failure to read or write the catalog or the season is not hidden.
    */
   async recomputeSeries(seriesId: number): Promise<void> {
     for (const season of await this.deps.seasons.listBySeries(seriesId)) {
-      await this.resolve(season.id).catch(() => undefined);
+      await this.resolve(season.id);
     }
     await this.tracker.recompute(seriesId);
   }
@@ -372,6 +368,7 @@ export class SeasonEpisodesService {
   ): Promise<SeasonEpisodes | undefined> {
     const { tmdb } = this.deps;
     if (!tmdb || series.tmdbId === null) return undefined;
+    const tmdbId = series.tmdbId;
     const providerNumber = season.tmdbSeasonNumber ?? season.number;
     const catalog = (episodes: Episode[], complete: boolean): SeasonEpisodes => ({
       seasonId: season.id,
@@ -382,51 +379,44 @@ export class SeasonEpisodesService {
     });
     try {
       if (series.tmdbEpisodeGroup !== null) {
-        const group = await tmdb.episodeGroup(series.tmdbEpisodeGroup);
-        const episodes = mapGroupSeasonEpisodes(group, providerNumber);
+        const group = series.tmdbEpisodeGroup;
+        const episodes = await fromProvider(async () =>
+          mapGroupSeasonEpisodes(await tmdb.episodeGroup(group), providerNumber),
+        );
         return episodes && episodes.length > 0 ? catalog(episodes, true) : undefined;
       }
       const continuing = stored !== undefined && (!stored.complete || stored.refill !== undefined);
       if (!continuing) {
         try {
-          const episodes = mapSeasonEpisodes(await tmdb.season(series.tmdbId, providerNumber));
+          const episodes = await fromProvider(async () =>
+            mapSeasonEpisodes(await tmdb.season(tmdbId, providerNumber)),
+          );
           return episodes.length > 0 ? catalog(episodes, true) : undefined;
         } catch (error) {
-          if (!(error instanceof ResponseTooLargeError)) throw error;
+          if (
+            !(error instanceof EpisodeProviderError) ||
+            !(error.cause instanceof ResponseTooLargeError)
+          ) {
+            throw error;
+          }
         }
       }
       const have =
         stored === undefined ? [] : stored.complete ? (stored.refill ?? []) : stored.episodes;
-      const chunk = await this.fetchChunk(series.tmdbId, providerNumber, season.episodeCount, have);
+      const chunk = await new EpisodeChunkLoader(tmdb).load(
+        tmdbId,
+        providerNumber,
+        season.episodeCount,
+        have,
+      );
       if (!chunk) return undefined;
       if (chunk.complete) return catalog(chunk.episodes, true);
       if (stored?.complete) return { ...stored, refill: chunk.episodes };
       return catalog(chunk.episodes, false);
-    } catch {
-      return undefined;
+    } catch (error) {
+      if (error instanceof EpisodeProviderError) return undefined;
+      throw error;
     }
-  }
-
-  private async fetchChunk(
-    tmdbId: number,
-    providerNumber: number,
-    count: number | null,
-    have: readonly Episode[],
-  ): Promise<{ episodes: Episode[]; complete: boolean } | undefined> {
-    const { tmdb } = this.deps;
-    if (!tmdb || count === null || count <= 0) return undefined;
-    const from = Math.max(0, ...have.map((e) => e.number)) + 1;
-    const last = Math.min(from + EPISODE_CHUNK_SIZE - 1, count);
-    const numbers = Array.from({ length: Math.max(0, last - from + 1) }, (_, i) => from + i);
-    const results = await Promise.allSettled(
-      numbers.map((n) => tmdb.seasonEpisode(tmdbId, providerNumber, n)),
-    );
-    const fetched = results.flatMap((r) =>
-      r.status === 'fulfilled' ? [mapSeasonEpisode(r.value)] : [],
-    );
-    if (fetched.length === 0) return undefined;
-    const episodes = [...have, ...fetched].sort((a, b) => a.number - b.number);
-    return { episodes, complete: last >= count };
   }
 
   private async withIds(
