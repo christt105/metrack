@@ -18,7 +18,6 @@ import type {
   ApiToken,
   CreatedToken,
   CreateTokenRequest,
-  ApiErrorBody,
   Collection,
   CreateInput,
   EditablePatch,
@@ -63,6 +62,7 @@ import type { BackupInfo } from './BackupInfo';
 import { ApiRequestError } from './ApiRequestError';
 import { buildQueryString } from './buildQueryString';
 import type { EntityOf } from './EntityOf';
+import { HttpTransport } from './HttpTransport';
 import type { ImageSettings } from './ImageSettings';
 import { DEFAULT_RECODE_MAX_SIDE, recodeToWebp } from '../logic/recodeToWebp';
 
@@ -73,12 +73,16 @@ type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDet
  * `onUnauthenticated` runs when a call outside `/auth` is refused for lack of a session.
  */
 export class ApiClient {
+  private readonly transport: HttpTransport;
+
   constructor(
-    private readonly fetchFn: typeof fetch = (...args) => fetch(...args),
-    private readonly onUnauthenticated: () => void = () => {},
+    fetchFn: typeof fetch = (...args) => fetch(...args),
+    onUnauthenticated: () => void = () => {},
     private readonly recode: (file: Blob, maxSide: number) => Promise<Blob> = recodeToWebp,
-    private readonly onReachable: (reachable: boolean) => void = () => {},
-  ) {}
+    onReachable: (reachable: boolean) => void = () => {},
+  ) {
+    this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+  }
 
   private settings: Promise<ImageSettings> | undefined;
 
@@ -86,52 +90,11 @@ export class ApiClient {
     method: string,
     path: string,
     body?: unknown,
-    acceptedStatuses: readonly number[] = [],
+    acceptedStatuses?: readonly number[],
   ): Promise<T> {
-    const init: RequestInit = { method };
-    if (body instanceof Blob) {
-      init.headers = { 'content-type': body.type || 'application/octet-stream' };
-      init.body = body;
-    } else if (body !== undefined) {
-      init.headers = { 'content-type': 'application/json' };
-      init.body = JSON.stringify(body);
-    }
-    let response: Response;
-    try {
-      response = await this.fetchFn(`/api${path}`, init);
-      this.onReachable(true);
-    } catch (cause) {
-      this.onReachable(false);
-      throw new ApiRequestError(
-        cause instanceof Error ? cause.message : 'Network error',
-        0,
-        'network_error',
-      );
-    }
-    if (!response.ok && !acceptedStatuses.includes(response.status)) {
-      if (response.status === 401 && !path.startsWith('/auth/')) this.onUnauthenticated();
-      throw await this.toError(response);
-    }
+    const response = await this.transport.send(method, path, body, acceptedStatuses);
     if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
-  }
-
-  private async toError(response: Response): Promise<ApiRequestError> {
-    try {
-      const body = (await response.json()) as Partial<ApiErrorBody>;
-      return new ApiRequestError(
-        body.error ?? `Request failed with status ${response.status}`,
-        response.status,
-        body.code ?? '',
-        body.details,
-      );
-    } catch {
-      return new ApiRequestError(
-        `Request failed with status ${response.status}`,
-        response.status,
-        '',
-      );
-    }
   }
 
   /** The signed-in user, or null without a session. */
@@ -498,17 +461,7 @@ export class ApiClient {
   }
 
   async imageBytes(hash: string): Promise<Uint8Array> {
-    let response: Response;
-    try {
-      response = await this.fetchFn(`/api/images/${hash}`);
-    } catch (cause) {
-      throw new ApiRequestError(
-        cause instanceof Error ? cause.message : 'Network error',
-        0,
-        'network_error',
-      );
-    }
-    if (!response.ok) throw await this.toError(response);
+    const response = await this.transport.send('GET', `/images/${hash}`);
     return new Uint8Array(await response.arrayBuffer());
   }
 

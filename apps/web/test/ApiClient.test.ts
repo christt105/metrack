@@ -99,6 +99,53 @@ describe('ApiClient', () => {
     await expect(broken.health()).rejects.toMatchObject({ code: 'network_error', status: 0 });
   });
 
+  describe('imageBytes', () => {
+    it('returns bytes and reports that the API is reachable', async () => {
+      const contents = Uint8Array.of(4, 21, 255);
+      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response(contents));
+      const onReachable = vi.fn();
+      const client = new ApiClient(fetchFn, undefined, undefined, onReachable);
+
+      expect(await client.imageBytes('abc')).toEqual(contents);
+      expect(fetchFn).toHaveBeenCalledWith('/api/images/abc', { method: 'GET' });
+      expect(onReachable).toHaveBeenCalledExactlyOnceWith(true);
+    });
+
+    it('reports an expired session while translating a 401 from the image endpoint', async () => {
+      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(JSON.stringify({ error: 'Please sign in', code: 'unauthenticated' }), {
+          status: 401,
+        }),
+      );
+      const onUnauthenticated = vi.fn();
+      const onReachable = vi.fn();
+      const client = new ApiClient(fetchFn, onUnauthenticated, undefined, onReachable);
+
+      await expect(client.imageBytes('abc')).rejects.toMatchObject({
+        status: 401,
+        code: 'unauthenticated',
+        message: 'Please sign in',
+      });
+      expect(onUnauthenticated).toHaveBeenCalledTimes(1);
+      expect(onReachable).toHaveBeenCalledExactlyOnceWith(true);
+    });
+
+    it('reports loss of connectivity when the image request cannot reach the API', async () => {
+      const fetchFn = vi.fn<typeof fetch>().mockRejectedValue(new Error('offline'));
+      const onUnauthenticated = vi.fn();
+      const onReachable = vi.fn();
+      const client = new ApiClient(fetchFn, onUnauthenticated, undefined, onReachable);
+
+      await expect(client.imageBytes('abc')).rejects.toMatchObject({
+        status: 0,
+        code: 'network_error',
+        message: 'offline',
+      });
+      expect(onReachable).toHaveBeenCalledExactlyOnceWith(false);
+      expect(onUnauthenticated).not.toHaveBeenCalled();
+    });
+  });
+
   describe('uploadImage', () => {
     function uploader(encoding: 'server' | 'client' | 'fails') {
       const calls: { url: string; init?: RequestInit }[] = [];
