@@ -13,7 +13,17 @@ import type {
 } from '@metrack/domain';
 import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from '@metrack/domain';
 import type { Messages } from './Messages';
-import { spanishCalendar } from './spanishCalendar';
+import { calendarMessages } from './calendarMessages';
+
+const spanishCalendar = calendarMessages('es-ES', [
+  'Lun',
+  'Mar',
+  'Mié',
+  'Jue',
+  'Vie',
+  'Sáb',
+  'Dom',
+]);
 
 const LOCALE = 'es-ES';
 const plurals = new Intl.PluralRules(LOCALE);

@@ -12,16 +12,19 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-const render = (props: {
-  modelValue: string;
-  max?: string;
-  required?: boolean;
-  disabled?: boolean;
-}) =>
+const render = (
+  props: {
+    modelValue: string;
+    max?: string;
+    required?: boolean;
+    disabled?: boolean;
+  },
+  languages: readonly string[] = ['en-US'],
+) =>
   mount(DatePicker, {
     attachTo: document.body,
     props,
-    global: { provide: { [localeKey as symbol]: new Locale(['en-US']) } },
+    global: { provide: { [localeKey as symbol]: new Locale(languages) } },
   });
 
 function calendar() {
@@ -34,8 +37,8 @@ describe('DatePicker', () => {
   it.each([
     ['2026-11-01', 'noviembre de 2026', '2026-10-26', '2026-11-01'],
     ['2027-02-01', 'febrero de 2027', '2027-02-01', '2027-02-07'],
-  ])('starts the week on Monday for %s on an English browser', async (date, month, first, last) => {
-    const wrapper = render({ modelValue: date });
+  ])('starts the week on Monday for %s', async (date, month, first, last) => {
+    const wrapper = render({ modelValue: date }, ['es-ES']);
     await wrapper.get('input').trigger('click');
     const grid = calendar();
     expect(grid.get('h2').text()).toBe(month);
@@ -52,6 +55,25 @@ describe('DatePicker', () => {
     expect(firstRow[0]!.attributes('data-date')).toBe(first);
     expect(firstRow[6]!.attributes('data-date')).toBe(last);
     expect(firstRow[0]!.attributes('aria-label')).toMatch(/^lunes/);
+  });
+
+  it('keeps Monday first with English names on an English browser', async () => {
+    const wrapper = render({ modelValue: '2026-11-01' });
+    await wrapper.get('input').trigger('click');
+    const grid = calendar();
+    expect(grid.get('h2').text()).toBe('November 2026');
+    expect(grid.findAll('[role="columnheader"]').map((day) => day.text())).toEqual([
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ]);
+    const firstDay = grid.findAll('[role="row"]')[1]!.findAll('button.day')[0]!;
+    expect(firstDay.attributes('data-date')).toBe('2026-10-26');
+    expect(firstDay.attributes('aria-label')).toMatch(/^Monday/);
   });
 
   it('disables days after max and blocks an existing value after max from form submission', async () => {
@@ -88,13 +110,13 @@ describe('DatePicker', () => {
     const wrapper = render({ modelValue: '2026-11-01' });
     await wrapper.get('input').trigger('keydown', { key: 'Enter' });
     const dialog = calendar();
-    expect(dialog.get('h2').text()).toBe('noviembre de 2026');
+    expect(dialog.get('h2').text()).toBe('November 2026');
     await dialog.get('[aria-label="Previous month"]').trigger('click');
-    expect(dialog.get('h2').text()).toBe('octubre de 2026');
+    expect(dialog.get('h2').text()).toBe('October 2026');
     await dialog.get('[aria-label="Next month"]').trigger('click');
-    expect(dialog.get('h2').text()).toBe('noviembre de 2026');
+    expect(dialog.get('h2').text()).toBe('November 2026');
     await dialog.get('[data-date="2026-11-01"]').trigger('keydown', { key: 'ArrowLeft' });
-    expect(dialog.get('h2').text()).toBe('octubre de 2026');
+    expect(dialog.get('h2').text()).toBe('October 2026');
     const selected = dialog.get('[data-date="2026-10-31"]');
     expect(document.activeElement).toBe(selected.element);
     await selected.trigger('keydown', { key: 'Enter' });
