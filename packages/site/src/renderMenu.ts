@@ -11,8 +11,12 @@ function link(href: string, name: string, active: boolean): string {
   return `<a class="site-nav-link" href="${escapeHtml(href)}"${current}>${escapeHtml(name)}</a>`;
 }
 
-/** The site header: the owner's avatar and name back to the library, the pages, and the feed. */
-export function renderMenu(library: Library, active: MenuPage | null): string {
+/** The site header: the owner's avatar and name back to the library (left out on the library itself, whose profile shows them), the pages, and the feed. */
+export function renderMenu(
+  library: Library,
+  active: MenuPage | null,
+  profileShown: boolean,
+): string {
   const { menu, footer } = library.messages;
   const home = homePath(library.handle);
   const links = [
@@ -23,5 +27,9 @@ export function renderMenu(library: Library, active: MenuPage | null): string {
       ? ''
       : link(aboutPath(library.handle), menu.about, active === 'about'),
   ].join('');
-  return `<header class="site-header"><div class="site-header-inner"><a class="site-brand" href="${escapeHtml(home)}"><img class="site-brand-avatar" src="${escapeHtml(avatarSrc(library))}" alt="" width="32" height="32"><span class="site-brand-name">${escapeHtml(ownerName(library))}</span></a><nav class="site-nav" aria-label="${menu.ariaLabel}">${links}</nav><a class="site-feed" href="${escapeHtml(feedPath(library.handle))}" title="${footer.rss}" aria-label="${footer.rss}">${icon('rss', 20)}</a></div></header>`;
+  const brand = profileShown
+    ? ''
+    : `<a class="site-brand" href="${escapeHtml(home)}"><img class="site-brand-avatar" src="${escapeHtml(avatarSrc(library))}" alt="" width="32" height="32"><span class="site-brand-name">${escapeHtml(ownerName(library))}</span></a>`;
+  const modifier = profileShown ? ' site-header-inner-home' : '';
+  return `<header class="site-header"><div class="site-header-inner${modifier}">${brand}<nav class="site-nav" aria-label="${menu.ariaLabel}">${links}</nav><a class="site-feed" href="${escapeHtml(feedPath(library.handle))}" title="${footer.rss}" aria-label="${footer.rss}">${icon('rss', 20)}</a></div></header>`;
 }

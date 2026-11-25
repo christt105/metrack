@@ -13,6 +13,8 @@ export interface LayoutOptions {
   title: string;
   description?: string;
   active: MenuPage | null;
+  /** Whether the page already shows the owner's avatar and name, so the header leaves them out. */
+  profileShown?: boolean;
   /** The page itself, between the header and the footer. */
   page: string;
   /** Data the shared script reads, written into the page as JSON. */
@@ -32,7 +34,7 @@ export function renderLayout(options: LayoutOptions): string {
 `;
   return `${renderHead(library.messages.lang, options.title, extra)}<body>
 ${iconSprite()}
-${renderMenu(library, options.active)}
+${renderMenu(library, options.active, options.profileShown === true)}
 ${options.page}
 ${renderFooter(library)}
 ${data}</body>

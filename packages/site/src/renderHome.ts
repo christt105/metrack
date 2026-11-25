@@ -90,6 +90,7 @@ export function renderHome(library: Library): string {
     library,
     title: ownerName(library),
     active: 'home',
+    profileShown: true,
     page: `${renderBio(library)}<main class="wrap home" aria-label="${library.messages.contentLabel}">${body}</main>`,
     data: { banners: banners(library) },
   });
