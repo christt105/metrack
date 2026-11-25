@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AnyDetail } from '../src/api/AnyDetail';
 import type { ApiClient } from '../src/api/ApiClient';
 import { mountWithApi } from './mountWithApi';
+import { pickDate } from './pickDate';
 
 const movie = {
   id: 4,
@@ -262,17 +263,23 @@ describe('MediaEditView', () => {
       expect(wrapper.text()).toContain('calculated from the episodes');
     });
 
-    it('keeps the dates editable when they are not derived', async () => {
+    it('saves a picked date when the dates are not derived from episodes', async () => {
+      const patch = vi.fn().mockResolvedValue(season);
       const { wrapper } = await open(
         {
           getDetail: vi.fn().mockResolvedValue(season),
           seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: false }),
+          patch,
         },
         '/seasons/30/edit',
         '/seasons/30',
       );
       expect((wrapper.find('#field-startedAt').element as HTMLInputElement).disabled).toBe(false);
       expect(wrapper.text()).not.toContain('calculated from the episodes');
+      await pickDate(wrapper.get('#field-finishedAt'), '2026-01-12');
+      await wrapper.get('form').trigger('submit');
+      await flushPromises();
+      expect(patch).toHaveBeenCalledWith('seasons', 30, { finishedAt: '2026-01-12' }, {});
     });
   });
 });

@@ -13,6 +13,17 @@ import type {
 } from '@metrack/domain';
 import { HANDLE_MAX_LENGTH, HANDLE_MIN_LENGTH } from '@metrack/domain';
 import type { Messages } from './Messages';
+import { calendarMessages } from './calendarMessages';
+
+const spanishCalendar = calendarMessages('es-ES', [
+  'Lun',
+  'Mar',
+  'Mié',
+  'Jue',
+  'Vie',
+  'Sáb',
+  'Dom',
+]);
 
 const LOCALE = 'es-ES';
 const plurals = new Intl.PluralRules(LOCALE);
@@ -496,6 +507,15 @@ export const es: Messages = {
     manualTitle: 'Título',
     create: 'Crear',
     added: 'Añadido.',
+  },
+  datePicker: {
+    ...spanishCalendar,
+    choose: 'Elegir fecha',
+    previousMonth: 'Mes anterior',
+    nextMonth: 'Mes siguiente',
+    today: 'Hoy',
+    clear: 'Borrar',
+    tooLate: (max: string) => `Elige una fecha hasta el ${spanishCalendar.field(max)}.`,
   },
   watchlist: {
     title: 'Siguiendo',

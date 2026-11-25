@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { sizedImageUrl } from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
-import { daysBetween } from '../logic/following/dates';
+import { daysBetween } from '../logic/calendar/dates';
 import type { FollowingEvent } from '../logic/following/FollowingEvent';
 
 const messages = useMessages();

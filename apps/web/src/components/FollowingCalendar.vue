@@ -2,9 +2,9 @@
 import { computed, ref } from 'vue';
 import { sizedImageUrl } from '@metrack/domain';
 import { useMessages } from '../composables/useMessages';
-import { addMonths } from '../logic/following/dates';
+import { addMonths } from '../logic/calendar/dates';
 import type { FollowingEvent } from '../logic/following/FollowingEvent';
-import { monthGrid } from '../logic/following/monthGrid';
+import { monthGrid } from '../logic/calendar/monthGrid';
 import AppIcon from './AppIcon.vue';
 import FollowingEventRow from './FollowingEventRow.vue';
 

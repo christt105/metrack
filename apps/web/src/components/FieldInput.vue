@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { DraftValue } from '../logic/formDraft';
 import type { FieldKind } from '../logic/FieldSchema';
+import DatePicker from './DatePicker.vue';
 import PlatformPicker from './PlatformPicker.vue';
 import RatingPicker from './RatingPicker.vue';
 
@@ -34,11 +35,10 @@ const checked = computed({
 <template>
   <input v-if="kind === 'boolean'" :id="id" v-model="checked" type="checkbox" />
   <textarea v-else-if="kind === 'textarea'" :id="id" v-model="text" />
-  <input
+  <DatePicker
     v-else-if="kind === 'date'"
     :id="id"
     v-model="text"
-    type="date"
     :required="required"
     :disabled="disabled"
   />

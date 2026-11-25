@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { WatchlistEntry } from '@metrack/domain';
 import { buildAgenda } from '../src/logic/following/buildAgenda';
-import { addMonths, daysBetween } from '../src/logic/following/dates';
+import { addMonths, daysBetween } from '../src/logic/calendar/dates';
 import { followingEvents } from '../src/logic/following/followingEvents';
-import { monthGrid } from '../src/logic/following/monthGrid';
+import { monthGrid } from '../src/logic/calendar/monthGrid';
 
 function series(id: number, airDate: string | null): WatchlistEntry {
   return {

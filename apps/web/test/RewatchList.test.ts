@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import RewatchList from '../src/components/RewatchList.vue';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { mountWithApi } from './mountWithApi';
+import { pickDate } from './pickDate';
 import { en as messages } from '../src/i18n/messages/en';
 
 enableAutoUnmount(afterEach);
@@ -33,12 +34,16 @@ describe('RewatchList', () => {
     expect(rows).toEqual(['Watching since 1 May 2026', '1 Feb 2025 to 3 Feb 2025', '1 Jan 2024']);
   });
 
-  it('edits a viewing inline and sends the full list', async () => {
+  it('edits a viewing inline and sends the full list', async ({ onTestFinished }) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2024, 0, 5));
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const { wrapper, patch } = await mountList();
     const row = wrapper.findAll('li')[2]!;
     await row.find('button').trigger('click');
-    const inputs = row.findAll('input');
-    await inputs[0]!.setValue('2023-12-30');
+    await pickDate(row.get('input.date-trigger'), '2023-12-30');
     await row.find('form').trigger('submit');
     await flushPromises();
     expect(patch).toHaveBeenCalledWith('games', 20, {
@@ -63,11 +68,16 @@ describe('RewatchList', () => {
     expect(patch).toHaveBeenLastCalledWith('games', 20, { restore: true, rewatches });
   });
 
-  it('adds a viewing with an optional start', async () => {
+  it('adds a viewing with an optional start', async ({ onTestFinished }) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 5, 15));
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const { wrapper, patch } = await mountList();
-    const inputs = wrapper.find('form.add').findAll('input');
-    await inputs[0]!.setValue('2026-06-01');
-    await inputs[1]!.setValue('2026-06-05');
+    const inputs = wrapper.find('form.add').findAll('input.date-trigger');
+    await pickDate(inputs[0]!, '2026-06-01');
+    await pickDate(inputs[1]!, '2026-06-05');
     await wrapper.find('form.add').trigger('submit');
     await flushPromises();
     const sent = patch.mock.calls[0]![2].rewatches;
