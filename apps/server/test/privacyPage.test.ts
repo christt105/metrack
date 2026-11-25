@@ -10,7 +10,7 @@ describe('privacy page', () => {
     const response = await api.app.inject({ method: 'GET', url: '/privacy' });
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toContain('text/html');
-    expect(response.body).toContain('<html lang="es" class="dark">');
+    expect(response.body).toContain('<html lang="es">');
     expect((await api.app.inject({ method: 'GET', url: '/api/account' })).statusCode).toBe(401);
   });
 
@@ -38,13 +38,13 @@ describe('privacy page', () => {
     const ask = async (headers: Record<string, string>) =>
       api.app.inject({ method: 'GET', url: '/privacy', headers });
     const none = await ask({});
-    expect(none.body).toContain('<html lang="es" class="dark">');
+    expect(none.body).toContain('<html lang="es">');
     expect(none.body).toContain('<h1>Privacidad</h1>');
     expect(none.body).toContain('privacy@example.test');
     const spanish = await ask({ 'accept-language': 'es-ES,es;q=0.9,en;q=0.8' });
     expect(spanish.body).toContain('<h1>Privacidad</h1>');
     const english = await ask({ 'accept-language': 'en-US,en;q=0.9' });
-    expect(english.body).toContain('<html lang="en" class="dark">');
+    expect(english.body).toContain('<html lang="en">');
     expect(english.body).toContain('<h1>Privacy</h1>');
     const french = await ask({ 'accept-language': 'fr-FR,fr;q=0.9' });
     expect(french.body).toContain('<h1>Privacidad</h1>');

@@ -9,7 +9,7 @@ import {
   renderNotFound,
   renderPrivacy,
 } from '../src/index.js';
-import { HASH_A, NO_PROFILE, book, game, input, movie, season, series } from './support.js';
+import { HASH_A, HASH_B, NO_PROFILE, book, game, input, movie, season, series } from './support.js';
 
 const library = buildLibrary(
   input({
@@ -74,8 +74,8 @@ describe('renderHome filters and empty states', () => {
         }),
       ),
     );
-    expect(html).toContain('data-value="finished">Completado<');
-    expect(html).toContain('data-value="not_started">Pendiente<');
+    expect(html).toContain('data-value="finished" aria-pressed="false">Completado<');
+    expect(html).toContain('data-value="not_started" aria-pressed="false">Pendiente<');
     expect(html).not.toContain('data-value="paused"');
     expect(html).not.toContain('data-value="dropped"');
     expect(html).toContain('data-value="7"');
@@ -106,22 +106,46 @@ describe('renderHome', () => {
     expect(html).toContain('<meta name="robots" content="noindex">');
   });
 
-  it('follows the theme: menu, hero banner, profile, filters and the completed years', () => {
-    expect(html).toContain('<div class="navbar" role="navigation">');
-    expect(html).toContain('<div id="random-hero-banner"></div>');
-    expect(html).toContain('class="author-avatar" src="/u/assets/default-avatar.svg"');
-    expect(html).toContain('<h2 class="author-name">@ana</h2>');
+  it('has the header, profile backdrop, filters and the completed years', () => {
+    expect(html).toContain('<header class="site-header">');
+    expect(html).toContain(
+      '<a class="site-nav-link" href="/u/ana/" aria-current="page">Biblioteca</a>',
+    );
+    expect(html).toContain('<div class="profile-backdrop" id="profile-backdrop"></div>');
+    expect(html).toContain('class="profile-avatar" src="/u/assets/default-avatar.svg"');
+    expect(html).toContain('<h1 class="profile-name">@ana</h1>');
     expect(html).toContain('id="filter-bar"');
     expect(html).toContain('data-filter-group="platform"');
-    expect(html).toContain('href="/u/ana/?type=movie"');
-    expect(html).toContain('<h3 class="section-title">En curso (2)</h3>');
-    expect(html).toContain('id="completed-section"');
+    expect(html).toContain('<h2 class="section-title">En curso <span class="count">2</span></h2>');
+    expect(html).toContain('id="completed"');
     expect(html).toContain('<a href="#year-2026" class="year-nav-link">2026</a>');
     expect(html).toContain('<a href="#year-unknown" class="year-nav-link">?</a>');
     expect(html).toContain('id="year-unknown"');
     expect(html).toContain('Ver en pausa y abandonados (1)');
-    expect(html).toContain('/u/assets/filter.js');
-    expect(html).toContain('/u/assets/banner.js');
+    expect(html).toContain('<script src="/u/assets/site.js" defer></script>');
+  });
+
+  it('gives the script the banners to pick the backdrop from, without seasons', () => {
+    const page = renderHome(
+      buildLibrary(
+        input({
+          movies: [
+            movie({ id: 1, status: 'completed', banner: `/api/images/${HASH_A}` }),
+            movie({ id: 2, status: 'completed' }),
+          ],
+          series: [series({ id: 1 })],
+          seasons: [
+            season({ id: 1, seriesId: 1, status: 'completed', banner: `/api/images/${HASH_B}` }),
+          ],
+        }),
+      ),
+    );
+    const match = /<script type="application\/json" id="site-data">(.*?)<\/script>/.exec(page);
+    expect(JSON.parse(match?.[1] ?? 'null')).toEqual({ banners: [`/u/ana/images/${HASH_A}`] });
+  });
+
+  it('has no inline style anywhere', () => {
+    expect(html).not.toContain('style=');
   });
 
   it('puts the cards data where the filters read it', () => {
@@ -136,7 +160,7 @@ describe('renderHome', () => {
     expect(html).toContain('Dune &lt;2&gt;');
     expect(html).not.toContain('Dune <2>');
     expect(html).toContain('href="/u/ana/movie/1"');
-    expect(html.match(/<a href="\/u\/ana\/movie\/1"><img/g)?.length).toBe(2);
+    expect(html.match(/<a class="card-link" href="\/u\/ana\/movie\/1">/g)?.length).toBe(2);
     expect(html).toContain('/t/p/w342/dune.jpg');
   });
 
@@ -158,8 +182,8 @@ describe('renderHome', () => {
         }),
       ),
     );
-    expect(custom).toContain('<h2 class="author-name">Mi sitio</h2>');
-    expect(custom).toContain('<p class="author-bio">Lo que veo</p>');
+    expect(custom).toContain('<h1 class="profile-name">Mi sitio</h1>');
+    expect(custom).toContain('<p class="profile-bio">Lo que veo</p>');
     expect(custom).toContain(`src="/u/ana/images/${HASH_A}"`);
     expect(custom).not.toContain('Acerca de');
     expect(html).not.toContain('Acerca de');
@@ -171,10 +195,10 @@ describe('renderDetail', () => {
     const html = renderDetail(library, 'movie', 1) as string;
     expect(html).toContain('<strong>obra</strong>');
     expect(html).toContain(`/u/ana/images/${HASH_A}`);
-    expect(html).toContain(
-      '<div class="media-rating-badge" style="background: #a855f7; color: white">Obra maestra</div>',
-    );
-    expect(html).toContain('<div class="page-content">');
+    expect(html).toContain('<span class="pill pill-rating rating-7">');
+    expect(html).toContain(' Obra maestra</span>');
+    expect(html).toContain('<div class="prose review">');
+    expect(html).not.toContain('style=');
     expect(html).toContain('https://www.themoviedb.org/movie/438631');
     expect(html).toContain('<meta name="robots" content="noindex">');
   });
@@ -295,7 +319,7 @@ describe('renderNotFound', () => {
 describe('renderPrivacy', () => {
   it('is an English page that escapes the contact and carries the required TMDB wording', () => {
     const page = renderPrivacy({ contactEmail: 'a&b@example.com' }, englishMessages);
-    expect(page).toContain('<html lang="en" class="dark">');
+    expect(page).toContain('<html lang="en">');
     expect(page).toContain('a&amp;b@example.com');
     expect(page).toContain(
       'This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.',

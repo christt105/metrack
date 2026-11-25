@@ -20,5 +20,5 @@ export function renderComments(library: Library): string {
   ]
     .map(([name, value]) => `${name}="${escapeHtml(value as string)}"`)
     .join(' ');
-  return `<script src="https://giscus.app/client.js" ${attrs} crossorigin="anonymous" async></script>`;
+  return `<section class="comments"><div class="giscus"></div><script src="https://giscus.app/client.js" ${attrs} crossorigin="anonymous" async></script></section>`;
 }

@@ -31,14 +31,12 @@ export interface SiteMessages {
     collage: string;
     stats: string;
     about: string;
-    icon: string;
     ariaLabel: string;
   };
   footer: {
     rss: string;
     servedBy: (link: string) => string;
     tmdbNotice: string;
-    toTop: string;
   };
   home: {
     emptyLibrary: string;
@@ -97,8 +95,6 @@ export interface SiteMessages {
   };
   collage: {
     title: string;
-    hideControls: string;
-    showControls: string;
     settings: string;
     from: string;
     to: string;

@@ -37,8 +37,6 @@ const ENGLISH_ONLY = [
   'Cinema',
   'Streaming / Home',
   'Rewatches:',
-  'Hide Controls',
-  'Show Controls',
   'Collage Settings',
   'Download PNG',
   'Items found:',
@@ -91,14 +89,14 @@ describe('the pages of an English owner', () => {
 
   it('are written in English with no Spanish text left', () => {
     for (const [name, html] of Object.entries(pages())) {
-      expect(html, name).toContain('<html lang="en" class="dark">');
+      expect(html, name).toContain('<html lang="en">');
       for (const text of SPANISH_ONLY) expect(html, `${name} ${text}`).not.toContain(text);
     }
     const { home, stats, collage, detail } = pages();
     expect(home).toContain('Library');
     expect(stats).toContain('Anime content');
     expect(stats).toContain('Non-anime');
-    expect(collage).toContain('Hide Controls');
+    expect(collage).toContain('Collage Settings');
     expect(detail).toContain('Rewatches:');
   });
 
@@ -112,10 +110,10 @@ describe('the pages of an English owner', () => {
 
   it('give the collage script its texts as JSON, not as literals', () => {
     const html = pages().collage as string;
-    const match = /<script type="application\/json" id="site-texts">(.*?)<\/script>/.exec(html);
+    const match = /<script type="application\/json" id="site-data">(.*?)<\/script>/.exec(html);
     expect(JSON.parse(match?.[1] ?? 'null')).toEqual({
-      showControls: 'Show Controls',
-      hideControls: 'Hide Controls',
+      index: '/u/ana/index.json',
+      download: 'Download PNG',
       generating: 'Generating...',
       tooLarge: 'Error: Image is too large for the browser.',
       failed: 'Error :(',
@@ -124,7 +122,7 @@ describe('the pages of an English owner', () => {
 });
 
 describe('the pages of a Spanish owner', () => {
-  it('have none of the English texts the theme used to carry', () => {
+  it('have none of the English texts of the English pages', () => {
     const pages = [
       renderHome(spanish()),
       renderStats(spanish()),
@@ -132,42 +130,42 @@ describe('the pages of a Spanish owner', () => {
       renderDetail(spanish(), 'movie', 1) as string,
     ];
     for (const html of pages) {
-      expect(html).toContain('<html lang="es" class="dark">');
+      expect(html).toContain('<html lang="es">');
       for (const text of ENGLISH_ONLY) expect(html, text).not.toContain(text);
     }
     expect(pages[1]).toContain('No anime');
     expect(pages[1]).toContain('Cine vs. Streaming');
     expect(pages[1]).toContain('6,5');
-    expect(pages[2]).toContain('Ocultar controles');
+    expect(pages[2]).toContain('Ajustes del collage');
     expect(pages[3]).toContain('Revisionados:');
     expect(pages[0]).toContain('1 jun 2026');
   });
 
   it('do not need a language: the default library is Spanish', () => {
-    expect(renderHome(buildLibrary(data()))).toContain('<html lang="es" class="dark">');
+    expect(renderHome(buildLibrary(data()))).toContain('<html lang="es">');
   });
 });
 
-describe('the collage and stats scripts', () => {
-  it('hold no text of their own', async () => {
-    const { COLLAGE_JS } = await import('../src/assets/COLLAGE_JS.js');
-    for (const text of ['Show Controls', 'Hide Controls', 'Generating', 'Error']) {
-      expect(COLLAGE_JS).not.toContain(`'${text}`);
-      expect(COLLAGE_JS).not.toContain(`"${text}`);
+describe('the site script', () => {
+  it('holds no text of its own', async () => {
+    const { SITE_JS } = await import('../src/assets/SITE_JS.js');
+    for (const text of ['Download', 'Descargar', 'Generating', 'Generando', 'Error']) {
+      expect(SITE_JS).not.toContain(`'${text}`);
+      expect(SITE_JS).not.toContain(`"${text}`);
     }
   });
 });
 
 describe('renderNotFound and renderPrivacy', () => {
   it('follow the dictionary they get', () => {
-    expect(renderNotFound(englishMessages)).toContain('<html lang="en" class="dark">');
+    expect(renderNotFound(englishMessages)).toContain('<html lang="en">');
     expect(renderNotFound(englishMessages)).toContain('This page does not exist.');
     expect(renderNotFound()).toContain('Esta página no existe.');
   });
 
   it('is written in Spanish by default, with the same facts as the English page', () => {
     const es = renderPrivacy({ contactEmail: 'a&b@example.com' });
-    expect(es).toContain('<html lang="es" class="dark">');
+    expect(es).toContain('<html lang="es">');
     expect(es).toContain('<title>Privacidad</title>');
     expect(es).toContain('a&amp;b@example.com');
     expect(es).toContain('la dirección de correo que Google verificó para tu cuenta de Google');

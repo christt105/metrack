@@ -1,13 +1,9 @@
-/** Font Awesome classes of the icon of a gaming platform, from its name. */
-export function platformIcon(platform: string): string {
+import type { IconName } from './IconName.js';
+
+/** The icon of a gaming platform, from its name: computers, phones, or a controller for everything else. */
+export function platformIcon(platform: string): IconName {
   const name = platform.toLowerCase();
-  if (name === 'steam deck' || name === 'steam') return 'fa-brands fa-steam';
-  if (name === 'pc' || name === 'windows') return 'fas fa-desktop';
-  if (name === 'mac' || name === 'macos') return 'fa-brands fa-apple';
-  if (name === 'linux') return 'fa-brands fa-linux';
-  if (name === 'mobile' || name === 'android' || name === 'ios') return 'fas fa-mobile-screen';
-  if (name === 'switch') return 'fas fa-gamepad';
-  if (name.includes('ps')) return 'fa-brands fa-playstation';
-  if (name.includes('xbox')) return 'fa-brands fa-xbox';
-  return 'fas fa-gamepad';
+  if (['pc', 'windows', 'mac', 'macos', 'linux'].includes(name)) return 'desktop';
+  if (['mobile', 'android', 'ios'].includes(name)) return 'mobile';
+  return 'videogame';
 }

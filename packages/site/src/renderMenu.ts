@@ -1,46 +1,27 @@
 import { escapeHtml } from '@metrack/export';
+import { icon } from './icon.js';
 import type { Library } from './Library.js';
-import { aboutPath, collagePath, homePath, statsPath } from './sitePaths.js';
+import type { MenuPage } from './MenuPage.js';
+import { ownerName } from './ownerName.js';
+import { avatarSrc } from './avatarSrc.js';
+import { aboutPath, collagePath, feedPath, homePath, statsPath } from './sitePaths.js';
 
-export type MenuPage = 'home' | 'collage' | 'stats' | 'about';
-
-const HOME_ICON =
-  '<svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-home"><title/><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
-
-const menuIcon = (title: string): string =>
-  `<svg width="25" height="25" stroke="currentColor" fill="none" viewBox="0 0 14 14"><title>${title}</title><path stroke-linecap="round" stroke-linejoin="round" d="M10.595 7H3.40726"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.5096 3.51488H3.49301"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.5096 10.4851H3.49301"/><path stroke-linecap="round" stroke-linejoin="round" d="M.5 12.5V1.5c0-.552285.447715-1 1-1h11C13.0523.5 13.5.947715 13.5 1.5v11C13.5 13.0523 13.0523 13.5 12.5 13.5H1.5C.947715 13.5.5 13.0523.5 12.5z"/></svg>`;
-
-function link(href: string, name: string, active: boolean, caret = false): string {
-  const caretHtml = caret
-    ? ' <i class="fas fa-chevron-down submenu-caret" aria-hidden="true"></i>'
-    : '';
-  return `<a class="menu-link${active ? ' active' : ''}" href="${escapeHtml(href)}">${escapeHtml(name)}${caretHtml}</a>`;
+function link(href: string, name: string, active: boolean): string {
+  const current = active ? ' aria-current="page"' : '';
+  return `<a class="site-nav-link" href="${escapeHtml(href)}"${current}>${escapeHtml(name)}</a>`;
 }
 
-function libraryTypes(library: Library): { type: string; name: string }[] {
-  const names = library.messages.typePlurals;
-  return [
-    { type: 'movie', name: names.movie, shown: library.movies.length > 0 },
-    { type: 'tv', name: names.tv, shown: library.series.length > 0 },
-    { type: 'videogame', name: names.videogame, shown: library.videogames.length > 0 },
-    { type: 'book', name: names.book, shown: library.books.length > 0 },
-  ].filter((entry) => entry.shown);
-}
-
-/** The navigation bar: the library with a dropdown per type, the collage, the statistics and, when the user wrote one, the about page. */
+/** The site header: the owner's avatar and name back to the library, the pages, and the feed. */
 export function renderMenu(library: Library, active: MenuPage | null): string {
-  const { menu } = library.messages;
+  const { menu, footer } = library.messages;
   const home = homePath(library.handle);
-  const submenu = libraryTypes(library)
-    .map((entry) => `<li>${link(`${home}?type=${entry.type}`, entry.name, false)}</li>`)
-    .join('');
-  const items = [
-    `<li class="has-submenu">${link(home, menu.library, active === 'home', true)}${submenu === '' ? '' : `<ul class="submenu">${submenu}</ul>`}</li>`,
-    `<li>${link(collagePath(library.handle), menu.collage, active === 'collage')}</li>`,
-    `<li>${link(statsPath(library.handle), menu.stats, active === 'stats')}</li>`,
+  const links = [
+    link(home, menu.library, active === 'home'),
+    link(collagePath(library.handle), menu.collage, active === 'collage'),
+    link(statsPath(library.handle), menu.stats, active === 'stats'),
     library.profile.about === null
       ? ''
-      : `<li>${link(aboutPath(library.handle), menu.about, active === 'about')}</li>`,
+      : link(aboutPath(library.handle), menu.about, active === 'about'),
   ].join('');
-  return `<div class="navbar" role="navigation"><nav class="menu" aria-label="${menu.ariaLabel}"><a href="${escapeHtml(home)}" class="logo">${HOME_ICON}</a><input type="checkbox" id="menu-trigger" class="menu-trigger"><label for="menu-trigger"><span class="menu-icon">${menuIcon(menu.icon)}</span></label><div class="trigger"><ul class="trigger-container">${items}</ul></div></nav></div>`;
+  return `<header class="site-header"><div class="site-header-inner"><a class="site-brand" href="${escapeHtml(home)}"><img class="site-brand-avatar" src="${escapeHtml(avatarSrc(library))}" alt="" width="32" height="32"><span class="site-brand-name">${escapeHtml(ownerName(library))}</span></a><nav class="site-nav" aria-label="${menu.ariaLabel}">${links}</nav><a class="site-feed" href="${escapeHtml(feedPath(library.handle))}" title="${footer.rss}" aria-label="${footer.rss}">${icon('rss', 20)}</a></div></header>`;
 }

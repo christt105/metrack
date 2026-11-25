@@ -165,12 +165,12 @@ describe('the public routes', () => {
     expect((await visitor('/u/Christian')).statusCode).toBe(200);
   });
 
-  it('serve the theme files with noindex and nothing else under assets', async () => {
-    const css = await visitor('/u/assets/theme.css');
+  it('serve the site files with noindex and nothing else under assets', async () => {
+    const css = await visitor('/u/assets/site.css');
     expect(css.statusCode).toBe(200);
     expect(css.headers['content-type']).toContain('text/css');
     expect(css.headers['x-robots-tag']).toBe('noindex');
-    const font = await visitor('/u/assets/fonts/Roboto/roboto-v30-latin-regular.woff2');
+    const font = await visitor('/u/assets/fonts/host-grotesk-latin.woff2');
     expect(font.statusCode).toBe(200);
     expect(font.rawPayload.byteLength).toBeGreaterThan(10000);
     expect((await visitor('/u/assets/missing.js')).statusCode).toBe(404);
@@ -347,7 +347,7 @@ describe('the language of the public pages', () => {
   it('is Spanish while the owner has not chosen one', async () => {
     for (const path of ['/u/christian/', '/u/christian/stats', '/u/christian/movie/1']) {
       const body = (await visitor(path)).body;
-      expect(body).toContain('<html lang="es" class="dark">');
+      expect(body).toContain('<html lang="es">');
       expect(body).not.toContain('Library');
     }
   });
@@ -357,13 +357,13 @@ describe('the language of the public pages', () => {
     const asked = { 'accept-language': 'es-ES' };
     for (const path of ['/u/christian/', '/u/christian/stats', '/u/christian/collage']) {
       const response = await api.app.inject({ method: 'GET', url: path, headers: asked });
-      expect(response.body, path).toContain('<html lang="en" class="dark">');
+      expect(response.body, path).toContain('<html lang="en">');
     }
     const home = await visitor('/u/christian/');
     expect(home.body).toContain('Mar 5, 2026');
     expect(home.body).toContain('Masterpiece');
     const detail = await visitor('/u/christian/movie/1');
-    expect(detail.body).toContain('<html lang="en" class="dark">');
+    expect(detail.body).toContain('<html lang="en">');
     expect(detail.body).toContain('Mar 5, 2026');
     expect((await visitor('/u/christian/feed.xml')).body).toContain('<language>en</language>');
     expect((await visitor('/u/christian/feed.xml')).body).toContain('Rating: 7 (Masterpiece)');
@@ -481,8 +481,8 @@ describe('the public page profile', () => {
       description: 'Lo que veo',
     });
     const home = (await visitor('/u/christian/')).body;
-    expect(home).toContain('<h2 class="author-name">Mi sitio</h2>');
-    expect(home).toContain('<p class="author-bio">Lo que veo</p>');
+    expect(home).toContain('<h1 class="profile-name">Mi sitio</h1>');
+    expect(home).toContain('<p class="profile-bio">Lo que veo</p>');
     expect(home).toContain('src="/u/assets/default-avatar.svg"');
     expect((await visitor('/u/assets/default-avatar.svg')).statusCode).toBe(200);
     const poster = await visitor('/u/assets/default-poster.svg');
@@ -507,7 +507,7 @@ describe('the public page profile', () => {
     await publish(OWNER, 'christian');
     await addMovie(OWNER, { title: 'Dune', status: 'completed', finishedAt: '2026-03-05' });
     expect((await visitor('/u/christian/stats/')).body).toContain('Estadísticas');
-    expect((await visitor('/u/christian/collage')).body).toContain('collage-canvas');
+    expect((await visitor('/u/christian/collage')).body).toContain('collage-grid');
     const index = await visitor('/u/christian/index.json');
     expect(index.headers['content-type']).toContain('application/json');
     expect(JSON.parse(index.body)).toHaveLength(1);

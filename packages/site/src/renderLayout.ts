@@ -1,71 +1,41 @@
 import { escapeHtml } from '@metrack/export';
 import type { Library } from './Library.js';
+import type { MenuPage } from './MenuPage.js';
 import { ownerName } from './ownerName.js';
 import { renderFooter } from './renderFooter.js';
-import { renderMenu, type MenuPage } from './renderMenu.js';
-import { assetPath, feedPath, indexPath } from './sitePaths.js';
+import { renderHead } from './renderHead.js';
+import { iconSprite } from './icon.js';
+import { renderMenu } from './renderMenu.js';
+import { feedPath } from './sitePaths.js';
 
 export interface LayoutOptions {
   library: Library;
   title: string;
   description?: string;
   active: MenuPage | null;
-  /** Markup between the navigation bar and the page, such as the hero banner. */
-  beforePage?: string;
-  /** The page itself. */
+  /** The page itself, between the header and the footer. */
   page: string;
-  /** Names of the shared scripts the page needs, loaded after the footer. */
-  scripts?: string[];
-  /** Names of extra shared stylesheets. */
-  styles?: string[];
-  /** Texts the page's scripts read, written into the page as JSON. */
-  texts?: Record<string, string>;
-  /** Markup for the end of the head, such as a script that must load first. */
-  headExtra?: string;
+  /** Data the shared script reads, written into the page as JSON. */
+  data?: unknown;
 }
 
-/** The shell shared by every public page, after the Hugo theme: dark by default, always asking search engines to stay away. */
+/** The shell shared by every page of a user: dark, always asking search engines to stay away. */
 export function renderLayout(options: LayoutOptions): string {
   const { library } = options;
   const description = options.description ?? library.profile.description;
-  const styles = [
-    'theme.css',
-    'fontawesome.css',
-    'code-highlight.css',
-    ...(options.styles ?? []),
-    'metrack.css',
-  ]
-    .map((name) => `<link href="${assetPath(name)}" rel="stylesheet">`)
-    .join('\n');
-  const texts =
-    options.texts === undefined
+  const data =
+    options.data === undefined
       ? ''
-      : `<script type="application/json" id="site-texts">${JSON.stringify(options.texts).replace(/</g, '\\u003c')}</script>\n`;
-  const scripts = ['main.js', ...(options.scripts ?? [])]
-    .map((name) => `<script src="${assetPath(name)}"></script>`)
-    .join('\n');
-  return `<!DOCTYPE html>
-<html lang="${library.messages.lang}" class="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>${escapeHtml(options.title)}</title>
-${description === null ? '' : `<meta name="description" content="${escapeHtml(description)}">\n`}<meta name="application-name" content="${escapeHtml(ownerName(library))}">
+      : `<script type="application/json" id="site-data">${JSON.stringify(options.data).replace(/</g, '\\u003c')}</script>\n`;
+  const extra = `${description === null ? '' : `<meta name="description" content="${escapeHtml(description)}">\n`}<meta name="application-name" content="${escapeHtml(ownerName(library))}">
 <link href="${escapeHtml(feedPath(library.handle))}" rel="alternate" type="application/rss+xml" title="${escapeHtml(ownerName(library))}">
-${styles}
-<link rel="icon" type="image/png" sizes="32x32" href="${assetPath('favicon-32x32.png')}">
-<link rel="icon" type="image/png" sizes="16x16" href="${assetPath('favicon-16x16.png')}">
-<meta name="theme-color" content="#434648">
-<meta name="color-scheme" content="light dark">
-${options.headExtra ?? ''}</head>
-<body data-theme="dark" class="notransition" data-index="${escapeHtml(indexPath(library.handle))}">
-<script src="${assetPath('theme.js')}"></script>
+`;
+  return `${renderHead(library.messages.lang, options.title, extra)}<body>
+${iconSprite()}
 ${renderMenu(library, options.active)}
-${options.beforePage ?? ''}${options.page}
+${options.page}
 ${renderFooter(library)}
-${texts}${scripts}
-</body>
+${data}</body>
 </html>
 `;
 }

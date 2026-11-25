@@ -18,6 +18,6 @@ export function renderAbout(library: Library): string | null {
     library,
     title: `${library.messages.menu.about} | ${ownerName(library)}`,
     active: 'about',
-    page: `<div class="wrapper post"><main class="page-content" aria-label="${library.messages.contentLabel}"><article><header class="header media-simple-header"><div class="media-simple-details"><h1 class="header-title">${library.messages.menu.about}</h1><div class="media-meta"></div></div></header><div class="page-content">${content}</div></article></main></div>`,
+    page: `<main class="wrap narrow" aria-label="${library.messages.contentLabel}"><header class="page-head"><h1>${library.messages.menu.about}</h1></header><div class="prose">${content}</div></main>`,
   });
 }

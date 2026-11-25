@@ -48,14 +48,12 @@ export const en: SiteMessages = {
     collage: 'Collage',
     stats: 'Statistics',
     about: 'About',
-    icon: 'Menu',
     ariaLabel: 'Main navigation',
   },
   footer: {
     rss: 'Rss',
     servedBy: (link: string): string => `Served by ${link}.`,
     tmdbNotice: TMDB_NOTICE,
-    toTop: 'Go to top',
   },
   home: {
     emptyLibrary: 'This library is empty.',
@@ -118,8 +116,6 @@ export const en: SiteMessages = {
   },
   collage: {
     title: 'Collage',
-    hideControls: 'Hide Controls',
-    showControls: 'Show Controls',
     settings: 'Collage Settings',
     from: 'From:',
     to: 'To:',
