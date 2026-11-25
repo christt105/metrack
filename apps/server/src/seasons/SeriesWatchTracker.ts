@@ -6,6 +6,7 @@ import {
   type Episode,
   type EpisodeState,
   type EpisodeWatches,
+  type Season,
   type SeasonEntryUpdate,
 } from '@metrack/domain';
 import { driftOf } from './driftOf.js';
@@ -32,8 +33,9 @@ export class SeriesWatchTracker {
   async load(
     seriesId: number,
     known: ReadonlyMap<number, readonly Episode[]> = new Map(),
+    entries?: readonly Season[],
   ): Promise<SeriesWatchState> {
-    const seasons = await this.deps.seasons.listBySeries(seriesId);
+    const seasons = entries ?? (await this.deps.seasons.listBySeries(seriesId));
     const catalogs = new Map(
       (await this.deps.catalog.listForSeries(seriesId))
         .filter((catalog) => catalog.complete)
@@ -112,8 +114,12 @@ export class SeriesWatchTracker {
    * Derives every known season entry of the series again from the user's watches, leaving the watches as they are,
    * and answers the entries that differ from what they hold. With `repair` it also writes them.
    */
-  async check(seriesId: number, repair: boolean): Promise<SeasonCacheDrift[]> {
-    const state = await this.load(seriesId);
+  async check(
+    seriesId: number,
+    repair: boolean,
+    entries?: readonly Season[],
+  ): Promise<SeasonCacheDrift[]> {
+    const state = await this.load(seriesId, undefined, entries);
     if (state.watches === undefined) return [];
     const updates = deriveSeriesTracking({
       seasons: state.seasons,
