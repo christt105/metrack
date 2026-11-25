@@ -31,26 +31,24 @@ describe('public achievements', () => {
 
   it('marks only the complete game on the list', () => {
     const html = renderHome(full);
-    expect(html.match(/class="badge-trophy"/g)).toHaveLength(1);
+    expect(html.match(/card-trophy"/g)).toHaveLength(1);
     expect(html).toContain('title="Todos los logros"');
-    const card = html.split('<div class="media-card"').find((part) => part.includes('Complete'));
-    expect(card).toContain('badge-trophy');
+    const card = html.split('<article class="card"').find((part) => part.includes('Complete'));
+    expect(card).toContain('card-trophy');
   });
 
   it('counts the games with every achievement in the profile stats', () => {
     const html = renderStats(full);
-    expect(html).toContain(
-      '<i class="fas fa-trophy"></i> 1</span><span class="stat-label">Juegos con todos los logros</span>',
-    );
+    expect(html).toContain(' 1</span><span class="stat-label">Juegos con todos los logros</span>');
   });
 
   it('shows the badge and the count on the game page', () => {
     const page = renderDetail(full, 'videogame', 1) as string;
-    expect(page).toContain('fa-trophy');
-    expect(page).toContain('<strong>Logros</strong> 40 / 40');
+    expect(page).toContain('pill-trophy');
+    expect(page).toContain('Todos los logros</span>');
     const partial = renderDetail(full, 'videogame', 2) as string;
-    expect(partial).toContain('<strong>Logros</strong> 3 / 40');
-    expect(partial).not.toContain('fa-trophy');
+    expect(partial).toContain(' Logros 3 / 40</span>');
+    expect(partial).not.toContain('pill-trophy');
     const unknown = renderDetail(full, 'videogame', 3) as string;
     expect(unknown).not.toContain('Logros');
     expect(renderDetail(full, 'videogame', 4)).not.toContain('Logros');
@@ -69,7 +67,7 @@ describe('public achievements', () => {
         },
       ]),
     );
-    expect(html).not.toContain('badge-trophy"');
+    expect(html).not.toContain('card-trophy"');
     expect(
       renderStats(
         library([

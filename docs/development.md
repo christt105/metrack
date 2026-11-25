@@ -3,7 +3,7 @@
 ## Layout
 
 - `packages/domain`: pure domain logic, no HTTP or database.
-- `packages/site`: pure renderer of the public pages (HTML, RSS and the theme's stylesheet, scripts, font and images) from one user's data; no database, no disk, no Node-only APIs.
+- `packages/site`: pure renderer of the public pages (HTML, RSS and its own stylesheet, script, font and images) from one user's data; no database, no disk, no Node-only APIs.
 - `packages/export`: pure builder of the vault mirror notes from stored data, plus the helpers the public pages share.
 - `apps/server`: Hono API, SQLite storage and migrations; also serves the built web app.
 - `apps/web`: Vue 3 + Vite frontend.

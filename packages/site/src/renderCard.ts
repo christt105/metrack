@@ -1,10 +1,11 @@
 import { escapeHtml } from '@metrack/export';
 import { entryStatus } from './entryStatus.js';
 import { formatDate } from './formatDate.js';
+import { icon } from './icon.js';
 import { coverSrc } from './imageOrDefault.js';
 import type { Library } from './Library.js';
 import type { PublicEntry } from './PublicEntry.js';
-import { ratingTheme } from './ratingTheme.js';
+import { ratingClass, ratingTheme } from './ratingTheme.js';
 import { entryPath } from './sitePaths.js';
 import { TYPE_ICONS, themeType } from './themeType.js';
 import { yearOf } from './yearOf.js';
@@ -22,19 +23,22 @@ export function renderCard(library: Library, entry: PublicEntry, date: string | 
   const type = themeType(entry.kind);
   const shownDate = date ?? entry.releaseDate;
   const year = yearOf(date) ?? yearOf(entry.releaseDate) ?? '';
-  const rating =
-    status === 'finished' && entry.rating !== null ? ratingTheme(entry.rating, messages) : null;
-  const badges = [
-    `<div class="badge-type ${type}" title="${messages.typeLabels[type]}"><i class="${TYPE_ICONS[type]}"></i></div>`,
+  const rated = status === 'finished' && entry.rating !== null;
+  const rating = rated ? ratingTheme(entry.rating as number, messages) : null;
+  const marks = [
     entry.allAchievements
-      ? `<div class="badge-trophy" title="${escapeHtml(messages.card.allAchievements)}"><i class="fas fa-trophy"></i></div>`
+      ? `<span class="card-mark card-trophy" title="${escapeHtml(messages.card.allAchievements)}">${icon('trophy', 14)}</span>`
       : '',
     entry.review !== null && entry.review.trim() !== ''
-      ? `<div class="badge-content" title="${messages.card.hasReview}"><i class="fas fa-file-alt"></i></div>`
+      ? `<span class="card-mark" title="${messages.card.hasReview}">${icon('review', 14)}</span>`
       : '',
+  ].join('');
+  const badges = [
+    `<span class="card-type" title="${messages.typeLabels[type]}">${icon(TYPE_ICONS[type], 14)}</span>`,
     rating === null
       ? ''
-      : `<div class="margin-rating" style="background: ${rating.color};"></div><div class="badge-rating" style="background: ${rating.color}; color: white" title="${escapeHtml(rating.label)}"><i class="${rating.icon}"></i></div>`,
+      : `<span class="card-rating ${ratingClass(entry.rating)}" title="${escapeHtml(rating.label)}">${icon(rating.icon, 16)}</span>`,
+    marks === '' ? '' : `<span class="card-marks">${marks}</span>`,
   ].join('');
   const caption =
     status === 'finished'
@@ -42,5 +46,5 @@ export function renderCard(library: Library, entry: PublicEntry, date: string | 
         ? ''
         : formatDate(shownDate, messages)
       : (messages.statusLabels[status] ?? '');
-  return `<div class="media-card" data-title="${escapeHtml(entry.title.toLowerCase())}" data-year="${year}" data-type="${type}" data-status="${status}" data-rating="${entry.rating ?? ''}" data-genres="${pipe(entry.genres)}" data-tags="${pipe(entry.tags)}" data-platforms="${pipe(entry.platforms)}"><div class="media-poster"><a href="${href}"><img src="${escapeHtml(coverSrc(entry.cover, handle, 'thumb'))}" alt="${escapeHtml(entry.title)}" loading="lazy" width="300" height="450"></a>${badges}</div><div class="media-info"><h3><a href="${href}">${escapeHtml(entry.title)}</a></h3><small>${escapeHtml(caption)}</small></div></div>`;
+  return `<article class="card" data-title="${escapeHtml(entry.title.toLowerCase())}" data-year="${year}" data-type="${type}" data-status="${status}" data-rating="${entry.rating ?? ''}" data-genres="${pipe(entry.genres)}" data-tags="${pipe(entry.tags)}" data-platforms="${pipe(entry.platforms)}"><a class="card-link" href="${href}"><div class="card-poster"><img src="${escapeHtml(coverSrc(entry.cover, handle, 'thumb'))}" alt="" loading="lazy" decoding="async" width="300" height="450">${badges}</div><h3 class="card-title">${escapeHtml(entry.title)}</h3><p class="card-caption">${escapeHtml(caption)}</p></a></article>`;
 }

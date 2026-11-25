@@ -1,29 +1,36 @@
+import { icon } from './icon.js';
 import type { Library } from './Library.js';
 import type { SiteMessages } from './messages/SiteMessages.js';
 import { ownerName } from './ownerName.js';
 import { renderLayout } from './renderLayout.js';
-import { assetPath } from './sitePaths.js';
+import { indexPath } from './sitePaths.js';
 
-const page = (messages: SiteMessages): string => {
+const TYPES = ['movie', 'tv', 'videogame', 'book'] as const;
+
+function controls(messages: SiteMessages): string {
   const c = messages.collage;
-  return `<script src="${assetPath('html2canvas-pro.js')}"></script><div class="collage-wrapper"><button class="collage-controls-toggle" id="controls-toggle" aria-expanded="true" aria-controls="collage-controls-panel"><i class="fas fa-sliders-h"></i> <span id="toggle-label">${c.hideControls}</span></button><aside class="collage-controls" id="collage-controls-panel"><h2>${c.settings}</h2><div class="control-group"><label>📅 ${c.from}</label><input type="date" id="start-date"></div><div class="control-group"><label>📅 ${c.to}</label><input type="date" id="end-date"></div><div class="control-group"><label>${c.type}</label><div class="checkbox-wrapper"><label><input type="checkbox" value="movie" checked> ${c.movies}</label><label><input type="checkbox" value="tv" checked> ${c.series}</label><label><input type="checkbox" value="videogame" checked> ${c.games}</label><label><input type="checkbox" value="book" checked> ${c.books}</label></div></div><div class="control-group"><label>${c.columns} <span id="col-val">5</span></label><input type="range" id="columns-range" min="2" max="20" value="5"></div><div class="control-stats">${c.itemsFound} <strong id="count-display">0</strong></div><button id="download-btn" class="btn-download"><i class="fas fa-download"></i> ${c.download}</button></aside><div class="collage-preview-area"><div class="canvas-scaler"><div id="collage-canvas"></div></div></div></div>`;
-};
+  const names = { movie: c.movies, tv: c.series, videogame: c.games, book: c.books };
+  const types = TYPES.map(
+    (type) =>
+      `<label class="check"><input type="checkbox" name="type" value="${type}" checked> ${names[type]}</label>`,
+  ).join('');
+  return `<details class="collage-controls" id="collage-controls" open><summary>${icon('sliders', 18)} ${c.settings}</summary><div class="collage-fields"><label class="field"><span>${c.from}</span><input type="date" id="collage-from"></label><label class="field"><span>${c.to}</span><input type="date" id="collage-to"></label><fieldset class="field"><legend>${c.type}</legend>${types}</fieldset><label class="field"><span>${c.columns} <output id="collage-columns-value">5</output></span><input type="range" id="collage-columns" min="2" max="20" value="5"></label><p class="collage-count">${c.itemsFound} <strong id="collage-count">0</strong></p><button type="button" class="button" id="collage-download">${icon('download', 18)} <span id="collage-download-label">${c.download}</span></button></div></details>`;
+}
 
 /** The collage page: a cover grid of what was finished in a period, drawn in the browser from the library index. */
 export function renderCollage(library: Library): string {
+  const { collage } = library.messages;
   return renderLayout({
     library,
-    title: `${library.messages.collage.title} | ${ownerName(library)}`,
+    title: `${collage.title} | ${ownerName(library)}`,
     active: 'collage',
-    styles: ['collage.css'],
-    page: page(library.messages),
-    texts: {
-      showControls: library.messages.collage.showControls,
-      hideControls: library.messages.collage.hideControls,
-      generating: library.messages.collage.generating,
-      tooLarge: library.messages.collage.tooLarge,
-      failed: library.messages.collage.failed,
+    page: `<main class="wrap collage" aria-label="${library.messages.contentLabel}"><h1 class="visually-hidden">${collage.title}</h1>${controls(library.messages)}<div class="collage-preview"><div class="collage-grid" id="collage-grid"></div></div></main>`,
+    data: {
+      index: indexPath(library.handle),
+      download: collage.download,
+      generating: collage.generating,
+      tooLarge: collage.tooLarge,
+      failed: collage.failed,
     },
-    scripts: ['collage.js'],
   });
 }

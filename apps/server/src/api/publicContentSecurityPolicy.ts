@@ -1,16 +1,15 @@
-/** The enforced policy of the public pages (`/u/*` and `/privacy`): inline styles and the giscus comments script and frame. */
-export const PUBLIC_CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  "script-src 'self' https://giscus.app",
-  "style-src 'self' 'unsafe-inline' https://giscus.app",
-  "img-src 'self' data: blob: https://image.tmdb.org https://images.igdb.com https://steamcdn-a.akamaihd.net https://*.steamstatic.com",
-  "font-src 'self'",
-  "connect-src 'self'",
-  "manifest-src 'self'",
-  "worker-src 'self'",
-  'frame-src https://giscus.app',
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join('; ');
+import { APP_CONTENT_SECURITY_POLICY } from './appContentSecurityPolicy.js';
+
+const GISCUS = 'https://giscus.app';
+
+function withGiscus(directive: string): string {
+  const [name] = directive.split(' ');
+  if (name === 'script-src' || name === 'style-src') return `${directive} ${GISCUS}`;
+  if (name === 'frame-src') return `frame-src ${GISCUS}`;
+  return directive;
+}
+
+/** The enforced policy of the public pages (`/u/*` and `/privacy`): the app's, plus the giscus comments script, stylesheet and frame. */
+export const PUBLIC_CONTENT_SECURITY_POLICY = APP_CONTENT_SECURITY_POLICY.split('; ')
+  .map(withGiscus)
+  .join('; ');

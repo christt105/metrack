@@ -79,8 +79,8 @@ export function renderVariableStats(messages: SiteMessages, finished: PublicEntr
       twoWay(
         messages,
         stats.animeContent,
-        { name: stats.anime, count: anime, color: '#a855f7' },
-        { name: stats.nonAnime, count: finished.length - anime, color: '#4f8cff' },
+        { name: stats.anime, count: anime, color: pieColor(9) },
+        { name: stats.nonAnime, count: finished.length - anime, color: pieColor(0) },
         finished.length,
       ),
     );
@@ -94,8 +94,8 @@ export function renderVariableStats(messages: SiteMessages, finished: PublicEntr
       twoWay(
         messages,
         stats.cinemaVsStreaming,
-        { name: stats.cinema, count: cinema, color: '#f59e0b' },
-        { name: stats.streaming, count: movies.length - cinema, color: '#22c55e' },
+        { name: stats.cinema, count: cinema, color: pieColor(1) },
+        { name: stats.streaming, count: movies.length - cinema, color: pieColor(0) },
         movies.length,
       ),
     );

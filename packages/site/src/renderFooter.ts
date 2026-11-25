@@ -1,20 +1,14 @@
 import { escapeHtml } from '@metrack/export';
 import type { Library } from './Library.js';
-import { assetPath, feedPath } from './sitePaths.js';
-
-const RSS_ICON =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 019 9"/><path d="M4 4a16 16 0 0116 16"/><circle cx="5" cy="19" r="1"/></svg>';
+import { assetPath } from './sitePaths.js';
 
 const REPOSITORY = 'https://github.com/christt105/metrack';
 
 const TMDB_URL = 'https://www.themoviedb.org';
 
-const UP_ICON =
-  '<svg width="48" height="48" fill="currentColor" stroke="currentColor" viewBox="0 96 960 960"><path d="M283 704.739 234.261 656 480 410.261 725.739 656 677 704.739l-197-197-197 197z"/></svg>';
-
-/** The footer with the feed link, the copyright and the TMDB attribution, and the go-to-top button. */
+/** The footer with the copyright, the link to metrack and the TMDB attribution. */
 export function renderFooter(library: Library): string {
   const { messages } = library;
   const year = new Date().getFullYear();
-  return `<footer class="footer"><span class="footer_item"> </span>&nbsp;<div class="footer_social-icons"><a href="${escapeHtml(feedPath(library.handle))}" target="_blank" rel="noopener noreferrer me" title="${messages.footer.rss}">${RSS_ICON}</a></div><small class="footer_copyright">© ${year} ${escapeHtml(library.handle)}. ${messages.footer.servedBy(`<a href="${REPOSITORY}" target="_blank" rel="noopener noreferrer">metrack</a>`)}</small><small class="footer_credits"><a href="${TMDB_URL}" target="_blank" rel="noopener noreferrer" title="TMDB"><img src="${assetPath('tmdb-logo.svg')}" alt="TMDB" height="10"></a> ${messages.footer.tmdbNotice}</small></footer><a href="#" title="${messages.footer.toTop}" id="totop">${UP_ICON}</a>`;
+  return `<footer class="site-footer"><div class="site-footer-inner"><p>© ${year} ${escapeHtml(library.handle)}. ${messages.footer.servedBy(`<a href="${REPOSITORY}" target="_blank" rel="noopener noreferrer">metrack</a>`)}</p><p class="site-credits"><a href="${TMDB_URL}" target="_blank" rel="noopener noreferrer" title="TMDB"><img src="${assetPath('tmdb-logo.svg')}" alt="TMDB" width="81" height="10"></a> ${messages.footer.tmdbNotice}</p></div></footer>`;
 }

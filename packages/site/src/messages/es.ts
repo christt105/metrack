@@ -48,14 +48,12 @@ export const es: SiteMessages = {
     collage: 'Collage',
     stats: 'Estadísticas',
     about: 'Acerca de',
-    icon: 'Menú',
     ariaLabel: 'Navegación principal',
   },
   footer: {
     rss: 'Rss',
     servedBy: (link: string): string => `Servido por ${link}.`,
     tmdbNotice: TMDB_NOTICE,
-    toTop: 'Ir arriba',
   },
   home: {
     emptyLibrary: 'Esta biblioteca está vacía.',
@@ -118,8 +116,6 @@ export const es: SiteMessages = {
   },
   collage: {
     title: 'Collage',
-    hideControls: 'Ocultar controles',
-    showControls: 'Mostrar controles',
     settings: 'Ajustes del collage',
     from: 'Desde:',
     to: 'Hasta:',

@@ -7,7 +7,8 @@ import type { Library } from './Library.js';
 import { ownerName } from './ownerName.js';
 import type { PublicEntry } from './PublicEntry.js';
 import type { SiteMessages } from './messages/SiteMessages.js';
-import { ratingScale } from './ratingTheme.js';
+import { icon } from './icon.js';
+import { ratingClass, ratingScale } from './ratingTheme.js';
 import { percentOf, renderStatBars, type StatBar } from './renderStatBars.js';
 import { renderLayout } from './renderLayout.js';
 import { renderTimeSpent } from './renderTimeSpent.js';
@@ -34,7 +35,7 @@ function typeCards(messages: SiteMessages, entries: PublicEntry[], hideEmpty: bo
     if (count === 0 && (hideEmpty || type === 'book')) return [];
     return [
       card(
-        `<i class="${TYPE_ICONS[type]}"></i> ${formatInteger(count, messages)}`,
+        `${icon(TYPE_ICONS[type], 20)} ${formatInteger(count, messages)}`,
         messages.typePlurals[type],
       ),
     ];
@@ -46,7 +47,7 @@ function achievementsCard(messages: SiteMessages, entries: PublicEntry[]): strin
   return count === 0
     ? ''
     : card(
-        `<i class="fas fa-trophy"></i> ${formatInteger(count, messages)}`,
+        `${icon('trophy', 20)} ${formatInteger(count, messages)}`,
         messages.stats.allAchievements,
       );
 }
@@ -62,7 +63,7 @@ function ratingBars(
     if (hideEmpty && count === 0) return [];
     return [
       {
-        name: `<i class="${theme.icon}" style="color:${theme.color}"></i> ${escapeHtml(theme.label)}`,
+        name: `<span class="rating-text ${ratingClass(theme.rating)}">${icon(theme.icon, 16)}</span> ${escapeHtml(theme.label)}`,
         percent: percentOf(count, max),
         value: formatInteger(count, messages),
         color: theme.color,
@@ -101,7 +102,7 @@ function allTime(
   const counts = new Map<number, number>();
   for (const rating of ratings) counts.set(rating, (counts.get(rating) ?? 0) + 1);
   const total = finished.reduce((sum, entry) => sum + completions(entry), 0);
-  const cards = `<section class="stats-cards">${card(formatInteger(media.length, messages), messages.stats.total)}${card(formatInteger(total, messages), messages.stats.finished)}${typeCards(messages, media, false)}${achievementsCard(messages, media)}${averageCard(messages, ratings)}</section>`;
+  const cards = `<section class="stat-cards">${card(formatInteger(media.length, messages), messages.stats.total)}${card(formatInteger(total, messages), messages.stats.finished)}${typeCards(messages, media, false)}${achievementsCard(messages, media)}${averageCard(messages, ratings)}</section>`;
 
   const perYear = new Map<string, number>();
   for (const entry of finished) {
@@ -132,8 +133,8 @@ function allTime(
           name: year,
           percent: percentOf(mean, maxRating(messages)),
           value: formatDecimal(mean, messages),
-          color: theme?.color ?? 'var(--primary-color,#4f8cff)',
-          valueColor: theme?.color,
+          color: theme?.color,
+          valueClass: theme === undefined ? undefined : `rating-text ${ratingClass(theme.rating)}`,
         } satisfies StatBar,
       ];
     });
@@ -181,7 +182,7 @@ function oneYear(
   const ratings = inYear.flatMap((entry) => (entry.rating === null ? [] : [entry.rating]));
   const counts = new Map<number, number>();
   for (const rating of ratings) counts.set(rating, (counts.get(rating) ?? 0) + 1);
-  const cards = `<section class="stats-cards">${card(formatInteger(inYear.length, messages), messages.stats.finished)}${typeCards(messages, inYear, true)}${averageCard(messages, ratings)}</section>`;
+  const cards = `<section class="stat-cards">${card(formatInteger(inYear.length, messages), messages.stats.finished)}${typeCards(messages, inYear, true)}${averageCard(messages, ratings)}</section>`;
   return `<div data-stats-year="${year}" hidden>${cards}${ratingBars(messages, counts, true)}${renderTimeSpent(messages, media, year)}${renderVariableStats(messages, inYear)}</div>`;
 }
 
@@ -199,13 +200,12 @@ export function renderStats(library: Library): string {
   const selector =
     years.length === 0
       ? ''
-      : `<div class="stats-year-filter"><label for="stats-year-select">${messages.stats.yearSelector}</label><select id="stats-year-select"><option value="all">${messages.stats.allYears}</option>${years.map((year) => `<option value="${year}">${year}</option>`).join('')}</select></div>`;
+      : `<label class="year-select" for="stats-year-select"><span>${messages.stats.yearSelector}</span><select id="stats-year-select"><option value="all">${messages.stats.allYears}</option>${years.map((year) => `<option value="${year}">${year}</option>`).join('')}</select></label>`;
   const blocks = `<div data-stats-year="all">${allTime(messages, media, finished, dated)}</div>${years.map((year) => oneYear(messages, year, dated, finished, media)).join('')}`;
   return renderLayout({
     library,
     title: `${messages.stats.title} | ${ownerName(library)}`,
     active: 'stats',
-    page: `<div class="wrapper stats-page"><header class="header"><h1 class="header-title center">${messages.stats.title}</h1></header><main class="page-content" aria-label="${messages.contentLabel}">${selector}${blocks}</main></div>`,
-    scripts: ['stats.js'],
+    page: `<main class="wrap stats" aria-label="${messages.contentLabel}"><header class="page-head"><h1>${messages.stats.title}</h1>${selector}</header>${blocks}</main>`,
   });
 }

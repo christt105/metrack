@@ -115,7 +115,8 @@ describe('renderStats', () => {
     );
     expect(html).toContain('<option value="2026">2026</option>');
     expect(html).toContain('data-stats-year="2025" hidden');
-    expect(html).toContain('/u/assets/stats.js');
+    expect(html).toContain('id="stats-year-select"');
+    expect(html).not.toContain('style=');
   });
 
   it('leaves out pending items', () => {
@@ -126,16 +127,18 @@ describe('renderStats', () => {
   it('adds the platform and cinema sections', () => {
     expect(html).toContain('Plataformas de juego');
     expect(html).toContain('Cine vs. Streaming');
-    expect(html).toContain('conic-gradient');
+    expect(html).toContain('<svg class="donut"');
+    expect(html).toContain('stroke-dasharray=');
   });
 });
 
 describe('renderCollage', () => {
-  it('carries the controls and loads the collage script against the library index', () => {
+  it('carries the controls and points the script at the library index', () => {
     const html = renderCollage(library);
-    expect(html).toContain('id="collage-canvas"');
-    expect(html).toContain('/u/assets/collage.js');
-    expect(html).toContain('data-index="/u/ana/index.json"');
+    expect(html).toContain('id="collage-grid"');
+    expect(html).toContain('id="collage-download"');
+    expect(html).toContain('"index":"/u/ana/index.json"');
+    expect(html).not.toContain('html2canvas');
   });
 });
 
@@ -151,7 +154,9 @@ describe('renderAbout', () => {
     const html = renderAbout(about) as string;
     expect(html).toContain('<h2>Hola</h2>');
     expect(html).toContain('<strong>texto</strong>');
-    expect(html).toContain('<a class="menu-link active" href="/u/ana/about/">Acerca de</a>');
+    expect(html).toContain(
+      '<a class="site-nav-link" href="/u/ana/about/" aria-current="page">Acerca de</a>',
+    );
   });
 });
 
@@ -199,11 +204,13 @@ describe('publishedImageHashes', () => {
 });
 
 describe('siteAsset', () => {
-  it('serves the theme files and nothing else', () => {
-    expect(siteAsset('theme.css')?.contentType).toContain('text/css');
-    expect(siteAsset('fonts/Roboto/roboto-v30-latin-regular.woff2')?.body).toBeInstanceOf(
-      Uint8Array,
-    );
+  it('serves the site files and nothing else', () => {
+    expect(siteAsset('site.css')?.contentType).toContain('text/css');
+    expect(siteAsset('site.js')?.contentType).toContain('javascript');
+    expect(siteAsset('fonts/host-grotesk-latin.woff2')?.body).toBeInstanceOf(Uint8Array);
+    expect(siteAsset('fonts/host-grotesk-latin-ext.woff2')?.body).toBeInstanceOf(Uint8Array);
+    expect(siteAsset('favicon.svg')?.contentType).toBe('image/svg+xml');
+    expect(siteAsset('theme.css')).toBeUndefined();
     expect(siteAsset('default-poster.svg')?.contentType).toBe('image/svg+xml');
     expect(siteAsset('default-poster.webp')).toBeUndefined();
     expect(siteAsset('../secret')).toBeUndefined();
@@ -259,19 +266,20 @@ describe('season titles', () => {
   });
 });
 
-describe('vendored assets', () => {
-  it('serves Font Awesome and html2canvas itself and loads the metrack stylesheet last', () => {
-    for (const html of [renderHome(library), renderCollage(library)]) {
-      expect(html).not.toMatch(/cdnjs|unpkg/);
-      expect(html).toContain('/u/assets/fontawesome.css');
-      expect(html.lastIndexOf('/u/assets/metrack.css')).toBeGreaterThan(
-        html.lastIndexOf('/u/assets/theme.css'),
-      );
+describe('site assets', () => {
+  it('load from the site itself, with one stylesheet and one script', () => {
+    for (const html of [renderHome(library), renderCollage(library), renderStats(library)]) {
+      expect(html).not.toMatch(/cdnjs|unpkg|fontawesome|fa-solid/);
+      expect(html.match(/rel="stylesheet"/g)).toHaveLength(1);
+      expect(html.match(/<script src=/g)).toHaveLength(1);
     }
-    expect(renderCollage(library)).toContain('/u/assets/html2canvas-pro.js');
-    expect(siteAsset('fonts/fontawesome/fa-solid-900.woff2')?.contentType).toBe('font/woff2');
-    expect(siteAsset('fonts/fontawesome/fa-brands-400.woff2')?.contentType).toBe('font/woff2');
-    expect(siteAsset('html2canvas-pro.js')?.contentType).toContain('javascript');
+  });
+
+  it('paint each rating level with its colour from a class', () => {
+    const css = String(siteAsset('site.css')?.body);
+    expect(css).toContain('.rating-7 { --rating: #a855f7; }');
+    expect(css).toContain('.rating-1 { --rating: #b91c1c; }');
+    expect(css).toContain("src: url('fonts/host-grotesk-latin.woff2')");
   });
 
   it('credits TMDB in the footer with the vendored logo', () => {

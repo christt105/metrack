@@ -4,6 +4,7 @@ import { formatHours } from './formatHours.js';
 import type { SiteMessages } from './messages/SiteMessages.js';
 import type { PublicEntry } from './PublicEntry.js';
 import { percentOf, renderStatBars, type StatBar } from './renderStatBars.js';
+import { icon } from './icon.js';
 import { TYPE_ICONS, themeType, type ThemeType } from './themeType.js';
 import { yearOf } from './yearOf.js';
 
@@ -30,7 +31,9 @@ function missingNote(messages: SiteMessages, entries: PublicEntry[], year: strin
       entry.timeSpent === null &&
       (year === null || yearOf(entry.finishedAt) === year),
   ).length;
-  return missing === 0 ? '' : `<p>${escapeHtml(messages.stats.timeMissing(missing))}</p>`;
+  return missing === 0
+    ? ''
+    : `<p class="note">${escapeHtml(messages.stats.timeMissing(missing))}</p>`;
 }
 
 /**
@@ -54,14 +57,14 @@ export function renderTimeSpent(
   const cards =
     total === 0
       ? ''
-      : `<section class="stats-cards">${card(formatHours(total, messages), messages.stats.total)}${TYPE_ORDER.flatMap(
+      : `<section class="stat-cards">${card(formatHours(total, messages), messages.stats.total)}${TYPE_ORDER.flatMap(
           (type) => {
             const minutes = perType.get(type);
             return minutes === undefined
               ? []
               : [
                   card(
-                    `<i class="${TYPE_ICONS[type]}"></i> ${formatHours(minutes, messages)}`,
+                    `${icon(TYPE_ICONS[type], 20)} ${formatHours(minutes, messages)}`,
                     messages.typePlurals[type],
                   ),
                 ];
