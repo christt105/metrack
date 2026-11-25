@@ -35,6 +35,22 @@ describe('MediaDetailView', () => {
     expect(wrapper.find('#edit').exists()).toBe(false);
   });
 
+  it('opens the metadata source in a new tab when the movie has a provider id', async () => {
+    const linked = await mountDetail('movies', movie);
+    await flushPromises();
+    const link = linked.wrapper.get('a.source-link');
+    expect(link.text()).toBe('View on TMDB');
+    expect(link.attributes()).toMatchObject({
+      href: 'https://www.themoviedb.org/movie/10',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+    });
+
+    const unlinked = await mountDetail('movies', { ...movie, tmdbId: null });
+    await flushPromises();
+    expect(unlinked.wrapper.find('a.source-link').exists()).toBe(false);
+  });
+
   const series = {
     ...movie,
     id: 7,
@@ -42,6 +58,28 @@ describe('MediaDetailView', () => {
     title: 'Dark',
     seasons: [{ id: 70, number: 1, tmdbSeasonNumber: 1, status: 'planned', rating: null }],
   };
+  it('waits for the current detail before showing a source link after navigation', async () => {
+    let resolve!: (value: typeof series) => void;
+    const next = new Promise<typeof series>((done) => {
+      resolve = done;
+    });
+    const getDetail = vi.fn().mockResolvedValueOnce(movie).mockReturnValueOnce(next);
+    const { wrapper } = await mountDetail('movies', movie, { getDetail });
+    await flushPromises();
+    expect(wrapper.get('a.source-link').attributes('href')).toBe(
+      'https://www.themoviedb.org/movie/10',
+    );
+
+    await wrapper.setProps({ collection: 'series', id: series.id });
+    expect(wrapper.find('a.source-link').exists()).toBe(false);
+
+    resolve(series);
+    await flushPromises();
+    expect(wrapper.get('a.source-link').attributes('href')).toBe(
+      'https://www.themoviedb.org/tv/20',
+    );
+  });
+
   const season = { ...movie, id: 70, seriesId: 7, number: 1, title: null };
   const groups = (wrapper: { findAll: (s: string) => { text: () => string }[] }) =>
     wrapper.findAll('.manage h3').map((h) => h.text());
