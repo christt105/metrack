@@ -188,6 +188,9 @@ export const es: Messages = {
     listHint: 'Separa los valores con comas.',
     singleSeasonNote:
       'Esta serie tiene una sola temporada, que se muestra como una única tarjeta en la biblioteca.',
+    viewOnTmdb: 'Ver en TMDB',
+    viewOnSteam: 'Ver en Steam',
+    viewOnOpenLibrary: 'Ver en Open Library',
     seasonOf: 'Temporada de',
     noSeasons: 'Aún no hay temporadas.',
     openLink: 'Abrir',
