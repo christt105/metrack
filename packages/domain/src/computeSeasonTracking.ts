@@ -66,12 +66,9 @@ function firstPassDates(
   }
   const aired = episodes.filter((e) => !skipped.has(e.key) && isAired(e, today));
   const allAiredWatched = aired.length > 0 && aired.every((e) => own.has(e.key));
-  if (
-    (firstPassComplete || allAiredWatched) &&
-    firsts.length > 0 &&
-    firsts.every((v) => v.finishedAt !== null)
-  ) {
-    result.finishedAt = latest(firsts.map((v) => v.finishedAt as string));
+  const datedFinishes = firsts.flatMap((v) => (v.finishedAt === null ? [] : [v.finishedAt]));
+  if ((firstPassComplete || allAiredWatched) && datedFinishes.length > 0) {
+    result.finishedAt = latest(datedFinishes);
   }
   const regenerable = firsts.every((v) => v.finishedAt !== null);
   if (!firstPassComplete && !allAiredWatched && regenerable) result.finishedAt = null;
@@ -100,13 +97,14 @@ function remembered(
  * A catalog season's status, dates, rewatches and counters, computed from scratch from the viewings of its
  * episodes, the episodes skipped, the user's intention to watch it again and today. Nothing depends on what was
  * written before except what the episodes cannot say: the season's own dates while its first pass has undated
- * viewings, and how many rewatches were closed, which tells that a pass the user asked for has just completed.
+ * viewings (a complete first pass still finishes at its latest dated one), and how many rewatches were closed, which tells that a pass the user asked for has just completed.
  *
  * Pass N is the N-th viewing of each episode. The first pass is complete when every episode that is not skipped has
  * aired and has a viewing, which makes the season completed (otherwise in progress, a planned or paused season
  * included); a later pass is complete when every aired episode that is not skipped has that many viewings. The
- * first pass takes its dates from the first viewings of the episodes, keeping the stored ones where those are
- * unknown, and an unfinished first pass has no finish unless some first viewing has no date to give it. A start
+ * first pass starts at its earliest first viewing, keeping the stored start while some first viewing has no date; a
+ * complete first pass finishes at its latest first viewing that has a date, keeping the stored finish when none has
+ * one; an unfinished first pass has no finish unless some first viewing has no date to give it. A start
  * after the finish is brought back to it. Every complete later pass is a rewatch, from its earliest start to its
  * latest finish. An incomplete pass that follows the complete ones with at least one dated viewing is an open
  * rewatch while the intention to watch again is set or while the pass has a viewing of each of the first two
