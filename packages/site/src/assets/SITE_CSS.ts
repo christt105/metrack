@@ -583,11 +583,22 @@ select {
 
 @media (max-width: 759px) {
   .profile {
-    min-height: 340px;
+    display: block;
+    min-height: 0;
+    background: none;
+  }
+
+  .profile-backdrop {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    aspect-ratio: 16 / 9;
   }
 
   .profile-inner {
-    padding: var(--s-7) var(--gut) var(--s-5);
+    position: relative;
+    margin-top: calc(-1 * var(--s-8));
+    padding: 0 var(--gut) var(--s-5);
     gap: var(--s-4);
   }
 
