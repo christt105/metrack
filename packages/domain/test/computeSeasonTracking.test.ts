@@ -94,6 +94,19 @@ describe('computeSeasonTracking first pass', () => {
     });
   });
 
+  it('finishes a complete first pass at its latest dated viewing when others have no date', () => {
+    const result = compute(
+      { ...planned, status: 'in_progress', startedAt: '2026-10-30' },
+      { k1: [], k2: [day('2026-11-06')], k3: [day('2026-11-22')] },
+    );
+    expect(result.tracking).toMatchObject({
+      status: 'completed',
+      startedAt: '2026-10-30',
+      finishedAt: '2026-11-22',
+    });
+    expect(result.completes).toBe(true);
+  });
+
   it('does not complete while an episode is unwatched or still to air', () => {
     expect(compute(planned, { k1: [day('2026-03-01')] }).tracking.status).toBe('in_progress');
     const unaired = computeSeasonTracking({

@@ -112,10 +112,10 @@ describe('deriveSeasonDates', () => {
         { a: [undated, view('2026-06-01')], b: [view('2026-03-01')], c: [view('2026-03-02')] },
         TODAY,
       ),
-    ).toEqual({ startedAt: '2026-01-01', finishedAt: '2026-02-02' });
+    ).toEqual({ startedAt: '2026-01-01', finishedAt: '2026-03-02' });
   });
 
-  it('keeps the stored finish when a first viewing has no finish date', () => {
+  it('finishes at the latest dated first viewing when another first viewing has no date', () => {
     expect(
       deriveSeasonDates(
         { startedAt: '2026-01-01', finishedAt: '2026-02-02' },
@@ -123,7 +123,7 @@ describe('deriveSeasonDates', () => {
         { a: [], b: [view('2026-03-01')], c: [view('2026-03-02')] },
         TODAY,
       ),
-    ).toEqual({ startedAt: '2026-01-01', finishedAt: '2026-02-02' });
+    ).toEqual({ startedAt: '2026-01-01', finishedAt: '2026-03-02' });
   });
 
   it('derives both from fully dated manual marking', () => {
