@@ -5,6 +5,7 @@ import { formatDate } from './formatDate.js';
 import { formatInteger } from './formatInteger.js';
 import { icon } from './icon.js';
 import { imageSrc } from './imageSrc.js';
+import { markdownText } from './markdown/markdownText.js';
 import type { Library } from './Library.js';
 import type { SiteMessages } from './messages/SiteMessages.js';
 import { ownerName } from './ownerName.js';
@@ -15,6 +16,7 @@ import { ratingClass, ratingTheme } from './ratingTheme.js';
 import { renderCard } from './renderCard.js';
 import { renderComments } from './renderComments.js';
 import { renderLayout } from './renderLayout.js';
+import type { ShareCard } from './ShareCard.js';
 import { reviewHtml } from './reviewHtml.js';
 import { homePath } from './sitePaths.js';
 import { TYPE_ICONS, themeType } from './themeType.js';
@@ -117,8 +119,30 @@ function relations(library: Library, entry: PublicEntry): string {
   return '';
 }
 
-/** The page of one item, or null when it is not shown. */
-export function renderDetail(library: Library, kind: PublicKind, id: number): string | null {
+function shareDescription(entry: PublicEntry): string | undefined {
+  const review = entry.review === null ? '' : markdownText(entry.review);
+  if (review !== '') return review;
+  const overview = entry.overview?.trim() ?? '';
+  return overview === '' ? undefined : overview;
+}
+
+function shareCard(library: Library, entry: PublicEntry, origin: string): ShareCard {
+  const cover = imageSrc(entry.cover, library.handle, 'cover', origin);
+  if (cover !== null && cover.startsWith('http')) return { image: cover, wide: false };
+  const banner = imageSrc(entry.banner, library.handle, 'banner', origin);
+  return { image: banner !== null && banner.startsWith('http') ? banner : null, wide: true };
+}
+
+/**
+ * The page of one item, or null when it is not shown. `origin` makes the shared picture an absolute
+ * address, which chats need to show it.
+ */
+export function renderDetail(
+  library: Library,
+  kind: PublicKind,
+  id: number,
+  origin = '',
+): string | null {
   const entry = findEntry(library, kind, id);
   if (!entry) return null;
   const overview =
@@ -133,8 +157,9 @@ export function renderDetail(library: Library, kind: PublicKind, id: number): st
   return renderLayout({
     library,
     title: `${entry.title} | ${ownerName(library)}`,
-    description: entry.overview ?? undefined,
+    description: shareDescription(entry),
     active: 'home',
+    share: shareCard(library, entry, origin),
     page,
   });
 }
