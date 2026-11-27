@@ -16,7 +16,7 @@ async function cancel(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    session.setDeletion((await api.cancelAccountDeletion()).deletion);
+    session.setDeletion((await api.account.cancelAccountDeletion()).deletion);
   } catch (cause) {
     error.value = cause;
   } finally {

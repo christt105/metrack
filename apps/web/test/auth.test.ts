@@ -193,7 +193,7 @@ describe('sessions and a waiting deletion', () => {
     const session = new Session(
       fakeApi({
         auth: { me: async () => FRIEND, logout: async () => {} },
-        accountStatus,
+        account: { accountStatus },
       }),
     );
     expect(await session.current()).toEqual(FRIEND);
@@ -206,8 +206,10 @@ describe('sessions and a waiting deletion', () => {
     const session = new Session(
       fakeApi({
         auth: { me: async () => FRIEND },
-        accountStatus: async () => {
-          throw new ApiRequestError('down', 0, 'network_error');
+        account: {
+          accountStatus: async () => {
+            throw new ApiRequestError('down', 0, 'network_error');
+          },
         },
       }),
     );
@@ -221,7 +223,7 @@ describe('first entry guard', () => {
     const session = new Session(
       fakeApi({
         auth: { me: async () => FRIEND },
-        accountStatus: async () => ({ deletion: null, canDelete: true, needsWelcome }),
+        account: { accountStatus: async () => ({ deletion: null, canDelete: true, needsWelcome }) },
       }),
     );
     const router = createAppRouter(createMemoryHistory());

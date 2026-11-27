@@ -1,6 +1,5 @@
 import type {
   AccountDeletion,
-  AccountStatus,
   CreateInviteRequest,
   CreatedInvite,
   Invite,
@@ -13,7 +12,6 @@ import type {
   UserSettingsPatch,
   UserWithSettings,
 } from '@metrack/domain';
-import type { AccountExportData } from './AccountExportData';
 import type { BackupInfo } from './BackupInfo';
 import { HttpTransport } from './HttpTransport';
 import { recodeToWebp } from '../logic/recodeToWebp';
@@ -25,6 +23,7 @@ import { ImagesApi } from './areas/ImagesApi';
 import { FollowingApi } from './areas/FollowingApi';
 import { SettingsApi } from './areas/SettingsApi';
 import { SteamApi } from './areas/SteamApi';
+import { AccountApi } from './areas/AccountApi';
 
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
@@ -32,6 +31,7 @@ import { SteamApi } from './areas/SteamApi';
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly account: AccountApi;
   readonly steam: SteamApi;
   readonly settings: SettingsApi;
   readonly following: FollowingApi;
@@ -47,6 +47,7 @@ export class ApiClient {
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.account = new AccountApi(this.transport);
     this.steam = new SteamApi(this.transport);
     this.settings = new SettingsApi(this.transport);
     this.following = new FollowingApi(this.transport);
@@ -106,22 +107,6 @@ export class ApiClient {
 
   cancelUserDeletion(userId: number): Promise<void> {
     return this.request('DELETE', `/users/${userId}/deletion`);
-  }
-
-  accountStatus(): Promise<AccountStatus> {
-    return this.request('GET', '/account');
-  }
-
-  accountExportData(): Promise<AccountExportData> {
-    return this.request('GET', '/account/export/data');
-  }
-
-  requestAccountDeletion(confirm: string): Promise<AccountDeletion> {
-    return this.request('POST', '/account/deletion', { confirm });
-  }
-
-  cancelAccountDeletion(): Promise<AccountStatus> {
-    return this.request('DELETE', '/account/deletion');
   }
 
   setUserRole(userId: number, role: UserRole): Promise<User> {

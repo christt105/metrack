@@ -8,7 +8,9 @@ const user = { id: 1, name: 'U', email: null, role: 'normal' } as const;
 describe('Session language', () => {
   it('takes the language from the signed-in user settings and forgets it on sign-out', async () => {
     const api = fakeApi({
-      accountStatus: vi.fn().mockResolvedValue({ deletion: null, needsWelcome: false }),
+      account: {
+        accountStatus: vi.fn().mockResolvedValue({ deletion: null, needsWelcome: false }),
+      },
       settings: {
         ownSettings: vi.fn().mockResolvedValue({
           settings: { language: 'en' },

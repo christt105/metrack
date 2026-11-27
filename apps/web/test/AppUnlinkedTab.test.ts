@@ -18,7 +18,9 @@ const USER: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 async function mountApp(jellyfinUser: string | null) {
   const api = fakeApi({
     auth: { me: async () => USER },
-    accountStatus: async () => ({ deletion: null, needsWelcome: false, canDelete: true }),
+    account: {
+      accountStatus: async () => ({ deletion: null, needsWelcome: false, canDelete: true }),
+    },
     settings: {
       ownSettings: async () => ({
         publicPage: EMPTY_PAGE,

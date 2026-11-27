@@ -16,7 +16,7 @@ const props = defineProps<{ handle: string | null }>();
 
 const api = useApi();
 const session = useSession();
-const { data: status, error: loadError, reload } = useLoader(() => api.accountStatus());
+const { data: status, error: loadError, reload } = useLoader(() => api.account.accountStatus());
 const confirm = ref('');
 const busy = ref(false);
 const error = ref<unknown>(null);
@@ -64,13 +64,13 @@ async function exportData(): Promise<void> {
 
 const requestDeletion = () =>
   act(async () => {
-    session.setDeletion(await api.requestAccountDeletion(confirm.value));
+    session.setDeletion(await api.account.requestAccountDeletion(confirm.value));
     confirm.value = '';
   });
 
 const cancelDeletion = () =>
   act(async () => {
-    session.setDeletion((await api.cancelAccountDeletion()).deletion);
+    session.setDeletion((await api.account.cancelAccountDeletion()).deletion);
   });
 </script>
 

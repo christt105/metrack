@@ -44,7 +44,7 @@ export class Session {
       return;
     }
     try {
-      const status = await this.api.accountStatus();
+      const status = await this.api.account.accountStatus();
       this.deletion.value = status.deletion;
       this.needsWelcome.value = status.needsWelcome;
     } catch {

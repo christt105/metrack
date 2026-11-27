@@ -22,7 +22,7 @@ describe('buildAccountExport', () => {
     const imageBytes = vi.fn(async (hash: string) => new Uint8Array([hash.charCodeAt(0), 1, 2]));
     const progress: string[] = [];
     const result = await buildAccountExport(
-      { accountExportData: async () => exportData(), images: { imageBytes } },
+      { account: { accountExportData: async () => exportData() }, images: { imageBytes } },
       ({ done, total }) => progress.push(`${done}/${total}`),
     );
 
@@ -52,7 +52,7 @@ describe('buildAccountExport', () => {
 
   it('keeps going when an image fails, marking it file: null', async () => {
     const result = await buildAccountExport({
-      accountExportData: async () => exportData(),
+      account: { accountExportData: async () => exportData() },
       images: {
         imageBytes: async (hash) => {
           if (hash === 'b') throw new Error('gone');
@@ -77,7 +77,7 @@ describe('buildAccountExport', () => {
     let active = 0;
     let peak = 0;
     await buildAccountExport({
-      accountExportData: async () => data,
+      account: { accountExportData: async () => data },
       images: {
         imageBytes: async () => {
           peak = Math.max(peak, ++active);
@@ -93,8 +93,10 @@ describe('buildAccountExport', () => {
   it('fails when the data cannot be fetched', async () => {
     await expect(
       buildAccountExport({
-        accountExportData: async () => {
-          throw new Error('offline');
+        account: {
+          accountExportData: async () => {
+            throw new Error('offline');
+          },
         },
         images: { imageBytes: async () => new Uint8Array() },
       }),

@@ -6,7 +6,8 @@ import { ZipWriter } from './ZipWriter';
 
 const CONCURRENCY = 4;
 
-type ExportSource = Pick<ApiClient, 'accountExportData'> & {
+type ExportSource = {
+  account: Pick<ApiClient['account'], 'accountExportData'>;
   images: Pick<ApiClient['images'], 'imageBytes'>;
 };
 
@@ -19,7 +20,7 @@ export async function buildAccountExport(
   api: ExportSource,
   onProgress: (progress: ExportProgress) => void = () => {},
 ): Promise<AccountExportResult> {
-  const data: AccountExportData = await api.accountExportData();
+  const data: AccountExportData = await api.account.accountExportData();
   const pending = data.images.filter((image) => image.file !== null);
   const files = new Map<string, Uint8Array>();
   const missing: string[] = [];

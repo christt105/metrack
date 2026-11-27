@@ -27,7 +27,9 @@ const page = (patch: Partial<PublicPage>): PublicPage => ({
 async function mountApp(publicPage: PublicPage) {
   const api = fakeApi({
     auth: { me: async () => USER },
-    accountStatus: async () => ({ deletion: null, needsWelcome: false, canDelete: true }),
+    account: {
+      accountStatus: async () => ({ deletion: null, needsWelcome: false, canDelete: true }),
+    },
     settings: {
       ownSettings: async () => ({
         publicPage,
