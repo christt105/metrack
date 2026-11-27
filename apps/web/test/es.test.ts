@@ -49,8 +49,10 @@ describe('Spanish dictionary in components', () => {
             ntfyTopicGenerated: false,
           } satisfies OwnSettings),
         },
-        listUsers: vi.fn().mockResolvedValue([{ user: owner, settings: noSettings }]),
-        listBackups: vi.fn().mockResolvedValue([]),
+        admin: {
+          listUsers: vi.fn().mockResolvedValue([{ user: owner, settings: noSettings }]),
+          listBackups: vi.fn().mockResolvedValue([]),
+        },
       },
       {},
       spanish,

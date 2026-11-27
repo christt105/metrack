@@ -24,7 +24,7 @@ afterEach(() => {
 describe('InvitationsPanel', () => {
   it('lists the links with uses spent and who used them, and offers revoke only while valid', async () => {
     const { wrapper } = await mountWithApi(InvitationsPanel, {
-      listInvites: vi.fn().mockResolvedValue([valid, spent]),
+      admin: { listInvites: vi.fn().mockResolvedValue([valid, spent]) },
     });
     await flushPromises();
     const items = wrapper.findAll('[data-test="invite"]');
@@ -39,7 +39,9 @@ describe('InvitationsPanel', () => {
   it('creates a link with the chosen uses and expiry and shows the full URL once', async () => {
     const createInvite = vi.fn().mockResolvedValue({ invite: valid, code: 'abc123' });
     const listInvites = vi.fn().mockResolvedValue([]);
-    const { wrapper } = await mountWithApi(InvitationsPanel, { listInvites, createInvite });
+    const { wrapper } = await mountWithApi(InvitationsPanel, {
+      admin: { listInvites, createInvite },
+    });
     await flushPromises();
     await wrapper.find('input[name="maxUses"]').setValue(5);
     await wrapper.find('select[name="expiresInDays"]').setValue('3');
@@ -55,8 +57,7 @@ describe('InvitationsPanel', () => {
   it('defaults to one use and seven days', async () => {
     const createInvite = vi.fn().mockResolvedValue({ invite: valid, code: 'c' });
     const { wrapper } = await mountWithApi(InvitationsPanel, {
-      listInvites: vi.fn().mockResolvedValue([]),
-      createInvite,
+      admin: { listInvites: vi.fn().mockResolvedValue([]), createInvite },
     });
     await flushPromises();
     await wrapper.find('form').trigger('submit');
@@ -68,8 +69,10 @@ describe('InvitationsPanel', () => {
     const share = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { share, clipboard: { writeText: vi.fn() } });
     const { wrapper } = await mountWithApi(InvitationsPanel, {
-      listInvites: vi.fn().mockResolvedValue([]),
-      createInvite: vi.fn().mockResolvedValue({ invite: valid, code: 'xyz' }),
+      admin: {
+        listInvites: vi.fn().mockResolvedValue([]),
+        createInvite: vi.fn().mockResolvedValue({ invite: valid, code: 'xyz' }),
+      },
     });
     await flushPromises();
     await wrapper.find('form').trigger('submit');
@@ -84,8 +87,10 @@ describe('InvitationsPanel', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { clipboard: { writeText } });
     const { wrapper } = await mountWithApi(InvitationsPanel, {
-      listInvites: vi.fn().mockResolvedValue([]),
-      createInvite: vi.fn().mockResolvedValue({ invite: valid, code: 'xyz' }),
+      admin: {
+        listInvites: vi.fn().mockResolvedValue([]),
+        createInvite: vi.fn().mockResolvedValue({ invite: valid, code: 'xyz' }),
+      },
     });
     await flushPromises();
     await wrapper.find('form').trigger('submit');
@@ -100,7 +105,9 @@ describe('InvitationsPanel', () => {
     const revokeInvite = vi.fn().mockResolvedValue(undefined);
     const listInvites = vi.fn().mockResolvedValue([valid]);
     window.confirm = vi.fn().mockReturnValue(true);
-    const { wrapper } = await mountWithApi(InvitationsPanel, { listInvites, revokeInvite });
+    const { wrapper } = await mountWithApi(InvitationsPanel, {
+      admin: { listInvites, revokeInvite },
+    });
     await flushPromises();
     await wrapper.find('[data-test="invite"] button').trigger('click');
     await flushPromises();
@@ -112,8 +119,7 @@ describe('InvitationsPanel', () => {
     const revokeInvite = vi.fn();
     window.confirm = vi.fn().mockReturnValue(false);
     const { wrapper } = await mountWithApi(InvitationsPanel, {
-      listInvites: vi.fn().mockResolvedValue([valid]),
-      revokeInvite,
+      admin: { listInvites: vi.fn().mockResolvedValue([valid]), revokeInvite },
     });
     await flushPromises();
     await wrapper.find('[data-test="invite"] button').trigger('click');

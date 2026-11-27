@@ -36,10 +36,10 @@ const {
   error: backupsError,
   reload: reloadBackups,
 } = useLoader(() =>
-  ownerOnly(async () => ((await loadHealth()).features.backups ? api.listBackups() : null)),
+  ownerOnly(async () => ((await loadHealth()).features.backups ? api.admin.listBackups() : null)),
 );
 const { data: imageUsage, error: imageUsageError } = useLoader(() => api.images.imageUsage());
-const { data: users, error: usersError } = useLoader(() => ownerOnly(() => api.listUsers()));
+const { data: users, error: usersError } = useLoader(() => ownerOnly(() => api.admin.listUsers()));
 const refreshOwn = async (): Promise<void> => {
   ownRequest = undefined;
   await reloadOwn();
@@ -66,13 +66,13 @@ const plan = ref<SyncPlan | null>(null);
 const syncChanges = computed(() => (plan.value === null ? 0 : countSyncChanges(plan.value)));
 const checkSync = () =>
   run(async () => {
-    plan.value = await api.syncReport();
+    plan.value = await api.admin.syncReport();
     return countSyncChanges(plan.value) === 0 ? messages.settings.syncNothing : '';
   });
 const applySync = () => {
   if (!window.confirm(messages.settings.syncConfirm)) return Promise.resolve();
   return run(async () => {
-    const { plan: applied } = await api.applySync();
+    const { plan: applied } = await api.admin.applySync();
     plan.value = null;
     return messages.settings.syncApplied(countSyncChanges(applied));
   });
@@ -82,7 +82,7 @@ const cleanup = () =>
   run(async () => messages.settings.cleanupDone((await api.images.cleanupImages()).removed.length));
 const backup = () =>
   run(async () => {
-    const created = await api.createBackup();
+    const created = await api.admin.createBackup();
     await reloadBackups();
     return messages.settings.backupDone(created.name);
   });

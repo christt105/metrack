@@ -8,7 +8,7 @@ import ErrorNotice from './ErrorNotice.vue';
 
 const messages = useMessages();
 const api = useApi();
-const { data: users, error: loadError, reload } = useLoader(() => api.listUserSummaries());
+const { data: users, error: loadError, reload } = useLoader(() => api.admin.listUserSummaries());
 const error = ref<unknown>(null);
 const busy = ref(false);
 
@@ -29,10 +29,10 @@ async function act(action: () => Promise<unknown>): Promise<void> {
 
 const remove = (user: UserSummary) => {
   if (!window.confirm(messages.users.deleteConfirm(user.name))) return Promise.resolve();
-  return act(() => api.scheduleUserDeletion(user.id));
+  return act(() => api.admin.scheduleUserDeletion(user.id));
 };
 
-const cancel = (user: UserSummary) => act(() => api.cancelUserDeletion(user.id));
+const cancel = (user: UserSummary) => act(() => api.admin.cancelUserDeletion(user.id));
 </script>
 
 <template>
