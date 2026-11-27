@@ -1,8 +1,8 @@
+import type { ApiOverrides } from './ApiOverrides';
 import { flushPromises } from '@vue/test-utils';
 import { RouterView } from 'vue-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AnyDetail } from '../src/api/AnyDetail';
-import type { ApiClient } from '../src/api/ApiClient';
 import { mountWithApi } from './mountWithApi';
 import { pickDate } from './pickDate';
 
@@ -65,7 +65,7 @@ const EMPTY_EPISODES = {
 
 const mounted: { unmount: () => void }[] = [];
 
-async function open(api: Partial<ApiClient>, path = '/movies/4/edit', from = '/movies/4') {
+async function open(api: ApiOverrides, path = '/movies/4/edit', from = '/movies/4') {
   const result = await mountWithApi(RouterView, api);
   mounted.push(result.wrapper);
   await result.router.push(from);

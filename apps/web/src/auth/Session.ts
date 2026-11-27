@@ -21,7 +21,7 @@ export class Session {
 
   async current(): Promise<User | null> {
     if (!this.known) {
-      this.user.value = await this.api.me();
+      this.user.value = await this.api.auth.me();
       this.known = true;
       await this.refreshDeletion();
       void this.refreshPublicPage();
@@ -91,7 +91,7 @@ export class Session {
   }
 
   async signOut(): Promise<void> {
-    await this.api.logout();
+    await this.api.auth.logout();
     this.forget();
   }
 

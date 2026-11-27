@@ -1,14 +1,14 @@
+import { fakeApi } from './fakeApi';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { User } from '@metrack/domain';
 import ImagePicker from '../src/components/ImagePicker.vue';
-import type { ApiClient } from '../src/api/ApiClient';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
 import { mountWithApi } from './mountWithApi';
 
 function sessionOf(role: User['role']): Session {
-  const session = new Session({} as ApiClient);
+  const session = new Session(fakeApi({}));
   session.signedIn({ id: 2, name: 'U', email: null, role });
   return session;
 }

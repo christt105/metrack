@@ -1,3 +1,4 @@
+import { fakeApi } from './fakeApi';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { AccountDeletion } from '@metrack/domain';
@@ -6,7 +7,6 @@ import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
 import AccountPanel from '../src/components/AccountPanel.vue';
 import DeletionBanner from '../src/components/DeletionBanner.vue';
-import type { ApiClient } from '../src/api/ApiClient';
 import { mountWithApi } from './mountWithApi';
 
 const scheduled: AccountDeletion = {
@@ -150,7 +150,7 @@ describe('AccountPanel', () => {
 describe('DeletionBanner', () => {
   it('shows only while a deletion waits, and cancels it', async () => {
     const cancelAccountDeletion = vi.fn().mockResolvedValue({ deletion: null, canDelete: true });
-    const api = { cancelAccountDeletion } as unknown as ApiClient;
+    const api = fakeApi({ cancelAccountDeletion });
     const session = new Session(api);
     session.setDeletion(scheduled);
     const { wrapper } = await mountWithApi(

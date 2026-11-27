@@ -1,8 +1,8 @@
+import { fakeApi } from './fakeApi';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import SearchView from '../src/views/SearchView.vue';
-import type { ApiClient } from '../src/api/ApiClient';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
 import { mountWithApi } from './mountWithApi';
@@ -26,7 +26,7 @@ describe('SearchView', () => {
   it('offers add-by-hand after an empty search only to users who may', async () => {
     const search = vi.fn().mockResolvedValue({ results: [] });
     const run = async (role: 'normal' | 'trusted') => {
-      const session = new Session({} as ApiClient);
+      const session = new Session(fakeApi({}));
       session.signedIn({ id: 2, name: 'U', email: null, role });
       const { wrapper } = await mountWithApi(
         SearchView,

@@ -34,7 +34,7 @@ async function submit(): Promise<void> {
   error.value = null;
   try {
     session.welcomed(
-      await api.completeWelcome({ name: name.value.trim(), handle: handle.value.trim() }),
+      await api.auth.completeWelcome({ name: name.value.trim(), handle: handle.value.trim() }),
     );
     await router.replace({ name: 'library' });
   } catch (cause) {

@@ -1,3 +1,4 @@
+import { fakeApi } from './fakeApi';
 import type { UserSettings } from '@metrack/domain';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,7 +7,6 @@ import { Locale } from '../src/i18n/Locale';
 import { localeKey } from '../src/i18n/localeKey';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
-import type { ApiClient } from '../src/api/ApiClient';
 import { mountWithApi } from './mountWithApi';
 
 const settings: Omit<UserSettings, 'language'> = {
@@ -44,7 +44,7 @@ describe('LanguagePanel', () => {
 
   it('saves the choice and tells the session', async () => {
     const updateLanguage = vi.fn().mockResolvedValue({ ...settings, language: 'es' });
-    const session = new Session({} as ApiClient);
+    const session = new Session(fakeApi({}));
     const { wrapper } = await mountWithApi(
       LanguagePanel,
       { updateLanguage },

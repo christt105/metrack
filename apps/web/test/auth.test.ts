@@ -1,3 +1,5 @@
+import { fakeApi } from './fakeApi';
+import type { ApiOverrides } from './ApiOverrides';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryHistory } from 'vue-router';
@@ -15,7 +17,11 @@ const OWNER: User = { id: 1, name: 'Owner', email: null, role: 'owner' };
 const FRIEND: User = { id: 2, name: 'Friend', email: 'friend@example.com', role: 'normal' };
 
 function guardedRouter(me: () => Promise<User | null>) {
-  const session = new Session({ me } as unknown as ApiClient);
+  const session = new Session(
+    fakeApi({
+      auth: { me },
+    }),
+  );
   const router = createAppRouter(createMemoryHistory());
   installAuthGuard(router, session);
   return { router, session };
@@ -61,7 +67,7 @@ describe('ApiClient and sessions', () => {
     );
     await expect(client.listWatchlist()).rejects.toBeInstanceOf(ApiRequestError);
     expect(onUnauthenticated).toHaveBeenCalledTimes(1);
-    expect(await client.me()).toBeNull();
+    expect(await client.auth.me()).toBeNull();
     expect(onUnauthenticated).toHaveBeenCalledTimes(1);
   });
 
@@ -72,13 +78,13 @@ describe('ApiClient and sessions', () => {
           status: 404,
         })) as unknown as typeof fetch,
     );
-    expect(await client.devUsers()).toBeNull();
+    expect(await client.auth.devUsers()).toBeNull();
   });
 });
 
 describe('LoginView', () => {
-  async function mountLogin(api: Partial<ApiClient>, next?: string) {
-    const session = new Session(api as ApiClient);
+  async function mountLogin(api: ApiOverrides, next?: string) {
+    const session = new Session(fakeApi(api));
     const { wrapper, router } = await mountWithApi(
       LoginView,
       api,
@@ -93,7 +99,9 @@ describe('LoginView', () => {
   it('lists the users and signs in as the one picked', async () => {
     const devLogin = vi.fn(async () => FRIEND);
     const { wrapper, router, session } = await mountLogin(
-      { devUsers: async () => [OWNER, FRIEND], devLogin },
+      {
+        auth: { devUsers: async () => [OWNER, FRIEND], devLogin },
+      },
       '/watchlist',
     );
     const buttons = wrapper.findAll('button');
@@ -106,13 +114,17 @@ describe('LoginView', () => {
   });
 
   it('says sign-in is with a Google account and that Jellyfin is optional', async () => {
-    const { wrapper } = await mountLogin({ devUsers: async () => null });
+    const { wrapper } = await mountLogin({
+      auth: { devUsers: async () => null },
+    });
     expect(wrapper.find('[data-test="google-note"]').text()).toContain('Google account');
     expect(wrapper.text()).toContain('if you use Jellyfin');
   });
 
   it('offers only the token form when dev login is off', async () => {
-    const { wrapper } = await mountLogin({ devUsers: async () => null });
+    const { wrapper } = await mountLogin({
+      auth: { devUsers: async () => null },
+    });
     expect(wrapper.text()).toContain('Sign in with an access token');
     expect(wrapper.findAll('button').map((b) => b.text())).toEqual(['Sign in']);
   });
@@ -120,9 +132,13 @@ describe('LoginView', () => {
   it('offers the Google link only when the server has it, and explains a refusal', async () => {
     const health = (googleLogin: boolean) => async () =>
       ({ features: { backups: false, sync: false, googleLogin } }) as HealthReport;
-    const off = await mountLogin({ devUsers: async () => null, health: health(false) });
+    const off = await mountLogin({
+      auth: { devUsers: async () => null, health: health(false) },
+    });
     expect(off.wrapper.find('a.google').exists()).toBe(false);
-    const on = await mountLogin({ devUsers: async () => null, health: health(true) });
+    const on = await mountLogin({
+      auth: { devUsers: async () => null, health: health(true) },
+    });
     expect(on.wrapper.find('a.google').attributes('href')).toBe('/api/auth/google/start');
     await on.router.push({ name: 'login', query: { error: 'google_no_account' } });
     await flushPromises();
@@ -135,7 +151,9 @@ describe('LoginView', () => {
   it('signs in with an access token and goes on to the next page', async () => {
     const tokenLogin = vi.fn(async () => FRIEND);
     const { wrapper, router, session } = await mountLogin(
-      { devUsers: async () => null, tokenLogin },
+      {
+        auth: { devUsers: async () => null, tokenLogin },
+      },
       '/watchlist',
     );
     await wrapper.find('input').setValue('  mt_secret ');
@@ -150,7 +168,9 @@ describe('LoginView', () => {
     const tokenLogin = vi.fn(async () => {
       throw new Error('Unknown or expired token');
     });
-    const { wrapper } = await mountLogin({ devUsers: async () => null, tokenLogin });
+    const { wrapper } = await mountLogin({
+      auth: { devUsers: async () => null, tokenLogin },
+    });
     await wrapper.find('input').setValue('mt_bad');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
@@ -165,12 +185,17 @@ describe('sessions and a waiting deletion', () => {
   };
 
   it('learns about a waiting deletion on sign-in and forgets it on sign-out', async () => {
-    const accountStatus = vi.fn(async () => ({ deletion: scheduled, canDelete: true }));
-    const session = new Session({
-      me: async () => FRIEND,
-      accountStatus,
-      logout: async () => {},
-    } as unknown as ApiClient);
+    const accountStatus = vi.fn(async () => ({
+      deletion: scheduled,
+      canDelete: true,
+      needsWelcome: false,
+    }));
+    const session = new Session(
+      fakeApi({
+        auth: { me: async () => FRIEND, logout: async () => {} },
+        accountStatus,
+      }),
+    );
     expect(await session.current()).toEqual(FRIEND);
     expect(session.deletion.value).toEqual(scheduled);
     await session.signOut();
@@ -178,12 +203,14 @@ describe('sessions and a waiting deletion', () => {
   });
 
   it('carries on when the account status cannot be read', async () => {
-    const session = new Session({
-      me: async () => FRIEND,
-      accountStatus: async () => {
-        throw new ApiRequestError('down', 0, 'network_error');
-      },
-    } as unknown as ApiClient);
+    const session = new Session(
+      fakeApi({
+        auth: { me: async () => FRIEND },
+        accountStatus: async () => {
+          throw new ApiRequestError('down', 0, 'network_error');
+        },
+      }),
+    );
     expect(await session.current()).toEqual(FRIEND);
     expect(session.deletion.value).toBeNull();
   });
@@ -191,10 +218,12 @@ describe('sessions and a waiting deletion', () => {
 
 describe('first entry guard', () => {
   function welcomeRouter(needsWelcome: boolean) {
-    const session = new Session({
-      me: async () => FRIEND,
-      accountStatus: async () => ({ deletion: null, canDelete: true, needsWelcome }),
-    } as unknown as ApiClient);
+    const session = new Session(
+      fakeApi({
+        auth: { me: async () => FRIEND },
+        accountStatus: async () => ({ deletion: null, canDelete: true, needsWelcome }),
+      }),
+    );
     const router = createAppRouter(createMemoryHistory());
     installAuthGuard(router, session);
     return { router, session };
@@ -224,7 +253,11 @@ describe('first entry guard', () => {
   });
 
   it('opens the invitation page with no session', async () => {
-    const session = new Session({ me: async () => null } as unknown as ApiClient);
+    const session = new Session(
+      fakeApi({
+        auth: { me: async () => null },
+      }),
+    );
     const router = createAppRouter(createMemoryHistory());
     installAuthGuard(router, session);
     await router.push('/invite/abc');

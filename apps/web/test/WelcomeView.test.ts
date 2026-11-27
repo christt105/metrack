@@ -1,3 +1,5 @@
+import { fakeApi } from './fakeApi';
+import type { ApiOverrides } from './ApiOverrides';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { User } from '@metrack/domain';
@@ -8,12 +10,11 @@ import { Locale } from '../src/i18n/Locale';
 import { localeKey } from '../src/i18n/localeKey';
 import WelcomeView from '../src/views/WelcomeView.vue';
 import { mountWithApi } from './mountWithApi';
-import type { ApiClient } from '../src/api/ApiClient';
 
 const joined: User = { id: 5, name: 'Ana García', email: 'ana@example.com', role: 'normal' };
 
-async function open(api: Partial<ApiClient>) {
-  const session = new Session(api as ApiClient);
+async function open(api: ApiOverrides) {
+  const session = new Session(fakeApi(api));
   session.signedIn(joined);
   session.needsWelcome.value = true;
   const mounted = await mountWithApi(WelcomeView, api, {}, { [sessionKey as symbol]: session });
@@ -33,7 +34,9 @@ describe('WelcomeView', () => {
 
   it('confirms the name and handle, clears the welcome state and leaves for the library', async () => {
     const completeWelcome = vi.fn().mockResolvedValue({ ...joined, name: 'Ana' });
-    const { wrapper, session, router } = await open({ completeWelcome });
+    const { wrapper, session, router } = await open({
+      auth: { completeWelcome },
+    });
     await wrapper.find('input[name="name"]').setValue(' Ana ');
     await wrapper.find('input[name="handle"]').setValue('ana');
     await wrapper.find('form').trigger('submit');
@@ -46,7 +49,9 @@ describe('WelcomeView', () => {
 
   it('explains an invalid handle with the shared rules and blocks sending it', async () => {
     const completeWelcome = vi.fn();
-    const { wrapper } = await open({ completeWelcome });
+    const { wrapper } = await open({
+      auth: { completeWelcome },
+    });
     await wrapper.find('input[name="handle"]').setValue('No Good!');
     expect(wrapper.find('[data-test="handle-problem"]').text()).toContain('lowercase letters');
     expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeDefined();
@@ -63,8 +68,8 @@ describe('WelcomeView', () => {
 
   it('translates the handle problems into Spanish', async () => {
     const { wrapper } = await open({}).then(async () => {
-      const api: Partial<ApiClient> = {};
-      const session = new Session(api as ApiClient);
+      const api: ApiOverrides = {};
+      const session = new Session(fakeApi(api));
       session.signedIn(joined);
       session.needsWelcome.value = true;
       return mountWithApi(
@@ -87,7 +92,9 @@ describe('WelcomeView', () => {
     const completeWelcome = vi
       .fn()
       .mockRejectedValue(new ApiRequestError('taken', 409, 'handle_taken'));
-    const { wrapper, session } = await open({ completeWelcome });
+    const { wrapper, session } = await open({
+      auth: { completeWelcome },
+    });
     await wrapper.find('form').trigger('submit');
     await flushPromises();
     expect(wrapper.text()).toContain('Another user already has that page name');

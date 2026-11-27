@@ -33,12 +33,14 @@ describe('Spanish dictionary in components', () => {
     const { wrapper } = await mountWithApi(
       SettingsView,
       {
-        health: vi.fn().mockResolvedValue({
-          status: 'ok',
-          appVersion: 'dev',
-          schemaVersion: 3,
-          features: { backups: true, sync: true, googleLogin: false },
-        }),
+        auth: {
+          health: vi.fn().mockResolvedValue({
+            status: 'ok',
+            appVersion: 'dev',
+            schemaVersion: 3,
+            features: { backups: true, sync: true, googleLogin: false },
+          }),
+        },
         ownSettings: vi.fn().mockResolvedValue({
           settings: noSettings,
           publicPage: EMPTY_PAGE,

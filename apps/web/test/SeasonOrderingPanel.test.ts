@@ -1,7 +1,7 @@
+import { fakeApi } from './fakeApi';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EpisodeGroupOptions, User } from '@metrack/domain';
-import type { ApiClient } from '../src/api/ApiClient';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
@@ -18,7 +18,7 @@ const OPTIONS: EpisodeGroupOptions = {
 };
 
 function sessionOf(role: User['role']): Record<symbol, unknown> {
-  const session = new Session({} as ApiClient);
+  const session = new Session(fakeApi({}));
   session.signedIn({ id: 1, name: 'U', email: null, role });
   return { [sessionKey as symbol]: session };
 }

@@ -8,6 +8,17 @@ export class HttpTransport {
     private readonly onReachable: (reachable: boolean) => void,
   ) {}
 
+  async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    acceptedStatuses?: readonly number[],
+  ): Promise<T> {
+    const response = await this.send(method, path, body, acceptedStatuses);
+    if (response.status === 204) return undefined as T;
+    return (await response.json()) as T;
+  }
+
   async send(
     method: string,
     path: string,

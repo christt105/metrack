@@ -9,7 +9,7 @@ import { useMessages } from '../composables/useMessages';
 const messages = useMessages();
 const props = defineProps<{ code: string }>();
 const api = useApi();
-const { data: preview, error } = useLoader(() => api.invitePreview(props.code));
+const { data: preview, error } = useLoader(() => api.auth.invitePreview(props.code));
 const signInHref = computed(
   () => `/api/auth/google/start?invite=${encodeURIComponent(props.code)}`,
 );

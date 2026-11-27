@@ -11,9 +11,7 @@ import type {
   CreateInviteRequest,
   CreatedInvite,
   Invite,
-  InvitePreview,
   UserSummary,
-  WelcomeRequest,
   UserRole,
   ApiToken,
   CreatedToken,
@@ -23,10 +21,10 @@ import type {
   EditablePatch,
   EntityRef,
   EpisodeGroupOptions,
-  HealthReport,
   ImageCandidateList,
   ImageKind,
   MediaDetail,
+  SeriesDetail,
   MediaPage,
   MediaQuery,
   MediaType,
@@ -43,7 +41,6 @@ import type {
   SyncApplyResult,
   SyncPlan,
   SearchableType,
-  SeriesDetail,
   ReleaseAlert,
   UnlinkedTitle,
   User,
@@ -59,12 +56,13 @@ import type {
 } from '@metrack/domain';
 import type { AccountExportData } from './AccountExportData';
 import type { BackupInfo } from './BackupInfo';
-import { ApiRequestError } from './ApiRequestError';
 import { buildQueryString } from './buildQueryString';
 import type { EntityOf } from './EntityOf';
 import { HttpTransport } from './HttpTransport';
 import type { ImageSettings } from './ImageSettings';
 import { DEFAULT_RECODE_MAX_SIDE, recodeToWebp } from '../logic/recodeToWebp';
+
+import { AuthApi } from './areas/AuthApi';
 
 type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDetail<EntityOf[C]>;
 
@@ -74,6 +72,7 @@ type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDet
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly auth: AuthApi;
 
   constructor(
     fetchFn: typeof fetch = (...args) => fetch(...args),
@@ -82,56 +81,13 @@ export class ApiClient {
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.auth = new AuthApi(this.transport);
   }
 
   private settings: Promise<ImageSettings> | undefined;
 
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-    acceptedStatuses?: readonly number[],
-  ): Promise<T> {
-    const response = await this.transport.send(method, path, body, acceptedStatuses);
-    if (response.status === 204) return undefined as T;
-    return (await response.json()) as T;
-  }
-
-  /** The signed-in user, or null without a session. */
-  async me(): Promise<User | null> {
-    try {
-      return await this.request<User>('GET', '/auth/me');
-    } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) return null;
-      throw error;
-    }
-  }
-
-  /** Who can sign in with dev login, or null when the server does not offer it. */
-  async devUsers(): Promise<User[] | null> {
-    try {
-      return await this.request<User[]>('GET', '/auth/dev-users');
-    } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 404) return null;
-      throw error;
-    }
-  }
-
-  devLogin(userId: number): Promise<User> {
-    return this.request('POST', '/auth/dev-login', { userId });
-  }
-
-  tokenLogin(token: string): Promise<User> {
-    return this.request('POST', '/auth/token-login', { token });
-  }
-
-  logout(): Promise<void> {
-    return this.request('POST', '/auth/logout');
-  }
-
-  /** A degraded service answers 503 with the same report, which is returned rather than thrown. */
-  health(): Promise<HealthReport> {
-    return this.request('GET', '/health', undefined, [503]);
+  private request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    return this.transport.request<T>(method, path, body);
   }
 
   listMedia(query: MediaQuery): Promise<MediaPage> {
@@ -419,11 +375,6 @@ export class ApiClient {
     return this.request('DELETE', `/tokens/${id}`);
   }
 
-  /** Public: whether an invitation link works and who invites. Spends nothing. */
-  invitePreview(code: string): Promise<InvitePreview> {
-    return this.request('GET', `/invites/${encodeURIComponent(code)}`);
-  }
-
   listInvites(): Promise<Invite[]> {
     return this.request('GET', '/invites');
   }
@@ -446,10 +397,6 @@ export class ApiClient {
 
   cancelUserDeletion(userId: number): Promise<void> {
     return this.request('DELETE', `/users/${userId}/deletion`);
-  }
-
-  completeWelcome(request: WelcomeRequest): Promise<User> {
-    return this.request('POST', '/account/welcome', request);
   }
 
   accountStatus(): Promise<AccountStatus> {

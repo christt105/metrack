@@ -23,7 +23,7 @@ const messages = useMessages();
 const api = useApi();
 const session = useSession();
 let healthRequest: Promise<HealthReport> | undefined;
-const loadHealth = (): Promise<HealthReport> => (healthRequest ??= api.health());
+const loadHealth = (): Promise<HealthReport> => (healthRequest ??= api.auth.health());
 const { data: health, error: healthError } = useLoader(loadHealth);
 let ownRequest: Promise<OwnSettings> | undefined;
 const loadOwn = (): Promise<OwnSettings> => (ownRequest ??= api.ownSettings());

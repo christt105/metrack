@@ -43,11 +43,11 @@ describe('OfflineNotice', () => {
       undefined,
       (reachable) => connectivity.report(reachable),
     );
-    await expect(client.me()).rejects.toThrow();
+    await expect(client.auth.me()).rejects.toThrow();
     await wrapper.vm.$nextTick();
     expect(wrapper.text()).toBe(messages.offline);
     fail = false;
-    await client.me().catch(() => undefined);
+    await client.auth.me().catch(() => undefined);
     await wrapper.vm.$nextTick();
     expect(wrapper.text()).toBe('');
   });
