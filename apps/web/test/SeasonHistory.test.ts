@@ -1,3 +1,4 @@
+import type { ApiOverrides } from './ApiOverrides';
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import type { SeasonEpisodeItem, SeasonEpisodesResponse } from '@metrack/domain';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -52,10 +53,13 @@ const episodes = [
   item(2, [day('2026-03-02')]),
 ];
 
-async function mountHistory(api: Record<string, unknown> = {}, props: object = {}) {
+async function mountHistory(
+  seasons: NonNullable<ApiOverrides['seasons']> = {},
+  props: object = {},
+) {
   const mounted = await mountWithApi(
     SeasonEpisodes,
-    { seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)), ...api } as never,
+    { seasons: { seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)), ...seasons } },
     { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [], wantsRewatch: true, ...props },
   );
   await flushPromises();

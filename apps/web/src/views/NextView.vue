@@ -30,7 +30,7 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 
 async function load(): Promise<void> {
   try {
-    rows.value = (await api.nextEpisodes()).rows;
+    rows.value = (await api.seasons.nextEpisodes()).rows;
   } catch (cause) {
     loadError.value = cause;
   }
@@ -55,7 +55,7 @@ function setBusy(seriesId: number, on: boolean): void {
 }
 
 async function refreshRow(seriesId: number): Promise<void> {
-  const response = await api.nextEpisodes(seriesId);
+  const response = await api.seasons.nextEpisodes(seriesId);
   rows.value = replaceNextRow(rows.value ?? [], seriesId, response.rows[0] ?? null);
 }
 
@@ -64,7 +64,7 @@ async function inverseFor(
   operation: EpisodeOperation,
 ): Promise<EpisodeOperation[]> {
   if (row.source !== 'numbers' && rewatching(row)) {
-    return inverseOperations(operation, (await api.seasonEpisodes(row.season.id)).episodes);
+    return inverseOperations(operation, (await api.seasons.seasonEpisodes(row.season.id)).episodes);
   }
   const keys = [nextEpisodeKey(row)];
   return [operation.op === 'skip' ? { op: 'unskip', keys } : { op: 'unmark', keys }];
@@ -83,7 +83,7 @@ async function act(row: NextEpisodeRow, kind: 'mark' | 'skip'): Promise<void> {
     const operation: EpisodeOperation =
       kind === 'mark' ? { op: 'mark', keys, date: todayIso() } : { op: 'skip', keys };
     const inverse = await inverseFor(row, operation);
-    const update = await api.updateSeasonEpisodes(row.season.id, operation);
+    const update = await api.seasons.updateSeasonEpisodes(row.season.id, operation);
     await refreshRow(seriesId);
     const done = kind === 'mark' ? messages.episodes.marked(1) : messages.episodes.skipped(1);
     const finished = update.tracking.status === 'completed' && !rewatching(row);
@@ -91,7 +91,8 @@ async function act(row: NextEpisodeRow, kind: 'mark' | 'skip'): Promise<void> {
       message: finished ? `${done}. ${messages.next.seasonCompleted(row.season.number)}` : done,
       seriesId,
       revert: async () => {
-        for (const reverse of inverse) await api.updateSeasonEpisodes(row.season.id, reverse);
+        for (const reverse of inverse)
+          await api.seasons.updateSeasonEpisodes(row.season.id, reverse);
         await refreshRow(seriesId);
       },
     });
@@ -108,13 +109,13 @@ async function restart(row: NextEpisodeRow): Promise<void> {
   setBusy(seriesId, true);
   error.value = null;
   try {
-    await api.restartSeason(row.season.id);
+    await api.seasons.restartSeason(row.season.id);
     await refreshRow(seriesId);
     say({
       message: messages.episodes.restartDone,
       seriesId,
       revert: async () => {
-        await api.undoSeasonRestart(row.season.id);
+        await api.seasons.undoSeasonRestart(row.season.id);
         await refreshRow(seriesId);
       },
     });
@@ -131,13 +132,13 @@ async function hide(row: NextEpisodeRow): Promise<void> {
   setBusy(seriesId, true);
   error.value = null;
   try {
-    await api.hideFromNext(seriesId);
+    await api.seasons.hideFromNext(seriesId);
     rows.value = replaceNextRow(rows.value ?? [], seriesId, null);
     say({
       message: messages.next.hidden(row.series.title),
       seriesId,
       revert: async () => {
-        await api.showInNext(seriesId);
+        await api.seasons.showInNext(seriesId);
         await load();
       },
     });

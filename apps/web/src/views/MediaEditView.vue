@@ -121,7 +121,7 @@ async function load(): Promise<void> {
     datesDerived.value = false;
     reset(result);
     if (props.collection === 'seasons') {
-      const episodes = await api.seasonEpisodes(props.id).catch(() => null);
+      const episodes = await api.seasons.seasonEpisodes(props.id).catch(() => null);
       if (mine === ticket) datesDerived.value = episodes?.datesDerived === true;
     }
   } catch (cause) {

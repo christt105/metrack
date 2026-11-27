@@ -262,7 +262,9 @@ describe('MediaEditView', () => {
       const { wrapper } = await open(
         {
           library: { getDetail: vi.fn().mockResolvedValue(season) },
-          seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: true }),
+          seasons: {
+            seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: true }),
+          },
         },
         '/seasons/30/edit',
         '/seasons/30',
@@ -278,7 +280,9 @@ describe('MediaEditView', () => {
       const { wrapper } = await open(
         {
           library: { getDetail: vi.fn().mockResolvedValue(season), patch },
-          seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: false }),
+          seasons: {
+            seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: false }),
+          },
         },
         '/seasons/30/edit',
         '/seasons/30',

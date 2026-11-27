@@ -34,7 +34,7 @@ async function start(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    await api.setSeasonRewatchIntent(season.id, true);
+    await api.seasons.setSeasonRewatchIntent(season.id, true);
     emit('changed');
   } catch (cause) {
     error.value = cause;

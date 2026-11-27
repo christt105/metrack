@@ -65,7 +65,7 @@ describe('MediaDetailView', () => {
       resolve = done;
     });
     const getDetail = vi.fn().mockResolvedValueOnce(movie).mockReturnValueOnce(next);
-    const { wrapper } = await mountDetail('movies', movie, { getDetail });
+    const { wrapper } = await mountDetail('movies', movie, { library: { getDetail } });
     await flushPromises();
     expect(wrapper.get('a.source-link').attributes('href')).toBe(
       'https://www.themoviedb.org/movie/10',
@@ -85,17 +85,12 @@ describe('MediaDetailView', () => {
   const groups = (wrapper: { findAll: (s: string) => { text: () => string }[] }) =>
     wrapper.findAll('.manage h3').map((h) => h.text());
 
-  async function mountDetail(
-    collection: string,
-    detail: object,
-    extra: NonNullable<ApiOverrides['library']> & Pick<ApiOverrides, 'seasonEpisodes'> = {},
-  ) {
-    const { seasonEpisodes, ...library } = extra;
+  async function mountDetail(collection: string, detail: object, extra: ApiOverrides = {}) {
     return mountWithApi(
       MediaDetailView,
       {
-        library: { getDetail: vi.fn().mockResolvedValue(detail), ...library },
-        ...(seasonEpisodes ? { seasonEpisodes } : {}),
+        ...extra,
+        library: { getDetail: vi.fn().mockResolvedValue(detail), ...extra.library },
       },
       { collection, id: (detail as { id: number }).id },
     );
@@ -146,7 +141,7 @@ describe('MediaDetailView', () => {
 
   it('needs two steps to delete and redirects to the library', async () => {
     const remove = vi.fn().mockResolvedValue(undefined);
-    const { wrapper, router } = await mountDetail('movies', movie, { remove });
+    const { wrapper, router } = await mountDetail('movies', movie, { library: { remove } });
     await flushPromises();
     const zone = () => wrapper.find('.danger-zone');
     await zone().find('button.danger').trigger('click');
@@ -165,7 +160,7 @@ describe('MediaDetailView', () => {
 
   it('sends a deleted season back to its series', async () => {
     const remove = vi.fn().mockResolvedValue(undefined);
-    const { wrapper, router } = await mountDetail('seasons', season, { remove });
+    const { wrapper, router } = await mountDetail('seasons', season, { library: { remove } });
     await flushPromises();
     await wrapper.find('.danger-zone button.danger').trigger('click');
     await wrapper.find('.danger-zone button.danger').trigger('click');
@@ -209,7 +204,10 @@ describe('MediaDetailView', () => {
         episodes: [],
         unmatched: lost,
       });
-      const { wrapper } = await mountDetail('seasons', season, { getDetail, seasonEpisodes });
+      const { wrapper } = await mountDetail('seasons', season, {
+        library: { getDetail },
+        seasons: { seasonEpisodes },
+      });
       await flushPromises();
       const banner = wrapper.find('.unmatched');
       expect(banner.text()).toContain('1 watched episode could not be recorded');

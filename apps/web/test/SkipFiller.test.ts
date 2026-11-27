@@ -48,7 +48,7 @@ describe('SkipFiller', () => {
   it('previews, preselects filler, skips per season and undoes exactly those keys', async () => {
     const fillerPreview = vi.fn().mockResolvedValue(response);
     const updateSeasonEpisodes = vi.fn().mockResolvedValue({});
-    const wrapper = await open({ library: { fillerPreview }, updateSeasonEpisodes });
+    const wrapper = await open({ library: { fillerPreview }, seasons: { updateSeasonEpisodes } });
     expect(fillerPreview).toHaveBeenCalledWith(7, undefined);
     expect(wrapper.get('[data-test="filler-counts"]').text()).toContain('Filler: 3');
     expect(wrapper.find('[data-test="filler-episode-1"]').exists()).toBe(false);

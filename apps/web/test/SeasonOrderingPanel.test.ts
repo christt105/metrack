@@ -29,7 +29,7 @@ describe('SeasonOrderingPanel', () => {
   it('preselects the suggested group and says why', async () => {
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS) },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS) } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('normal'),
     );
@@ -47,7 +47,7 @@ describe('SeasonOrderingPanel', () => {
     const episodeGroups = vi.fn().mockResolvedValue({ ...OPTIONS, suggested: null });
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups },
+      { seasons: { episodeGroups } },
       { seriesId: 7, hasUnlinkedSeasons: false },
       sessionOf('normal'),
     );
@@ -65,7 +65,7 @@ describe('SeasonOrderingPanel', () => {
     const setSeasonOrdering = vi.fn().mockResolvedValue({});
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('normal'),
     );
@@ -85,7 +85,7 @@ describe('SeasonOrderingPanel', () => {
       .mockResolvedValueOnce({});
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('owner'),
     );
@@ -104,7 +104,7 @@ describe('SeasonOrderingPanel', () => {
       .mockRejectedValue(new ApiRequestError('shared', 409, 'catalog_shared'));
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('normal'),
     );

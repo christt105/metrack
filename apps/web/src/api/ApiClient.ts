@@ -1,9 +1,5 @@
 import type {
-  EpisodeOperation,
   Language,
-  NextEpisodesResponse,
-  SeasonEpisodesResponse,
-  SeasonEpisodesUpdateResponse,
   AccountDeletion,
   AccountStatus,
   CreateInviteRequest,
@@ -15,7 +11,6 @@ import type {
   CreatedToken,
   CreateTokenRequest,
   Collection,
-  EpisodeGroupOptions,
   ImageCandidateList,
   ImageKind,
   SteamAchievementsDetail,
@@ -47,6 +42,7 @@ import { DEFAULT_RECODE_MAX_SIDE, recodeToWebp } from '../logic/recodeToWebp';
 
 import { AuthApi } from './areas/AuthApi';
 import { LibraryApi } from './areas/LibraryApi';
+import { SeasonsApi } from './areas/SeasonsApi';
 
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
@@ -54,6 +50,7 @@ import { LibraryApi } from './areas/LibraryApi';
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly seasons: SeasonsApi;
   readonly library: LibraryApi;
   readonly auth: AuthApi;
 
@@ -64,6 +61,7 @@ export class ApiClient {
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.seasons = new SeasonsApi(this.transport);
     this.library = new LibraryApi(this.transport);
     this.auth = new AuthApi(this.transport);
   }
@@ -72,61 +70,6 @@ export class ApiClient {
 
   private request<T>(method: string, path: string, body?: unknown): Promise<T> {
     return this.transport.request<T>(method, path, body);
-  }
-
-  nextEpisodes(series?: number): Promise<NextEpisodesResponse> {
-    return this.request('GET', series === undefined ? '/next' : `/next?series=${series}`);
-  }
-
-  hideFromNext(seriesId: number): Promise<void> {
-    return this.request('PUT', `/series/${seriesId}/next-hidden`);
-  }
-
-  showInNext(seriesId: number): Promise<void> {
-    return this.request('DELETE', `/series/${seriesId}/next-hidden`);
-  }
-
-  seasonEpisodes(seasonId: number): Promise<SeasonEpisodesResponse> {
-    return this.request('GET', `/seasons/${seasonId}/episodes`);
-  }
-
-  updateSeasonEpisodes(
-    seasonId: number,
-    operation: EpisodeOperation,
-  ): Promise<SeasonEpisodesUpdateResponse> {
-    return this.request('PATCH', `/seasons/${seasonId}/episodes`, operation);
-  }
-
-  restartSeason(seasonId: number): Promise<SeasonEpisodesUpdateResponse> {
-    return this.request('POST', `/seasons/${seasonId}/restart`);
-  }
-
-  undoSeasonRestart(seasonId: number, day?: string): Promise<SeasonEpisodesUpdateResponse> {
-    return this.request(
-      'DELETE',
-      `/seasons/${seasonId}/restart${day === undefined ? '' : `?day=${day}`}`,
-    );
-  }
-
-  removeSeasonPass(seasonId: number, pass: number): Promise<SeasonEpisodesUpdateResponse> {
-    return this.request('DELETE', `/seasons/${seasonId}/passes/${pass}`);
-  }
-
-  setSeasonRewatchIntent(seasonId: number, wanted: boolean): Promise<SeasonEpisodesUpdateResponse> {
-    return this.request('PUT', `/seasons/${seasonId}/rewatch-intent`, { wanted });
-  }
-
-  episodeGroups(seriesId: number): Promise<EpisodeGroupOptions> {
-    return this.request('GET', `/series/${seriesId}/episode-groups`);
-  }
-
-  setSeasonOrdering(
-    seriesId: number,
-    episodeGroup: string | null,
-    options: { forAll?: boolean } = {},
-  ): Promise<Detail<'series'>> {
-    const query = options.forAll ? '?forAll=true' : '';
-    return this.request('PUT', `/series/${seriesId}/season-ordering${query}`, { episodeGroup });
   }
 
   imageCandidates(

@@ -104,7 +104,7 @@ async function refillOnce(mine: number): Promise<void> {
   if (busy.value) return planRefill(mine);
   attempts.value += 1;
   try {
-    const loaded = await api.seasonEpisodes(props.seasonId);
+    const loaded = await api.seasons.seasonEpisodes(props.seasonId);
     if (mine === ticket && !busy.value) data.value = loaded;
   } catch {
     /* the next attempt asks again */
@@ -120,7 +120,7 @@ async function load(): Promise<void> {
   error.value = null;
   dismiss();
   try {
-    const loaded = await api.seasonEpisodes(props.seasonId);
+    const loaded = await api.seasons.seasonEpisodes(props.seasonId);
     if (mine !== ticket) return;
     data.value = loaded;
     emit('loaded', loaded);
@@ -162,7 +162,7 @@ async function run(
   try {
     const undo = inverseOperations(operation, data.value.episodes);
     const before = props.status;
-    const update = await api.updateSeasonEpisodes(props.seasonId, operation);
+    const update = await api.seasons.updateSeasonEpisodes(props.seasonId, operation);
     receive(update);
     say(describe(update.tracking.status !== before ? update.tracking.status : null), undo);
   } catch (cause) {
@@ -223,7 +223,7 @@ async function setRewatchIntent(wantedNow: boolean): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    receive(await api.setSeasonRewatchIntent(props.seasonId, wantedNow));
+    receive(await api.seasons.setSeasonRewatchIntent(props.seasonId, wantedNow));
     say(wantedNow ? messages.episodes.rewatchStarted : messages.episodes.rewatchCancelled, []);
   } catch (cause) {
     error.value = cause;
@@ -237,7 +237,7 @@ async function restart(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    receive(await api.restartSeason(props.seasonId));
+    receive(await api.seasons.restartSeason(props.seasonId));
     say(messages.episodes.restartDone, [], true);
   } catch (cause) {
     error.value = cause;
@@ -272,7 +272,7 @@ async function deletePass(pass: HistoryPass): Promise<void> {
   error.value = null;
   try {
     const undo = previousViewings(pass.rows);
-    receive(await api.removeSeasonPass(props.seasonId, pass.number));
+    receive(await api.seasons.removeSeasonPass(props.seasonId, pass.number));
     say(messages.history.passDeleted, undo);
   } catch (cause) {
     error.value = cause;
@@ -287,7 +287,7 @@ async function takeBack(pass: HistoryPass): Promise<void> {
   error.value = null;
   try {
     const undo = previousViewings(pass.rows);
-    receive(await api.undoSeasonRestart(props.seasonId, pass.abandonedOn));
+    receive(await api.seasons.undoSeasonRestart(props.seasonId, pass.abandonedOn));
     say(messages.history.startOverUndone, undo);
   } catch (cause) {
     error.value = cause;
@@ -301,7 +301,7 @@ async function removeIntent(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    receive(await api.setSeasonRewatchIntent(props.seasonId, false));
+    receive(await api.seasons.setSeasonRewatchIntent(props.seasonId, false));
     say(messages.history.intentRemoved, [], false, true);
   } catch (cause) {
     error.value = cause;
@@ -319,10 +319,10 @@ async function undo(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    if (intent !== null) receive(await api.setSeasonRewatchIntent(props.seasonId, intent));
-    if (restarted) receive(await api.undoSeasonRestart(props.seasonId));
+    if (intent !== null) receive(await api.seasons.setSeasonRewatchIntent(props.seasonId, intent));
+    if (restarted) receive(await api.seasons.undoSeasonRestart(props.seasonId));
     for (const operation of operations) {
-      receive(await api.updateSeasonEpisodes(props.seasonId, operation));
+      receive(await api.seasons.updateSeasonEpisodes(props.seasonId, operation));
     }
     say(messages.quick.undone, []);
   } catch (cause) {
