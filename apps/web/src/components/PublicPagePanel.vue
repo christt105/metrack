@@ -74,7 +74,7 @@ async function save(): Promise<void> {
   error.value = null;
   const giscusValues = [repo, repoId, category, categoryId].map((value) => value.value.trim());
   try {
-    const page = await api.updatePublicPage({
+    const page = await api.settings.updatePublicPage({
       handle: handle.value.trim(),
       enabled: enabled.value,
       ...(avatar.value === props.page.avatar ? {} : { avatar: avatar.value }),

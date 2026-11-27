@@ -41,12 +41,14 @@ describe('Spanish dictionary in components', () => {
             features: { backups: true, sync: true, googleLogin: false },
           }),
         },
-        ownSettings: vi.fn().mockResolvedValue({
-          settings: noSettings,
-          publicPage: EMPTY_PAGE,
-          owner: true,
-          ntfyTopicGenerated: false,
-        } satisfies OwnSettings),
+        settings: {
+          ownSettings: vi.fn().mockResolvedValue({
+            settings: noSettings,
+            publicPage: EMPTY_PAGE,
+            owner: true,
+            ntfyTopicGenerated: false,
+          } satisfies OwnSettings),
+        },
         listUsers: vi.fn().mockResolvedValue([{ user: owner, settings: noSettings }]),
         listBackups: vi.fn().mockResolvedValue([]),
       },

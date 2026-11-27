@@ -47,7 +47,7 @@ describe('LanguagePanel', () => {
     const session = new Session(fakeApi({}));
     const { wrapper } = await mountWithApi(
       LanguagePanel,
-      { updateLanguage },
+      { settings: { updateLanguage } },
       { language: null },
       { [sessionKey as symbol]: session },
     );
@@ -59,7 +59,11 @@ describe('LanguagePanel', () => {
 
   it('sends null for automatic', async () => {
     const updateLanguage = vi.fn().mockResolvedValue({ ...settings, language: null });
-    const { wrapper } = await mountWithApi(LanguagePanel, { updateLanguage }, { language: 'en' });
+    const { wrapper } = await mountWithApi(
+      LanguagePanel,
+      { settings: { updateLanguage } },
+      { language: 'en' },
+    );
     await wrapper.find('select').setValue('');
     await flushPromises();
     expect(updateLanguage).toHaveBeenCalledWith(null);
@@ -67,7 +71,11 @@ describe('LanguagePanel', () => {
 
   it('shows the error and keeps the previous choice when saving fails', async () => {
     const updateLanguage = vi.fn().mockRejectedValue(new Error('boom'));
-    const { wrapper } = await mountWithApi(LanguagePanel, { updateLanguage }, { language: 'en' });
+    const { wrapper } = await mountWithApi(
+      LanguagePanel,
+      { settings: { updateLanguage } },
+      { language: 'en' },
+    );
     await wrapper.find('select').setValue('es');
     await flushPromises();
     expect((wrapper.find('select').element as HTMLSelectElement).value).toBe('en');

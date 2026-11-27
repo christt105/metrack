@@ -8,7 +8,7 @@ describe('SteamPanel', () => {
     const updateSteamId = vi.fn().mockResolvedValue({ steamId: '76561198012345678' });
     const { wrapper } = await mountWithApi(
       SteamPanel,
-      { updateSteamId },
+      { settings: { updateSteamId } },
       { steamId: null, canImport: true },
     );
     await wrapper.find('[data-test="steam-input"]').setValue('steamcommunity.com/id/gaben');
@@ -27,7 +27,7 @@ describe('SteamPanel', () => {
       .mockRejectedValue(new Error('Steam has no profile with that name'));
     const { wrapper } = await mountWithApi(
       SteamPanel,
-      { updateSteamId },
+      { settings: { updateSteamId } },
       { steamId: '76561198012345678', canImport: true },
     );
     await wrapper.find('[data-test="steam-input"]').setValue('');

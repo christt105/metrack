@@ -28,19 +28,21 @@ async function mountApp(publicPage: PublicPage) {
   const api = fakeApi({
     auth: { me: async () => USER },
     accountStatus: async () => ({ deletion: null, needsWelcome: false, canDelete: true }),
-    ownSettings: async () => ({
-      publicPage,
-      settings: {
-        language: null,
-        jellyfinUser: null,
-        ntfyTopic: null,
-        steamId: null,
-        mirrorDir: null,
-        mirrorLinkPrefix: null,
-      },
-      owner: false,
-      ntfyTopicGenerated: false,
-    }),
+    settings: {
+      ownSettings: async () => ({
+        publicPage,
+        settings: {
+          language: null,
+          jellyfinUser: null,
+          ntfyTopic: null,
+          steamId: null,
+          mirrorDir: null,
+          mirrorLinkPrefix: null,
+        },
+        owner: false,
+        ntfyTopicGenerated: false,
+      }),
+    },
   });
   const session = new Session(api);
   await session.current();

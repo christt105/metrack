@@ -26,7 +26,7 @@ let healthRequest: Promise<HealthReport> | undefined;
 const loadHealth = (): Promise<HealthReport> => (healthRequest ??= api.auth.health());
 const { data: health, error: healthError } = useLoader(loadHealth);
 let ownRequest: Promise<OwnSettings> | undefined;
-const loadOwn = (): Promise<OwnSettings> => (ownRequest ??= api.ownSettings());
+const loadOwn = (): Promise<OwnSettings> => (ownRequest ??= api.settings.ownSettings());
 const { data: own, error: ownError, reload: reloadOwn } = useLoader(loadOwn);
 const owner = computed(() => own.value?.owner === true);
 const ownerOnly = async <T,>(load: () => Promise<T>): Promise<T | null> =>

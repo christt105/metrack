@@ -7,9 +7,6 @@ import type {
   Invite,
   UserSummary,
   UserRole,
-  ApiToken,
-  CreatedToken,
-  CreateTokenRequest,
   SteamAchievementsDetail,
   SteamAchievementsRequest,
   SteamAchievementsResponse,
@@ -22,9 +19,6 @@ import type {
   UserSettings,
   UserSettingsPatch,
   UserWithSettings,
-  OwnSettings,
-  PublicPage,
-  PublicPagePatch,
 } from '@metrack/domain';
 import type { AccountExportData } from './AccountExportData';
 import type { BackupInfo } from './BackupInfo';
@@ -36,6 +30,7 @@ import { LibraryApi } from './areas/LibraryApi';
 import { SeasonsApi } from './areas/SeasonsApi';
 import { ImagesApi } from './areas/ImagesApi';
 import { FollowingApi } from './areas/FollowingApi';
+import { SettingsApi } from './areas/SettingsApi';
 
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
@@ -43,6 +38,7 @@ import { FollowingApi } from './areas/FollowingApi';
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly settings: SettingsApi;
   readonly following: FollowingApi;
   readonly images: ImagesApi;
   readonly seasons: SeasonsApi;
@@ -56,6 +52,7 @@ export class ApiClient {
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.settings = new SettingsApi(this.transport);
     this.following = new FollowingApi(this.transport);
     this.images = new ImagesApi(this.transport, recode);
     this.seasons = new SeasonsApi(this.transport);
@@ -83,26 +80,6 @@ export class ApiClient {
     return this.request('POST', '/sync/apply', { confirm: true });
   }
 
-  ownSettings(): Promise<OwnSettings> {
-    return this.request('GET', '/settings');
-  }
-
-  generateNtfyTopic(): Promise<UserSettings> {
-    return this.request('POST', '/settings/ntfy-topic');
-  }
-
-  clearNtfyTopic(): Promise<UserSettings> {
-    return this.request('DELETE', '/settings/ntfy-topic');
-  }
-
-  updateLanguage(language: Language | null): Promise<UserSettings> {
-    return this.request('PATCH', '/settings', { language });
-  }
-
-  updateSteamId(steamId: string | null): Promise<UserSettings> {
-    return this.request('PATCH', '/settings', { steamId });
-  }
-
   steamReport(): Promise<SteamImportReport> {
     return this.request('GET', '/steam/report');
   }
@@ -125,28 +102,12 @@ export class ApiClient {
     return this.request('POST', '/steam/achievements', request);
   }
 
-  updatePublicPage(patch: PublicPagePatch): Promise<PublicPage> {
-    return this.request('PATCH', '/settings/public-page', patch);
-  }
-
   listUsers(): Promise<UserWithSettings[]> {
     return this.request('GET', '/users');
   }
 
   updateUserSettings(userId: number, patch: UserSettingsPatch): Promise<UserSettings> {
     return this.request('PATCH', `/users/${userId}/settings`, patch);
-  }
-
-  listTokens(): Promise<ApiToken[]> {
-    return this.request('GET', '/tokens');
-  }
-
-  createToken(request: CreateTokenRequest): Promise<CreatedToken> {
-    return this.request('POST', '/tokens', request);
-  }
-
-  revokeToken(id: number): Promise<void> {
-    return this.request('DELETE', `/tokens/${id}`);
   }
 
   listInvites(): Promise<Invite[]> {

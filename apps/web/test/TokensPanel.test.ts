@@ -24,17 +24,21 @@ describe('TokensPanel', () => {
 
   it('offers the connector scope only to the owner', async () => {
     const listTokens = vi.fn().mockResolvedValue([]);
-    const user = await mountWithApi(TokensPanel, { listTokens });
+    const user = await mountWithApi(TokensPanel, { settings: { listTokens } });
     await flushPromises();
     expect(scopes(user.wrapper)).toEqual(['read', 'write']);
-    const owner = await mountWithApi(TokensPanel, { listTokens }, { connector: true });
+    const owner = await mountWithApi(
+      TokensPanel,
+      { settings: { listTokens } },
+      { connector: true },
+    );
     await flushPromises();
     expect(scopes(owner.wrapper)).toEqual(['read', 'write', 'connector']);
   });
 
   it('lists tokens with their access, dates and last use', async () => {
     const { wrapper } = await mountWithApi(TokensPanel, {
-      listTokens: vi.fn().mockResolvedValue([connector]),
+      settings: { listTokens: vi.fn().mockResolvedValue([connector]) },
     });
     await flushPromises();
     expect(wrapper.text()).toContain('Connector');
@@ -46,7 +50,7 @@ describe('TokensPanel', () => {
   it('creates a token, shows its secret once and reloads the list', async () => {
     const listTokens = vi.fn().mockResolvedValueOnce([]).mockResolvedValue([connector]);
     const createToken = vi.fn().mockResolvedValue({ token: connector, secret: 'mt_secret' });
-    const { wrapper } = await mountWithApi(TokensPanel, { listTokens, createToken });
+    const { wrapper } = await mountWithApi(TokensPanel, { settings: { listTokens, createToken } });
     await flushPromises();
     expect(wrapper.text()).toContain('No tokens yet.');
 
@@ -78,7 +82,7 @@ describe('TokensPanel', () => {
     window.confirm = vi.fn().mockReturnValue(true);
     const listTokens = vi.fn().mockResolvedValueOnce([connector]).mockResolvedValue([]);
     const revokeToken = vi.fn().mockResolvedValue(undefined);
-    const { wrapper } = await mountWithApi(TokensPanel, { listTokens, revokeToken });
+    const { wrapper } = await mountWithApi(TokensPanel, { settings: { listTokens, revokeToken } });
     await flushPromises();
     await wrapper.find('.tokens button').trigger('click');
     await flushPromises();

@@ -9,12 +9,14 @@ describe('Session language', () => {
   it('takes the language from the signed-in user settings and forgets it on sign-out', async () => {
     const api = fakeApi({
       accountStatus: vi.fn().mockResolvedValue({ deletion: null, needsWelcome: false }),
-      ownSettings: vi.fn().mockResolvedValue({
-        settings: { language: 'en' },
-        publicPage: EMPTY_PAGE,
-        owner: false,
-        ntfyTopicGenerated: false,
-      }),
+      settings: {
+        ownSettings: vi.fn().mockResolvedValue({
+          settings: { language: 'en' },
+          publicPage: EMPTY_PAGE,
+          owner: false,
+          ntfyTopicGenerated: false,
+        }),
+      },
     });
     const session = new Session(api);
     session.signedIn(user);

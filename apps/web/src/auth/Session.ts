@@ -62,7 +62,7 @@ export class Session {
       return;
     }
     try {
-      const own = await this.api.ownSettings();
+      const own = await this.api.settings.ownSettings();
       this.publicPage.value = own.publicPage;
       this.language.value = own.settings.language;
       this.jellyfinLinked.value = Boolean(own.settings.jellyfinUser);

@@ -1,3 +1,4 @@
+import type { ApiOverrides } from './ApiOverrides';
 import { EMPTY_PAGE } from './EMPTY_PAGE';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
@@ -38,12 +39,14 @@ const friend: User = { id: 2, name: 'Friend', email: null, role: 'normal' };
 
 function ownerApi() {
   return {
-    ownSettings: vi.fn().mockResolvedValue({
-      settings: ownerSettings,
-      publicPage: EMPTY_PAGE,
-      owner: true,
-      ntfyTopicGenerated: false,
-    } satisfies OwnSettings),
+    settings: {
+      ownSettings: vi.fn().mockResolvedValue({
+        settings: ownerSettings,
+        publicPage: EMPTY_PAGE,
+        owner: true,
+        ntfyTopicGenerated: false,
+      } satisfies OwnSettings),
+    },
     listUsers: vi.fn().mockResolvedValue([
       { user: owner, settings: ownerSettings },
       { user: friend, settings: noSettings },
@@ -237,12 +240,14 @@ describe('SettingsView user settings', () => {
     const listUsers = vi.fn();
     const { wrapper } = await mountWithApi(SettingsView, {
       auth: { health: vi.fn().mockResolvedValue(health) },
-      ownSettings: vi.fn().mockResolvedValue({
-        settings: { ...noSettings, jellyfinUser: 'haku' },
-        publicPage: EMPTY_PAGE,
-        owner: false,
-        ntfyTopicGenerated: false,
-      } satisfies OwnSettings),
+      settings: {
+        ownSettings: vi.fn().mockResolvedValue({
+          settings: { ...noSettings, jellyfinUser: 'haku' },
+          publicPage: EMPTY_PAGE,
+          owner: false,
+          ntfyTopicGenerated: false,
+        } satisfies OwnSettings),
+      },
       listBackups,
       listUsers,
     });
@@ -343,12 +348,14 @@ describe('SettingsView images', () => {
   it('shows every user how much of their image quota they use', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       auth: { health: vi.fn().mockResolvedValue(health) },
-      ownSettings: vi.fn().mockResolvedValue({
-        settings: noSettings,
-        publicPage: EMPTY_PAGE,
-        owner: false,
-        ntfyTopicGenerated: false,
-      } satisfies OwnSettings),
+      settings: {
+        ownSettings: vi.fn().mockResolvedValue({
+          settings: noSettings,
+          publicPage: EMPTY_PAGE,
+          owner: false,
+          ntfyTopicGenerated: false,
+        } satisfies OwnSettings),
+      },
       images: {
         imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: 209_715_200 }),
       },
@@ -360,12 +367,14 @@ describe('SettingsView images', () => {
   it('says the owner has no limit', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       auth: { health: vi.fn().mockResolvedValue(health) },
-      ownSettings: vi.fn().mockResolvedValue({
-        settings: noSettings,
-        publicPage: EMPTY_PAGE,
-        owner: false,
-        ntfyTopicGenerated: false,
-      } satisfies OwnSettings),
+      settings: {
+        ownSettings: vi.fn().mockResolvedValue({
+          settings: noSettings,
+          publicPage: EMPTY_PAGE,
+          owner: false,
+          ntfyTopicGenerated: false,
+        } satisfies OwnSettings),
+      },
       images: {
         imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: null }),
       },
@@ -390,8 +399,10 @@ describe('SettingsView release alerts', () => {
     const generateNtfyTopic = vi.fn().mockResolvedValue({ ...noSettings, ntfyTopic: topic });
     const { wrapper } = await mountWithApi(SettingsView, {
       auth: { health: vi.fn().mockResolvedValue(cloudHealth) },
-      ownSettings: vi.fn().mockResolvedValueOnce(cloud(null)).mockResolvedValueOnce(cloud(topic)),
-      generateNtfyTopic,
+      settings: {
+        ownSettings: vi.fn().mockResolvedValueOnce(cloud(null)).mockResolvedValueOnce(cloud(topic)),
+        generateNtfyTopic,
+      },
     });
     await flushPromises();
     expect(wrapper.find('[data-test="ntfy-link"]').exists()).toBe(false);
@@ -409,8 +420,7 @@ describe('SettingsView release alerts', () => {
     window.confirm = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
     const { wrapper } = await mountWithApi(SettingsView, {
       auth: { health: vi.fn().mockResolvedValue(cloudHealth) },
-      ownSettings: vi.fn().mockResolvedValue(cloud(topic)),
-      generateNtfyTopic,
+      settings: { ownSettings: vi.fn().mockResolvedValue(cloud(topic)), generateNtfyTopic },
     });
     await flushPromises();
     await wrapper.find('[data-test="ntfy-regenerate"]').trigger('click');
@@ -425,8 +435,10 @@ describe('SettingsView release alerts', () => {
     const clearNtfyTopic = vi.fn().mockResolvedValue(noSettings);
     const { wrapper } = await mountWithApi(SettingsView, {
       auth: { health: vi.fn().mockResolvedValue(cloudHealth) },
-      ownSettings: vi.fn().mockResolvedValueOnce(cloud(topic)).mockResolvedValueOnce(cloud(null)),
-      clearNtfyTopic,
+      settings: {
+        ownSettings: vi.fn().mockResolvedValueOnce(cloud(topic)).mockResolvedValueOnce(cloud(null)),
+        clearNtfyTopic,
+      },
     });
     await flushPromises();
     await wrapper.find('[data-test="ntfy-off"]').trigger('click');
@@ -438,7 +450,7 @@ describe('SettingsView release alerts', () => {
   it('does not let the owner type the topic of a user in the cloud', async () => {
     const { wrapper } = await mountWithApi(SettingsView, {
       auth: { health: vi.fn().mockResolvedValue(cloudHealth) },
-      ownSettings: vi.fn().mockResolvedValue(cloud(topic, true)),
+      settings: { ownSettings: vi.fn().mockResolvedValue(cloud(topic, true)) },
       listUsers: vi.fn().mockResolvedValue([{ user: friend, settings: noSettings }]),
     });
     await flushPromises();
@@ -460,7 +472,7 @@ describe('SettingsView release alerts', () => {
 });
 
 describe('SettingsView invitations and accounts', () => {
-  const panels = (api: object) => ({
+  const panels = (api: ApiOverrides) => ({
     auth: { health: vi.fn().mockResolvedValue(health) },
     listInvites: vi.fn().mockResolvedValue([]),
     listUserSummaries: vi.fn().mockResolvedValue([]),
@@ -476,12 +488,14 @@ describe('SettingsView invitations and accounts', () => {
 
   it('hides them from a normal user and never asks for them', async () => {
     const api = panels({
-      ownSettings: vi.fn().mockResolvedValue({
-        settings: noSettings,
-        publicPage: EMPTY_PAGE,
-        owner: false,
-        ntfyTopicGenerated: false,
-      } satisfies OwnSettings),
+      settings: {
+        ownSettings: vi.fn().mockResolvedValue({
+          settings: noSettings,
+          publicPage: EMPTY_PAGE,
+          owner: false,
+          ntfyTopicGenerated: false,
+        } satisfies OwnSettings),
+      },
     });
     const { wrapper } = await mountWithApi(SettingsView, api);
     await flushPromises();

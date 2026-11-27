@@ -21,7 +21,7 @@ async function choose(event: Event): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    const saved = await api.updateLanguage(language);
+    const saved = await api.settings.updateLanguage(language);
     current.value = saved.language;
     session.setLanguage(saved.language);
   } catch (cause) {
