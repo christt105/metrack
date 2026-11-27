@@ -16,7 +16,7 @@ describe('ManualAddForm', () => {
   it('lets a trusted user add by hand', async () => {
     const { wrapper } = await mountWithApi(
       ManualAddForm,
-      { create: vi.fn() },
+      { library: { create: vi.fn() } },
       { collection: 'games' },
       { [sessionKey as symbol]: sessionOf({ id: 2, name: 'T', email: null, role: 'trusted' }) },
     );
@@ -26,7 +26,7 @@ describe('ManualAddForm', () => {
   it('tells a normal user to ask the owner instead of showing the form', async () => {
     const { wrapper } = await mountWithApi(
       ManualAddForm,
-      { create: vi.fn() },
+      { library: { create: vi.fn() } },
       { collection: 'games' },
       { [sessionKey as symbol]: sessionOf({ id: 3, name: 'N', email: null, role: 'normal' }) },
     );

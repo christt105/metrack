@@ -86,7 +86,7 @@ afterEach(() => {
 
 describe('MediaEditView', () => {
   it('renders the sections in order', async () => {
-    const { wrapper } = await open({ getDetail: vi.fn().mockResolvedValue(movie) });
+    const { wrapper } = await open({ library: { getDetail: vi.fn().mockResolvedValue(movie) } });
     const legends = wrapper.findAll('fieldset legend').map((l) => l.text());
     expect(legends).toEqual(['Your tracking', 'Your notes', 'Title details', 'Identifiers']);
     expect(wrapper.find('h1').text()).toBe('Edit Heat');
@@ -95,7 +95,7 @@ describe('MediaEditView', () => {
 
   it('has no tracking section for a series and keeps its review under notes', async () => {
     const { wrapper } = await open(
-      { getDetail: vi.fn().mockResolvedValue(series) },
+      { library: { getDetail: vi.fn().mockResolvedValue(series) } },
       '/series/9/edit',
       '/series/9',
     );
@@ -106,13 +106,13 @@ describe('MediaEditView', () => {
   });
 
   it('offers only valid status transitions', async () => {
-    const { wrapper } = await open({ getDetail: vi.fn().mockResolvedValue(movie) });
+    const { wrapper } = await open({ library: { getDetail: vi.fn().mockResolvedValue(movie) } });
     const options = wrapper.findAll('#field-status option').map((o) => o.attributes('value'));
     expect(options).toEqual(['in_progress', 'completed']);
   });
 
   it('disables Save until something changes and counts the changes', async () => {
-    const { wrapper } = await open({ getDetail: vi.fn().mockResolvedValue(movie) });
+    const { wrapper } = await open({ library: { getDetail: vi.fn().mockResolvedValue(movie) } });
     const { save, count } = footerButtons(wrapper);
     expect(save.attributes('disabled')).toBeDefined();
     expect(count.text()).toBe('No changes');
@@ -126,8 +126,7 @@ describe('MediaEditView', () => {
   it('sends only the changed fields and goes back to the detail page', async () => {
     const patch = vi.fn().mockResolvedValue(movie);
     const { wrapper, router } = await open({
-      getDetail: vi.fn().mockResolvedValue(movie),
-      patch,
+      library: { getDetail: vi.fn().mockResolvedValue(movie), patch },
     });
     Object.defineProperty(router.options.history, 'state', { value: { back: '/movies/4' } });
     const back = vi.spyOn(router, 'back').mockImplementation(() => undefined);
@@ -140,7 +139,12 @@ describe('MediaEditView', () => {
 
   it('replaces the edit entry when it was opened directly', async () => {
     const { wrapper, router } = await open(
-      { getDetail: vi.fn().mockResolvedValue(movie), patch: vi.fn().mockResolvedValue(movie) },
+      {
+        library: {
+          getDetail: vi.fn().mockResolvedValue(movie),
+          patch: vi.fn().mockResolvedValue(movie),
+        },
+      },
       '/movies/4/edit',
       '/',
     );
@@ -153,7 +157,9 @@ describe('MediaEditView', () => {
   it('sends the pending review checkbox as pendingReview', async () => {
     const pending = { ...movie, pendingReview: true } as AnyDetail;
     const patch = vi.fn().mockResolvedValue(movie);
-    const { wrapper } = await open({ getDetail: vi.fn().mockResolvedValue(pending), patch });
+    const { wrapper } = await open({
+      library: { getDetail: vi.fn().mockResolvedValue(pending), patch },
+    });
     const box = wrapper.find('#field-pendingReview');
     expect((box.element as HTMLInputElement).checked).toBe(true);
     await box.setValue(false);
@@ -167,9 +173,7 @@ describe('MediaEditView', () => {
     const unmarkEdited = vi.fn().mockResolvedValue(undefined);
     const patch = vi.fn();
     const { wrapper } = await open({
-      getDetail: vi.fn().mockResolvedValue(movie),
-      unmarkEdited,
-      patch,
+      library: { getDetail: vi.fn().mockResolvedValue(movie), unmarkEdited, patch },
     });
     const toggle = wrapper.find('.field .below button');
     await toggle.trigger('click');
@@ -186,7 +190,9 @@ describe('MediaEditView', () => {
 
   it('shows a field problem and does not save', async () => {
     const patch = vi.fn();
-    const { wrapper } = await open({ getDetail: vi.fn().mockResolvedValue(movie), patch });
+    const { wrapper } = await open({
+      library: { getDetail: vi.fn().mockResolvedValue(movie), patch },
+    });
     await wrapper.find('#field-title').setValue('');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
@@ -197,7 +203,9 @@ describe('MediaEditView', () => {
   it('asks before leaving with unsaved changes', async () => {
     const confirm = vi.fn().mockReturnValue(false);
     vi.stubGlobal('confirm', confirm);
-    const { wrapper, router } = await open({ getDetail: vi.fn().mockResolvedValue(movie) });
+    const { wrapper, router } = await open({
+      library: { getDetail: vi.fn().mockResolvedValue(movie) },
+    });
     await wrapper.find('#field-slug').setValue('heat');
     await router.push('/watchlist');
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('unsaved changes'));
@@ -211,8 +219,10 @@ describe('MediaEditView', () => {
     const confirm = vi.fn().mockReturnValue(true);
     vi.stubGlobal('confirm', confirm);
     const { wrapper, router } = await open({
-      getDetail: vi.fn().mockResolvedValue(movie),
-      patch: vi.fn().mockResolvedValue(movie),
+      library: {
+        getDetail: vi.fn().mockResolvedValue(movie),
+        patch: vi.fn().mockResolvedValue(movie),
+      },
     });
     await wrapper.find('#field-slug').setValue('heat');
     await wrapper.find('form').trigger('submit');
@@ -222,7 +232,7 @@ describe('MediaEditView', () => {
   });
 
   it('warns on page unload only while dirty', async () => {
-    const { wrapper } = await open({ getDetail: vi.fn().mockResolvedValue(movie) });
+    const { wrapper } = await open({ library: { getDetail: vi.fn().mockResolvedValue(movie) } });
     const clean = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(clean);
     expect(clean.defaultPrevented).toBe(false);
@@ -251,7 +261,7 @@ describe('MediaEditView', () => {
     it('shows the dates read-only with a hint when they come from the episodes', async () => {
       const { wrapper } = await open(
         {
-          getDetail: vi.fn().mockResolvedValue(season),
+          library: { getDetail: vi.fn().mockResolvedValue(season) },
           seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: true }),
         },
         '/seasons/30/edit',
@@ -267,9 +277,8 @@ describe('MediaEditView', () => {
       const patch = vi.fn().mockResolvedValue(season);
       const { wrapper } = await open(
         {
-          getDetail: vi.fn().mockResolvedValue(season),
+          library: { getDetail: vi.fn().mockResolvedValue(season), patch },
           seasonEpisodes: vi.fn().mockResolvedValue({ ...EMPTY_EPISODES, datesDerived: false }),
-          patch,
         },
         '/seasons/30/edit',
         '/seasons/30',

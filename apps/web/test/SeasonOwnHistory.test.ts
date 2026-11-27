@@ -24,7 +24,11 @@ const season = {
 describe('SeasonOwnHistory', () => {
   it('edits the dates of the season with one date and undoes it with a restore', async () => {
     const patch = vi.fn().mockResolvedValue({});
-    const { wrapper } = await mountWithApi(SeasonOwnHistory, { patch: patch as never }, { season });
+    const { wrapper } = await mountWithApi(
+      SeasonOwnHistory,
+      { library: { patch: patch as never } },
+      { season },
+    );
     const row = wrapper.find('.dates li');
     await row.find('button').trigger('click');
     expect(row.findAll('input.date-trigger')).toHaveLength(2);
@@ -47,7 +51,11 @@ describe('SeasonOwnHistory', () => {
 
   it('lists the rewatches through the rewatch list and adds one with a single date', async () => {
     const patch = vi.fn().mockResolvedValue({});
-    const { wrapper } = await mountWithApi(SeasonOwnHistory, { patch: patch as never }, { season });
+    const { wrapper } = await mountWithApi(
+      SeasonOwnHistory,
+      { library: { patch: patch as never } },
+      { season },
+    );
     const add = wrapper.find('form.add');
     expect(add.findAll('input.date-trigger')).toHaveLength(1);
     await pickDate(add.get('input.date-trigger'), '2026-03-01');

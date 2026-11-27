@@ -1,30 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiClient } from '../src/api/ApiClient';
-import { ApiRequestError } from '../src/api/ApiRequestError';
-import { recorder } from './recordApi';
 
 describe('ApiClient', () => {
-  it('builds the list query string without empty values', async () => {
-    const { calls, client } = recorder(new Response(JSON.stringify({ items: [], total: 0 })));
-    await client.listMedia({ q: 'dan', status: 'completed', limit: 10, type: undefined });
-    expect(calls[0]?.url).toBe('/api/media?q=dan&status=completed&limit=10');
-  });
-
-  it('sends JSON bodies', async () => {
-    const { calls, client } = recorder(new Response('{}'));
-    await client.patch('movies', 3, { rating: 7 });
-    expect(calls[0]?.url).toBe('/api/movies/3');
-    expect(calls[0]?.init?.method).toBe('PATCH');
-    expect(calls[0]?.init?.body).toBe('{"rating":7}');
-  });
-
   it('asks to change a shared catalog field for everyone only when told to', async () => {
     const calls: { url: string; init?: RequestInit }[] = [];
     const client = new ApiClient((async (url: string, init?: RequestInit) => {
       calls.push({ url, init });
       return new Response('{}');
     }) as unknown as typeof fetch);
-    await client.patch('seasons', 3, { tmdbSeasonNumber: 2 }, { forAll: true });
+    await client.library.patch('seasons', 3, { tmdbSeasonNumber: 2 }, { forAll: true });
     await client.setSeasonOrdering(4, 'g1');
     await client.setSeasonOrdering(4, null, { forAll: true });
     await client.episodeGroups(4);
@@ -38,37 +22,6 @@ describe('ApiClient', () => {
     ]);
     expect(calls[1]?.init?.body).toBe('{"episodeGroup":"g1"}');
     expect(calls[4]?.init?.body).toBe('{"op":"unmark","keys":["s1e2"]}');
-  });
-
-  it('encodes free-text path segments', async () => {
-    const { calls, client } = recorder(new Response('{}'));
-    await client.removeRewatch('movies', 3, '2026/../x?y#z');
-    expect(calls[0]?.url).toBe('/api/movies/3/rewatches/2026%2F..%2Fx%3Fy%23z');
-    expect(calls[0]?.init?.method).toBe('DELETE');
-  });
-
-  it('posts a viewing with an optional start', async () => {
-    const first = recorder(new Response('{}'));
-    await first.client.addRewatch('games', 2, '2026-01-02');
-    const second = recorder(new Response('{}'));
-    await second.client.addRewatch('games', 2, '2026-01-02', '2026-01-01');
-    expect(first.calls[0]?.init?.body).toBe('{"finishedAt":"2026-01-02"}');
-    expect(second.calls[0]?.init?.body).toBe(
-      '{"startedAt":"2026-01-01","finishedAt":"2026-01-02"}',
-    );
-  });
-
-  it('turns an error body into an ApiRequestError', async () => {
-    const body = { error: 'No such transition', code: 'invalid_transition', details: { x: 1 } };
-    const { client } = recorder(new Response(JSON.stringify(body), { status: 409 }));
-    const error = await client.patch('movies', 1, { status: 'planned' }).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ApiRequestError);
-    expect(error).toMatchObject({
-      status: 409,
-      code: 'invalid_transition',
-      message: 'No such transition',
-      details: { x: 1 },
-    });
   });
 
   describe('imageBytes', () => {

@@ -39,7 +39,7 @@ describe('MediaListView', () => {
       ],
     });
     vi.useFakeTimers();
-    const { wrapper } = await mountWithApi(MediaListView, { listMedia });
+    const { wrapper } = await mountWithApi(MediaListView, { library: { listMedia } });
     await vi.advanceTimersByTimeAsync(0);
     await flushPromises();
     expect(wrapper.findAll('.grid .card')).toHaveLength(2);
@@ -59,7 +59,7 @@ describe('MediaListView', () => {
 describe('MediaListView empty states', () => {
   it('welcomes a user whose library is empty and links to adding a title', async () => {
     const listMedia = vi.fn().mockResolvedValue({ total: 0, items: [] });
-    const { wrapper, router } = await mountWithApi(MediaListView, { listMedia });
+    const { wrapper, router } = await mountWithApi(MediaListView, { library: { listMedia } });
     await flushPromises();
     expect(wrapper.text()).toContain('Welcome to metrack');
     expect(wrapper.text()).not.toContain('Nothing matches these filters.');
@@ -70,7 +70,7 @@ describe('MediaListView empty states', () => {
 
   it('links the welcome to the help page', async () => {
     const listMedia = vi.fn().mockResolvedValue({ total: 0, items: [] });
-    const { wrapper, router } = await mountWithApi(MediaListView, { listMedia });
+    const { wrapper, router } = await mountWithApi(MediaListView, { library: { listMedia } });
     await flushPromises();
     await wrapper.find('.welcome a').trigger('click');
     await flushPromises();
@@ -85,7 +85,7 @@ describe('MediaListView empty states', () => {
         items: [{ ...base, type: 'movie', id: 1, title: 'Heat', status: 'completed' }],
       })
       .mockResolvedValue({ total: 0, items: [] });
-    const { wrapper } = await mountWithApi(MediaListView, { listMedia });
+    const { wrapper } = await mountWithApi(MediaListView, { library: { listMedia } });
     await flushPromises();
     vi.useFakeTimers();
     await wrapper.find('input[type="search"]').setValue('zzz');
@@ -106,7 +106,7 @@ describe('MediaListView empty states', () => {
     const listMedia = vi.fn().mockReturnValue(new Promise((r) => (resolve = r)));
     const { wrapper } = await mountWithApi(
       MediaListView,
-      { listMedia },
+      { library: { listMedia } },
       {},
       { [libraryCacheKey as symbol]: cache },
     );

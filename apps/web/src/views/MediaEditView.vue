@@ -114,7 +114,7 @@ function reset(current: AnyDetail): void {
 async function load(): Promise<void> {
   const mine = ++ticket;
   try {
-    const result = (await api.getDetail(props.collection, props.id)) as AnyDetail;
+    const result = (await api.library.getDetail(props.collection, props.id)) as AnyDetail;
     if (mine !== ticket) return;
     detail.value = result;
     error.value = null;
@@ -163,13 +163,14 @@ async function save(): Promise<void> {
   try {
     if (Object.keys(patch).length > 0) {
       await saveForAll(
-        (options) => api.patch(props.collection, props.id, patch as never, options),
+        (options) => api.library.patch(props.collection, props.id, patch as never, options),
         session?.user.value?.role === 'owner',
         () => window.confirm(messages.detail.confirmForAll),
       );
       patched = true;
     }
-    for (const key of releases.value) await api.unmarkEdited(props.collection, props.id, key);
+    for (const key of releases.value)
+      await api.library.unmarkEdited(props.collection, props.id, key);
     await leave();
   } catch (cause) {
     leaving.value = false;

@@ -32,7 +32,7 @@ async function mountApp(jellyfinUser: string | null) {
       owner: false,
       ntfyTopicGenerated: false,
     }),
-    listUnlinked: async () => [],
+    library: { listUnlinked: async () => [] },
   });
   const session = new Session(api);
   await session.current();

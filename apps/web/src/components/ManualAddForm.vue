@@ -25,7 +25,7 @@ async function create(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    const created = await api.create(props.collection, { title: title.value.trim() });
+    const created = await api.library.create(props.collection, { title: title.value.trim() });
     await router.push(`/${props.collection}/${created.id}`);
   } catch (cause) {
     error.value = cause;

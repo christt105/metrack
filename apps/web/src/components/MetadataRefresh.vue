@@ -33,7 +33,7 @@ async function refresh(): Promise<void> {
   outcome.value = null;
   failed.value = false;
   try {
-    const result = await api.refreshMetadata(props.type, props.id);
+    const result = await api.library.refreshMetadata(props.type, props.id);
     failed.value = result.outcome === 'failed';
     outcome.value = describe(result);
     emit('refreshed');

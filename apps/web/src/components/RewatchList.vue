@@ -59,7 +59,10 @@ async function replace(next: Viewing[], message: string, undo: Viewing[] | null)
   error.value = null;
   try {
     const patch = undo === null ? { restore: true, rewatches: next } : { rewatches: next };
-    emit('updated', (await api.patch(props.collection, props.id, patch as never)) as AnyDetail);
+    emit(
+      'updated',
+      (await api.library.patch(props.collection, props.id, patch as never)) as AnyDetail,
+    );
     say(message, undo);
   } catch (cause) {
     error.value = cause;

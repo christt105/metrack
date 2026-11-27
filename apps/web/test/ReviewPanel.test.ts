@@ -40,7 +40,7 @@ describe('ReviewPanel', () => {
     const patch = vi.fn().mockResolvedValue({ ...movie, review: 'Better.' });
     const { wrapper } = await mountWithApi(
       ReviewPanel,
-      { patch },
+      { library: { patch } },
       { collection: 'movies', detail: movie },
     );
     await wrapper.find('.edit-review').trigger('click');
@@ -59,7 +59,7 @@ describe('ReviewPanel', () => {
     const patch = vi.fn();
     const { wrapper } = await mountWithApi(
       ReviewPanel,
-      { patch },
+      { library: { patch } },
       { collection: 'movies', detail: movie },
     );
     await wrapper.find('.edit-review').trigger('click');
@@ -74,7 +74,7 @@ describe('ReviewPanel', () => {
     const patch = vi.fn().mockResolvedValue({ ...movie, review: null });
     const { wrapper } = await mountWithApi(
       ReviewPanel,
-      { patch },
+      { library: { patch } },
       { collection: 'movies', detail: movie },
     );
     await wrapper.find('.edit-review').trigger('click');
@@ -96,7 +96,7 @@ describe('ReviewPanel', () => {
     const patch = vi.fn().mockResolvedValue(pending);
     const { wrapper } = await mountWithApi(
       ReviewPanel,
-      { patch },
+      { library: { patch } },
       { collection: 'movies', detail: pending },
     );
     await wrapper.find('.edit-review').trigger('click');

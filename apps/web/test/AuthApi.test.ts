@@ -16,7 +16,7 @@ describe('AuthApi', () => {
 
   it('maps a 204 to undefined and a thrown fetch to a network error', async () => {
     const { client } = recorder(new Response(null, { status: 204 }));
-    expect(await client.remove('books', 1)).toBeUndefined();
+    expect(await client.library.remove('books', 1)).toBeUndefined();
     const broken = new ApiClient((async () => {
       throw new Error('offline');
     }) as unknown as typeof fetch);

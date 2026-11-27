@@ -12,7 +12,7 @@ describe('SearchView', () => {
     const search = vi
       .fn()
       .mockRejectedValue(new ApiRequestError('not configured', 501, 'provider_not_configured'));
-    const { wrapper } = await mountWithApi(SearchView, { search });
+    const { wrapper } = await mountWithApi(SearchView, { library: { search } });
     const gameChip = wrapper.findAll('.types button').find((b) => b.text() === 'Game');
     await gameChip?.trigger('click');
     await wrapper.find('input[type="search"]').setValue('Hades');
@@ -30,7 +30,7 @@ describe('SearchView', () => {
       session.signedIn({ id: 2, name: 'U', email: null, role });
       const { wrapper } = await mountWithApi(
         SearchView,
-        { search },
+        { library: { search } },
         {},
         { [sessionKey as symbol]: session },
       );
@@ -60,8 +60,10 @@ describe('SearchView', () => {
       existingId: null,
     };
     const api = {
-      search: vi.fn().mockResolvedValue({ results: [result] }),
-      addTitle: vi.fn().mockResolvedValue({ type: 'movie', id: 12 }),
+      library: {
+        search: vi.fn().mockResolvedValue({ results: [result] }),
+        addTitle: vi.fn().mockResolvedValue({ type: 'movie', id: 12 }),
+      },
     };
     const { wrapper, router } = await mountWithApi(SearchView, api);
     await wrapper.find('input[type="search"]').setValue('heat');
@@ -69,7 +71,7 @@ describe('SearchView', () => {
     await flushPromises();
     await wrapper.find('button.primary.small').trigger('click');
     await flushPromises();
-    expect(api.addTitle).toHaveBeenCalledWith({ type: 'movie', externalId: '9' });
+    expect(api.library.addTitle).toHaveBeenCalledWith({ type: 'movie', externalId: '9' });
     expect(router.currentRoute.value.path).toBe('/movies/12');
   });
 });

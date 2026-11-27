@@ -95,7 +95,7 @@ async function load(slug?: string): Promise<void> {
   loading.value = true;
   preview.value = null;
   try {
-    const loaded = await api.fillerPreview(props.seriesId, slug);
+    const loaded = await api.library.fillerPreview(props.seriesId, slug);
     preview.value = loaded;
     selection.value = defaultSelection(loaded.episodes);
     notFound.value = false;

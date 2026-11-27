@@ -44,7 +44,7 @@ async function search(): Promise<void> {
   results.value = null;
   try {
     const yearNumber = year.value ? Number(year.value) : undefined;
-    results.value = (await api.search(type.value, q.value.trim(), yearNumber)).results;
+    results.value = (await api.library.search(type.value, q.value.trim(), yearNumber)).results;
   } catch (cause) {
     error.value = cause;
   } finally {
@@ -56,7 +56,7 @@ async function add(result: SearchResult): Promise<void> {
   adding.value = true;
   error.value = null;
   try {
-    const ref = await api.addTitle({ type: result.type, externalId: result.externalId });
+    const ref = await api.library.addTitle({ type: result.type, externalId: result.externalId });
     await router.push(detailPath(ref.type, ref.id));
   } catch (cause) {
     if (cause instanceof ApiRequestError && cause.code === 'already_added') {

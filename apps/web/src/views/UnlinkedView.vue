@@ -7,7 +7,7 @@ import { useMessages } from '../composables/useMessages';
 
 const messages = useMessages();
 const api = useApi();
-const { data, error, loading, reload } = useLoader(() => api.listUnlinked());
+const { data, error, loading, reload } = useLoader(() => api.library.listUnlinked());
 </script>
 
 <template>

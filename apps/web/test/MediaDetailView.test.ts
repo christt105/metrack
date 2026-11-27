@@ -1,3 +1,4 @@
+import type { ApiOverrides } from './ApiOverrides';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import MediaDetailView from '../src/views/MediaDetailView.vue';
@@ -26,7 +27,7 @@ describe('MediaDetailView', () => {
   it('links to the edit route and holds no form', async () => {
     const { wrapper } = await mountWithApi(
       MediaDetailView,
-      { getDetail: vi.fn().mockResolvedValue(movie) },
+      { library: { getDetail: vi.fn().mockResolvedValue(movie) } },
       { collection: 'movies', id: 4 },
     );
     await flushPromises();
@@ -84,10 +85,18 @@ describe('MediaDetailView', () => {
   const groups = (wrapper: { findAll: (s: string) => { text: () => string }[] }) =>
     wrapper.findAll('.manage h3').map((h) => h.text());
 
-  async function mountDetail(collection: string, detail: object, extra: object = {}) {
+  async function mountDetail(
+    collection: string,
+    detail: object,
+    extra: NonNullable<ApiOverrides['library']> & Pick<ApiOverrides, 'seasonEpisodes'> = {},
+  ) {
+    const { seasonEpisodes, ...library } = extra;
     return mountWithApi(
       MediaDetailView,
-      { getDetail: vi.fn().mockResolvedValue(detail), ...extra },
+      {
+        library: { getDetail: vi.fn().mockResolvedValue(detail), ...library },
+        ...(seasonEpisodes ? { seasonEpisodes } : {}),
+      },
       { collection, id: (detail as { id: number }).id },
     );
   }

@@ -25,7 +25,7 @@ async function confirm(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    await api.remove(props.collection, props.id);
+    await api.library.remove(props.collection, props.id);
     await router.replace(props.redirectTo);
   } catch (cause) {
     error.value = cause;

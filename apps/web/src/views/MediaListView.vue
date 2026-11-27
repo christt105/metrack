@@ -46,7 +46,7 @@ async function load(): Promise<void> {
   loading.value = true;
   try {
     const query = filtersToMediaQuery(filters.value);
-    const result = await api.listMedia(query);
+    const result = await api.library.listMedia(query);
     cache.set(query, result);
     if (mine !== ticket) return;
     page.value = result;

@@ -1,13 +1,11 @@
 import type {
   EpisodeOperation,
   Language,
-  FillerPreviewResponse,
   NextEpisodesResponse,
   SeasonEpisodesResponse,
   SeasonEpisodesUpdateResponse,
   AccountDeletion,
   AccountStatus,
-  AddTitleRequest,
   CreateInviteRequest,
   CreatedInvite,
   Invite,
@@ -17,21 +15,9 @@ import type {
   CreatedToken,
   CreateTokenRequest,
   Collection,
-  CreateInput,
-  EditablePatch,
-  EntityRef,
   EpisodeGroupOptions,
   ImageCandidateList,
   ImageKind,
-  MediaDetail,
-  SeriesDetail,
-  MediaPage,
-  MediaQuery,
-  MediaType,
-  RefreshResult,
-  ResolveUnlinkedRequest,
-  ResolveUnlinkedResponse,
-  SearchResult,
   SteamAchievementsDetail,
   SteamAchievementsRequest,
   SteamAchievementsResponse,
@@ -40,9 +26,7 @@ import type {
   SteamImportReport,
   SyncApplyResult,
   SyncPlan,
-  SearchableType,
   ReleaseAlert,
-  UnlinkedTitle,
   User,
   UserSettings,
   UserSettingsPatch,
@@ -56,15 +40,13 @@ import type {
 } from '@metrack/domain';
 import type { AccountExportData } from './AccountExportData';
 import type { BackupInfo } from './BackupInfo';
-import { buildQueryString } from './buildQueryString';
-import type { EntityOf } from './EntityOf';
+import type { Detail } from './Detail';
 import { HttpTransport } from './HttpTransport';
 import type { ImageSettings } from './ImageSettings';
 import { DEFAULT_RECODE_MAX_SIDE, recodeToWebp } from '../logic/recodeToWebp';
 
 import { AuthApi } from './areas/AuthApi';
-
-type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDetail<EntityOf[C]>;
+import { LibraryApi } from './areas/LibraryApi';
 
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
@@ -72,6 +54,7 @@ type Detail<C extends Collection> = C extends 'series' ? SeriesDetail : MediaDet
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly library: LibraryApi;
   readonly auth: AuthApi;
 
   constructor(
@@ -81,6 +64,7 @@ export class ApiClient {
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.library = new LibraryApi(this.transport);
     this.auth = new AuthApi(this.transport);
   }
 
@@ -88,37 +72,6 @@ export class ApiClient {
 
   private request<T>(method: string, path: string, body?: unknown): Promise<T> {
     return this.transport.request<T>(method, path, body);
-  }
-
-  listMedia(query: MediaQuery): Promise<MediaPage> {
-    return this.request('GET', `/media${buildQueryString(query)}`);
-  }
-
-  getDetail<C extends Collection>(collection: C, id: number): Promise<Detail<C>> {
-    return this.request('GET', `/${collection}/${id}`);
-  }
-
-  create<C extends Exclude<Collection, 'seasons'>>(
-    collection: C,
-    input: Partial<CreateInput<EntityOf[C], never>>,
-  ): Promise<Detail<C>> {
-    return this.request('POST', `/${collection}`, input);
-  }
-
-  /** `forAll` is the owner's way to change a catalog field other users hold too. */
-  patch<C extends Collection>(
-    collection: C,
-    id: number,
-    patch: EditablePatch<EntityOf[C]>,
-    options: { forAll?: boolean } = {},
-  ): Promise<Detail<C>> {
-    const query = options.forAll ? '?forAll=true' : '';
-    return this.request('PATCH', `/${collection}/${id}${query}`, patch);
-  }
-
-  fillerPreview(seriesId: number, slug?: string): Promise<FillerPreviewResponse> {
-    const query = slug ? `?slug=${encodeURIComponent(slug)}` : '';
-    return this.request('GET', `/series/${seriesId}/filler${query}`);
   }
 
   nextEpisodes(series?: number): Promise<NextEpisodesResponse> {
@@ -174,55 +127,6 @@ export class ApiClient {
   ): Promise<Detail<'series'>> {
     const query = options.forAll ? '?forAll=true' : '';
     return this.request('PUT', `/series/${seriesId}/season-ordering${query}`, { episodeGroup });
-  }
-
-  remove(collection: Collection, id: number): Promise<void> {
-    return this.request('DELETE', `/${collection}/${id}`);
-  }
-
-  unmarkEdited<C extends Collection>(collection: C, id: number, field: string): Promise<void> {
-    return this.request('DELETE', `/${collection}/${id}/edited/${encodeURIComponent(field)}`);
-  }
-
-  addRewatch<C extends Collection>(
-    collection: C,
-    id: number,
-    finishedAt: string,
-    startedAt: string | null = null,
-  ): Promise<Detail<C>> {
-    return this.request(
-      'POST',
-      `/${collection}/${id}/rewatches`,
-      startedAt === null ? { finishedAt } : { startedAt, finishedAt },
-    );
-  }
-
-  removeRewatch<C extends Collection>(collection: C, id: number, date: string): Promise<Detail<C>> {
-    return this.request('DELETE', `/${collection}/${id}/rewatches/${encodeURIComponent(date)}`);
-  }
-
-  refreshMetadata(type: MediaType, id: number): Promise<RefreshResult> {
-    return this.request('POST', `/metadata/${type}/${id}/refresh`);
-  }
-
-  search(type: SearchableType, q: string, year?: number): Promise<{ results: SearchResult[] }> {
-    return this.request('GET', `/search${buildQueryString({ type, q, year })}`);
-  }
-
-  addTitle(request: AddTitleRequest): Promise<EntityRef> {
-    return this.request('POST', '/titles', request);
-  }
-
-  listUnlinked(): Promise<UnlinkedTitle[]> {
-    return this.request('GET', '/unlinked');
-  }
-
-  dismissUnlinked(id: number): Promise<void> {
-    return this.request('DELETE', `/unlinked/${id}`);
-  }
-
-  resolveUnlinked(id: number, request: ResolveUnlinkedRequest): Promise<ResolveUnlinkedResponse> {
-    return this.request('POST', `/unlinked/${id}/resolve`, request);
   }
 
   imageCandidates(
