@@ -12,24 +12,18 @@ import { AsyncUserScope } from './users/AsyncUserScope.js';
 import { seedOwnerSettings } from './users/seedOwnerSettings.js';
 import { UserJobContext } from './users/UserJobContext.js';
 import { createEditServices } from './api/createEditServices.js';
-import type { ImageProvider } from './artwork/ImageProvider.js';
-import { OpenLibraryImageProvider } from './artwork/OpenLibraryImageProvider.js';
 import { SteamGridDbImageProvider } from './artwork/SteamGridDbImageProvider.js';
-import { TmdbImageProvider } from './artwork/TmdbImageProvider.js';
 import { loadConfig } from './config/loadConfig.js';
 import { createImageStore } from './images/createImageStore.js';
 import { storeOptionsFor } from './images/storeOptionsFor.js';
-import { MetadataCache } from './metadata/MetadataCache.js';
-import { registerTmdbMetadata } from './metadata/registerTmdbMetadata.js';
 import { createUserSyncQueues } from './sync/createUserSyncQueues.js';
 import { openJellystatPool } from './sync/jellystat/openJellystatPool.js';
 import { UserSyncServices } from './sync/UserSyncServices.js';
 import { createUserMirrorQueues } from './mirror/createUserMirrorQueues.js';
 import { TimerScheduler } from './jobs/TimerScheduler.js';
+import { createProviderRegistry } from './providers/createProviderRegistry.js';
 import { IgdbClient } from './providers/igdb/IgdbClient.js';
-import { OpenLibraryClient } from './providers/openlibrary/OpenLibraryClient.js';
 import { SteamGridDbClient } from './providers/steamgriddb/SteamGridDbClient.js';
-import { TmdbClient } from './providers/tmdb/TmdbClient.js';
 import { HomeReleaseStore } from './alerts/HomeReleaseStore.js';
 import { ReleaseWatcher } from './alerts/ReleaseWatcher.js';
 import { ReleaseWatchScheduler } from './alerts/ReleaseWatchScheduler.js';
@@ -54,10 +48,6 @@ import { MigrationRunner } from './storage/MigrationRunner.js';
 import { migrations } from './storage/migrations/index.js';
 import { createSteamServices } from './steam/createSteamServices.js';
 import { IgdbGameProvider } from './titles/IgdbGameProvider.js';
-import { OpenLibraryBookProvider } from './titles/OpenLibraryBookProvider.js';
-import { TitleProviders } from './titles/TitleProviders.js';
-import { TmdbMovieProvider } from './titles/TmdbMovieProvider.js';
-import { TmdbSeriesProvider } from './titles/TmdbSeriesProvider.js';
 import { createSyncService } from './sync/createSyncService.js';
 import { loadSyncConfig } from './sync/loadSyncConfig.js';
 import { MemoryContentVersions } from './site/MemoryContentVersions.js';
@@ -94,63 +84,54 @@ const imageStore = createImageStore(
   () => new Date(),
   storeOptionsFor(config.images),
 );
-const metadataCache = new MetadataCache(metadataStates, imageStore);
-const titleProviders = new TitleProviders();
-const imageProviders: ImageProvider[] = [];
-let releaseScheduler: ReleaseWatchScheduler | undefined;
-const tmdb = config.tmdbApiKey
-  ? new TmdbClient(fetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
-  : undefined;
-if (tmdb) {
-  registerTmdbMetadata(
-    metadataCache,
-    tmdb,
-    { movies, series, seasons, seasonEpisodes: repositories.seasonEpisodes },
-    imageStore,
-  );
-  titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
-  titleProviders.register(new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore));
-  imageProviders.push(new TmdbImageProvider(tmdb));
-  if (config.alerts.enabled && jobs.canNotify) {
-    const source = new TmdbReleaseSource(tmdb);
-    releaseScheduler = new ReleaseWatchScheduler(
-      new UserReleaseWatchers(
-        () => jobs.usersWith((settings) => settings.ntfyTopic),
-        (userId) =>
-          new ReleaseWatcher({
-            store: new HomeReleaseStore({
-              movies,
-              series,
-              seasons,
-              alerts: releaseAlerts,
-            }),
-            source,
-            notifier: jobs.notifier(userId),
-            logger: jobs.logger(userId),
-            timeZone: config.alerts.timeZone,
-            notifyFromHour: config.alerts.notifyFromHour,
-          }),
-        scope,
-        logger,
-      ),
-      logger,
-    );
-  }
-}
 const steamGridDb = config.steamGridDbToken
   ? new SteamGridDbClient(fetch, config.steamGridDbToken)
   : null;
-if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
 const igdb = config.igdb && {
   client: new IgdbClient(fetch, config.igdb),
 };
 const igdbGames =
   igdb &&
   new IgdbGameProvider(igdb.client, videogames, imageStore, steamGridDb, repositories.gameArtwork);
+const { metadataCache, titleProviders, imageProviders, tmdb } = createProviderRegistry(
+  config,
+  fetch,
+  repositories,
+  imageStore,
+  {
+    title: igdbGames,
+    image: steamGridDb ? new SteamGridDbImageProvider(steamGridDb) : undefined,
+  },
+);
+let releaseScheduler: ReleaseWatchScheduler | undefined;
+if (tmdb && config.alerts.enabled && jobs.canNotify) {
+  const source = new TmdbReleaseSource(tmdb);
+  releaseScheduler = new ReleaseWatchScheduler(
+    new UserReleaseWatchers(
+      () => jobs.usersWith((settings) => settings.ntfyTopic),
+      (userId) =>
+        new ReleaseWatcher({
+          store: new HomeReleaseStore({
+            movies,
+            series,
+            seasons,
+            alerts: releaseAlerts,
+          }),
+          source,
+          notifier: jobs.notifier(userId),
+          logger: jobs.logger(userId),
+          timeZone: config.alerts.timeZone,
+          notifyFromHour: config.alerts.notifyFromHour,
+        }),
+      scope,
+      logger,
+    ),
+    logger,
+  );
+}
 const gameArtwork =
   igdb &&
   new GameArtworkBackfill(repositories.gameArtwork, imageStore, igdb.client, steamGridDb, logger);
-if (igdbGames) titleProviders.register(igdbGames);
 const steam = createSteamServices(
   config.steamApiKey,
   fetch,
@@ -160,9 +141,6 @@ const steam = createSteamServices(
     igdbGames &&
     gameArtwork && { client: igdb.client, adder: igdbGames, artwork: gameArtwork },
 );
-const openLibrary = new OpenLibraryClient(fetch, config.openLibraryLanguage);
-titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
-imageProviders.push(new OpenLibraryImageProvider(openLibrary));
 
 const edit = createEditServices({
   sources: {

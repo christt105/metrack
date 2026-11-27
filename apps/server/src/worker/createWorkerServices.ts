@@ -1,26 +1,16 @@
 import { AccountDeletionService } from '../account/AccountDeletionService.js';
 import { createEditServices } from '../api/createEditServices.js';
-import type { ImageProvider } from '../artwork/ImageProvider.js';
-import { OpenLibraryImageProvider } from '../artwork/OpenLibraryImageProvider.js';
 import { SteamGridDbImageProvider } from '../artwork/SteamGridDbImageProvider.js';
-import { TmdbImageProvider } from '../artwork/TmdbImageProvider.js';
 import { loadConfig } from '../config/loadConfig.js';
 import { ImageStore } from '../images/ImageStore.js';
 import { R2ImageBlobStore } from '../images/R2ImageBlobStore.js';
 import { WebpValidatingEncoder } from '../images/WebpValidatingEncoder.js';
-import { MetadataCache } from '../metadata/MetadataCache.js';
-import { registerTmdbMetadata } from '../metadata/registerTmdbMetadata.js';
+import { createProviderRegistry } from '../providers/createProviderRegistry.js';
 import { IgdbClient } from '../providers/igdb/IgdbClient.js';
-import { OpenLibraryClient } from '../providers/openlibrary/OpenLibraryClient.js';
 import { SteamGridDbClient } from '../providers/steamgriddb/SteamGridDbClient.js';
-import { TmdbClient } from '../providers/tmdb/TmdbClient.js';
 import { createD1Repositories } from '../storage/d1/createD1Repositories.js';
 import { createSteamServices } from '../steam/createSteamServices.js';
 import { IgdbGameProvider } from '../titles/IgdbGameProvider.js';
-import { OpenLibraryBookProvider } from '../titles/OpenLibraryBookProvider.js';
-import { TitleProviders } from '../titles/TitleProviders.js';
-import { TmdbMovieProvider } from '../titles/TmdbMovieProvider.js';
-import { TmdbSeriesProvider } from '../titles/TmdbSeriesProvider.js';
 import { AsyncUserScope } from '../users/AsyncUserScope.js';
 import { GameArtworkBackfill } from '../backfill/GameArtworkBackfill.js';
 import { MovieRuntimeBackfill } from '../backfill/MovieRuntimeBackfill.js';
@@ -64,37 +54,26 @@ export function createWorkerServices(
       encodedBy: 'client',
     },
   );
-  const metadataCache = new MetadataCache(repositories.metadataStates, imageStore);
-  const titleProviders = new TitleProviders();
-  const imageProviders: ImageProvider[] = [];
-  const tmdb = config.tmdbApiKey
-    ? new TmdbClient(workerFetch, { apiKey: config.tmdbApiKey, language: config.tmdbLanguage })
-    : undefined;
-  if (tmdb) {
-    registerTmdbMetadata(
-      metadataCache,
-      tmdb,
-      { movies, series, seasons, seasonEpisodes: repositories.seasonEpisodes },
-      imageStore,
-    );
-    titleProviders.register(new TmdbMovieProvider(tmdb, movies, metadataCache));
-    titleProviders.register(
-      new TmdbSeriesProvider(tmdb, series, seasons, metadataCache, imageStore),
-    );
-    imageProviders.push(new TmdbImageProvider(tmdb));
-  }
   const steamGridDb = config.steamGridDbToken
     ? new SteamGridDbClient(workerFetch, config.steamGridDbToken)
     : null;
-  if (steamGridDb) imageProviders.push(new SteamGridDbImageProvider(steamGridDb));
   const igdbClient = config.igdb && new IgdbClient(workerFetch, config.igdb);
   const igdbGames =
     igdbClient &&
     new IgdbGameProvider(igdbClient, videogames, imageStore, steamGridDb, repositories.gameArtwork);
+  const { metadataCache, titleProviders, imageProviders, tmdb } = createProviderRegistry(
+    config,
+    workerFetch,
+    repositories,
+    imageStore,
+    {
+      title: igdbGames,
+      image: steamGridDb ? new SteamGridDbImageProvider(steamGridDb) : undefined,
+    },
+  );
   const gameArtwork =
     igdbClient &&
     new GameArtworkBackfill(repositories.gameArtwork, imageStore, igdbClient, steamGridDb, logger);
-  if (igdbGames) titleProviders.register(igdbGames);
   const steam = createSteamServices(
     config.steamApiKey,
     workerFetch,
@@ -104,9 +83,6 @@ export function createWorkerServices(
       igdbGames &&
       gameArtwork && { client: igdbClient, adder: igdbGames, artwork: gameArtwork },
   );
-  const openLibrary = new OpenLibraryClient(workerFetch, config.openLibraryLanguage);
-  titleProviders.register(new OpenLibraryBookProvider(openLibrary, books, imageStore));
-  imageProviders.push(new OpenLibraryImageProvider(openLibrary));
 
   const edit = createEditServices({
     sources: {
