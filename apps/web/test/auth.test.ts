@@ -65,7 +65,7 @@ describe('ApiClient and sessions', () => {
       (async () => refused()) as unknown as typeof fetch,
       onUnauthenticated,
     );
-    await expect(client.listWatchlist()).rejects.toBeInstanceOf(ApiRequestError);
+    await expect(client.following.listWatchlist()).rejects.toBeInstanceOf(ApiRequestError);
     expect(onUnauthenticated).toHaveBeenCalledTimes(1);
     expect(await client.auth.me()).toBeNull();
     expect(onUnauthenticated).toHaveBeenCalledTimes(1);

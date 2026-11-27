@@ -16,8 +16,8 @@ const messages = useMessages();
 type View = 'upcoming' | 'calendar' | 'all';
 
 const api = useApi();
-const followed = useLoader(() => api.listWatchlist());
-const alerts = useLoader(() => api.listAlerts());
+const followed = useLoader(() => api.following.listWatchlist());
+const alerts = useLoader(() => api.following.listAlerts());
 const view = ref<View>('upcoming');
 const views: View[] = ['upcoming', 'calendar', 'all'];
 const today = localDate(new Date());

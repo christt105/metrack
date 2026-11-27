@@ -83,8 +83,10 @@ describe('Spanish dictionary in components', () => {
     const { wrapper } = await mountWithApi(
       WatchlistView,
       {
-        listWatchlist: vi.fn().mockResolvedValue([show, premiere]),
-        listAlerts: vi.fn().mockResolvedValue([]),
+        following: {
+          listWatchlist: vi.fn().mockResolvedValue([show, premiere]),
+          listAlerts: vi.fn().mockResolvedValue([]),
+        },
       },
       {},
       spanish,

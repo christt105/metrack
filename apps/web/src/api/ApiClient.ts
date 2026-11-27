@@ -18,7 +18,6 @@ import type {
   SteamImportReport,
   SyncApplyResult,
   SyncPlan,
-  ReleaseAlert,
   User,
   UserSettings,
   UserSettingsPatch,
@@ -26,7 +25,6 @@ import type {
   OwnSettings,
   PublicPage,
   PublicPagePatch,
-  WatchlistEntry,
 } from '@metrack/domain';
 import type { AccountExportData } from './AccountExportData';
 import type { BackupInfo } from './BackupInfo';
@@ -37,6 +35,7 @@ import { AuthApi } from './areas/AuthApi';
 import { LibraryApi } from './areas/LibraryApi';
 import { SeasonsApi } from './areas/SeasonsApi';
 import { ImagesApi } from './areas/ImagesApi';
+import { FollowingApi } from './areas/FollowingApi';
 
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
@@ -44,6 +43,7 @@ import { ImagesApi } from './areas/ImagesApi';
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly following: FollowingApi;
   readonly images: ImagesApi;
   readonly seasons: SeasonsApi;
   readonly library: LibraryApi;
@@ -56,6 +56,7 @@ export class ApiClient {
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.following = new FollowingApi(this.transport);
     this.images = new ImagesApi(this.transport, recode);
     this.seasons = new SeasonsApi(this.transport);
     this.library = new LibraryApi(this.transport);
@@ -80,22 +81,6 @@ export class ApiClient {
 
   applySync(): Promise<{ plan: SyncPlan; result: SyncApplyResult }> {
     return this.request('POST', '/sync/apply', { confirm: true });
-  }
-
-  listWatchlist(): Promise<WatchlistEntry[]> {
-    return this.request('GET', '/watchlist');
-  }
-
-  follow(collection: 'movies' | 'series', id: number): Promise<void> {
-    return this.request('PUT', `/watchlist/${collection}/${id}`);
-  }
-
-  unfollow(collection: 'movies' | 'series', id: number): Promise<void> {
-    return this.request('DELETE', `/watchlist/${collection}/${id}`);
-  }
-
-  listAlerts(): Promise<ReleaseAlert[]> {
-    return this.request('GET', '/alerts');
   }
 
   ownSettings(): Promise<OwnSettings> {
