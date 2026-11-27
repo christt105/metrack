@@ -11,7 +11,7 @@ import ErrorNotice from './ErrorNotice.vue';
 const messages = useMessages();
 const api = useApi();
 const session = useSession();
-const { data: invites, error: loadError, reload } = useLoader(() => api.listInvites());
+const { data: invites, error: loadError, reload } = useLoader(() => api.admin.listInvites());
 const draft = reactive({ maxUses: 1, expiresInDays: INVITE_LIMITS.defaultExpiryDays });
 const link = ref<string | null>(null);
 const copied = ref(false);
@@ -37,7 +37,7 @@ async function act(action: () => Promise<void>): Promise<void> {
 
 const create = () =>
   act(async () => {
-    const created = await api.createInvite({
+    const created = await api.admin.createInvite({
       maxUses: draft.maxUses,
       expiresInDays: draft.expiresInDays,
     });
@@ -47,7 +47,7 @@ const create = () =>
 
 const revoke = (invite: Invite) => {
   if (!window.confirm(messages.invites.revokeConfirm)) return Promise.resolve();
-  return act(() => api.revokeInvite(invite.id));
+  return act(() => api.admin.revokeInvite(invite.id));
 };
 
 async function share(): Promise<void> {

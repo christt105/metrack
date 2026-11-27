@@ -24,7 +24,7 @@ async function dismiss(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    await api.dismissUnlinked(props.title.id);
+    await api.library.dismissUnlinked(props.title.id);
     emit('gone');
   } catch (cause) {
     error.value = cause;
@@ -40,7 +40,7 @@ async function resolve(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    const created = await api.resolveUnlinked(props.title.id, { ids });
+    const created = await api.library.resolveUnlinked(props.title.id, { ids });
     resolvedPath.value = detailPath(created.type, created.id);
   } catch (cause) {
     error.value = cause;

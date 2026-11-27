@@ -42,7 +42,7 @@ async function save(publish = false): Promise<void> {
   try {
     const updated = await saveForAll(
       (options) =>
-        api.patch(
+        api.library.patch(
           props.collection,
           props.detail.id,
           (publish ? { review: next, pendingReview: false } : { review: next }) as never,

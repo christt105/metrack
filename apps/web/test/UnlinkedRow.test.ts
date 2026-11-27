@@ -17,7 +17,11 @@ const title: UnlinkedTitle = {
 describe('UnlinkedRow', () => {
   it('asks for an id before resolving', async () => {
     const resolveUnlinked = vi.fn();
-    const { wrapper } = await mountWithApi(UnlinkedRow, { resolveUnlinked }, { title });
+    const { wrapper } = await mountWithApi(
+      UnlinkedRow,
+      { library: { resolveUnlinked } },
+      { title },
+    );
     await wrapper.find('form').trigger('submit');
     expect(resolveUnlinked).not.toHaveBeenCalled();
     expect(wrapper.find('[role="alert"]').exists()).toBe(true);
@@ -25,7 +29,11 @@ describe('UnlinkedRow', () => {
 
   it('resolves with the typed ids and links to the new entity', async () => {
     const resolveUnlinked = vi.fn().mockResolvedValue({ type: 'series', id: 8, refresh: null });
-    const { wrapper } = await mountWithApi(UnlinkedRow, { resolveUnlinked }, { title });
+    const { wrapper } = await mountWithApi(
+      UnlinkedRow,
+      { library: { resolveUnlinked } },
+      { title },
+    );
     await wrapper.find('input[type="number"]').setValue('1399');
     await wrapper.find('form').trigger('submit');
     await flushPromises();

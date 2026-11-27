@@ -21,7 +21,7 @@ async function run(): Promise<void> {
   try {
     const pass = await refreshSteamAchievements(
       (request) =>
-        api.refreshSteamAchievements(
+        api.steam.refreshSteamAchievements(
           props.gameId === undefined ? request : { ...request, gameId: props.gameId },
         ),
       (done, total) => (progress.value = { done, total }),

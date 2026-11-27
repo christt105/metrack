@@ -42,12 +42,12 @@ async function change(action: () => Promise<unknown>): Promise<void> {
   }
 }
 
-const turnOn = () => change(() => api.generateNtfyTopic());
+const turnOn = () => change(() => api.settings.generateNtfyTopic());
 const regenerate = () => {
   if (!window.confirm(messages.ntfyAlerts.regenerateConfirm)) return Promise.resolve();
-  return change(() => api.generateNtfyTopic());
+  return change(() => api.settings.generateNtfyTopic());
 };
-const turnOff = () => change(() => api.clearNtfyTopic());
+const turnOff = () => change(() => api.settings.clearNtfyTopic());
 </script>
 
 <template>

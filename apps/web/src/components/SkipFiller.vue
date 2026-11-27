@@ -95,7 +95,7 @@ async function load(slug?: string): Promise<void> {
   loading.value = true;
   preview.value = null;
   try {
-    const loaded = await api.fillerPreview(props.seriesId, slug);
+    const loaded = await api.library.fillerPreview(props.seriesId, slug);
     preview.value = loaded;
     selection.value = defaultSelection(loaded.episodes);
     notFound.value = false;
@@ -151,7 +151,7 @@ async function apply(): Promise<void> {
   const done: FillerSkipGroup[] = [];
   try {
     for (const group of groups) {
-      await api.updateSeasonEpisodes(group.seasonId, { op: 'skip', keys: group.keys });
+      await api.seasons.updateSeasonEpisodes(group.seasonId, { op: 'skip', keys: group.keys });
       done.push(group);
     }
   } catch (cause) {
@@ -174,7 +174,7 @@ async function undo(): Promise<void> {
   error.value = null;
   try {
     for (const group of groups) {
-      await api.updateSeasonEpisodes(group.seasonId, { op: 'unskip', keys: group.keys });
+      await api.seasons.updateSeasonEpisodes(group.seasonId, { op: 'unskip', keys: group.keys });
     }
     say(messages.filler.undone, []);
   } catch (cause) {

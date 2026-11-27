@@ -18,7 +18,7 @@ const scopes = computed(() =>
   TOKEN_SCOPES.filter((scope) => scope !== 'connector' || props.connector === true),
 );
 const api = useApi();
-const { data: tokens, error: loadError, reload } = useLoader(() => api.listTokens());
+const { data: tokens, error: loadError, reload } = useLoader(() => api.settings.listTokens());
 const draft = reactive<CreateTokenRequest>({ name: '', scope: 'read', expiresInDays: 90 });
 const secret = ref<string | null>(null);
 const copied = ref(false);
@@ -49,7 +49,7 @@ async function act(action: () => Promise<void>): Promise<void> {
 
 const create = () =>
   act(async () => {
-    const created = await api.createToken({ ...draft });
+    const created = await api.settings.createToken({ ...draft });
     secret.value = created.secret;
     copied.value = false;
     draft.name = '';
@@ -57,7 +57,7 @@ const create = () =>
 
 const revoke = (token: ApiToken) => {
   if (!window.confirm(messages.tokens.revokeConfirm(token.name))) return Promise.resolve();
-  return act(() => api.revokeToken(token.id));
+  return act(() => api.settings.revokeToken(token.id));
 };
 
 async function copy(): Promise<void> {

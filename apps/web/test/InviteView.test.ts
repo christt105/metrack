@@ -5,7 +5,13 @@ import { mountWithApi } from './mountWithApi';
 
 async function open(status: string) {
   const invitePreview = vi.fn().mockResolvedValue({ status, inviter: 'Christian' });
-  const { wrapper } = await mountWithApi(InviteView, { invitePreview }, { code: 'abc-123' });
+  const { wrapper } = await mountWithApi(
+    InviteView,
+    {
+      auth: { invitePreview },
+    },
+    { code: 'abc-123' },
+  );
   await flushPromises();
   return { wrapper, invitePreview };
 }
@@ -34,7 +40,13 @@ describe('InviteView', () => {
 
   it('shows a neutral title and no inviter name for an unknown link', async () => {
     const invitePreview = vi.fn().mockResolvedValue({ status: 'unknown', inviter: '' });
-    const { wrapper } = await mountWithApi(InviteView, { invitePreview }, { code: 'nope' });
+    const { wrapper } = await mountWithApi(
+      InviteView,
+      {
+        auth: { invitePreview },
+      },
+      { code: 'nope' },
+    );
     await flushPromises();
     expect(wrapper.find('[data-test="invite-title"]').text()).toBe('Invitation to metrack');
   });

@@ -20,7 +20,11 @@ enableAutoUnmount(afterEach);
 afterEach(() => vi.useRealTimers());
 
 async function mountActions(patch: Mock, detail: AnyDetail = movie) {
-  return mountWithApi(QuickActions, { patch: patch as never }, { collection: 'movies', detail });
+  return mountWithApi(
+    QuickActions,
+    { library: { patch: patch as never } },
+    { collection: 'movies', detail },
+  );
 }
 
 describe('QuickActions', () => {
@@ -169,7 +173,7 @@ describe('QuickActions', () => {
       expect((await mountActions(patch, movie)).wrapper.find('form.hours').exists()).toBe(false);
       const { wrapper } = await mountWithApi(
         QuickActions,
-        { patch: patch as never },
+        { library: { patch: patch as never } },
         { collection: 'games', detail: game },
       );
       expect(wrapper.text()).toContain('1 h 30 min');
@@ -179,7 +183,7 @@ describe('QuickActions', () => {
       const patch = vi.fn().mockResolvedValue(game);
       const { wrapper } = await mountWithApi(
         QuickActions,
-        { patch: patch as never },
+        { library: { patch: patch as never } },
         { collection: 'games', detail: game },
       );
       const toggle = wrapper.findAll('button').find((b) => b.text().includes('1 h 30 min'));
@@ -199,7 +203,7 @@ describe('QuickActions', () => {
       const patch = vi.fn();
       const { wrapper } = await mountWithApi(
         QuickActions,
-        { patch: patch as never },
+        { library: { patch: patch as never } },
         { collection: 'books', detail: game },
       );
       await wrapper

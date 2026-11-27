@@ -1,3 +1,4 @@
+import type { ApiOverrides } from './ApiOverrides';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { FillerPreviewEpisode, FillerPreviewResponse } from '@metrack/domain';
@@ -36,7 +37,7 @@ const response: FillerPreviewResponse = {
   ],
 };
 
-async function open(api: Record<string, unknown>) {
+async function open(api: ApiOverrides) {
   const { wrapper } = await mountWithApi(SkipFiller, api, { seriesId: 7 });
   await wrapper.get('[data-test="filler-open"]').trigger('click');
   await flushPromises();
@@ -47,7 +48,7 @@ describe('SkipFiller', () => {
   it('previews, preselects filler, skips per season and undoes exactly those keys', async () => {
     const fillerPreview = vi.fn().mockResolvedValue(response);
     const updateSeasonEpisodes = vi.fn().mockResolvedValue({});
-    const wrapper = await open({ fillerPreview, updateSeasonEpisodes });
+    const wrapper = await open({ library: { fillerPreview }, seasons: { updateSeasonEpisodes } });
     expect(fillerPreview).toHaveBeenCalledWith(7, undefined);
     expect(wrapper.get('[data-test="filler-counts"]').text()).toContain('Filler: 3');
     expect(wrapper.find('[data-test="filler-episode-1"]').exists()).toBe(false);
@@ -81,7 +82,7 @@ describe('SkipFiller', () => {
       .fn()
       .mockRejectedValueOnce(new ApiRequestError('nope', 404, 'filler_not_found'))
       .mockResolvedValueOnce(response);
-    const wrapper = await open({ fillerPreview });
+    const wrapper = await open({ library: { fillerPreview } });
     await wrapper
       .get('[data-test="filler-slug"]')
       .setValue('https://www.animefillerlist.com/shows/show');
@@ -97,7 +98,7 @@ describe('SkipFiller', () => {
       .mockRejectedValue(
         new ApiRequestError('x', 409, 'filler_count_mismatch', { ours: 12, theirs: 20 }),
       );
-    const wrapper = await open({ fillerPreview });
+    const wrapper = await open({ library: { fillerPreview } });
     const text = wrapper.get('[data-test="filler-problem"]').text();
     expect(text).toContain('12 episodes');
     expect(text).toContain('lists 20');
@@ -109,7 +110,7 @@ describe('SkipFiller', () => {
       ...response,
       episodes: [ep(1, 1, 'mangaCanon'), ep(1, 2, 'filler', true)],
     });
-    const wrapper = await open({ fillerPreview });
+    const wrapper = await open({ library: { fillerPreview } });
     expect(wrapper.find('[data-test="filler-nothing"]').exists()).toBe(true);
     expect(
       (wrapper.get('[data-test="filler-confirm"]').element as HTMLButtonElement).disabled,

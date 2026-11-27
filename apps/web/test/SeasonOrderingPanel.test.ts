@@ -1,7 +1,7 @@
+import { fakeApi } from './fakeApi';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EpisodeGroupOptions, User } from '@metrack/domain';
-import type { ApiClient } from '../src/api/ApiClient';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
@@ -18,7 +18,7 @@ const OPTIONS: EpisodeGroupOptions = {
 };
 
 function sessionOf(role: User['role']): Record<symbol, unknown> {
-  const session = new Session({} as ApiClient);
+  const session = new Session(fakeApi({}));
   session.signedIn({ id: 1, name: 'U', email: null, role });
   return { [sessionKey as symbol]: session };
 }
@@ -29,7 +29,7 @@ describe('SeasonOrderingPanel', () => {
   it('preselects the suggested group and says why', async () => {
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS) },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS) } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('normal'),
     );
@@ -47,7 +47,7 @@ describe('SeasonOrderingPanel', () => {
     const episodeGroups = vi.fn().mockResolvedValue({ ...OPTIONS, suggested: null });
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups },
+      { seasons: { episodeGroups } },
       { seriesId: 7, hasUnlinkedSeasons: false },
       sessionOf('normal'),
     );
@@ -65,7 +65,7 @@ describe('SeasonOrderingPanel', () => {
     const setSeasonOrdering = vi.fn().mockResolvedValue({});
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('normal'),
     );
@@ -85,7 +85,7 @@ describe('SeasonOrderingPanel', () => {
       .mockResolvedValueOnce({});
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('owner'),
     );
@@ -104,7 +104,7 @@ describe('SeasonOrderingPanel', () => {
       .mockRejectedValue(new ApiRequestError('shared', 409, 'catalog_shared'));
     const { wrapper } = await mountWithApi(
       SeasonOrderingPanel,
-      { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering },
+      { seasons: { episodeGroups: vi.fn().mockResolvedValue(OPTIONS), setSeasonOrdering } },
       { seriesId: 7, hasUnlinkedSeasons: true },
       sessionOf('normal'),
     );

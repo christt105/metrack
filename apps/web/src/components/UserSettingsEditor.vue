@@ -32,7 +32,7 @@ async function changeRole(): Promise<void> {
   error.value = null;
   roleSaved.value = null;
   try {
-    const updated = await api.setUserRole(props.user.id, role.value);
+    const updated = await api.admin.setUserRole(props.user.id, role.value);
     roleSaved.value = messages.settings.roleSaved(
       updated.name,
       messages.settings.roleLabels[updated.role],
@@ -62,7 +62,7 @@ async function save(): Promise<void> {
   error.value = null;
   saved.value = false;
   try {
-    const updated = await api.updateUserSettings(props.user.id, patch);
+    const updated = await api.admin.updateUserSettings(props.user.id, patch);
     for (const key of WEB_EDITABLE_SETTINGS) draft[key] = updated[key] ?? '';
     saved.value = true;
     emit('saved', updated);

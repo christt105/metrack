@@ -29,7 +29,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 
 onMounted(async () => {
   try {
-    list.value = await api.imageCandidates(props.collection, props.id, props.kind);
+    list.value = await api.images.imageCandidates(props.collection, props.id, props.kind);
   } catch (cause) {
     error.value = cause;
   }
@@ -43,8 +43,11 @@ async function upload(event: Event): Promise<void> {
   choosing.value = messages.artwork.uploading;
   error.value = null;
   try {
-    const uploaded = await api.uploadImage(file);
-    emit('chosen', await api.chooseImage(props.collection, props.id, props.kind, uploaded.ref));
+    const uploaded = await api.images.uploadImage(file);
+    emit(
+      'chosen',
+      await api.images.chooseImage(props.collection, props.id, props.kind, uploaded.ref),
+    );
   } catch (cause) {
     error.value = cause;
   } finally {
@@ -56,7 +59,7 @@ async function choose(url: string): Promise<void> {
   choosing.value = url;
   error.value = null;
   try {
-    emit('chosen', await api.chooseImage(props.collection, props.id, props.kind, url));
+    emit('chosen', await api.images.chooseImage(props.collection, props.id, props.kind, url));
   } catch (cause) {
     error.value = cause;
   } finally {

@@ -1,3 +1,4 @@
+import { fakeApi } from './fakeApi';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { AccountDeletion } from '@metrack/domain';
@@ -6,7 +7,6 @@ import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
 import AccountPanel from '../src/components/AccountPanel.vue';
 import DeletionBanner from '../src/components/DeletionBanner.vue';
-import type { ApiClient } from '../src/api/ApiClient';
 import { mountWithApi } from './mountWithApi';
 
 const scheduled: AccountDeletion = {
@@ -39,9 +39,11 @@ describe('AccountPanel', () => {
     const { wrapper } = await mountWithApi(
       AccountPanel,
       {
-        accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
-        accountExportData,
-        imageBytes,
+        account: {
+          accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
+          accountExportData,
+        },
+        images: { imageBytes },
       },
       { handle: null },
     );
@@ -61,8 +63,10 @@ describe('AccountPanel', () => {
     const { wrapper } = await mountWithApi(
       AccountPanel,
       {
-        accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
-        accountExportData: vi.fn().mockRejectedValue(new ApiRequestError('Boom', 500, '')),
+        account: {
+          accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
+          accountExportData: vi.fn().mockRejectedValue(new ApiRequestError('Boom', 500, '')),
+        },
       },
       { handle: null },
     );
@@ -81,7 +85,7 @@ describe('AccountPanel', () => {
     const requestAccountDeletion = vi.fn().mockResolvedValue(scheduled);
     const { wrapper } = await mountWithApi(
       AccountPanel,
-      { accountStatus, requestAccountDeletion },
+      { account: { accountStatus, requestAccountDeletion } },
       { handle: 'nia' },
     );
     await flushPromises();
@@ -105,7 +109,7 @@ describe('AccountPanel', () => {
     const cancelAccountDeletion = vi.fn().mockResolvedValue({ deletion: null, canDelete: true });
     const { wrapper } = await mountWithApi(
       AccountPanel,
-      { accountStatus, cancelAccountDeletion },
+      { account: { accountStatus, cancelAccountDeletion } },
       { handle: null },
     );
     await flushPromises();
@@ -123,8 +127,10 @@ describe('AccountPanel', () => {
     const { wrapper } = await mountWithApi(
       AccountPanel,
       {
-        accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
-        requestAccountDeletion,
+        account: {
+          accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
+          requestAccountDeletion,
+        },
       },
       { handle: null },
     );
@@ -138,7 +144,9 @@ describe('AccountPanel', () => {
   it('tells the owner their account cannot be deleted and offers no way to', async () => {
     const { wrapper } = await mountWithApi(
       AccountPanel,
-      { accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: false }) },
+      {
+        account: { accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: false }) },
+      },
       { handle: null },
     );
     await flushPromises();
@@ -150,7 +158,7 @@ describe('AccountPanel', () => {
 describe('DeletionBanner', () => {
   it('shows only while a deletion waits, and cancels it', async () => {
     const cancelAccountDeletion = vi.fn().mockResolvedValue({ deletion: null, canDelete: true });
-    const api = { cancelAccountDeletion } as unknown as ApiClient;
+    const api = fakeApi({ account: { cancelAccountDeletion } });
     const session = new Session(api);
     session.setDeletion(scheduled);
     const { wrapper } = await mountWithApi(

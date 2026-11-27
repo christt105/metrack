@@ -19,8 +19,8 @@ async function toggle(): Promise<void> {
   error.value = null;
   try {
     await (next
-      ? api.follow(props.collection, props.id)
-      : api.unfollow(props.collection, props.id));
+      ? api.following.follow(props.collection, props.id)
+      : api.following.unfollow(props.collection, props.id));
     emit('changed', next);
   } catch (cause) {
     error.value = cause;

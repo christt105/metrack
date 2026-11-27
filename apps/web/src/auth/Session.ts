@@ -21,7 +21,7 @@ export class Session {
 
   async current(): Promise<User | null> {
     if (!this.known) {
-      this.user.value = await this.api.me();
+      this.user.value = await this.api.auth.me();
       this.known = true;
       await this.refreshDeletion();
       void this.refreshPublicPage();
@@ -44,7 +44,7 @@ export class Session {
       return;
     }
     try {
-      const status = await this.api.accountStatus();
+      const status = await this.api.account.accountStatus();
       this.deletion.value = status.deletion;
       this.needsWelcome.value = status.needsWelcome;
     } catch {
@@ -62,7 +62,7 @@ export class Session {
       return;
     }
     try {
-      const own = await this.api.ownSettings();
+      const own = await this.api.settings.ownSettings();
       this.publicPage.value = own.publicPage;
       this.language.value = own.settings.language;
       this.jellyfinLinked.value = Boolean(own.settings.jellyfinUser);
@@ -91,7 +91,7 @@ export class Session {
   }
 
   async signOut(): Promise<void> {
-    await this.api.logout();
+    await this.api.auth.logout();
     this.forget();
   }
 

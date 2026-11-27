@@ -54,7 +54,7 @@ const pending = computed(() => tracking.value.pendingReview);
 
 async function send(patch: Record<string, unknown>): Promise<void> {
   const updated = await saveForAll(
-    (options) => api.patch(props.collection, props.detail.id, patch as never, options),
+    (options) => api.library.patch(props.collection, props.detail.id, patch as never, options),
     session?.user.value?.role === 'owner',
     () => window.confirm(messages.detail.confirmForAll),
   );

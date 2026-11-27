@@ -39,7 +39,7 @@ async function save(next: Viewing, message: string, undo: Viewing | null): Promi
   try {
     const patch = { startedAt: next.startedAt, finishedAt: next.finishedAt };
     const body = undo === null ? { ...patch, restore: true } : patch;
-    const detail = await api.patch('seasons', props.season.id, body as never);
+    const detail = await api.library.patch('seasons', props.season.id, body as never);
     emit('updated', detail as AnyDetail);
     dismiss();
     if (undo !== null) {

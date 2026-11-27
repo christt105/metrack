@@ -15,13 +15,13 @@ const api = useApi();
 const session = useSession();
 const route = useRoute();
 const router = useRouter();
-const { data: users, error, loading } = useLoader(() => api.devUsers());
+const { data: users, error, loading } = useLoader(() => api.auth.devUsers());
 const busy = ref(false);
 const signInError = ref<unknown>(null);
 const accessToken = ref('');
 const { data: googleAvailable } = useLoader(async () => {
   try {
-    return (await api.health()).features.googleLogin;
+    return (await api.auth.health()).features.googleLogin;
   } catch {
     return false;
   }
@@ -36,7 +36,7 @@ async function signIn(user: User): Promise<void> {
   busy.value = true;
   signInError.value = null;
   try {
-    session.signedIn(await api.devLogin(user.id));
+    session.signedIn(await api.auth.devLogin(user.id));
     await router.replace(safeNext(route.query.next));
   } catch (cause) {
     signInError.value = cause;
@@ -49,7 +49,7 @@ async function signInWithToken(): Promise<void> {
   busy.value = true;
   signInError.value = null;
   try {
-    session.signedIn(await api.tokenLogin(accessToken.value.trim()));
+    session.signedIn(await api.auth.tokenLogin(accessToken.value.trim()));
     accessToken.value = '';
     await router.replace(safeNext(route.query.next));
   } catch (cause) {

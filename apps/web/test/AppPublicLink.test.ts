@@ -1,9 +1,9 @@
+import { fakeApi } from './fakeApi';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { enableAutoUnmount } from '@vue/test-utils';
 import { createMemoryHistory } from 'vue-router';
 import type { PublicPage, User } from '@metrack/domain';
-import type { ApiClient } from '../src/api/ApiClient';
 import { apiKey } from '../src/api/apiKey';
 import App from '../src/App.vue';
 import { Session } from '../src/auth/Session';
@@ -25,11 +25,27 @@ const page = (patch: Partial<PublicPage>): PublicPage => ({
 });
 
 async function mountApp(publicPage: PublicPage) {
-  const api = {
-    me: async () => USER,
-    accountStatus: async () => ({ deletion: null, needsWelcome: false }),
-    ownSettings: async () => ({ publicPage, settings: { language: null } }),
-  } as unknown as ApiClient;
+  const api = fakeApi({
+    auth: { me: async () => USER },
+    account: {
+      accountStatus: async () => ({ deletion: null, needsWelcome: false, canDelete: true }),
+    },
+    settings: {
+      ownSettings: async () => ({
+        publicPage,
+        settings: {
+          language: null,
+          jellyfinUser: null,
+          ntfyTopic: null,
+          steamId: null,
+          mirrorDir: null,
+          mirrorLinkPrefix: null,
+        },
+        owner: false,
+        ntfyTopicGenerated: false,
+      }),
+    },
+  });
   const session = new Session(api);
   await session.current();
   const router = createAppRouter(createMemoryHistory());

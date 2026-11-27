@@ -33,20 +33,26 @@ describe('Spanish dictionary in components', () => {
     const { wrapper } = await mountWithApi(
       SettingsView,
       {
-        health: vi.fn().mockResolvedValue({
-          status: 'ok',
-          appVersion: 'dev',
-          schemaVersion: 3,
-          features: { backups: true, sync: true, googleLogin: false },
-        }),
-        ownSettings: vi.fn().mockResolvedValue({
-          settings: noSettings,
-          publicPage: EMPTY_PAGE,
-          owner: true,
-          ntfyTopicGenerated: false,
-        } satisfies OwnSettings),
-        listUsers: vi.fn().mockResolvedValue([{ user: owner, settings: noSettings }]),
-        listBackups: vi.fn().mockResolvedValue([]),
+        auth: {
+          health: vi.fn().mockResolvedValue({
+            status: 'ok',
+            appVersion: 'dev',
+            schemaVersion: 3,
+            features: { backups: true, sync: true, googleLogin: false },
+          }),
+        },
+        settings: {
+          ownSettings: vi.fn().mockResolvedValue({
+            settings: noSettings,
+            publicPage: EMPTY_PAGE,
+            owner: true,
+            ntfyTopicGenerated: false,
+          } satisfies OwnSettings),
+        },
+        admin: {
+          listUsers: vi.fn().mockResolvedValue([{ user: owner, settings: noSettings }]),
+          listBackups: vi.fn().mockResolvedValue([]),
+        },
       },
       {},
       spanish,
@@ -81,8 +87,10 @@ describe('Spanish dictionary in components', () => {
     const { wrapper } = await mountWithApi(
       WatchlistView,
       {
-        listWatchlist: vi.fn().mockResolvedValue([show, premiere]),
-        listAlerts: vi.fn().mockResolvedValue([]),
+        following: {
+          listWatchlist: vi.fn().mockResolvedValue([show, premiere]),
+          listAlerts: vi.fn().mockResolvedValue([]),
+        },
       },
       {},
       spanish,

@@ -1,3 +1,4 @@
+import { fakeApi } from './fakeApi';
 import type { UserSettings } from '@metrack/domain';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,7 +7,6 @@ import { Locale } from '../src/i18n/Locale';
 import { localeKey } from '../src/i18n/localeKey';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
-import type { ApiClient } from '../src/api/ApiClient';
 import { mountWithApi } from './mountWithApi';
 
 const settings: Omit<UserSettings, 'language'> = {
@@ -44,10 +44,10 @@ describe('LanguagePanel', () => {
 
   it('saves the choice and tells the session', async () => {
     const updateLanguage = vi.fn().mockResolvedValue({ ...settings, language: 'es' });
-    const session = new Session({} as ApiClient);
+    const session = new Session(fakeApi({}));
     const { wrapper } = await mountWithApi(
       LanguagePanel,
-      { updateLanguage },
+      { settings: { updateLanguage } },
       { language: null },
       { [sessionKey as symbol]: session },
     );
@@ -59,7 +59,11 @@ describe('LanguagePanel', () => {
 
   it('sends null for automatic', async () => {
     const updateLanguage = vi.fn().mockResolvedValue({ ...settings, language: null });
-    const { wrapper } = await mountWithApi(LanguagePanel, { updateLanguage }, { language: 'en' });
+    const { wrapper } = await mountWithApi(
+      LanguagePanel,
+      { settings: { updateLanguage } },
+      { language: 'en' },
+    );
     await wrapper.find('select').setValue('');
     await flushPromises();
     expect(updateLanguage).toHaveBeenCalledWith(null);
@@ -67,7 +71,11 @@ describe('LanguagePanel', () => {
 
   it('shows the error and keeps the previous choice when saving fails', async () => {
     const updateLanguage = vi.fn().mockRejectedValue(new Error('boom'));
-    const { wrapper } = await mountWithApi(LanguagePanel, { updateLanguage }, { language: 'en' });
+    const { wrapper } = await mountWithApi(
+      LanguagePanel,
+      { settings: { updateLanguage } },
+      { language: 'en' },
+    );
     await wrapper.find('select').setValue('es');
     await flushPromises();
     expect((wrapper.find('select').element as HTMLSelectElement).value).toBe('en');

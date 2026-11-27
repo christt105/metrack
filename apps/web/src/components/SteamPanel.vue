@@ -20,7 +20,9 @@ async function save(): Promise<void> {
   error.value = null;
   saved.value = false;
   try {
-    const settings = await api.updateSteamId(typed.value.trim() === '' ? null : typed.value);
+    const settings = await api.settings.updateSteamId(
+      typed.value.trim() === '' ? null : typed.value,
+    );
     typed.value = settings.steamId ?? '';
     saved.value = true;
     emit('saved');

@@ -1,16 +1,16 @@
+import { fakeApi } from './fakeApi';
 import { EMPTY_PAGE } from './EMPTY_PAGE';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import PublicPagePanel from '../src/components/PublicPagePanel.vue';
 import { ApiRequestError } from '../src/api/ApiRequestError';
 import type { User } from '@metrack/domain';
-import type { ApiClient } from '../src/api/ApiClient';
 import { Session } from '../src/auth/Session';
 import { sessionKey } from '../src/auth/sessionKey';
 import { mountWithApi } from './mountWithApi';
 
 function sessionOf(role: User['role']): Session {
-  const session = new Session({} as ApiClient);
+  const session = new Session(fakeApi({}));
   session.signedIn({ id: 2, name: 'U', email: null, role });
   return session;
 }
@@ -22,7 +22,7 @@ describe('PublicPagePanel', () => {
       .mockResolvedValue({ ...EMPTY_PAGE, handle: 'christian', enabled: true });
     const { wrapper } = await mountWithApi(
       PublicPagePanel,
-      { updatePublicPage },
+      { settings: { updatePublicPage } },
       { page: EMPTY_PAGE },
     );
     await wrapper.find('input[name="handle"]').setValue(' christian ');
@@ -46,7 +46,11 @@ describe('PublicPagePanel', () => {
   it('sends the avatar only when it changed', async () => {
     const page = { ...EMPTY_PAGE, avatar: '/api/images/abc' };
     const updatePublicPage = vi.fn().mockResolvedValue(page);
-    const { wrapper } = await mountWithApi(PublicPagePanel, { updatePublicPage }, { page });
+    const { wrapper } = await mountWithApi(
+      PublicPagePanel,
+      { settings: { updatePublicPage } },
+      { page },
+    );
     await wrapper.find('form').trigger('submit');
     await flushPromises();
     expect(updatePublicPage.mock.calls[0]?.[0]).not.toHaveProperty('avatar');
@@ -58,7 +62,7 @@ describe('PublicPagePanel', () => {
       .mockRejectedValue(new ApiRequestError('taken', 409, 'handle_taken'));
     const { wrapper } = await mountWithApi(
       PublicPagePanel,
-      { updatePublicPage },
+      { settings: { updatePublicPage } },
       { page: EMPTY_PAGE },
     );
     await wrapper.find('input[name="handle"]').setValue('christian');
@@ -81,7 +85,7 @@ describe('PublicPagePanel', () => {
     const updatePublicPage = vi.fn().mockResolvedValue(EMPTY_PAGE);
     const { wrapper } = await mountWithApi(
       PublicPagePanel,
-      { updatePublicPage },
+      { settings: { updatePublicPage } },
       { page: EMPTY_PAGE },
     );
     await wrapper.find('input[name="intro"]').setValue('Mi sitio');
@@ -106,7 +110,7 @@ describe('PublicPagePanel', () => {
     const updatePublicPage = vi.fn().mockResolvedValue(EMPTY_PAGE);
     const trusted = await mountWithApi(
       PublicPagePanel,
-      { uploadImage, updatePublicPage },
+      { images: { uploadImage }, settings: { updatePublicPage } },
       { page: EMPTY_PAGE },
       { [sessionKey as symbol]: sessionOf('trusted') },
     );

@@ -1,3 +1,5 @@
+import type { ApiOverrides } from './ApiOverrides';
+import type { SeasonsApi } from '../src/api/areas/SeasonsApi';
 import { enableAutoUnmount, flushPromises, type DOMWrapper } from '@vue/test-utils';
 import type { SeasonEpisodeItem, SeasonEpisodesResponse } from '@metrack/domain';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -49,15 +51,19 @@ const tracking = (status = 'in_progress') => ({
 
 async function mountList(
   episodes: SeasonEpisodeItem[],
-  api: Record<string, unknown> = {},
+  seasons: NonNullable<ApiOverrides['seasons']> = {},
   patch: Partial<SeasonEpisodesResponse> = {},
 ) {
   const seasonEpisodes = vi.fn().mockResolvedValue(response(episodes, patch));
-  const mounted = await mountWithApi(SeasonEpisodes, { seasonEpisodes, ...api } as never, {
-    seasonId: 50,
-    seriesId: 7,
-    status: 'in_progress',
-  });
+  const mounted = await mountWithApi(
+    SeasonEpisodes,
+    { seasons: { seasonEpisodes, ...seasons } },
+    {
+      seasonId: 50,
+      seriesId: 7,
+      status: 'in_progress',
+    },
+  );
   await flushPromises();
   return { ...mounted, seasonEpisodes };
 }
@@ -267,13 +273,15 @@ describe('SeasonEpisodes', () => {
       item(3, { skipped: true }),
     ];
 
-    async function mountRewatch(update: ReturnType<typeof vi.fn>) {
+    async function mountRewatch(update: SeasonsApi['updateSeasonEpisodes']) {
       const mounted = await mountWithApi(
         SeasonEpisodes,
         {
-          seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)),
-          updateSeasonEpisodes: update,
-        } as never,
+          seasons: {
+            seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)),
+            updateSeasonEpisodes: update,
+          },
+        },
         { seasonId: 50, seriesId: 7, status: 'completed', rewatches: open },
       );
       await flushPromises();
@@ -331,9 +339,11 @@ describe('SeasonEpisodes', () => {
     const mounted = await mountWithApi(
       SeasonEpisodes,
       {
-        seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])),
-        setSeasonRewatchIntent,
-      } as never,
+        seasons: {
+          seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])),
+          setSeasonRewatchIntent,
+        },
+      },
       { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [] },
     );
     await flushPromises();
@@ -358,9 +368,11 @@ describe('SeasonEpisodes', () => {
     const mounted = await mountWithApi(
       SeasonEpisodes,
       {
-        seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])),
-        setSeasonRewatchIntent,
-      } as never,
+        seasons: {
+          seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])),
+          setSeasonRewatchIntent,
+        },
+      },
       { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [], wantsRewatch: true },
     );
     await flushPromises();
@@ -378,7 +390,7 @@ describe('SeasonEpisodes', () => {
   it('hides the Rewatch button while a rewatch is open or the season is not completed', async () => {
     const open = await mountWithApi(
       SeasonEpisodes,
-      { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])) } as never,
+      { seasons: { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])) } },
       {
         seasonId: 50,
         seriesId: 7,
@@ -420,10 +432,12 @@ describe('SeasonEpisodes', () => {
     const mounted = await mountWithApi(
       SeasonEpisodes,
       {
-        seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)),
-        restartSeason,
-        undoSeasonRestart,
-      } as never,
+        seasons: {
+          seasonEpisodes: vi.fn().mockResolvedValue(response(episodes)),
+          restartSeason,
+          undoSeasonRestart,
+        },
+      },
       { seasonId: 50, seriesId: 7, status: 'in_progress', rewatches: [] },
     );
     await flushPromises();
@@ -445,7 +459,7 @@ describe('SeasonEpisodes', () => {
   it('only offers Start over for a season in progress with something watched', async () => {
     const none = await mountWithApi(
       SeasonEpisodes,
-      { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])) } as never,
+      { seasons: { seasonEpisodes: vi.fn().mockResolvedValue(response([item(1)])) } },
       { seasonId: 50, seriesId: 7, status: 'in_progress', rewatches: [] },
     );
     await flushPromises();
@@ -453,10 +467,12 @@ describe('SeasonEpisodes', () => {
     const done = await mountWithApi(
       SeasonEpisodes,
       {
-        seasonEpisodes: vi
-          .fn()
-          .mockResolvedValue(response([item(1, { watched: true, viewings: [viewing] })])),
-      } as never,
+        seasons: {
+          seasonEpisodes: vi
+            .fn()
+            .mockResolvedValue(response([item(1, { watched: true, viewings: [viewing] })])),
+        },
+      },
       { seasonId: 50, seriesId: 7, status: 'completed', rewatches: [] },
     );
     await flushPromises();
@@ -517,11 +533,15 @@ describe('SeasonEpisodes', () => {
         .mockResolvedValueOnce(response([item(1)], { complete: false }))
         .mockResolvedValueOnce(response([item(1), item(2)], { complete: false }))
         .mockResolvedValueOnce(response([item(1), item(2), item(3)]));
-      const { wrapper } = await mountWithApi(SeasonEpisodes, { seasonEpisodes } as never, {
-        seasonId: 50,
-        seriesId: 7,
-        status: 'in_progress',
-      });
+      const { wrapper } = await mountWithApi(
+        SeasonEpisodes,
+        { seasons: { seasonEpisodes } },
+        {
+          seasonId: 50,
+          seriesId: 7,
+          status: 'in_progress',
+        },
+      );
       await flushPromises();
       expect(rows(wrapper)).toHaveLength(1);
       expect(wrapper.find('.partial').exists()).toBe(true);
@@ -541,11 +561,15 @@ describe('SeasonEpisodes', () => {
     vi.useFakeTimers();
     try {
       const seasonEpisodes = vi.fn().mockResolvedValue(response([item(1)], { complete: false }));
-      const { wrapper } = await mountWithApi(SeasonEpisodes, { seasonEpisodes } as never, {
-        seasonId: 50,
-        seriesId: 7,
-        status: 'in_progress',
-      });
+      const { wrapper } = await mountWithApi(
+        SeasonEpisodes,
+        { seasons: { seasonEpisodes } },
+        {
+          seasonId: 50,
+          seriesId: 7,
+          status: 'in_progress',
+        },
+      );
       await flushPromises();
       await vi.advanceTimersByTimeAsync(60000);
       expect(seasonEpisodes).toHaveBeenCalledTimes(21);
@@ -558,7 +582,7 @@ describe('SeasonEpisodes', () => {
   it('shows an error when the episodes cannot be loaded', async () => {
     const mounted = await mountWithApi(
       SeasonEpisodes,
-      { seasonEpisodes: vi.fn().mockRejectedValue(new Error('boom')) } as never,
+      { seasons: { seasonEpisodes: vi.fn().mockRejectedValue(new Error('boom')) } },
       { seasonId: 50, seriesId: 7, status: 'planned' },
     );
     await flushPromises();

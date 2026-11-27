@@ -20,7 +20,10 @@ async function unfollow(): Promise<void> {
   busy.value = true;
   error.value = null;
   try {
-    await api.unfollow(props.entry.type === 'movie' ? 'movies' : 'series', props.entry.id);
+    await api.following.unfollow(
+      props.entry.type === 'movie' ? 'movies' : 'series',
+      props.entry.id,
+    );
     emit('unfollowed');
   } catch (cause) {
     error.value = cause;

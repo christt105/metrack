@@ -1,3 +1,4 @@
+import type { ApiOverrides } from './ApiOverrides';
 import { enableAutoUnmount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import type { NextEpisodeRow } from '@metrack/domain';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -28,14 +29,15 @@ const row = (id: number, patch: Partial<NextEpisodeRow> = {}): NextEpisodeRow =>
   ...patch,
 });
 
-async function mountNext(rows: NextEpisodeRow[], api: Record<string, unknown> = {}) {
+async function mountNext(
+  rows: NextEpisodeRow[],
+  seasons: NonNullable<ApiOverrides['seasons']> = {},
+) {
   const nextEpisodes = vi.fn().mockResolvedValue({ rows });
   const updateSeasonEpisodes = vi.fn().mockResolvedValue({ tracking: { status: 'in_progress' } });
   const mounted = await mountWithApi(NextView, {
-    nextEpisodes,
-    updateSeasonEpisodes,
-    ...api,
-  } as never);
+    seasons: { nextEpisodes, updateSeasonEpisodes, ...seasons },
+  });
   await flushPromises();
   return { ...mounted, nextEpisodes, updateSeasonEpisodes };
 }

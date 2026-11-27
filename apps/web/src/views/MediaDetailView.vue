@@ -94,14 +94,14 @@ const unmatchedSource = computed(() => {
 async function load(): Promise<void> {
   const mine = ++ticket;
   try {
-    const result = (await api.getDetail(props.collection, props.id)) as AnyDetail;
+    const result = (await api.library.getDetail(props.collection, props.id)) as AnyDetail;
     if (mine !== ticket) return;
     detail.value = result;
     error.value = null;
     parent.value = null;
     seasonUnmatched.value = [];
     if (props.collection === 'seasons') {
-      const resultParent = await api
+      const resultParent = await api.library
         .getDetail('series', (result as unknown as Season).seriesId)
         .catch(() => null);
       if (mine === ticket) parent.value = resultParent;

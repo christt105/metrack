@@ -32,7 +32,7 @@ async function load(): Promise<void> {
   loading.value = true;
   error.value = null;
   try {
-    const loaded = await api.episodeGroups(props.seriesId);
+    const loaded = await api.seasons.episodeGroups(props.seriesId);
     options.value = loaded;
     chosen.value = loaded.suggested ?? loaded.current ?? REGULAR;
   } catch (cause) {
@@ -62,7 +62,7 @@ async function apply(): Promise<void> {
   try {
     await saveForAll(
       (saveOptions) =>
-        api.setSeasonOrdering(
+        api.seasons.setSeasonOrdering(
           props.seriesId,
           chosen.value === REGULAR ? null : chosen.value,
           saveOptions,

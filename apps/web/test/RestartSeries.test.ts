@@ -20,9 +20,13 @@ const season = (number: number, patch: Partial<Season> = {}): Season =>
 describe('RestartSeries', () => {
   it('sets the intention to watch season 1 again on a finished series', async () => {
     const setSeasonRewatchIntent = vi.fn().mockResolvedValue({});
-    const { wrapper } = await mountWithApi(RestartSeries, { setSeasonRewatchIntent } as never, {
-      seasons: [season(2), season(1)],
-    });
+    const { wrapper } = await mountWithApi(
+      RestartSeries,
+      { seasons: { setSeasonRewatchIntent } },
+      {
+        seasons: [season(2), season(1)],
+      },
+    );
     await wrapper.find('button').trigger('click');
     await flushPromises();
     expect(setSeasonRewatchIntent).toHaveBeenCalledWith(11, true);
@@ -37,7 +41,7 @@ describe('RestartSeries', () => {
       [season(1, { wantsRewatch: true }), season(2)],
       [],
     ]) {
-      const { wrapper } = await mountWithApi(RestartSeries, {} as never, { seasons });
+      const { wrapper } = await mountWithApi(RestartSeries, {}, { seasons });
       expect(wrapper.find('button').exists()).toBe(false);
     }
   });

@@ -28,7 +28,7 @@ afterEach(() => vi.restoreAllMocks());
 describe('UsersPanel', () => {
   it('shows name, email, sign-up date and storage, with no delete button for the owner', async () => {
     const { wrapper } = await mountWithApi(UsersPanel, {
-      listUserSummaries: vi.fn().mockResolvedValue([owner, friend]),
+      admin: { listUserSummaries: vi.fn().mockResolvedValue([owner, friend]) },
     });
     await flushPromises();
     const rows = wrapper.findAll('[data-test="account"]');
@@ -44,7 +44,9 @@ describe('UsersPanel', () => {
     const scheduleUserDeletion = vi.fn().mockResolvedValue({});
     const listUserSummaries = vi.fn().mockResolvedValue([owner, friend]);
     window.confirm = vi.fn().mockReturnValue(true);
-    const { wrapper } = await mountWithApi(UsersPanel, { listUserSummaries, scheduleUserDeletion });
+    const { wrapper } = await mountWithApi(UsersPanel, {
+      admin: { listUserSummaries, scheduleUserDeletion },
+    });
     await flushPromises();
     await wrapper.findAll('[data-test="account"]')[1]!.find('button').trigger('click');
     await flushPromises();
@@ -59,8 +61,7 @@ describe('UsersPanel', () => {
       deletion: { requestedAt: '2026-11-20T00:00:00.000Z', deleteAt: '2026-11-27T00:00:00.000Z' },
     };
     const { wrapper } = await mountWithApi(UsersPanel, {
-      listUserSummaries: vi.fn().mockResolvedValue([owner, waiting]),
-      cancelUserDeletion,
+      admin: { listUserSummaries: vi.fn().mockResolvedValue([owner, waiting]), cancelUserDeletion },
     });
     await flushPromises();
     const row = wrapper.findAll('[data-test="account"]')[1]!;

@@ -21,7 +21,7 @@ async function mountList(
 ) {
   const mounted = await mountWithApi(
     RewatchList,
-    { patch: patch as never },
+    { library: { patch: patch as never } },
     { collection: 'games', id: 20, rewatches: list, completed },
   );
   return { ...mounted, patch };

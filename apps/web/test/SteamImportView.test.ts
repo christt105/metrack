@@ -1,3 +1,4 @@
+import type { ApiOverrides } from './ApiOverrides';
 import type { SteamImportReport } from '@metrack/domain';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
@@ -33,8 +34,10 @@ const report: SteamImportReport = {
   unmatched: [{ appId: '9', name: 'Mystery', playtimeMinutes: 10 }],
 };
 
-async function loaded(api: object = {}) {
-  const result = await mountWithApi(SteamImportView, { steamReport: async () => report, ...api });
+async function loaded(steam: NonNullable<ApiOverrides['steam']> = {}) {
+  const result = await mountWithApi(SteamImportView, {
+    steam: { steamReport: async () => report, ...steam },
+  });
   await result.wrapper.find('[data-test="steam-check"]').trigger('click');
   await flushPromises();
   return result;
@@ -180,7 +183,7 @@ describe('SteamImportView', () => {
         'steam_profile_private',
       );
     };
-    const { wrapper } = await mountWithApi(SteamImportView, { steamReport });
+    const { wrapper } = await mountWithApi(SteamImportView, { steam: { steamReport } });
     await wrapper.find('[data-test="steam-check"]').trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('Game details are private');

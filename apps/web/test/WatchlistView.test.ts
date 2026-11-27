@@ -48,8 +48,10 @@ describe('WatchlistView', () => {
     };
     const premiere: WatchlistEntry = { ...heat, releaseDate: '2026-12-25' };
     const { wrapper } = await mountWithApi(WatchlistView, {
-      listWatchlist: vi.fn().mockResolvedValue([show, premiere]),
-      listAlerts: vi.fn().mockResolvedValue([]),
+      following: {
+        listWatchlist: vi.fn().mockResolvedValue([show, premiere]),
+        listAlerts: vi.fn().mockResolvedValue([]),
+      },
     });
     await flushPromises();
     const agenda = wrapper.find('.agenda').text();
@@ -69,8 +71,10 @@ describe('WatchlistView', () => {
 
   it('lists followed titles and sent alerts', async () => {
     const { wrapper } = await mountWithApi(WatchlistView, {
-      listWatchlist: vi.fn().mockResolvedValue([lupin, heat]),
-      listAlerts: vi.fn().mockResolvedValue([alert]),
+      following: {
+        listWatchlist: vi.fn().mockResolvedValue([lupin, heat]),
+        listAlerts: vi.fn().mockResolvedValue([alert]),
+      },
     });
     await flushPromises();
     expect(wrapper.find('.waiting').text()).toContain('Lupin');
@@ -92,8 +96,10 @@ describe('WatchlistView', () => {
 
   it('shows empty states', async () => {
     const { wrapper } = await mountWithApi(WatchlistView, {
-      listWatchlist: vi.fn().mockResolvedValue([]),
-      listAlerts: vi.fn().mockResolvedValue([]),
+      following: {
+        listWatchlist: vi.fn().mockResolvedValue([]),
+        listAlerts: vi.fn().mockResolvedValue([]),
+      },
     });
     await flushPromises();
     expect(wrapper.text()).toContain('Nothing is followed yet.');
@@ -104,9 +110,7 @@ describe('WatchlistView', () => {
     const listWatchlist = vi.fn().mockResolvedValueOnce([lupin]).mockResolvedValueOnce([]);
     const unfollow = vi.fn().mockResolvedValue(undefined);
     const { wrapper } = await mountWithApi(WatchlistView, {
-      listWatchlist,
-      listAlerts: vi.fn().mockResolvedValue([]),
-      unfollow,
+      following: { listWatchlist, listAlerts: vi.fn().mockResolvedValue([]), unfollow },
     });
     await flushPromises();
     await showAll(wrapper);
@@ -122,7 +126,7 @@ describe('FollowToggle', () => {
     const follow = vi.fn().mockResolvedValue(undefined);
     const { wrapper } = await mountWithApi(
       FollowToggle,
-      { follow },
+      { following: { follow } },
       { collection: 'movies', id: 8, following: false },
     );
     await wrapper.find('button').trigger('click');
@@ -135,7 +139,7 @@ describe('FollowToggle', () => {
     const unfollow = vi.fn().mockResolvedValue(undefined);
     const { wrapper } = await mountWithApi(
       FollowToggle,
-      { unfollow },
+      { following: { unfollow } },
       { collection: 'series', id: 3, following: true },
     );
     expect(wrapper.find('button').attributes('aria-pressed')).toBe('true');
@@ -150,7 +154,7 @@ describe('FollowToggle', () => {
     const follow = vi.fn().mockRejectedValue(new Error('down'));
     const { wrapper } = await mountWithApi(
       FollowToggle,
-      { follow },
+      { following: { follow } },
       { collection: 'movies', id: 8, following: false },
     );
     await wrapper.find('button').trigger('click');
