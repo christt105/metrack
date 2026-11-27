@@ -13,7 +13,13 @@ export default tseslint.config(
     languageOptions: { parserOptions: { parser: tseslint.parser } },
   },
   {
-    files: ['apps/server/**/*.ts', 'packages/export/**/*.ts', '*.js', '**/*.config.ts'],
+    files: [
+      'apps/server/**/*.ts',
+      'packages/export/**/*.ts',
+      '*.js',
+      '**/*.config.ts',
+      'packages/site/scripts/*.mjs',
+    ],
     languageOptions: { globals: globals.node },
   },
   {
@@ -28,7 +34,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/**/*.{ts,vue}'],
+    files: ['apps/web/**/*.{ts,vue}', 'packages/site/client/**/*.ts'],
     languageOptions: { globals: globals.browser },
   },
   {
