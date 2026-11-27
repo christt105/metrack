@@ -17,12 +17,18 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run build:assets && tsc -p tsconfig.build.json",
+    "build:assets": "node scripts/siteAssets.mjs",
+    "check:assets": "node scripts/siteAssets.mjs --check",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p client/tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
     "@metrack/domain": "0.1.0",
     "@metrack/export": "0.1.0"
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.4",
+    "vite": "^8.3.8"
   }
 }
