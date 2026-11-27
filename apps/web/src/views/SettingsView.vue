@@ -38,7 +38,7 @@ const {
 } = useLoader(() =>
   ownerOnly(async () => ((await loadHealth()).features.backups ? api.listBackups() : null)),
 );
-const { data: imageUsage, error: imageUsageError } = useLoader(() => api.imageUsage());
+const { data: imageUsage, error: imageUsageError } = useLoader(() => api.images.imageUsage());
 const { data: users, error: usersError } = useLoader(() => ownerOnly(() => api.listUsers()));
 const refreshOwn = async (): Promise<void> => {
   ownRequest = undefined;
@@ -79,7 +79,7 @@ const applySync = () => {
 };
 
 const cleanup = () =>
-  run(async () => messages.settings.cleanupDone((await api.cleanupImages()).removed.length));
+  run(async () => messages.settings.cleanupDone((await api.images.cleanupImages()).removed.length));
 const backup = () =>
   run(async () => {
     const created = await api.createBackup();

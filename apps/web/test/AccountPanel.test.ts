@@ -41,7 +41,7 @@ describe('AccountPanel', () => {
       {
         accountStatus: vi.fn().mockResolvedValue({ deletion: null, canDelete: true }),
         accountExportData,
-        imageBytes,
+        images: { imageBytes },
       },
       { handle: null },
     );

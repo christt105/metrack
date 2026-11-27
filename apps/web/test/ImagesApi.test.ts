@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiClient } from '../src/api/ApiClient';
 
-describe('ApiClient', () => {
+describe('ImagesApi', () => {
   describe('imageBytes', () => {
     it('returns bytes and reports that the API is reachable', async () => {
       const contents = Uint8Array.of(4, 21, 255);
@@ -9,7 +9,7 @@ describe('ApiClient', () => {
       const onReachable = vi.fn();
       const client = new ApiClient(fetchFn, undefined, undefined, onReachable);
 
-      expect(await client.imageBytes('abc')).toEqual(contents);
+      expect(await client.images.imageBytes('abc')).toEqual(contents);
       expect(fetchFn).toHaveBeenCalledWith('/api/images/abc', { method: 'GET' });
       expect(onReachable).toHaveBeenCalledExactlyOnceWith(true);
     });
@@ -24,7 +24,7 @@ describe('ApiClient', () => {
       const onReachable = vi.fn();
       const client = new ApiClient(fetchFn, onUnauthenticated, undefined, onReachable);
 
-      await expect(client.imageBytes('abc')).rejects.toMatchObject({
+      await expect(client.images.imageBytes('abc')).rejects.toMatchObject({
         status: 401,
         code: 'unauthenticated',
         message: 'Please sign in',
@@ -39,7 +39,7 @@ describe('ApiClient', () => {
       const onReachable = vi.fn();
       const client = new ApiClient(fetchFn, onUnauthenticated, undefined, onReachable);
 
-      await expect(client.imageBytes('abc')).rejects.toMatchObject({
+      await expect(client.images.imageBytes('abc')).rejects.toMatchObject({
         status: 0,
         code: 'network_error',
         message: 'offline',
@@ -75,15 +75,15 @@ describe('ApiClient', () => {
 
     it('sends the file as it is when the server encodes', async () => {
       const { calls, client, recode } = uploader('server');
-      await client.uploadImage(file);
+      await client.images.uploadImage(file);
       expect(recode).not.toHaveBeenCalled();
       expect(calls.at(-1)?.init?.body).toBe(file);
     });
 
     it('recodes first when the client encodes, and asks the mode only once', async () => {
       const { calls, client, recode, recoded } = uploader('client');
-      await client.uploadImage(file);
-      await client.uploadImage(file);
+      await client.images.uploadImage(file);
+      await client.images.uploadImage(file);
       expect(recode).toHaveBeenCalledWith(file, 1280);
       expect(calls.at(-1)?.init?.body).toBe(recoded);
       expect(calls.filter((call) => call.url === '/api/images/usage')).toHaveLength(1);
@@ -91,8 +91,8 @@ describe('ApiClient', () => {
 
     it('uploads the file as it is when the mode cannot be read, and asks again next time', async () => {
       const { calls, client, recode } = uploader('fails');
-      await client.uploadImage(file);
-      await client.uploadImage(file);
+      await client.images.uploadImage(file);
+      await client.images.uploadImage(file);
       expect(recode).not.toHaveBeenCalled();
       expect(calls.filter((call) => call.url === '/api/images/usage')).toHaveLength(2);
     });

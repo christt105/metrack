@@ -19,9 +19,11 @@ const candidates = { candidates: [], failures: [] };
 describe('ImagePicker', () => {
   it('offers a trusted user an upload or any address as their own cover', async () => {
     const api = {
-      imageCandidates: vi.fn().mockResolvedValue(candidates),
-      uploadImage: vi.fn().mockResolvedValue({ ref: '/api/images/abc' }),
-      chooseImage: vi.fn().mockResolvedValue({ id: 7 }),
+      images: {
+        imageCandidates: vi.fn().mockResolvedValue(candidates),
+        uploadImage: vi.fn().mockResolvedValue({ ref: '/api/images/abc' }),
+        chooseImage: vi.fn().mockResolvedValue({ id: 7 }),
+      },
     };
     const { wrapper } = await mountWithApi(ImagePicker, api, props, {
       [sessionKey as symbol]: sessionOf('trusted'),
@@ -32,14 +34,14 @@ describe('ImagePicker', () => {
     Object.defineProperty(input.element, 'files', { value: [file] });
     await input.trigger('change');
     await flushPromises();
-    expect(api.uploadImage).toHaveBeenCalledWith(file);
-    expect(api.chooseImage).toHaveBeenCalledWith('movies', 7, 'cover', '/api/images/abc');
+    expect(api.images.uploadImage).toHaveBeenCalledWith(file);
+    expect(api.images.chooseImage).toHaveBeenCalledWith('movies', 7, 'cover', '/api/images/abc');
     expect(wrapper.emitted('chosen')).toHaveLength(1);
 
     await wrapper.find('[data-test="own-url"]').setValue(' https://pics.test/a.png ');
     await wrapper.find('form').trigger('submit');
     await flushPromises();
-    expect(api.chooseImage).toHaveBeenLastCalledWith(
+    expect(api.images.chooseImage).toHaveBeenLastCalledWith(
       'movies',
       7,
       'cover',
@@ -48,7 +50,7 @@ describe('ImagePicker', () => {
   });
 
   it('shows a normal user only the provider candidates', async () => {
-    const api = { imageCandidates: vi.fn().mockResolvedValue(candidates) };
+    const api = { images: { imageCandidates: vi.fn().mockResolvedValue(candidates) } };
     const { wrapper } = await mountWithApi(ImagePicker, api, props, {
       [sessionKey as symbol]: sessionOf('normal'),
     });

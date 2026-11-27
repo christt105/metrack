@@ -106,7 +106,7 @@ describe('PublicPagePanel', () => {
     const updatePublicPage = vi.fn().mockResolvedValue(EMPTY_PAGE);
     const trusted = await mountWithApi(
       PublicPagePanel,
-      { uploadImage, updatePublicPage },
+      { images: { uploadImage }, updatePublicPage },
       { page: EMPTY_PAGE },
       { [sessionKey as symbol]: sessionOf('trusted') },
     );

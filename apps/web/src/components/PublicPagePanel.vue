@@ -62,7 +62,7 @@ async function upload(event: Event): Promise<void> {
   if (!file) return;
   error.value = null;
   try {
-    avatar.value = (await api.uploadImage(file)).ref;
+    avatar.value = (await api.images.uploadImage(file)).ref;
   } catch (cause) {
     error.value = cause;
   }

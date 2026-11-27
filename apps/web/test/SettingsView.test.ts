@@ -349,7 +349,9 @@ describe('SettingsView images', () => {
         owner: false,
         ntfyTopicGenerated: false,
       } satisfies OwnSettings),
-      imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: 209_715_200 }),
+      images: {
+        imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: 209_715_200 }),
+      },
     });
     await flushPromises();
     expect(wrapper.find('[data-test="image-usage"]').text()).toContain('33.0 MB of 200.0 MB');
@@ -364,7 +366,9 @@ describe('SettingsView images', () => {
         owner: false,
         ntfyTopicGenerated: false,
       } satisfies OwnSettings),
-      imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: null }),
+      images: {
+        imageUsage: vi.fn().mockResolvedValue({ usedBytes: 34_603_008, quotaBytes: null }),
+      },
     });
     await flushPromises();
     const text = wrapper.find('[data-test="image-usage"]').text();

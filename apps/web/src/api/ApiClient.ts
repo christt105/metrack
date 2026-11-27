@@ -10,9 +10,6 @@ import type {
   ApiToken,
   CreatedToken,
   CreateTokenRequest,
-  Collection,
-  ImageCandidateList,
-  ImageKind,
   SteamAchievementsDetail,
   SteamAchievementsRequest,
   SteamAchievementsResponse,
@@ -30,19 +27,16 @@ import type {
   PublicPage,
   PublicPagePatch,
   WatchlistEntry,
-  ImageUsage,
-  UploadedImage,
 } from '@metrack/domain';
 import type { AccountExportData } from './AccountExportData';
 import type { BackupInfo } from './BackupInfo';
-import type { Detail } from './Detail';
 import { HttpTransport } from './HttpTransport';
-import type { ImageSettings } from './ImageSettings';
-import { DEFAULT_RECODE_MAX_SIDE, recodeToWebp } from '../logic/recodeToWebp';
+import { recodeToWebp } from '../logic/recodeToWebp';
 
 import { AuthApi } from './areas/AuthApi';
 import { LibraryApi } from './areas/LibraryApi';
 import { SeasonsApi } from './areas/SeasonsApi';
+import { ImagesApi } from './areas/ImagesApi';
 
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
@@ -50,6 +44,7 @@ import { SeasonsApi } from './areas/SeasonsApi';
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly images: ImagesApi;
   readonly seasons: SeasonsApi;
   readonly library: LibraryApi;
   readonly auth: AuthApi;
@@ -57,71 +52,18 @@ export class ApiClient {
   constructor(
     fetchFn: typeof fetch = (...args) => fetch(...args),
     onUnauthenticated: () => void = () => {},
-    private readonly recode: (file: Blob, maxSide: number) => Promise<Blob> = recodeToWebp,
+    recode: (file: Blob, maxSide: number) => Promise<Blob> = recodeToWebp,
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.images = new ImagesApi(this.transport, recode);
     this.seasons = new SeasonsApi(this.transport);
     this.library = new LibraryApi(this.transport);
     this.auth = new AuthApi(this.transport);
   }
 
-  private settings: Promise<ImageSettings> | undefined;
-
   private request<T>(method: string, path: string, body?: unknown): Promise<T> {
     return this.transport.request<T>(method, path, body);
-  }
-
-  imageCandidates(
-    collection: Collection,
-    id: number,
-    kind: ImageKind,
-  ): Promise<ImageCandidateList> {
-    return this.request('GET', `/${collection}/${id}/images/${kind}`);
-  }
-
-  chooseImage<C extends Collection>(
-    collection: C,
-    id: number,
-    kind: ImageKind,
-    url: string,
-  ): Promise<Detail<C>> {
-    return this.request('PUT', `/${collection}/${id}/images/${kind}`, { url });
-  }
-
-  clearImage<C extends Collection>(collection: C, id: number, kind: ImageKind): Promise<Detail<C>> {
-    return this.request('DELETE', `/${collection}/${id}/images/${kind}`);
-  }
-
-  /**
-   * Uploads an image file and counts it for the user's quota. The server stores it as WebP; when it reports
-   * that images are encoded by the client, the file is recoded to WebP in the browser first.
-   */
-  async uploadImage(file: Blob): Promise<UploadedImage> {
-    const { imageEncoding, maxDimension } = await this.imageSettings();
-    const body = imageEncoding === 'client' ? await this.recode(file, maxDimension) : file;
-    return this.request('POST', '/images', body);
-  }
-
-  private async imageSettings(): Promise<ImageSettings> {
-    this.settings ??= this.imageUsage().then(({ imageEncoding, maxDimension }) => ({
-      imageEncoding,
-      maxDimension,
-    }));
-    try {
-      return await this.settings;
-    } catch {
-      this.settings = undefined;
-      return { imageEncoding: 'server', maxDimension: DEFAULT_RECODE_MAX_SIDE };
-    }
-  }
-
-  imageUsage(): Promise<ImageUsage> {
-    return this.request('GET', '/images/usage');
-  }
-
-  cleanupImages(): Promise<{ removed: string[] }> {
-    return this.request('POST', '/images/cleanup');
   }
 
   listBackups(): Promise<BackupInfo[]> {
@@ -252,11 +194,6 @@ export class ApiClient {
 
   accountExportData(): Promise<AccountExportData> {
     return this.request('GET', '/account/export/data');
-  }
-
-  async imageBytes(hash: string): Promise<Uint8Array> {
-    const response = await this.transport.send('GET', `/images/${hash}`);
-    return new Uint8Array(await response.arrayBuffer());
   }
 
   requestAccountDeletion(confirm: string): Promise<AccountDeletion> {

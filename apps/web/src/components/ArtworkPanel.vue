@@ -37,7 +37,10 @@ function onChosen(detail: unknown): void {
 async function clear(kind: ImageKind): Promise<void> {
   error.value = null;
   try {
-    emit('updated', (await api.clearImage(props.collection, props.detail.id, kind)) as AnyDetail);
+    emit(
+      'updated',
+      (await api.images.clearImage(props.collection, props.detail.id, kind)) as AnyDetail,
+    );
   } catch (cause) {
     error.value = cause;
   }
