@@ -1,16 +1,9 @@
-import { readFileSync, readdirSync } from 'node:fs';
 import { Miniflare } from 'miniflare';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MemoryContentVersions } from '../src/site/MemoryContentVersions.js';
 import { D1ContentVersions } from '../src/storage/d1/D1ContentVersions.js';
 import type { D1Database } from '../src/storage/d1/D1Database.js';
-
-function statements(file: URL): string[] {
-  return readFileSync(file, 'utf8')
-    .split(/;\s*\n/)
-    .map((sql) => sql.trim())
-    .filter((sql) => sql.length > 0);
-}
+import { applyD1Migrations } from './support/d1Migrations.js';
 
 describe('MemoryContentVersions.global', () => {
   it('adds the counters of every user to the base', async () => {
@@ -40,13 +33,7 @@ describe('D1ContentVersions.global', () => {
       d1Databases: { DB: 'metrack-content-versions' },
     });
     db = (await miniflare.getD1Database('DB')) as unknown as D1Database;
-    const folder = new URL('../d1/migrations/', import.meta.url);
-    const files = readdirSync(folder)
-      .filter((file) => file.endsWith('.sql'))
-      .sort();
-    for (const file of files) {
-      for (const sql of statements(new URL(file, folder))) await db.prepare(sql).run();
-    }
+    await applyD1Migrations(db);
   });
 
   afterAll(async () => {
