@@ -56,7 +56,7 @@ describe('SteamPanel', () => {
     const refreshSteamAchievements = vi.fn(async () => answers.shift()!);
     const { wrapper } = await mountWithApi(
       SteamPanel,
-      { refreshSteamAchievements },
+      { steam: { refreshSteamAchievements } },
       { steamId: '1', canImport: true },
     );
     await wrapper.find('[data-test="achievements-button"]').trigger('click');

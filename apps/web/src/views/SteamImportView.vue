@@ -34,7 +34,7 @@ async function check(): Promise<void> {
   error.value = null;
   result.value = null;
   try {
-    const loaded = await api.steamReport();
+    const loaded = await api.steam.steamReport();
     report.value = loaded;
     selected.value = new Set(loaded.rows.filter((row) => row.selected).map((row) => row.appId));
   } catch (cause) {
@@ -72,7 +72,7 @@ async function importSelected(): Promise<void> {
   try {
     result.value = await applySteamRows(
       appIds,
-      (batch) => api.applySteam(batch),
+      (batch) => api.steam.applySteam(batch),
       (next) => (progress.value = next),
     );
   } catch (cause) {
@@ -85,7 +85,7 @@ async function importSelected(): Promise<void> {
   artworkLeft.value = imported;
   try {
     await prepareSteamArtwork(
-      () => api.prepareSteamArtwork(),
+      () => api.steam.prepareSteamArtwork(),
       (left) => (artworkLeft.value = left),
     );
   } catch (cause) {

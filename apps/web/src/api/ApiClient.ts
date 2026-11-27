@@ -1,5 +1,4 @@
 import type {
-  Language,
   AccountDeletion,
   AccountStatus,
   CreateInviteRequest,
@@ -7,12 +6,6 @@ import type {
   Invite,
   UserSummary,
   UserRole,
-  SteamAchievementsDetail,
-  SteamAchievementsRequest,
-  SteamAchievementsResponse,
-  SteamApplyResponse,
-  SteamArtworkResponse,
-  SteamImportReport,
   SyncApplyResult,
   SyncPlan,
   User,
@@ -31,6 +24,7 @@ import { SeasonsApi } from './areas/SeasonsApi';
 import { ImagesApi } from './areas/ImagesApi';
 import { FollowingApi } from './areas/FollowingApi';
 import { SettingsApi } from './areas/SettingsApi';
+import { SteamApi } from './areas/SteamApi';
 
 /**
  * Typed access to the private editing API. The fetch function is injected so tests can fake the network.
@@ -38,6 +32,7 @@ import { SettingsApi } from './areas/SettingsApi';
  */
 export class ApiClient {
   private readonly transport: HttpTransport;
+  readonly steam: SteamApi;
   readonly settings: SettingsApi;
   readonly following: FollowingApi;
   readonly images: ImagesApi;
@@ -52,6 +47,7 @@ export class ApiClient {
     onReachable: (reachable: boolean) => void = () => {},
   ) {
     this.transport = new HttpTransport(fetchFn, onUnauthenticated, onReachable);
+    this.steam = new SteamApi(this.transport);
     this.settings = new SettingsApi(this.transport);
     this.following = new FollowingApi(this.transport);
     this.images = new ImagesApi(this.transport, recode);
@@ -78,28 +74,6 @@ export class ApiClient {
 
   applySync(): Promise<{ plan: SyncPlan; result: SyncApplyResult }> {
     return this.request('POST', '/sync/apply', { confirm: true });
-  }
-
-  steamReport(): Promise<SteamImportReport> {
-    return this.request('GET', '/steam/report');
-  }
-
-  applySteam(appIds: string[]): Promise<SteamApplyResponse> {
-    return this.request('POST', '/steam/apply', { appIds });
-  }
-
-  prepareSteamArtwork(): Promise<SteamArtworkResponse> {
-    return this.request('POST', '/steam/artwork');
-  }
-
-  steamAchievements(gameId: number, language: Language): Promise<SteamAchievementsDetail> {
-    return this.request('GET', `/steam/achievements/${gameId}?language=${language}`);
-  }
-
-  refreshSteamAchievements(
-    request: SteamAchievementsRequest = {},
-  ): Promise<SteamAchievementsResponse> {
-    return this.request('POST', '/steam/achievements', request);
   }
 
   listUsers(): Promise<UserWithSettings[]> {

@@ -37,7 +37,7 @@ async function load(): Promise<void> {
   loading.value = true;
   error.value = null;
   try {
-    const answer = await api.steamAchievements(props.game.id, locale.language.value);
+    const answer = await api.steam.steamAchievements(props.game.id, locale.language.value);
     detail.value = answer;
     const { achievementsUnlocked: unlocked, achievementsTotal: total } = props.game;
     if (

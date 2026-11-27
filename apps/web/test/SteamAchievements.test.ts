@@ -40,7 +40,7 @@ describe('SteamAchievements', () => {
       .mockResolvedValue({ processed: 1, failed: 0, remaining: 0, asOf: 'T0' });
     const { wrapper } = await mountWithApi(
       SteamAchievements,
-      { refreshSteamAchievements },
+      { steam: { refreshSteamAchievements } },
       { game: game({}) },
     );
     await wrapper.find('[data-test="achievements-button"]').trigger('click');
@@ -54,7 +54,7 @@ describe('SteamAchievements', () => {
     const refreshSteamAchievements = vi.fn().mockRejectedValue(new Error('Set your Steam account'));
     const { wrapper } = await mountWithApi(
       SteamAchievements,
-      { refreshSteamAchievements },
+      { steam: { refreshSteamAchievements } },
       { game: game({}) },
     );
     await wrapper.find('[data-test="achievements-button"]').trigger('click');
@@ -93,7 +93,7 @@ describe('SteamAchievements', () => {
     const steamAchievements = vi.fn().mockResolvedValue(detail);
     const { wrapper } = await mountWithApi(
       SteamAchievements,
-      { steamAchievements },
+      { steam: { steamAchievements } },
       { game: game(counts) },
     );
     await flushPromises();
@@ -119,7 +119,7 @@ describe('SteamAchievements', () => {
     const steamAchievements = vi.fn().mockResolvedValue({ ...detail, unlocked: 2 });
     const { wrapper } = await mountWithApi(
       SteamAchievements,
-      { steamAchievements },
+      { steam: { steamAchievements } },
       { game: game(counts) },
     );
     await flushPromises();
@@ -133,7 +133,7 @@ describe('SteamAchievements', () => {
       .mockRejectedValueOnce(new Error('boom'));
     const { wrapper } = await mountWithApi(
       SteamAchievements,
-      { steamAchievements },
+      { steam: { steamAchievements } },
       { game: game({}) },
     );
     await flushPromises();
