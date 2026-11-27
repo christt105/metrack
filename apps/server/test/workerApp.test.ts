@@ -7,16 +7,10 @@ import { createWorkerApp } from '../src/worker/createWorkerApp.js';
 import type { WorkerEnv } from '../src/worker/WorkerEnv.js';
 import { WorkerUrlGuard } from '../src/worker/WorkerUrlGuard.js';
 import { solidImage } from './support/sampleImages.js';
+import { applyD1Migrations } from './support/d1Migrations.js';
 
 const SECRET = 'mt_test-secret-for-the-worker';
 const CONNECTOR_SECRET = 'mt_test-connector-secret';
-
-function statements(file: string): string[] {
-  return readFileSync(new URL(file, import.meta.url), 'utf8')
-    .split(/;\s*\n/)
-    .map((sql) => sql.trim())
-    .filter((sql) => sql.length > 0);
-}
 
 let miniflare: Miniflare;
 let app: ReturnType<typeof createWorkerApp>;
@@ -30,23 +24,9 @@ beforeAll(async () => {
   });
   const DB = await miniflare.getD1Database('DB');
   const IMAGES = await miniflare.getR2Bucket('IMAGES');
+  await applyD1Migrations(DB);
   const seed = [
-    ...statements('../d1/migrations/0001_schema.sql'),
-    ...statements('../d1/migrations/0002_public_render_cache.sql'),
-    ...statements('../d1/migrations/0003_connector_token_scope.sql'),
-    ...statements('../d1/migrations/0005_invites.sql'),
-    ...statements('../d1/migrations/0009_season_episodes.sql'),
-    ...statements('../d1/migrations/0014_user_language.sql'),
-    ...statements('../d1/migrations/0015_time_spent.sql'),
-    ...statements('../d1/migrations/0016_steam_id.sql'),
-    ...statements('../d1/migrations/0017_artwork_pending.sql'),
-    ...statements('../d1/migrations/0018_season_filler.sql'),
-    ...statements('../d1/migrations/0019_steam_achievements.sql'),
-    ...statements('../d1/migrations/0020_last_activity.sql'),
-    ...statements('../d1/migrations/0021_next_hidden.sql'),
-    ...statements('../d1/migrations/0022_rewatch_intent.sql'),
-    ...statements('../d1/migrations/0023_manual_tracking.sql'),
-    ...statements('../d1/seed/test-data.sql'),
+    readFileSync(new URL('../d1/seed/test-data.sql', import.meta.url), 'utf8'),
     `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'test', '${hashSecret(SECRET)}', 'write', '2026-01-01T00:00:00.000Z')`,
     `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'connector', '${hashSecret(CONNECTOR_SECRET)}', 'connector', '2026-01-01T00:00:00.000Z')`,
     `UPDATE user_setting SET jellyfin_user = 'owner-jf' WHERE user_id = 1`,

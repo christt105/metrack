@@ -8,9 +8,10 @@ import { STEAM_APPLY_BUDGET } from '../src/steam/SteamApplyBudget.js';
 import type { D1Database } from '../src/storage/d1/D1Database.js';
 import { createWorkerApp } from '../src/worker/createWorkerApp.js';
 import type { WorkerEnv } from '../src/worker/WorkerEnv.js';
-import { D1_OWNER, D1_SCHEMA } from './support/d1Backend.js';
+import { D1_OWNER } from './support/d1Backend.js';
 import { solidImage } from './support/sampleImages.js';
 import { SubrequestCounter } from './support/SubrequestCounter.js';
+import { applyD1Migrations } from './support/d1Migrations.js';
 
 const FREE_PLAN_SUBREQUESTS = 50;
 const SECRET = 'mt_steam-budget-secret';
@@ -96,9 +97,9 @@ beforeAll(async () => {
   const DB = await miniflare.getD1Database('DB');
   rawDb = DB as unknown as D1Database;
   const IMAGES = await miniflare.getR2Bucket('IMAGES');
+  await applyD1Migrations(DB);
   await DB.batch(
     [
-      ...D1_SCHEMA,
       D1_OWNER,
       `INSERT INTO api_token (user_id, name, secret_hash, scope, created_at) VALUES (1, 'test', '${hashSecret(SECRET)}', 'write', '2026-01-01T00:00:00.000Z')`,
       `INSERT INTO user_setting (user_id, steam_id) VALUES (1, '${STEAM_ID}')`,

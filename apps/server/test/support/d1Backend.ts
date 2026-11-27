@@ -1,38 +1,11 @@
-import { readFileSync } from 'node:fs';
 import { Miniflare } from 'miniflare';
 import type { D1Database } from '../../src/storage/d1/D1Database.js';
+import { applyD1Migrations } from './d1Migrations.js';
 import { D1Harness } from './D1Harness.js';
 import type { StorageBackend } from './StorageBackend.js';
 
 export const D1_OWNER = `INSERT INTO user (id, name, email, created_at, role)
 VALUES (1, 'Owner', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 'owner')`;
-
-export const D1_SCHEMA = [
-  '0001_schema.sql',
-  '0002_public_render_cache.sql',
-  '0004_google_login.sql',
-  '0005_invites.sql',
-  '0006_episode_group.sql',
-  '0007_next_episode.sql',
-  '0009_season_episodes.sql',
-  '0010_season_episodes_refill.sql',
-  '0012_unmatched_episodes.sql',
-  '0014_user_language.sql',
-  '0015_time_spent.sql',
-  '0016_steam_id.sql',
-  '0017_artwork_pending.sql',
-  '0018_season_filler.sql',
-  '0019_steam_achievements.sql',
-  '0020_last_activity.sql',
-  '0021_next_hidden.sql',
-  '0022_rewatch_intent.sql',
-  '0023_manual_tracking.sql',
-].flatMap((file) =>
-  readFileSync(new URL(`../../d1/migrations/${file}`, import.meta.url), 'utf8')
-    .split(/;\s*\n/)
-    .map((sql) => sql.trim())
-    .filter((sql) => sql.length > 0),
-);
 
 /** Local D1 under Miniflare, one database per file that is emptied and re-seeded on every `open`. */
 export function createD1Backend(): StorageBackend {
@@ -40,20 +13,29 @@ export function createD1Backend(): StorageBackend {
   let database: D1Database | undefined;
 
   async function connect(): Promise<D1Database> {
-    if (database) return database;
-    miniflare = new Miniflare({
+    const instance = new Miniflare({
       modules: true,
       script: 'export default { fetch() { return new Response(null); } };',
       d1Databases: { DB: 'metrack-test' },
     });
-    database = (await miniflare.getD1Database('DB')) as unknown as D1Database;
-    return database;
+    try {
+      const db = (await instance.getD1Database('DB')) as unknown as D1Database;
+      await applyD1Migrations(db);
+      await db.prepare(D1_OWNER).run();
+      miniflare = instance;
+      database = db;
+      return db;
+    } catch (error) {
+      await instance.dispose();
+      throw error;
+    }
   }
 
   return {
     name: 'd1',
     async open() {
-      const db = await connect();
+      if (!database) return new D1Harness(await connect());
+      const db = database;
       const tables = (
         await db
           .prepare(
@@ -61,15 +43,11 @@ export function createD1Backend(): StorageBackend {
           )
           .all()
       ).results.map((row) => String(row.name));
-      if (tables.length === 0) {
-        await db.batch([...D1_SCHEMA, D1_OWNER].map((sql) => db.prepare(sql)));
-      } else {
-        await db.batch([
-          db.prepare('PRAGMA defer_foreign_keys = true'),
-          ...tables.map((name) => db.prepare(`DELETE FROM "${name}"`)),
-          db.prepare(D1_OWNER),
-        ]);
-      }
+      await db.batch([
+        db.prepare('PRAGMA defer_foreign_keys = true'),
+        ...tables.map((name) => db.prepare(`DELETE FROM "${name}"`)),
+        db.prepare(D1_OWNER),
+      ]);
       return new D1Harness(db);
     },
     async dispose() {

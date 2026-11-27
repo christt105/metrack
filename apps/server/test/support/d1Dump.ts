@@ -1,5 +1,8 @@
+import { loadD1Migrations } from './d1Migrations.js';
+
 /** A small D1-style SQL export: deferred foreign keys, an internal migrations table, images and a sequence. */
 export function d1Dump(images: string[] = []): string {
+  const [initial] = loadD1Migrations({ through: 1 });
   const rows = images
     .map((file) => {
       const [hash, extension] = file.split('.');
@@ -12,7 +15,7 @@ CREATE TABLE IF NOT EXISTS "d1_migrations"(
 		name       TEXT UNIQUE,
 		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
-INSERT INTO "d1_migrations" ("id","name","applied_at") VALUES(1,'0001_schema.sql','2026-11-10 22:56:27');
+INSERT INTO "d1_migrations" ("id","name","applied_at") VALUES(1,'${initial!.name}','2026-11-10 22:56:27');
 CREATE TABLE parent (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
 CREATE TABLE child (id INTEGER PRIMARY KEY, parent_id INTEGER NOT NULL REFERENCES parent (id), note TEXT, data BLOB);
 CREATE TABLE image (hash TEXT NOT NULL, extension TEXT NOT NULL);

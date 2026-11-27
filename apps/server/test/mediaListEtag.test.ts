@@ -1,9 +1,9 @@
-import { readFileSync, readdirSync } from 'node:fs';
 import { Miniflare } from 'miniflare';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { hashSecret } from '../src/auth/hashSecret.js';
 import type { WorkerEnv } from '../src/worker/WorkerEnv.js';
 import { createWorkerApp } from '../src/worker/createWorkerApp.js';
+import { applyD1Migrations } from './support/d1Migrations.js';
 
 const BASE = 'http://localhost';
 const OWNER = 'mt_etag-owner-secret';
@@ -12,13 +12,6 @@ const json = (secret: string) => ({
   authorization: `Bearer ${secret}`,
   'content-type': 'application/json',
 });
-
-function statements(file: URL): string[] {
-  return readFileSync(file, 'utf8')
-    .split(/;\s*\n/)
-    .map((sql) => sql.trim())
-    .filter((sql) => sql.length > 0);
-}
 
 let miniflare: Miniflare;
 let app: ReturnType<typeof createWorkerApp>;
@@ -34,13 +27,7 @@ beforeAll(async () => {
   });
   DB = await miniflare.getD1Database('DB');
   const IMAGES = await miniflare.getR2Bucket('IMAGES');
-  const folder = new URL('../d1/migrations/', import.meta.url);
-  const files = readdirSync(folder)
-    .filter((file) => file.endsWith('.sql'))
-    .sort();
-  for (const file of files) {
-    for (const sql of statements(new URL(file, folder))) await DB.prepare(sql).run();
-  }
+  await applyD1Migrations(DB);
   const spy = {
     prepare: (sql: string) => {
       queries.push(sql);

@@ -1,19 +1,9 @@
-import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { MigrationRunner } from '../src/storage/MigrationRunner.js';
 import { migrations } from '../src/storage/migrations/index.js';
 import { describeSchema } from './support/describeSchema.js';
-
-const schemaSql = readFileSync(
-  new URL('../d1/migrations/0001_schema.sql', import.meta.url),
-  'utf8',
-);
-
-const renderCacheSql = readFileSync(
-  new URL('../d1/migrations/0002_public_render_cache.sql', import.meta.url),
-  'utf8',
-);
+import { applyD1MigrationsToSqlite } from './support/d1Migrations.js';
 
 function fromMigrations(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
@@ -21,143 +11,24 @@ function fromMigrations(): DatabaseSync {
   return db;
 }
 
-const connectorScopeSql = readFileSync(
-  new URL('../d1/migrations/0003_connector_token_scope.sql', import.meta.url),
-  'utf8',
-);
-
-const googleLoginSql = readFileSync(
-  new URL('../d1/migrations/0004_google_login.sql', import.meta.url),
-  'utf8',
-);
-
-const invitesSql = readFileSync(
-  new URL('../d1/migrations/0005_invites.sql', import.meta.url),
-  'utf8',
-);
-
-const episodeGroupSql = readFileSync(
-  new URL('../d1/migrations/0006_episode_group.sql', import.meta.url),
-  'utf8',
-);
-
-const nextEpisodeSql = readFileSync(
-  new URL('../d1/migrations/0007_next_episode.sql', import.meta.url),
-  'utf8',
-);
-
-const rewatchViewingsSql = readFileSync(
-  new URL('../d1/migrations/0008_rewatch_viewings.sql', import.meta.url),
-  'utf8',
-);
-
-const seasonEpisodesSql = readFileSync(
-  new URL('../d1/migrations/0009_season_episodes.sql', import.meta.url),
-  'utf8',
-);
-
-const refillSql = readFileSync(
-  new URL('../d1/migrations/0010_season_episodes_refill.sql', import.meta.url),
-  'utf8',
-);
-
-const dropSeasonOverrideSql = readFileSync(
-  new URL('../d1/migrations/0011_drop_season_override.sql', import.meta.url),
-  'utf8',
-);
-
-const unmatchedEpisodesSql = readFileSync(
-  new URL('../d1/migrations/0012_unmatched_episodes.sql', import.meta.url),
-  'utf8',
-);
-
-const dropPublishSettingsSql = readFileSync(
-  new URL('../d1/migrations/0013_drop_publish_settings.sql', import.meta.url),
-  'utf8',
-);
-
-const userLanguageSql = readFileSync(
-  new URL('../d1/migrations/0014_user_language.sql', import.meta.url),
-  'utf8',
-);
-
-const timeSpentSql = readFileSync(
-  new URL('../d1/migrations/0015_time_spent.sql', import.meta.url),
-  'utf8',
-);
-
-const steamIdSql = readFileSync(
-  new URL('../d1/migrations/0016_steam_id.sql', import.meta.url),
-  'utf8',
-);
-
-const artworkPendingSql = readFileSync(
-  new URL('../d1/migrations/0017_artwork_pending.sql', import.meta.url),
-  'utf8',
-);
-
-const seasonFillerSql = readFileSync(
-  new URL('../d1/migrations/0018_season_filler.sql', import.meta.url),
-  'utf8',
-);
-
-const steamAchievementsSql = readFileSync(
-  new URL('../d1/migrations/0019_steam_achievements.sql', import.meta.url),
-  'utf8',
-);
-
-const lastActivitySql = readFileSync(
-  new URL('../d1/migrations/0020_last_activity.sql', import.meta.url),
-  'utf8',
-);
-
-const rewatchIntentSql = readFileSync(
-  new URL('../d1/migrations/0022_rewatch_intent.sql', import.meta.url),
-  'utf8',
-);
-
-const manualTrackingSql = readFileSync(
-  new URL('../d1/migrations/0023_manual_tracking.sql', import.meta.url),
-  'utf8',
-);
-
-const nextHiddenSql = readFileSync(
-  new URL('../d1/migrations/0021_next_hidden.sql', import.meta.url),
-  'utf8',
-);
-
-function fromSql(): DatabaseSync {
+function fromSql(through?: number): DatabaseSync {
   const db = new DatabaseSync(':memory:');
-  db.exec(schemaSql);
-  db.exec(connectorScopeSql);
-  db.exec(googleLoginSql);
-  db.exec(invitesSql);
-  db.exec(episodeGroupSql);
-  db.exec(nextEpisodeSql);
-  db.exec(rewatchViewingsSql);
-  db.exec(seasonEpisodesSql);
-  db.exec(refillSql);
-  db.exec(dropSeasonOverrideSql);
-  db.exec(unmatchedEpisodesSql);
-  db.exec(dropPublishSettingsSql);
-  db.exec(userLanguageSql);
-  db.exec(timeSpentSql);
-  db.exec(steamIdSql);
-  db.exec(artworkPendingSql);
-  db.exec(seasonFillerSql);
-  db.exec(steamAchievementsSql);
-  db.exec(lastActivitySql);
-  db.exec(nextHiddenSql);
-  db.exec(rewatchIntentSql);
-  db.exec(manualTrackingSql);
+  applyD1MigrationsToSqlite(db, { through });
   return db;
 }
 
 describe('D1 schema file', () => {
-  const expected = describeSchema(fromMigrations(), ['schema_migrations']);
+  const homeWithCache = new DatabaseSync(':memory:');
+  new MigrationRunner(
+    homeWithCache,
+    migrations.filter(({ version }) => version <= 18),
+  ).run();
+  applyD1MigrationsToSqlite(homeWithCache, { after: 1, through: 2 });
+  new MigrationRunner(homeWithCache, migrations).run();
+  const expected = describeSchema(homeWithCache, ['schema_migrations']);
   const actual = describeSchema(fromSql(), []);
 
-  it('has the same tables as the TypeScript migrations', () => {
+  it('has the same tables as the TypeScript migrations with the D1 render cache', () => {
     expect(Object.keys(actual.tables)).toEqual(Object.keys(expected.tables));
   });
 
@@ -264,10 +135,9 @@ describe('D1 schema file', () => {
 });
 
 describe('D1 render cache migration', () => {
-  it('adds only the content version and the public_render table to the home schema', () => {
-    const before = describeSchema(fromSql(), []);
-    const db = fromSql();
-    db.exec(renderCacheSql);
+  it('adds only the content version and the public_render table to the initial D1 schema', () => {
+    const before = describeSchema(fromSql(1), []);
+    const db = fromSql(2);
     const after = describeSchema(db, []);
     expect(Object.keys(after.tables)).toEqual(
       [...Object.keys(before.tables), 'public_render'].sort(),
@@ -275,14 +145,28 @@ describe('D1 render cache migration', () => {
     const { user: beforeUser, ...otherBefore } = before.tables;
     const { user: afterUser, public_render: cache, ...otherAfter } = after.tables;
     expect(otherAfter).toEqual(otherBefore);
-    expect(afterUser).toHaveLength((beforeUser ?? []).length + 1);
-    expect(afterUser).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'content_version', notnull: 1, dflt_value: '0' }),
-      ]),
-    );
+    expect(afterUser?.slice(0, -1)).toEqual(beforeUser);
+    expect(afterUser?.at(-1)).toMatchObject({
+      name: 'content_version',
+      type: 'INTEGER',
+      notnull: 1,
+      dflt_value: '0',
+    });
     expect(cache).toHaveLength(6);
     expect(after.indexes).toEqual(expect.objectContaining(before.indexes));
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+  });
+});
+
+describe('D1 render cache invalidation migrations', () => {
+  it.each([24, 25])('clears existing renders when applying migration %i', (version) => {
+    const db = fromSql(version - 1);
+    db.exec(`
+      INSERT INTO user (id, name, created_at) VALUES (1, 'Owner', '2026-01-01');
+      INSERT INTO public_render (user_id, cache_key, version, rendered_at, content_type, body)
+      VALUES (1, 'home', 0, 0, 'text/html', '<p>Old render</p>');
+    `);
+    applyD1MigrationsToSqlite(db, { after: version - 1, through: version });
+    expect(db.prepare('SELECT * FROM public_render').all()).toEqual([]);
   });
 });
