@@ -219,12 +219,37 @@ describe('renderDetail', () => {
   it('describes the page for link previews with the review and an absolute picture', () => {
     const html = renderDetail(library, 'movie', 1, 'https://example.org') as string;
     expect(html).toContain('<meta property="og:title" content="Dune &lt;2&gt; | ');
-    expect(html).toContain('<meta property="og:description" content="Una obra.">');
-    expect(html).toContain('<meta name="description" content="Una obra.">');
+    const description = 'Película · Completado · 👑 Obra maestra · 5 mar 2026\nUna obra.';
+    expect(html).toContain(`<meta property="og:description" content="${description}">`);
+    expect(html).toContain(`<meta name="description" content="${description}">`);
     expect(html).toContain(
       '<meta property="og:image" content="https://image.tmdb.org/t/p/w780/dune.jpg">',
     );
     expect(html).toContain('<meta name="twitter:card" content="summary">');
+  });
+
+  it('puts the status, rating, date and achievements of a game in its link preview', () => {
+    const games = buildLibrary(
+      input({
+        videogames: [
+          game({
+            id: 1,
+            status: 'completed',
+            rating: 5,
+            finishedAt: '2026-11-20',
+            achievementsUnlocked: 12,
+            achievementsTotal: 40,
+          }),
+          game({ id: 2, status: 'paused', achievementsUnlocked: 40, achievementsTotal: 40 }),
+        ],
+      }),
+    );
+    expect(renderDetail(games, 'videogame', 1)).toContain(
+      '<meta property="og:description" content="Juego · Completado · 👍 Bueno · 20 nov 2026 · 🏆 Logros 12 / 40">',
+    );
+    expect(renderDetail(games, 'videogame', 2)).toContain(
+      '<meta property="og:description" content="Juego · En pausa · 🏆 Todos los logros">',
+    );
   });
 
   it('falls back to the banner and leaves out pictures without an absolute address', () => {
@@ -245,7 +270,9 @@ describe('renderDetail', () => {
       `<meta property="og:image" content="https://example.org/u/ana/images/${HASH_B}">`,
     );
     expect(shared).toContain('<meta name="twitter:card" content="summary_large_image">');
-    expect(shared).toContain('<meta property="og:description" content="Sinopsis.">');
+    expect(shared).toContain(
+      '<meta property="og:description" content="Película · Completado\nSinopsis.">',
+    );
     expect(renderDetail(own, 'movie', 1)).not.toContain('og:image');
     const both = buildLibrary(
       input({

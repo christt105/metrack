@@ -5,7 +5,6 @@ import { formatDate } from './formatDate.js';
 import { formatInteger } from './formatInteger.js';
 import { icon } from './icon.js';
 import { imageSrc } from './imageSrc.js';
-import { markdownText } from './markdown/markdownText.js';
 import type { Library } from './Library.js';
 import type { SiteMessages } from './messages/SiteMessages.js';
 import { ownerName } from './ownerName.js';
@@ -17,6 +16,7 @@ import { renderCard } from './renderCard.js';
 import { renderComments } from './renderComments.js';
 import { renderLayout } from './renderLayout.js';
 import type { ShareCard } from './ShareCard.js';
+import { shareDescription } from './shareDescription.js';
 import { reviewHtml } from './reviewHtml.js';
 import { homePath } from './sitePaths.js';
 import { TYPE_ICONS, themeType } from './themeType.js';
@@ -119,13 +119,6 @@ function relations(library: Library, entry: PublicEntry): string {
   return '';
 }
 
-function shareDescription(entry: PublicEntry): string | undefined {
-  const review = entry.review === null ? '' : markdownText(entry.review);
-  if (review !== '') return review;
-  const overview = entry.overview?.trim() ?? '';
-  return overview === '' ? undefined : overview;
-}
-
 function shareCard(library: Library, entry: PublicEntry, origin: string): ShareCard {
   const cover = imageSrc(entry.cover, library.handle, 'cover', origin);
   if (cover !== null && cover.startsWith('http')) return { image: cover, wide: false };
@@ -157,7 +150,7 @@ export function renderDetail(
   return renderLayout({
     library,
     title: `${entry.title} | ${ownerName(library)}`,
-    description: shareDescription(entry),
+    description: shareDescription(entry, library.messages),
     active: 'home',
     share: shareCard(library, entry, origin),
     page,
